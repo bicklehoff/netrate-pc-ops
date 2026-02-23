@@ -173,3 +173,31 @@ Use this file to coordinate across PC work chats. Each session should read this 
 - [ ] **David → Mac** — Relay: "clerk: WEBSITE-2026 — GA4 deployed, all 4 content pages live with marketing copy, contact form wired to Zoho CRM API (pending env vars)"
 - [ ] **WebDev** — Test contact form end-to-end after Zoho env vars are set in Vercel
 - [ ] **WebDev** — Read Mac's Marketing copy files for website content ~~(DONE — completed this session)~~
+
+---
+
+## Session: February 23, 2026 (cont'd) - Website Strategy + AI Search + Portal Planning (Setup)
+
+**Chat focus:** Strategic planning session — AI search optimization, portal architecture, Zoho CRM direction. Defined next phase of PC Dev work.
+
+**What was done:**
+- Researched `llms.txt` — emerging standard for AI agent search optimization. Markdown file at site root that tells AI models where to find key content. ~10% adoption, endorsed by Anthropic and Vercel. Zero-risk, high-value for our "rates today" use case.
+- Defined three-phase product strategy: (1) AI search optimization, (2) portal architecture, (3) Zoho CRM transition
+- Designed portal architecture: one Next.js app, two zones — public at `/`, private at `/portal/*` behind auth
+- Settled Zoho question: keep existing lead→CRM flow, transition to portal DB as primary store when built, Zoho becomes secondary
+- Wrote full strategy plan to `.claude/plans/iterative-weaving-abelson.md`
+- Prepared WebDev prompt for Phase 1 (AI search tasks)
+
+**Key decisions:**
+- `llms.txt` is first priority for Dev — positions rate tool as AI-citable source for rate queries
+- Portal is one app with public/private zones, NOT a separate repo or deployment
+- Database: Vercel Postgres or Supabase (not JSON files) — decision for Dev to make
+- Auth: NextAuth.js with magic links for borrowers — decision for Dev to confirm
+- Zoho CRM: keep near-term, transition mid-term, evaluate long-term
+- Mac's BORROWER-PORTAL-BRIEF.md is the design brief for portal — Dev designs schema/states from scratch
+
+**Open items:**
+- [ ] **WebDev** — Phase 1: Create `llms.txt`, Schema.org structured data, `robots.txt`, `sitemap.xml`
+- [ ] **WebDev** — Phase 2 (later): Portal foundation — auth, database, borrower schema, route group
+- [ ] **David** — Still need Zoho env vars in Vercel (carried forward)
+- [ ] **David → Mac** — Relay WEBSITE-2026 tracker update (carried forward)
