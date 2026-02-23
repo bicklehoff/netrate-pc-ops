@@ -127,3 +127,49 @@ Use this file to coordinate across PC work chats. Each session should read this 
 3. Should portal data live in the site repo or in a separate data repo?
 
 **Status:** Awaiting David relay to Mac for review.
+
+---
+
+## Session: February 23, 2026 - Marketing Copy Integration + Zoho Lead API (WebDev)
+
+**Chat focus:** Integrated all marketing copy into the 4 content pages, added GA4 tracking, built contact form with Zoho CRM lead capture API.
+
+**What was done:**
+- Reviewed and committed GA4 tracking (Setup had added it but left uncommitted). Moved `<Script>` tags from `<head>` to `<body>` per Next.js App Router best practice — `afterInteractive` strategy is documented as a body-level child, placing it in `<head>` risks breakage on future Next.js upgrades.
+- Installed `node_modules` (were missing — repo was cloned but `npm install` never ran)
+- Integrated all 4 marketing copy files into pages:
+  - **Homepage** (`page.js`): New hero with Marketing headline, rate teaser section, 3 "why us" cards, 3 service overview cards, credibility section, teal bottom CTA band
+  - **About** (`about/page.js`): David's first-person story, direct-to-consumer section, rate tool section, credentials card with stats
+  - **Services** (`services/page.js`): Refinance and purchase sections with `id` anchors for deep linking (`#refinance`, `#purchase`), loan programs grid (Conventional/FHA/VA/Jumbo), licensed states grid, bottom CTA
+  - **Contact** (`contact/page.js`): Full lead capture form (name, email, phone, loan type dropdown, message) with loading/error/success states. Matches Marketing's field spec exactly.
+- Created `contact/layout.js` for metadata (page.js is `'use client'` so can't export metadata)
+- Created `/api/lead` route (`src/app/api/lead/route.js`) — server-side Zoho CRM integration:
+  - Refreshes OAuth access token via `ZOHO_REFRESH_TOKEN`, `ZOHO_CLIENT_ID`, `ZOHO_CLIENT_SECRET` env vars
+  - Creates a Lead in Zoho CRM with name, email, phone, lead source "Website", description with loan type + message
+  - Returns lead ID on success, proper error responses on failure
+- Both commits pushed to `main` → Vercel auto-deploying
+
+**Key decisions:**
+- GA4 `<Script>` placed in `<body>` not `<head>` — follows Next.js documented pattern, more upgrade-resilient
+- Contact page is a client component (`'use client'`) for form state — metadata moved to `layout.js`
+- Zoho CRM credentials use environment variables (not hardcoded) — need to be set in Vercel dashboard
+- Lead form POSTs to `/api/lead` (Next.js API route, runs server-side on Vercel)
+
+**Commits (netrate-mortgage-site):**
+- `ecb7f5e` — Add GA4 tracking (G-QPEE5ZSZ79) to root layout
+- `c60c6b4` — Integrate marketing copy into all pages, add Zoho CRM lead API
+
+**Files created/modified (netrate-mortgage-site):**
+- `src/app/layout.js` — GA4 script tags (modified)
+- `src/app/page.js` — Full homepage with marketing copy (modified)
+- `src/app/about/page.js` — Full about page (modified)
+- `src/app/services/page.js` — Full services page (modified)
+- `src/app/contact/page.js` — Lead capture form with Zoho integration (modified)
+- `src/app/contact/layout.js` — Contact page metadata (created)
+- `src/app/api/lead/route.js` — Zoho CRM lead API route (created)
+
+**Open items:**
+- [ ] **David** — Add Zoho env vars to Vercel: `ZOHO_REFRESH_TOKEN`, `ZOHO_CLIENT_ID`, `ZOHO_CLIENT_SECRET` (lead form will 500 until these are set)
+- [ ] **David → Mac** — Relay: "clerk: WEBSITE-2026 — GA4 deployed, all 4 content pages live with marketing copy, contact form wired to Zoho CRM API (pending env vars)"
+- [ ] **WebDev** — Test contact form end-to-end after Zoho env vars are set in Vercel
+- [ ] **WebDev** — Read Mac's Marketing copy files for website content ~~(DONE — completed this session)~~
