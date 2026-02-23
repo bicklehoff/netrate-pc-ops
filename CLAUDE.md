@@ -97,7 +97,10 @@ Mac writes rate tool source → pushes to netrate-ops → PC reads for porting
 Mac Clerk updates trackers → pushes to netrate-ops → Vercel TrackerPortal reflects
 PC builds website → pushes to netrate-mortgage-site → Vercel auto-deploys
 PC completes work → logs in PC SESSION-LOG → David relays to Mac → Mac Clerk updates tracker
+Cross-device proposals/questions → post to RELAY.md in netrate-governance → other device pulls and reads
 ```
+
+**RELAY.md:** For cross-device communication (proposals, questions, handoffs), post to `netrate-governance/RELAY.md` instead of relaying through David verbally. David says "check RELAY.md" to signal new messages. Pull before reading, push after writing.
 
 ## Key Resources on Mac (Read via GitHub)
 
