@@ -236,7 +236,36 @@ Use this file to coordinate across PC work chats. Each session should read this 
 
 **Open items:**
 - [ ] **WebDev** — Phase 2 (later): Portal foundation — auth, database, borrower schema, route group
-- [ ] **David** — Still need Zoho env vars in Vercel (carried forward from Feb 23 WebDev session)
+- [x] ~~**David** — Still need Zoho env vars in Vercel~~ (done — new CRM-scoped refresh token set)
 - [ ] **David → Mac** — Relay WEBSITE-2026 tracker update (carried forward)
 - [ ] **WebDev** — Validate structured data with Google Rich Results Test after deploy
 - [ ] **WebDev** — Submit sitemap to GSC (Google Search Console) after deploy
+
+---
+
+## Session: February 23, 2026 (cont'd) - Zoho CRM Fix + End-to-End Test (WebDev)
+
+**Chat focus:** Fixed Zoho OAuth scope (was Creator, needed CRM), tested live contact form end-to-end, added Google-Extended to robots.txt.
+
+**What was done:**
+- Discovered existing Zoho refresh token had **Zoho Creator** scope, not **Zoho CRM** scope — that's why the lead API was returning 502
+- Walked David through generating a new grant token in Zoho API Console Self Client with scope `ZohoCRM.modules.leads.CREATE,ZohoCRM.modules.leads.READ`
+- Exchanged grant token for new CRM-scoped refresh token
+- Tested Zoho CRM lead creation directly — confirmed working (test lead created)
+- David updated `ZOHO_REFRESH_TOKEN` in Vercel with the new value and redeployed
+- Tested live site end-to-end: `POST https://netratemortgage.com/api/lead` → **200 OK**, lead created in Zoho CRM
+- Added `Google-Extended` (Gemini) user-agent to robots.txt (was missing from initial version)
+
+**Key decisions:**
+- Zoho Self Client reused (same client_id/client_secret), only the refresh token changed
+- Old Creator-scoped token is now stale — only the CRM-scoped token is in use
+
+**Commits (netrate-mortgage-site):**
+- `e2100c7` — Add Google-Extended (Gemini) to robots.txt AI bot allowlist
+
+**Open items:**
+- [ ] **David** — Delete 2 test leads from Zoho CRM ("Test Lead - Delete Me" and "Website Test 2 - Delete Me")
+- [ ] **David → Mac** — Relay: "clerk: WEBSITE-2026 — All Phase 1 complete. GA4 live, all content pages deployed, contact form creating leads in Zoho CRM, AI search optimization shipped (llms.txt, Schema.org, robots.txt, sitemap). Ready for Phase 2 (portal)."
+- [ ] **WebDev** — Validate structured data with Google Rich Results Test
+- [ ] **WebDev** — Submit sitemap to GSC
+- [ ] **WebDev** — Phase 2 (later): Portal foundation
