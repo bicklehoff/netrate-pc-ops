@@ -126,7 +126,7 @@ Use this file to coordinate across PC work chats. Each session should read this 
 2. How will portal data sync from Mac trackers? (read-only API? JSON push? Vercel serverless function?)
 3. Should portal data live in the site repo or in a separate data repo?
 
-**Status:** Awaiting David relay to Mac for review.
+**Status:** ✅ Resolved — Mac approved. See `netrate-governance/BORROWER-PORTAL-BRIEF.md` for full design brief. Shelved for now — website first.
 
 ---
 
