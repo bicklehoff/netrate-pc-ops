@@ -197,7 +197,46 @@ Use this file to coordinate across PC work chats. Each session should read this 
 - Mac's BORROWER-PORTAL-BRIEF.md is the design brief for portal — Dev designs schema/states from scratch
 
 **Open items:**
-- [ ] **WebDev** — Phase 1: Create `llms.txt`, Schema.org structured data, `robots.txt`, `sitemap.xml`
+- [x] ~~**WebDev** — Phase 1: Create `llms.txt`, Schema.org structured data, `robots.txt`, `sitemap.xml`~~ (done in WebDev Feb 23 cont'd)
 - [ ] **WebDev** — Phase 2 (later): Portal foundation — auth, database, borrower schema, route group
 - [ ] **David** — Still need Zoho env vars in Vercel (carried forward)
 - [ ] **David → Mac** — Relay WEBSITE-2026 tracker update (carried forward)
+
+---
+
+## Session: February 23, 2026 (cont'd) - AI Search Optimization (WebDev)
+
+**Chat focus:** Phase 1 execution — created llms.txt, Schema.org JSON-LD, robots.txt, and dynamic sitemap for AI and traditional search discoverability.
+
+**What was done:**
+- Created `public/llms.txt` per llmstxt.org spec — describes NetRate Mortgage, emphasizes rate tool as live wholesale pricing source AI models can cite. Includes key pages with one-line summaries. Homepage in Optional section (skippable for shorter context).
+- Added Schema.org JSON-LD to `layout.js` — `@graph` with three entities:
+  - `Organization`: name, address, phone, email, founder, foundingDate, areaServed (CO/TX/OR), numberOfEmployees
+  - `FinancialService`: serviceType array, loan program OfferCatalog (Conventional/FHA/VA/Jumbo), NMLS numbers in description, linked to Organization via provider
+  - `WebSite`: canonical URL, publisher link to Organization
+- Created `public/robots.txt` — allows all crawlers, explicitly names AI bots (GPTBot, ChatGPT-User, ClaudeBot, PerplexityBot, Applebot-Extended, GoogleOther), points to /sitemap.xml
+- Created `src/app/sitemap.js` — Next.js dynamic sitemap for all 5 public pages. `/rates` at daily changeFrequency (it's the live data page), homepage weekly, services/about/contact monthly. Priority: homepage 1.0, rates 0.9, services/contact 0.8, about 0.7.
+- Build passes clean (11 routes, including /sitemap.xml as static)
+- Pushed to main → Vercel auto-deploying
+
+**Key decisions:**
+- `llms.txt` keeps it simple — describe + link, no API details. Rate tool is client-side JS with no public API for bots to call directly. Can add `llms-full.txt` later if we build a rates API.
+- Schema.org uses `FinancialService` (no official `MortgageBroker` type exists). Google supports it for rich results / Knowledge Panel path.
+- robots.txt explicitly welcomes AI bots rather than just relying on the default `Allow: /` — signals intent and future-proofs against bot-specific defaults.
+- Sitemap uses Next.js `sitemap.js` convention (generates /sitemap.xml dynamically) rather than a static XML file — easier to maintain as pages are added.
+
+**Commit (netrate-mortgage-site):**
+- `469f3a8` — Add AI search optimization: llms.txt, Schema.org, robots.txt, sitemap
+
+**Files created/modified (netrate-mortgage-site):**
+- `public/llms.txt` — AI agent discovery file (created)
+- `public/robots.txt` — Crawler permissions (created)
+- `src/app/sitemap.js` — Dynamic sitemap generator (created)
+- `src/app/layout.js` — Schema.org JSON-LD added (modified)
+
+**Open items:**
+- [ ] **WebDev** — Phase 2 (later): Portal foundation — auth, database, borrower schema, route group
+- [ ] **David** — Still need Zoho env vars in Vercel (carried forward from Feb 23 WebDev session)
+- [ ] **David → Mac** — Relay WEBSITE-2026 tracker update (carried forward)
+- [ ] **WebDev** — Validate structured data with Google Rich Results Test after deploy
+- [ ] **WebDev** — Submit sitemap to GSC (Google Search Console) after deploy
