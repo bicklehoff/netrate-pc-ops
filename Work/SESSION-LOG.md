@@ -75,6 +75,55 @@ Use this file to coordinate across PC work chats. Each session should read this 
 - GSC: Verified
 
 **Open items:**
-- [ ] WebDev — Clone netrate-mortgage-site repo and start building
-- [ ] Setup — Clone netrate-governance repo for shared rules reference
+- [x] ~~WebDev — Clone netrate-mortgage-site repo and start building~~ (done in Setup Feb 23)
+- [x] ~~Setup — Clone netrate-governance repo for shared rules reference~~ (done in Setup Feb 23)
 - [ ] WebDev — Read Mac's Marketing copy files for website content
+
+---
+
+## Session: February 23, 2026 - PC Bootstrap + Vercel Check (Setup)
+
+**Chat focus:** First PC-native Setup session. Cloned all repos, verified Vercel deployment, confirmed GA4 status, prepped handoff to WebDev.
+
+**What was done:**
+- Cloned `netrate-governance` to `D:\PROJECTS\netrate-governance`
+- Cloned `netrate-pc-ops` to `D:\PROJECTS\netrate-pc-ops`
+- Cloned `netrate-mortgage-site` to `D:\PROJECTS\netrate-mortgage-site`
+- Verified Vercel is connected and auto-deploying from `main` branch (deployed 3 days ago, live at netrate-mortgage-site.vercel.app)
+- Confirmed GA4 (`G-QPEE5ZSZ79`) is NOT yet in layout.js — still needs adding
+- Started GA4 edit in layout.js (added `next/script` import + gtag snippet) but **not committed** — handing off to WebDev to review and commit
+
+**Key decisions:**
+- All 3 repos live at `D:\PROJECTS/` on PC
+- Dev work on `netrate-mortgage-site` belongs to WebDev department, not Setup
+- Setup session stays for architecture/coordination only
+
+**Files modified (uncommitted, in netrate-mortgage-site):**
+- `src/app/layout.js` — GA4 script tags added but NOT committed
+
+**Open items:**
+- [ ] **WebDev** — Review and commit the GA4 addition in layout.js, push to deploy
+- [ ] **WebDev** — Integrate marketing copy into 4 pages (homepage, about, services, contact). Copy is in `netrate-ops` at `Work/Marketing/Website/copy/`
+- [ ] **WebDev** — Wire lead capture form to Zoho CRM API
+- [ ] **David → Mac** — Relay that PC is bootstrapped and WebDev is ready to pick up work
+
+### ⚠️ Architecture Proposal: Borrower Portal Infrastructure (needs Mac approval)
+
+**Proposed by:** PC Setup, Feb 23
+
+**Context:** The mortgage site (`netrate-mortgage-site`) will eventually become a borrower-facing portal with its own tracked data (loan status, documents, milestones). That portal will need a read path from Mac's back-end trackers to display borrower-facing details.
+
+**Proposal:** Set up `netrate-mortgage-site` with full `.claude/` infrastructure mirroring Mac's pattern:
+- `.claude/agents/clerk.md` — customized for front-end portal data (dormant until portal exists)
+- `.claude/scripts/validate-tracker-write.sh` — write guard for future portal data files
+- `.claude/settings.local.json` — permissions + hook wiring
+- `CLAUDE.md` — WebDev department rules, references governance
+
+**Why now:** Easier to build on the right foundation than to retrofit later. The scaffolding is dormant — no functional impact until portal data exists.
+
+**Needs agreement on:**
+1. Does Mac approve mirroring the `.claude/` structure for the site repo?
+2. How will portal data sync from Mac trackers? (read-only API? JSON push? Vercel serverless function?)
+3. Should portal data live in the site repo or in a separate data repo?
+
+**Status:** Awaiting David relay to Mac for review.
