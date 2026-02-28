@@ -268,4 +268,194 @@ Use this file to coordinate across PC work chats. Each session should read this 
 - [ ] **David → Mac** — Relay: "clerk: WEBSITE-2026 — All Phase 1 complete. GA4 live, all content pages deployed, contact form creating leads in Zoho CRM, AI search optimization shipped (llms.txt, Schema.org, robots.txt, sitemap). Ready for Phase 2 (portal)."
 - [ ] **WebDev** — Validate structured data with Google Rich Results Test
 - [ ] **WebDev** — Submit sitemap to GSC
-- [ ] **WebDev** — Phase 2 (later): Portal foundation
+- [x] ~~**WebDev** — Phase 2 (later): Portal foundation~~ (done — Feb 23-24 sessions)
+
+---
+
+## Session: February 23, 2026 - Borrower Portal Architecture Planning (WebDev)
+
+**Chat focus:** Full architecture planning session for the borrower portal. Analyzed 3 LendingDox BPMN workflows, designed the 6-step application form, database schema, loan state machine, auth model, and build plan.
+
+**What was done:**
+- Analyzed 3 LendingDox BPMN XML files (EZ, Standard, Pre-qual flows)
+- Chose Flow 2 (Standard) as the base — more complete, better for MLO processing
+- Designed 6-step application wizard (~32 fields) with purchase/refinance branching
+- Designed database schema (5 tables: borrowers, mlos, loans, loan_events, documents)
+- Designed loan state machine (10 states: draft → funded, with suspended/denied branches)
+- Designed two-factor auth: magic link (email) + SMS verification (phone via Zoho Voice API)
+- Designed AES-256-GCM encryption for SSN and DOB
+- Designed XML export for wholesale lender submission
+- Resolved all 7 architecture decisions through iterative discussion with David
+- Wrote comprehensive PORTAL-ARCHITECTURE-PLAN.md
+
+**Key decisions:**
+- SSN/DOB collected in Step 1 — encrypted with AES-256-GCM at application level
+- Borrower auth: magic link + SMS (no passwords). Zoho Voice for SMS (no Twilio)
+- Database: Vercel Postgres (now Neon) + Prisma ORM
+- File storage: Vercel Blob
+- Path-based routing: `netratemortgage.com/portal/*`
+- MLO accounts: hard-coded seed (David = admin, Jamie = MLO)
+- Email sender: new alias `portal@netratemortgage.com` via Zoho Mail API
+- XML export included in v1 scope (originally deferred to v2)
+- Coborrower flow deferred to v2
+
+**Files created (netrate-pc-ops):**
+- `Work/WebDev/PORTAL-ARCHITECTURE-PLAN.md` — Full architecture document
+
+---
+
+## Session: February 24, 2026 - Portal Phase 2a Foundation Build (WebDev)
+
+**Chat focus:** Phase 2a execution — installed all dependencies, created Prisma schema, set up NextAuth, built portal route group, connected Neon Postgres, ran first migration, seeded MLO accounts.
+
+**What was done:**
+- Installed 9 production deps: next-auth, @prisma/client, @neondatabase/serverless, @vercel/blob, react-hook-form, zod, @hookform/resolvers, bcrypt, dotenv
+- Discovered `@vercel/postgres` is deprecated — replaced with `@neondatabase/serverless` (Neon is what Vercel Postgres became)
+- Created Prisma schema with all 5 tables (borrowers, mlos, loans, loan_events, documents) with proper @map to snake_case columns
+- Created `src/lib/prisma.js` — Prisma client singleton
+- Created `src/lib/encryption.js` — AES-256-GCM encrypt/decrypt/ssnLastFour
+- Created `src/lib/loan-states.js` — State machine, transitions, ball-in-court, email triggers, helper functions
+- Created `src/lib/auth.js` — NextAuth config (CredentialsProvider for MLO), plus custom magic link + SMS verification helpers for borrowers
+- Created `src/lib/validations/application.js` — Zod schemas for all 6 form steps
+- Created `src/middleware.js` — Route protection for MLO and borrower dashboard routes
+- Created `src/app/api/auth/[...nextauth]/route.js` — NextAuth API handler
+- Created portal route group with 9 pages
+- Walked David through Neon Postgres setup in Vercel Marketplace (free tier, US East)
+- Connected Neon database to project, set up env vars
+- Ran first Prisma migration — all 5 tables created in Neon
+- Seeded MLO accounts: David (admin) + Jamie (MLO) with default passwords
+- Build passes clean: 18 routes, zero errors
+
+**Key decisions:**
+- `@vercel/postgres` deprecated → use `@neondatabase/serverless` instead
+- Neon Postgres free tier (0.5 GB) — sufficient for v1
+- Prisma 6 generates TypeScript — seed script uses `npx tsx` to run
+- `DIRECT_URL` manually added in Vercel (Neon creates `DATABASE_URL_UNPOOLED` but Prisma expects `DIRECT_URL`)
+
+**Commits:** Not yet committed — all changes local, pending review before push.
+
+**Environment variables set in Vercel:**
+- `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `DIRECT_URL`, `PII_ENCRYPTION_KEY`, `NEXTAUTH_SECRET`
+
+**Open items:**
+- [ ] **WebDev** — Commit and push Phase 2a foundation to main
+- [ ] **WebDev** — Phase 2b: Build 6-step form fields with React Hook Form + Zod
+- [ ] **WebDev** — Phase 2c: Borrower dashboard, doc uploads, Zoho Mail notifications
+- [ ] **WebDev** — Phase 2d: MLO dashboard, status transitions, XML export
+- [ ] **David** — Change default MLO passwords after first login
+- [ ] **David** — Create `portal@netratemortgage.com` email alias in Zoho Mail (for Phase 2c)
+- [ ] **David** — Generate Zoho Mail + Zoho Voice grant tokens (for Phase 2b/2c)
+- [ ] **David → Mac** — Relay WEBSITE-2026 tracker update (carried forward)
+
+---
+
+## Session: February 25, 2026 - Project Roadmap Planning (Setup)
+
+**Chat focus:** Design a PC project roadmap/tracker — David's equivalent of Mac's TrackerPortal, but for PC-side development projects. Decided to build it into the existing portal app rather than a separate tool.
+
+**What was done:**
+- Explored Mac's TrackerPortal architecture (localhost Next.js app reading flat JSON trackers)
+- Explored PC portal codebase — discovered it's far more advanced than SESSION-LOG reflected (25+ commits, full application wizard, auth, MLO dashboard, Prisma/Neon, PII encryption all built and deployed)
+- Evaluated 3 approaches: standalone tool (Mac style), separate Next.js app, or build into portal
+- Chose "build into portal" — reuses existing Neon DB, NextAuth, and Tailwind patterns
+- Wrote full plan for `/portal/mlo/roadmap` admin-only page
+- Plan includes: 2 new Prisma models (Project + Milestone), 4 API routes, kanban board UI, seed data for 13 current projects
+- Wrote WebDev handoff prompt
+
+**Key decisions:**
+- Roadmap lives at `/portal/mlo/roadmap` (not a separate `/portal/admin/` route group — follows existing pattern where admin features are role-gated within MLO routes)
+- Two new Prisma models: `Project` and `Milestone` — independent of loan tables
+- "Ball tracking" is the key UI principle — every project shows whose court it's in (dev / david / blocked / done)
+- Kanban-style board grouped by status (Planned / In Progress / Completed) with department filter tabs
+- Admin-only access (same auth pattern as existing MLO API guards)
+- No new component libraries — raw Tailwind matching existing portal patterns
+- 13 current projects seeded reflecting actual state of play
+
+**Files created/modified:**
+- `C:\Users\bickl\.claude\plans\iterative-weaving-abelson.md` — Full roadmap plan (replaces old strategy plan which is now complete)
+
+**Open items:**
+- [ ] **WebDev** — Build the roadmap feature per the plan (see WebDev prompt in plan file)
+- [ ] **David** — Set up Google Maps API key for address autocomplete (carried forward)
+- [ ] **David** — Set Twilio API keys in Vercel env vars (carried forward)
+- [ ] **David → Mac** — Relay WEBSITE-2026 tracker update (carried forward)
+- [ ] **David** — Delete 2 test leads from Zoho CRM (carried forward)
+
+---
+
+## Session: February 26-27, 2026 - Marketing Strategy & Website Trust Signals (Marketing)
+
+**Chat focus:** Full marketing strategy session — lead capture design, trust signals spec, traffic generation plan, daily market content integration, analytics dashboard planning, site review, and dev handoff for Batch 1 website updates.
+
+**Note:** This was a long multi-session conversation (ran out of context once, continued). Marketing is not a formal PC department — this session covered strategy, website review, and dev briefing across all consumer-facing marketing work.
+
+**What was done:**
+
+*Strategy & Planning:*
+- Built comprehensive marketing playbook covering brand positioning, trust signals, lead capture, traffic generation (7 channels), analytics, and compliance
+- Designed rate tool lead capture flow: "Get This Rate" buttons per row + on recoup cards → modal with pre-filled rate data + Name/Phone/Email → Zoho CRM
+- Created interactive HTML mockup of the lead capture flow
+- Planned 7-channel traffic generation strategy on ~$1K/mo budget (Google Ads, Bing Ads, GBP, AI/GEO, rate table leads, state landing pages, social/Reddit)
+- Planned custom standalone marketing analytics dashboard (Google Ads API + Bing Ads API + Zoho CRM API)
+- Planned MBS Live daily market data → agent-automated website content + social posts
+- Researched Google Business Profile migration, AI search optimization (GEO), Bing Ads opportunity
+
+*Brand Decisions (David's — documented in playbook):*
+- NO personal photos (makes operation look small)
+- NO application-to-funding rate (consumers don't have frame of reference)
+- NO AI mentions on consumer-facing content (compliance risk, not a selling point)
+- Size perception: straddle between call center and solo broker
+- NO location-heavy branding (hurts out-of-state conversion)
+- GBP rename from Locus → NetRate: DEFERRED (not blocking review display)
+
+*Trust Signals Spec (for WebDev):*
+- Trust checkmark bar: ✓ No application or credit pull · ✓ Real wholesale rates, updated daily · ✓ Compare multiple loan options
+- Google Reviews: 4.9 stars, 35 reviews, 6 curated quotes, "Formerly Locus Mortgage" note, Place ID `ChIJa5-5jCXza4cRptwJxaP23eU`
+- BBB A+ seal: Got actual embed code from David (static image seal, Business ID 90159653)
+- NMLS Consumer Access logo + Equal Housing Opportunity icon
+- BBB seal in email signatures (static image, Jamie to implement)
+- Google Reviews footer banner (site-wide, dark background)
+
+*Site Review (Feb 27):*
+- Reviewed live homepage with password access
+- Found: Google reviews section already built by dev (6 cards, looks great)
+- Found: BBB/NMLS/Equal Housing icons present but BBB is generic, not real seal
+- Missing: Trust checkmark bar, footer review banner, "Formerly Locus Mortgage" note, bottom CTA copy update, rate tool lead capture, favicon color mismatch
+- Wrote detailed webdev log with punch list for all missing items
+
+*Favicon Redesign:*
+- Current favicon uses `#0d9488` (green-teal), site uses `#0891b2` (blue-teal) — mismatch
+- Designed 3 options: color fix, logo-match split treatment, bold single "N"
+- David chose Option C: Bold white "N" on brand teal `#0891b2`
+- Created production SVG file ready for dev to drop in
+
+**Key decisions:**
+- GBP rename deferred — reviews display proceeds with "Formerly Locus Mortgage" note
+- Lead capture via "Get This Rate" buttons → modal → Zoho CRM (not gating behind forms)
+- Custom standalone dashboard over Zoho Analytics
+- Google Ads / Bing Ads budget split: 70/30 starting point
+- MBS Live market data via OpenClaw agent → daily website content
+- Favicon: Bold "N" on teal (Option C)
+- Email primary, PDF secondary for quote delivery
+- Bottom CTA copy: "Not Sure Which Rate? Let Us Help."
+
+**Files created/modified:**
+- `D:\netrate-marketing-playbook.md` — Master marketing strategy document (created, updated multiple times)
+- `D:\netrate-dev-brief.md` — Actionable dev brief, Batch 1 + Batch 2 (created, updated)
+- `D:\netrate-webdev-log-2026-02-27.md` — Detailed site review + punch list for dev (created)
+- `D:\mockup-rate-tool-lead-capture.html` — Interactive HTML mockup of lead capture flow (created)
+- `D:\netrate-favicon.svg` — New favicon SVG (created)
+- `D:\favicon-options.html` — Favicon comparison mockup (created, reference only)
+- `D:\netrate-marketing-playbook.md` — Updated: GBP rename deferred, review data with Place ID, "Formerly Locus Mortgage" treatment, Channel 1 updated, BBB email signature spec
+- `D:\netrate-dev-brief.md` — Updated: Concrete review specs (4.9 stars, 35 reviews, exact link URL, exact quotes), BBB actual embed code, fixed duplicate numbering, renumbered Batch 1 (1-6) and Batch 2 (7-12)
+
+**Open items:**
+- [ ] **WebDev** — Implement Batch 1 punch list per `D:\netrate-webdev-log-2026-02-27.md` (trust bar, real BBB seal, "formerly" note, footer review banner, bottom CTA copy, rate tool lead capture, UTM capture, favicon swap)
+- [ ] **David** — Contact BBB Denver/Boulder to rename Locus → NetRate (when convenient, not blocking)
+- [ ] **David** — Hand `D:\netrate-webdev-log-2026-02-27.md` + `D:\netrate-dev-brief.md` to dev
+- [ ] **David/Jamie** — Add BBB static seal image to email signatures after BBB rename
+- [ ] **David** — Verify MBS Live TOS allows summarized market commentary on website
+- [ ] **Setup** — Configure OpenClaw agent to monitor MBS Live for daily market summaries
+- [ ] **WebDev** — Batch 2 items after Batch 1 ships (AI crawler access, schema markup, FAQ expansion, state landing pages, Today's Market component)
+- [ ] **David** — Launch Google Ads + Bing Ads campaigns after lead capture ships
+- [ ] **David → Mac** — Relay: Marketing strategy complete. Playbook, dev brief, and site review ready. Batch 1 trust signals + lead capture spec'd for WebDev.
