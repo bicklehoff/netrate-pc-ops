@@ -13,10 +13,10 @@ This device handles all public-facing work: website, borrower products, calculat
 The following are defined in `netrate-governance/GOVERNANCE.md` and apply to ALL devices:
 - Session Protocol (read log → work → log)
 - Department Model (concept)
-- Clerk Protocol (status updates via subagent)
+- EOD Protocol (end of day wrap-up)
+- Tracker Architecture (SQLite — see GOVERNANCE.md)
 - Spotter Protocol (friction scanner)
 - Auditor Role (independent review)
-- Tracker Write Permissions (write guard + flag system)
 - Document Generation rules
 - Process Documentation rules
 - Cross-Device Rules (device roles, tracker authority, governance changes)
@@ -86,17 +86,15 @@ Ask: "Which department should I work as? (WebDev, Products, Integrations, Admin,
 
 **This PC has NO tracker write access.**
 
-- ALL tracker JSON files live on Mac in `netrate-ops` at `Work/Admin/trackers/`
-- Mac Admin creates/edits tracker content, Mac Clerk updates status
+- All tracker data lives in SQLite on Mac
+- All departments write trackers via TrackerPortal API routes
 - PC views trackers via TrackerPortal on Vercel (read-only dashboard)
 
 **When PC completes work:**
 1. Log it in PC's `Work/SESSION-LOG.md`
-2. David relays to Mac: "clerk: [PROJECT-ID] — [what happened]"
-3. Mac Clerk updates the tracker
-4. TrackerPortal on Vercel reflects the update after next sync
+2. David relays to Mac → Mac updates tracker via API
 
-**PC does NOT have a Clerk agent.** The Clerk only runs on Mac where the trackers live.
+PC has no Clerk agent and no write-guard hook. The Clerk pattern is retired across all devices.
 
 ---
 
@@ -105,9 +103,9 @@ Ask: "Which department should I work as? (WebDev, Products, Integrations, Admin,
 ```
 Mac writes marketing copy → pushes to netrate-ops → PC reads from GitHub
 Mac writes rate tool source → pushes to netrate-ops → PC reads for porting
-Mac Clerk updates trackers → pushes to netrate-ops → Vercel TrackerPortal reflects
+Mac updates trackers via API → TrackerPortal on Vercel reflects changes
 PC builds website → pushes to netrate-pc-ops → Vercel auto-deploys from Work/Development/netrate-mortgage-site/
-PC completes work → logs in PC SESSION-LOG → David relays to Mac → Mac Clerk updates tracker
+PC completes work → logs in PC SESSION-LOG → David relays to Mac → Mac updates tracker via API
 Cross-device proposals/questions → post to RELAY.md in netrate-governance → other device pulls and reads
 ```
 
@@ -120,7 +118,7 @@ Cross-device proposals/questions → post to RELAY.md in netrate-governance → 
 | Rate tool source | `Work/Development/RateTool/` | Port to website |
 | Marketing copy | `Work/Marketing/Website/copy/` | Website content |
 | Brand guide | `Work/Marketing/Brand/BRAND_GUIDE.md` | Colors, fonts, logo specs |
-| Tracker schema | `netrate-governance/TRACKER_SCHEMA_V2.md` | Reference only |
+| Tracker schema | SQLite — see `GOVERNANCE.md` Tracker Architecture section | Reference only |
 | Production data | `Work/Admin/mcr/PRODUCTION-SUMMARY.json` | Business metrics |
 
 ---
