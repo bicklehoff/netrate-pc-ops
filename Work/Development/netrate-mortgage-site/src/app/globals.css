@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand-primary: #0891b2;
+  --brand-dark: #0e7490;
+  --text-primary: #0f172a;
+  --text-body: #334155;
+  --text-light: #64748b;
+  --text-muted: #94a3b8;
+  --bg-page: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-subtle: #f1f5f9;
+  --border: #e2e8f0;
+  --success: #059669;
+  --warning: #dc2626;
+}
+
+body {
+  color: var(--text-body);
+  background: var(--bg-page);
+}

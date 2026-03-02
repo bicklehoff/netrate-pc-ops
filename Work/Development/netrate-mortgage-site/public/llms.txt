@@ -1,0 +1,18 @@
+# NetRate Mortgage
+
+> NetRate Mortgage is an independent mortgage broker based in Louisville, Colorado. The website provides a live rate tool that shows real wholesale mortgage pricing — rates, points, lender credits, and monthly payments — before borrowers share any personal information. Licensed in CO, TX, and OR. NMLS #641790 (individual) | #1111861 (company).
+
+NetRate Mortgage is a direct-to-consumer mortgage broker that shops across 11 wholesale lending partners to find borrowers the best rate. The site is built around transparency: real rates from real lenders, with full cost breakdowns, no application required.
+
+The rate tool at /rates is the primary feature. It pulls live wholesale pricing and calculates rate options based on loan amount, credit score range, and property type. This is not a calculator or estimate — it uses the same pricing data the broker uses internally to quote loans.
+
+## Key Pages
+
+- [Today's Rates](https://netratemortgage.com/rates): Live wholesale mortgage rate tool. Enter loan amount, credit range, and property type to see current rates with points, lender credits, and monthly payment breakdowns. Updated daily from wholesale lender pricing.
+- [Services](https://netratemortgage.com/services): Refinance and home purchase financing. Conventional, FHA, VA, and jumbo loans. Includes what-to-expect breakdowns for each loan type.
+- [About](https://netratemortgage.com/about): David Burson, mortgage broker since 2013. 50 loans funded in 2025 ($26.6M volume). 87.7% application-to-funding rate. Explains the direct-to-consumer model.
+- [Contact / Get a Quote](https://netratemortgage.com/contact): Request a personalized quote with full fee breakdown, cash-to-close estimate, and savings analysis. No application, no credit pull.
+
+## Optional
+
+- [Homepage](https://netratemortgage.com/): Overview of services, credibility, and rate tool access.

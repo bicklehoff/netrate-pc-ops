@@ -1,0 +1,106 @@
+'use client';
+
+import { useMemo } from 'react';
+import { getFicoBand } from '@/lib/rates/engine';
+
+export default function ScenarioForm({ scenario, onChange }) {
+  const update = (field, value) => onChange({ ...scenario, [field]: value });
+
+  const loanAmount = useMemo(() => {
+    if (scenario.purpose === "purchase") {
+      return scenario.propertyValue * (1 - scenario.downPaymentPct / 100);
+    }
+    return scenario.currentPayoff || 0;
+  }, [scenario.purpose, scenario.propertyValue, scenario.downPaymentPct, scenario.currentPayoff]);
+
+  const ltv = useMemo(() => {
+    if (!scenario.propertyValue) return 0;
+    return (loanAmount / scenario.propertyValue) * 100;
+  }, [loanAmount, scenario.propertyValue]);
+
+  useMemo(() => {
+    if (scenario.loanAmount !== loanAmount || scenario.ltv !== ltv) {
+      onChange({ ...scenario, loanAmount, ltv });
+    }
+  }, [loanAmount, ltv]);
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-lg p-5 my-4">
+      <h2 className="text-lg font-semibold text-gray-800 mb-4">Your Scenario</h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
+        <div>
+          <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Loan Purpose</label>
+          <select value={scenario.purpose} onChange={e => update("purpose", e.target.value)}
+            className="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white">
+            <option value="purchase">Purchase</option>
+            <option value="refi">Rate/Term Refinance</option>
+            <option value="cashout">Cash-Out Refinance</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Property Type</label>
+          <select value={scenario.propertyType} onChange={e => update("propertyType", e.target.value)}
+            className="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white">
+            <option value="sfr">Single Family</option>
+            <option value="condo">Condo</option>
+            <option value="townhome">Townhome</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">
+            {scenario.purpose === "purchase" ? "Purchase Price" : "Property Value"}
+          </label>
+          <input type="number" value={scenario.propertyValue || ""} placeholder="$"
+            onChange={e => update("propertyValue", Number(e.target.value))}
+            className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+        </div>
+        {scenario.purpose === "purchase" ? (
+          <div>
+            <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Down Payment %</label>
+            <input type="number" value={scenario.downPaymentPct || ""} placeholder="%"
+              onChange={e => update("downPaymentPct", Number(e.target.value))}
+              className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+          </div>
+        ) : (
+          <div>
+            <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Current Payoff</label>
+            <input type="number" value={scenario.currentPayoff || ""} placeholder="$"
+              onChange={e => update("currentPayoff", Number(e.target.value))}
+              className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+          </div>
+        )}
+        <div>
+          <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Credit Score</label>
+          <select value={scenario.fico} onChange={e => update("fico", Number(e.target.value))}
+            className="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white">
+            <option value={800}>800+</option>
+            <option value={780}>780 - 799</option>
+            <option value={760}>760 - 779</option>
+            <option value={740}>740 - 759</option>
+            <option value={720}>720 - 739</option>
+            <option value={700}>700 - 719</option>
+            <option value={680}>680 - 699</option>
+            <option value={660}>660 - 679</option>
+            <option value={640}>640 - 659</option>
+            <option value={620}>620 - 639</option>
+          </select>
+        </div>
+        {scenario.purpose !== "purchase" && (
+          <div>
+            <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Current Rate</label>
+            <input type="number" step="0.125" value={scenario.currentRate || ""} placeholder="%"
+              onChange={e => update("currentRate", Number(e.target.value))}
+              className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+          </div>
+        )}
+      </div>
+      {loanAmount > 0 && (
+        <div className="mt-4 pt-3 border-t border-gray-100 flex flex-wrap gap-6 text-sm text-gray-600">
+          <span>Loan Amount: <strong className="text-gray-800">${loanAmount.toLocaleString("en-US", { maximumFractionDigits: 0 })}</strong></span>
+          <span>LTV: <strong className="text-gray-800">{ltv.toFixed(1)}%</strong></span>
+          <span>FICO Band: <strong className="text-gray-800">{getFicoBand(scenario.fico)}</strong></span>
+        </div>
+      )}
+    </div>
+  );
+}

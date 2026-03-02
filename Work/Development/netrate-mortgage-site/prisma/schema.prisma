@@ -1,0 +1,263 @@
+// Borrower Portal — Prisma Schema
+// Based on PORTAL-ARCHITECTURE-PLAN.md (Feb 23, 2026)
+// Database: Neon Postgres (via Vercel Marketplace)
+
+generator client {
+  provider   = "prisma-client"
+  output     = "../src/generated/prisma"
+  engineType = "client"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─── Borrowers ───────────────────────────────────────────────
+
+model Borrower {
+  id              String    @id @default(uuid()) @db.Uuid
+  email           String    @unique
+  firstName       String    @map("first_name")
+  lastName        String    @map("last_name")
+  phone           String?
+
+  // PII — encrypted at application level (AES-256-GCM)
+  dobEncrypted    String    @map("dob_encrypted")
+  ssnEncrypted    String    @map("ssn_encrypted")
+  ssnLastFour     String    @map("ssn_last_four") @db.VarChar(4)
+
+  // Auth — magic link (no password)
+  phoneVerified   Boolean   @default(false) @map("phone_verified")
+  passwordHash    String?   @map("password_hash")
+  magicToken      String?   @map("magic_token")
+  magicExpires    DateTime? @map("magic_expires")
+
+  // SMS verification (second factor)
+  smsCode         String?   @map("sms_code")
+  smsCodeExpires  DateTime? @map("sms_code_expires")
+  smsAttempts     Int       @default(0) @map("sms_attempts")
+  smsLockedUntil  DateTime? @map("sms_locked_until")
+
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  loans           Loan[]
+  contact         Contact?
+
+  @@map("borrowers")
+}
+
+// ─── MLOs (Mortgage Loan Officers) ───────────────────────────
+
+model Mlo {
+  id              String    @id @default(uuid()) @db.Uuid
+  email           String    @unique
+  firstName       String    @map("first_name")
+  lastName        String    @map("last_name")
+  passwordHash    String    @map("password_hash")
+  role            String    @default("mlo") // 'mlo' | 'admin'
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  loans           Loan[]
+  requestedDocs   Document[] @relation("RequestedBy")
+  callLogs        CallLog[]
+  callNotes       CallNote[]
+  smsMessages     SmsMessage[]
+
+  @@map("mlos")
+}
+
+// ─── Loans ───────────────────────────────────────────────────
+
+model Loan {
+  id              String    @id @default(uuid()) @db.Uuid
+  borrowerId      String    @map("borrower_id") @db.Uuid
+  mloId           String?   @map("mlo_id") @db.Uuid
+  status          String    @default("draft") // Loan state machine
+  ballInCourt     String    @default("borrower") @map("ball_in_court") // 'borrower' | 'mlo' | 'lender'
+  purpose         String?   // 'purchase' | 'refinance'
+  occupancy       String?   // 'primary' | 'secondary' | 'investment'
+
+  // Property
+  propertyAddress Json?     @map("property_address") @db.JsonB
+  propertyType    String?   @map("property_type")
+  numUnits        Int?      @map("num_units")
+  purchasePrice   Decimal?  @map("purchase_price") @db.Decimal(12, 2)
+  downPayment     Decimal?  @map("down_payment") @db.Decimal(12, 2)
+  estimatedValue  Decimal?  @map("estimated_value") @db.Decimal(12, 2)
+  currentBalance  Decimal?  @map("current_balance") @db.Decimal(12, 2)
+  refiPurpose     String?   @map("refi_purpose")
+  cashOutAmount   Decimal?  @map("cash_out_amount") @db.Decimal(12, 2)
+
+  // Address History
+  currentAddress  Json?     @map("current_address") @db.JsonB
+  addressYears    Int?      @map("address_years")
+  addressMonths   Int?      @map("address_months")
+  mailingAddress  Json?     @map("mailing_address") @db.JsonB
+  maritalStatus   String?   @map("marital_status")
+  numDependents   Int?      @map("num_dependents")
+  dependentAges   String?   @map("dependent_ages")
+
+  // Employment & Income
+  employmentStatus     String?   @map("employment_status")
+  employerName         String?   @map("employer_name")
+  positionTitle        String?   @map("position_title")
+  yearsInPosition      Int?      @map("years_in_position")
+  monthlyBaseIncome    Decimal?  @map("monthly_base_income") @db.Decimal(12, 2)
+  otherMonthlyIncome   Decimal?  @map("other_monthly_income") @db.Decimal(12, 2)
+  otherIncomeSource    String?   @map("other_income_source")
+  presentHousingExpense Decimal? @map("present_housing_expense") @db.Decimal(12, 2)
+
+  // Declarations (flexible JSONB)
+  declarations    Json?     @db.JsonB
+
+  // Metadata
+  applicationStep Int       @default(1) @map("application_step")
+  submittedAt     DateTime? @map("submitted_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  borrower        Borrower  @relation(fields: [borrowerId], references: [id])
+  mlo             Mlo?      @relation(fields: [mloId], references: [id])
+  events          LoanEvent[]
+  documents       Document[]
+
+  @@map("loans")
+}
+
+// ─── Loan Events (Audit Trail) ──────────────────────────────
+
+model LoanEvent {
+  id              String    @id @default(uuid()) @db.Uuid
+  loanId          String    @map("loan_id") @db.Uuid
+  eventType       String    @map("event_type")  // 'status_change' | 'doc_requested' | 'doc_uploaded' | 'field_updated' | 'note_added' | 'ssn_revealed' | 'xml_export'
+  actorType       String    @map("actor_type")  // 'borrower' | 'mlo' | 'system'
+  actorId         String?   @map("actor_id") @db.Uuid
+  oldValue        String?   @map("old_value")
+  newValue        String?   @map("new_value")
+  details         Json?     @db.JsonB
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  loan            Loan      @relation(fields: [loanId], references: [id])
+
+  @@map("loan_events")
+}
+
+// ─── Documents ──────────────────────────────────────────────
+
+model Document {
+  id              String    @id @default(uuid()) @db.Uuid
+  loanId          String    @map("loan_id") @db.Uuid
+  docType         String    @map("doc_type")    // 'pay_stub' | 'w2' | 'bank_statement' | 'tax_return' | 'id' | 'other'
+  label           String                         // Display name, e.g. "Most Recent Pay Stub"
+  status          String    @default("requested") // 'requested' | 'uploaded' | 'reviewed' | 'accepted' | 'rejected'
+  requestedById   String?   @map("requested_by") @db.Uuid
+  fileUrl         String?   @map("file_url")     // Vercel Blob URL
+  fileName        String?   @map("file_name")
+  fileSize        Int?      @map("file_size")
+  uploadedAt      DateTime? @map("uploaded_at")
+  reviewedAt      DateTime? @map("reviewed_at")
+  notes           String?                         // MLO notes on rejection, etc.
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  loan            Loan      @relation(fields: [loanId], references: [id])
+  requestedBy     Mlo?      @relation("RequestedBy", fields: [requestedById], references: [id])
+
+  @@map("documents")
+}
+
+// ─── Contacts (Dialer CRM) ──────────────────────────────
+
+model Contact {
+  id              String    @id @default(uuid()) @db.Uuid
+  firstName       String    @map("first_name")
+  lastName        String    @map("last_name")
+  email           String?
+  phone           String?   // E.164 format
+  company         String?
+  source          String    @default("manual") // 'manual' | 'lead' | 'borrower' | 'zoho'
+  tags            String[]  @default([])       // Flexible tagging: 'borrower', 'realtor', 'lender', etc.
+  notes           String?                       // General notes about this contact
+
+  // Link to existing records (optional)
+  borrowerId      String?   @unique @map("borrower_id") @db.Uuid
+  zohoLeadId      String?   @map("zoho_lead_id")
+
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  borrower        Borrower? @relation(fields: [borrowerId], references: [id])
+  callLogs        CallLog[]
+  smsMessages     SmsMessage[]
+
+  @@index([phone])
+  @@index([email])
+  @@map("contacts")
+}
+
+// ─── Call Logs (Dialer) ──────────────────────────────────
+
+model CallLog {
+  id              String    @id @default(uuid()) @db.Uuid
+  contactId       String?   @map("contact_id") @db.Uuid
+  mloId           String    @map("mlo_id") @db.Uuid
+  direction       String    // 'inbound' | 'outbound'
+  fromNumber      String    @map("from_number")
+  toNumber        String    @map("to_number")
+  status          String    @default("initiated") // 'initiated' | 'ringing' | 'in-progress' | 'completed' | 'missed' | 'busy' | 'no-answer' | 'failed'
+  duration        Int?      // Seconds
+  recordingUrl    String?   @map("recording_url")
+  twilioCallSid   String?   @unique @map("twilio_call_sid")
+  startedAt       DateTime  @default(now()) @map("started_at")
+  endedAt         DateTime? @map("ended_at")
+
+  contact         Contact?  @relation(fields: [contactId], references: [id])
+  mlo             Mlo       @relation(fields: [mloId], references: [id])
+  notes           CallNote[]
+
+  @@index([contactId])
+  @@index([mloId])
+  @@index([twilioCallSid])
+  @@map("call_logs")
+}
+
+// ─── Call Notes ──────────────────────────────────────────
+
+model CallNote {
+  id              String    @id @default(uuid()) @db.Uuid
+  callLogId       String    @map("call_log_id") @db.Uuid
+  mloId           String    @map("mlo_id") @db.Uuid
+  content         String
+  disposition     String?   // 'interested' | 'callback' | 'not_interested' | 'wrong_number' | 'voicemail' | 'no_answer'
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  callLog         CallLog   @relation(fields: [callLogId], references: [id])
+  mlo             Mlo       @relation(fields: [mloId], references: [id])
+
+  @@map("call_notes")
+}
+
+// ─── SMS Messages ────────────────────────────────────────
+
+model SmsMessage {
+  id              String    @id @default(uuid()) @db.Uuid
+  contactId       String?   @map("contact_id") @db.Uuid
+  mloId           String?   @map("mlo_id") @db.Uuid
+  direction       String    // 'inbound' | 'outbound'
+  fromNumber      String    @map("from_number")
+  toNumber        String    @map("to_number")
+  body            String
+  status          String    @default("queued") // 'queued' | 'sent' | 'delivered' | 'failed' | 'received'
+  twilioMessageSid String?  @unique @map("twilio_message_sid")
+  sentAt          DateTime  @default(now()) @map("sent_at")
+
+  contact         Contact?  @relation(fields: [contactId], references: [id])
+  mlo             Mlo?      @relation(fields: [mloId], references: [id])
+
+  @@index([contactId])
+  @@index([twilioMessageSid])
+  @@map("sms_messages")
+}

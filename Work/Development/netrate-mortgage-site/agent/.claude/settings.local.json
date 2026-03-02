@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:help.zoho.com)",
+      "WebFetch(domain:docs.catalyst.zoho.com)",
+      "WebFetch(domain:www.zoho.com)",
+      "WebFetch(domain:truto.one)",
+      "WebFetch(domain:muxlet.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:www.motviz.com)",
+      "WebFetch(domain:apitracker.io)",
+      "Bash(ls:*)",
+      "Bash(wc:*)",
+      "Bash(curl:*)",
+      "Bash(python3:*)",
+      "Bash(npm install:*)",
+      "Bash(npx prisma migrate dev:*)",
+      "Bash(npx next build:*)",
+      "Bash(npx next lint:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(npx vercel --version)",
+      "Bash(npx vercel env ls production)",
+      "Bash(node -e \"let d='''';process.stdin.on\\(''data'',c=>d+=c\\);process.stdin.on\\(''end'',\\(\\)=>{const j=JSON.parse\\(d\\);console.log\\(''Voice URL:'',j.voice_url\\);console.log\\(''Status CB:'',j.status_callback\\)}\\)\")",
+      "WebFetch(domain:www.twilio.com)",
+      "WebFetch(domain:support.twilio.com)"
+    ]
+  }
+}

@@ -459,3 +459,145 @@ Use this file to coordinate across PC work chats. Each session should read this 
 - [ ] **WebDev** — Batch 2 items after Batch 1 ships (AI crawler access, schema markup, FAQ expansion, state landing pages, Today's Market component)
 - [ ] **David** — Launch Google Ads + Bing Ads campaigns after lead capture ships
 - [ ] **David → Mac** — Relay: Marketing strategy complete. Playbook, dev brief, and site review ready. Batch 1 trust signals + lead capture spec'd for WebDev.
+
+---
+
+## Session: February 27, 2026 - Rate Pipeline & Site Hardening (WebDev)
+
+**Chat focus:** GitHub token for Claw agent, site password wall, rate API cache fix, lender name stripping, marketing playbook portal page.
+
+**What was done:**
+- Created `ubuntu-agent-readonly` fine-grained GitHub token for Claw (Ubuntu agent) — scoped to `bicklehoff/netrate-mortgage-site` only, Contents + Metadata read-only, no expiration
+- Activated site-wide password wall — `SITE_PASSWORD` env var in Vercel controls access at `/site-access`, API routes excluded so rate pipeline keeps working
+- Fixed rate API caching that caused stale data (38+ min worst case). Reduced: function cache 15→2 min, CDN s-maxage 5→1 min, browser max-age 2→0.5 min, stale-while-revalidate 10→1 min. Worst-case staleness now ~3 min.
+- Stripped wholesale lender name from consumer-facing pages and API
+- Added admin-only Marketing Playbook page to MLO portal
+- Verified rate pipeline end-to-end: Claw parses → uploads to GCS → API serves within ~3 min
+
+**Commits (netrate-mortgage-site):**
+- `c64fc1e` — Reduce rate API cache TTLs to prevent stale data
+- `787b3c6` — Fix ESLint: use Object.entries filter instead of destructuring
+- `4b73966` — Add site-wide password wall for pre-launch compliance
+- `13c57f3` — Fix watcher to upload manifest.json after rate data
+- `9c907ee` — Fix ESLint unused variable errors in lender name stripping
+- `499c778` — Strip wholesale lender name from consumer-facing pages and API
+- `192d505` — Add action item checklist to marketing playbook
+- `70b70cc` — Add admin-only Marketing Playbook page to MLO portal
+
+**Open items:**
+- [ ] **Claw** — `git pull` and copy updated watcher: `cp ~/netrate-mortgage-site/agent/watcher.js ~/rates/watcher.js`
+- [ ] **David** — Revoke old expired classic `ghp_` GitHub token
+- [ ] **WebDev** — LoanSifter browser automation (Playwright-based skill for autonomous rate downloads)
+- [ ] **WebDev** — Rate effective date monitoring — alert if rates are stale beyond 1 business day
+
+---
+
+## Session: March 2, 2026 - Twilio Account Migration (Integrations/WebDev)
+
+**Chat focus:** Migrated all Twilio services from old locusmortgage trial account to cmglending pay-as-you-go account. First successful outbound call from MLO portal dialer.
+
+**What was done:**
+- Migrated Twilio from `ACdb8564fc...` (david@locusmortgage.com, trial, no console access) to `ACc65dbcde...` (david@cmglending.com, pay-as-you-go, ~$49 balance)
+- Provisioned: API Key `SKc21bc57a...`, TwiML App `AP0916cc46...`, Phone Number (720) 573-1236 / +17205731236 (Denver, CO), Verify Service `VAb786cd9a...`
+- Configured all webhook URLs (must use `www.netratemortgage.com`, not bare domain — Vercel redirects bare → www causing Twilio 405 errors):
+  - TwiML App Voice/Status → `/api/dialer/voice`, `/api/dialer/status`
+  - Phone Voice → `/api/dialer/incoming`
+  - Phone SMS → `/api/dialer/sms/incoming`, `/api/dialer/sms/status`
+- Updated local `.env` and 7 Vercel production env vars, redeployed
+- First successful outbound call — dialer shows "Online", token fetch works, Twilio Device registers, call connected
+
+**Commits:** None (all changes were Twilio API config + Vercel env vars)
+
+**Key decisions:**
+- All webhook URLs must use `www.netratemortgage.com` (not bare domain) to avoid 307 redirect → 405 error
+- Old locusmortgage phone number (720) 292-2558 will expire (unpaid trial)
+
+**Open items:**
+- [ ] **Integrations** — A2P 10DLC SMS registration ($15-50, 10-15 day approval)
+- [ ] **Integrations** — SMS testing — send/receive from dialer
+- [ ] **David** — Set `NEXT_PUBLIC_APP_URL` env var in Vercel for SMS status callbacks
+- [ ] **Integrations** — Inbound call testing — call (720) 573-1236 to test incoming call popup
+- [ ] **WebDev** — Dialer UI polish — combine search/dial input, smoother contact flow
+
+---
+
+## Session: March 2, 2026 - Document Structure & EOD Protocol (Setup)
+
+**Chat focus:** Design scalable PC doc structure, add EOD protocol to governance, plan project roadmap tracker for portal.
+
+**What was done:**
+- Investigated PC document landscape — found two SESSION-LOGs, 6 loose marketing files at D:\ root, no CLAUDE.md in mortgage-site repo, empty department folders
+- Designed two-repo model: `netrate-pc-ops` = operations hub, `netrate-mortgage-site` = code + CLAUDE.md
+- Designed EOD Protocol for governance — standardized "eod" command for wrapping up sessions
+- Added EOD Protocol to `netrate-governance/GOVERNANCE.md`
+- Posted EOD Protocol proposal to `netrate-governance/RELAY.md` for Mac approval
+- Wrote comprehensive plan covering: doc structure consolidation, EOD protocol, roadmap tracker feature
+- Merged mortgage-site SESSION-LOG entries into pc-ops SESSION-LOG (this entry)
+- Educated David on: session scoping, launch directories, CLAUDE.md hierarchy, commit vs push, CLI vs desktop app
+
+**Key decisions:**
+- ONE SESSION-LOG for all PC work: `netrate-pc-ops/Work/SESSION-LOG.md`
+- CLAUDE.md goes in `netrate-mortgage-site` (project context) but points to pc-ops for logging
+- Session launch rules: Dev/Marketing from `netrate-mortgage-site`, Setup from `D:\`
+- EOD protocol: "eod" = wrap up this session, "eod all" = wrap up + Setup generates prompts for others
+- Roadmap tracker at `/portal/mlo/roadmap` — handed off to Dev
+
+**Files created/modified:**
+- `D:\PROJECTS\netrate-governance\GOVERNANCE.md` — Added EOD Protocol section
+- `D:\PROJECTS\netrate-governance\RELAY.md` — Added EOD Protocol governance proposal
+- `D:\PROJECTS\netrate-pc-ops\Work\SESSION-LOG.md` — Merged mortgage-site entries, added this entry
+- `C:\Users\bickl\.claude\plans\iterative-weaving-abelson.md` — Full plan (doc structure + EOD + roadmap)
+
+**Open items:**
+- [x] ~~**Setup** — Move 6 loose D:\ marketing files into pc-ops department folders~~ (done — one-repo migration)
+- [x] ~~**Setup** — Create department reference docs (Marketing/, Integrations/, WebDev/, Products/)~~ (done — TWILIO.md, ZOHO-CRM.md, plus marketing files moved)
+- [x] ~~**Setup** — Update pc-ops CLAUDE.md with session launch rules~~ (done — one-repo migration)
+- [x] ~~**David** — Tell Dev to create `netrate-mortgage-site/CLAUDE.md`~~ (done — Setup created it as part of migration)
+- [ ] **David** — Confirm what to do with 3 loose files in `D:\PROJECTS\` root (app_full_version.py, test_zoho_token.py, mostadvancedcoderequirements.txt)
+- [ ] **Mac** — Approve EOD Protocol governance change (pending via RELAY.md)
+- [ ] **WebDev** — Build roadmap feature per plan (see WebDev prompt in plan file)
+
+---
+
+## Session: March 2, 2026 (cont'd) - One-Repo Migration (Setup)
+
+**Chat focus:** Consolidated `netrate-mortgage-site` into `netrate-pc-ops` monorepo, matching Mac's pattern where code lives under `Work/Development/`.
+
+**What was done:**
+- Copied entire mortgage-site codebase into `Work/Development/netrate-mortgage-site/` (143 files, excluding .git, node_modules, .next, .env, stale docs)
+- Moved 6 loose marketing files from `D:\` root into `Work/Marketing/` (PLAYBOOK.md, DEV-BRIEF.md, WEBDEV-LOG, favicon, mockup, brand options)
+- Created CLAUDE.md cascade:
+  - `Work/Development/CLAUDE.md` — Dev department rules, session protocol
+  - `Work/Development/netrate-mortgage-site/CLAUDE.md` — Project tech stack, patterns, integrations
+  - Updated root `CLAUDE.md` — new folder structure, session launch rules, Development/ department
+- Created integration reference docs: `Work/Integrations/TWILIO.md`, `Work/Integrations/ZOHO-CRM.md`
+- Verified: `npm install` + `npm run build` pass clean in new location (all routes compiled)
+- Mac proposed this approach ("match how Mac organizes netrate-ops"), David approved
+
+**Key decisions:**
+- **One repo per device** — all PC code and docs live in `netrate-pc-ops`. Matches Mac's `netrate-ops` pattern.
+- **CLAUDE.md cascade** — project → department → root. Every Dev session gets full context automatically.
+- **Vercel reconfigured** — David will change connected repo and set root directory to `Work/Development/netrate-mortgage-site`
+- **Old repo archived** — `bicklehoff/netrate-mortgage-site` on GitHub stays read-only for git history reference
+- **Session launch rules** — all code sessions from `Work/Development/netrate-mortgage-site/`, Setup from repo root
+
+**Files created:**
+- `Work/Development/CLAUDE.md`
+- `Work/Development/netrate-mortgage-site/CLAUDE.md`
+- `Work/Development/netrate-mortgage-site/` (entire codebase — 143 tracked files)
+- `Work/Integrations/TWILIO.md`
+- `Work/Integrations/ZOHO-CRM.md`
+- `Work/Marketing/PLAYBOOK.md`, `DEV-BRIEF.md`, `WEBDEV-LOG-2026-02-27.md`
+- `Work/Marketing/brand/netrate-favicon.svg`, `favicon-options.html`
+- `Work/Marketing/mockups/mockup-rate-tool-lead-capture.html`
+
+**Files modified:**
+- `CLAUDE.md` — Updated departments, folder structure, data flow, session launch rules
+- `Work/SESSION-LOG.md` — Added this entry, marked prior open items complete
+
+**Open items:**
+- [ ] **David** — Reconfigure Vercel: connect `bicklehoff/netrate-pc-ops`, set root dir to `Work/Development/netrate-mortgage-site`, set ignored build step
+- [ ] **David** — Archive `bicklehoff/netrate-mortgage-site` on GitHub (Settings → Archive)
+- [ ] **David** — Update Claw's GitHub token scope from `netrate-mortgage-site` to `netrate-pc-ops`
+- [ ] **David** — Confirm what to do with 3 loose files in `D:\PROJECTS\` root
+- [ ] **David → Mac** — Relay: "PC completed one-repo migration. Code now lives in pc-ops/Work/Development/netrate-mortgage-site/. Matches Mac's pattern."

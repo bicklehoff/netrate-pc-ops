@@ -1,0 +1,58 @@
+// Dialer Voice Webhook — Handles outbound call routing
+// Twilio POSTs here when a browser client initiates a call via device.connect().
+// Returns TwiML that tells Twilio to dial the destination number.
+//
+// This is the "Voice URL" configured in your TwiML App.
+
+import { buildOutboundTwiml } from '@/lib/twilio-voice';
+import prisma from '@/lib/prisma';
+
+export async function POST(req) {
+  const formData = await req.formData();
+  const to = formData.get('To');
+  const from = formData.get('From');        // client:mlo-<uuid>
+  const callSid = formData.get('CallSid');
+
+  if (!to) {
+    return new Response(
+      '<?xml version="1.0" encoding="UTF-8"?><Response><Say>No destination number provided.</Say></Response>',
+      { headers: { 'Content-Type': 'text/xml' } }
+    );
+  }
+
+  // Extract MLO ID from the client identity (format: "client:mlo-<uuid>")
+  const mloId = from?.replace('client:mlo-', '') || null;
+
+  // Look up contact by phone number
+  let contactId = null;
+  if (to) {
+    try {
+      const contact = await prisma.contact.findFirst({ where: { phone: to } });
+      if (contact) contactId = contact.id;
+    } catch (e) {
+      console.error('Contact lookup failed:', e);
+    }
+  }
+
+  // Log the outbound call
+  if (mloId) {
+    try {
+      await prisma.callLog.create({
+        data: {
+          mloId,
+          contactId,
+          direction: 'outbound',
+          fromNumber: process.env.TWILIO_PHONE_NUMBER || '',
+          toNumber: to,
+          status: 'initiated',
+          twilioCallSid: callSid,
+        },
+      });
+    } catch (e) {
+      console.error('Failed to log outbound call:', e);
+    }
+  }
+
+  const twiml = buildOutboundTwiml(to);
+  return new Response(twiml, { headers: { 'Content-Type': 'text/xml' } });
+}

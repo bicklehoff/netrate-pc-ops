@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NetRate Mortgage - Rate Tool Lead Capture Mockup</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; color: #1a1a1a; }
+
+  /* Header */
+  .header { background: #fff; border-bottom: 3px solid #0fa5b5; padding: 14px 40px; display: flex; align-items: center; justify-content: space-between; }
+  .logo { font-size: 22px; font-weight: 300; color: #333; }
+  .logo span { font-weight: 700; color: #0fa5b5; }
+  .nav { display: flex; gap: 28px; align-items: center; }
+  .nav a { color: #555; text-decoration: none; font-size: 15px; }
+  .nav .btn-quote { background: #0fa5b5; color: #fff; padding: 10px 22px; border-radius: 6px; font-weight: 600; font-size: 14px; }
+
+  /* Banner */
+  .banner { background: linear-gradient(135deg, #0a8a98, #0fa5b5); color: #fff; padding: 24px 40px; margin: 24px 40px 0; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; }
+  .banner h2 { font-size: 22px; font-weight: 700; }
+  .banner .sub { font-size: 14px; opacity: 0.9; margin-top: 4px; }
+  .banner .date { text-align: right; font-size: 13px; }
+  .banner .date strong { display: block; font-size: 15px; }
+
+  /* Main content */
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 20px; }
+
+  /* Scenario card */
+  .scenario { background: #fff; border-radius: 10px; padding: 28px 32px; margin: 20px 40px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .scenario h3 { font-size: 17px; font-weight: 700; margin-bottom: 16px; color: #333; }
+  .scenario-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 32px; }
+  .field label { font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px; }
+  .field input, .field select { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 15px; color: #333; background: #fff; }
+  .summary { margin-top: 16px; font-size: 14px; color: #555; }
+  .summary strong { color: #1a1a1a; }
+
+  /* Rate table */
+  .rate-section { margin: 20px 40px; }
+  .rate-header { background: linear-gradient(135deg, #0a8a98, #0fa5b5); color: #fff; padding: 16px 24px; border-radius: 10px 10px 0 0; display: flex; justify-content: space-between; align-items: center; }
+  .rate-header h3 { font-size: 17px; font-weight: 700; }
+  .rate-header .meta { font-size: 13px; opacity: 0.85; }
+
+  .adjustments { background: #fff; padding: 14px 24px; border-left: 1px solid #eee; border-right: 1px solid #eee; font-size: 13px; color: #666; }
+  .adj-badge { display: inline-block; background: #e8f9fa; color: #0a8a98; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; margin-left: 8px; }
+  .adj-value { color: #0fa5b5; font-weight: 600; }
+
+  .rate-table { width: 100%; background: #fff; border-collapse: collapse; border-left: 1px solid #eee; border-right: 1px solid #eee; }
+  .rate-table thead th { padding: 12px 16px; font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; border-bottom: 2px solid #eee; }
+  .rate-table tbody tr { border-bottom: 1px solid #f0f0f0; transition: background 0.15s; }
+  .rate-table tbody tr:hover { background: #f8fcfc; }
+  .rate-table td { padding: 14px 16px; font-size: 14px; }
+  .rate-table .rate-val { font-weight: 700; font-size: 15px; }
+  .credit { color: #0a8a98; font-weight: 600; }
+  .charge { color: #d9534f; font-weight: 600; }
+  .net-pos { color: #333; font-weight: 600; }
+  .net-neg { color: #d9534f; font-weight: 600; }
+  .low-cost { display: inline-block; background: #e8f9fa; color: #0a8a98; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: 600; }
+
+  /* NEW: Get This Rate button in table */
+  .btn-get-rate {
+    background: #fff;
+    color: #0fa5b5;
+    border: 1.5px solid #0fa5b5;
+    padding: 6px 14px;
+    border-radius: 5px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .btn-get-rate:hover { background: #0fa5b5; color: #fff; }
+
+  /* Recoup section */
+  .recoup { background: #fff; padding: 24px; margin: 0 40px; border-left: 1px solid #eee; border-right: 1px solid #eee; border-bottom: 1px solid #eee; border-radius: 0 0 10px 10px; }
+  .recoup-label { font-size: 12px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 14px; }
+  .recoup-cards { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .recoup-card {
+    border: 1.5px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .recoup-card:hover { border-color: #0fa5b5; box-shadow: 0 2px 12px rgba(15,165,181,0.12); }
+  .recoup-card .rc-rate { font-size: 26px; font-weight: 800; color: #1a1a1a; }
+  .recoup-card .rc-detail { font-size: 13px; color: #666; margin: 6px 0; }
+  .recoup-card .rc-recoup { font-size: 14px; color: #0fa5b5; font-weight: 700; }
+
+  /* NEW: CTA on recoup cards */
+  .btn-get-rate-card {
+    display: block;
+    margin-top: 14px;
+    background: #0fa5b5;
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: 100%;
+  }
+  .btn-get-rate-card:hover { background: #0d929f; }
+
+  /* Disclaimer */
+  .disclaimer { margin: 20px 40px; font-size: 12px; color: #999; }
+
+  /* Bottom form (existing, now updated copy) */
+  .bottom-form { background: #fff; border-radius: 10px; padding: 32px; margin: 24px 40px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .bottom-form h3 { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+  .bottom-form p { font-size: 14px; color: #666; margin-bottom: 18px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .form-row input, .bottom-form input[type="email"], .bottom-form textarea { width: 100%; padding: 12px 14px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
+  .bottom-form textarea { width: 100%; padding: 12px 14px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; height: 70px; resize: vertical; margin-bottom: 12px; }
+  .btn-submit { background: #0fa5b5; color: #fff; border: none; padding: 14px; border-radius: 6px; font-size: 15px; font-weight: 700; cursor: pointer; width: 100%; transition: background 0.2s; }
+  .btn-submit:hover { background: #0d929f; }
+
+  /* Modal */
+  .modal-overlay {
+    display: none;
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal {
+    background: #fff;
+    border-radius: 14px;
+    padding: 32px;
+    width: 460px;
+    max-width: 90vw;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    position: relative;
+    animation: slideUp 0.25s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .modal-close { position: absolute; top: 14px; right: 18px; background: none; border: none; font-size: 22px; cursor: pointer; color: #999; }
+  .modal-close:hover { color: #333; }
+  .modal h3 { font-size: 19px; font-weight: 700; margin-bottom: 4px; }
+  .modal .modal-subtitle { font-size: 14px; color: #666; margin-bottom: 20px; }
+  .modal .selected-rate-display {
+    background: linear-gradient(135deg, #e8f9fa, #f0fbfc);
+    border: 1.5px solid #b8e8ed;
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .selected-rate-display .sr-rate { font-size: 28px; font-weight: 800; color: #0a8a98; }
+  .selected-rate-display .sr-details { text-align: right; font-size: 13px; color: #555; }
+  .selected-rate-display .sr-details strong { color: #1a1a1a; }
+  .modal .form-group { margin-bottom: 12px; }
+  .modal .form-group input {
+    width: 100%; padding: 12px 14px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;
+  }
+  .modal .form-group input:focus { outline: none; border-color: #0fa5b5; box-shadow: 0 0 0 3px rgba(15,165,181,0.1); }
+  .modal .btn-modal-submit {
+    background: #0fa5b5; color: #fff; border: none; padding: 14px; border-radius: 6px;
+    font-size: 15px; font-weight: 700; cursor: pointer; width: 100%; margin-top: 6px; transition: background 0.2s;
+  }
+  .modal .btn-modal-submit:hover { background: #0d929f; }
+  .modal .privacy-note { font-size: 11px; color: #999; text-align: center; margin-top: 10px; }
+
+  /* NEW badge annotation */
+  .new-badge {
+    display: inline-block;
+    background: #ff6b35;
+    color: #fff;
+    font-size: 9px;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-left: 6px;
+    vertical-align: middle;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+
+  /* Annotation callouts */
+  .annotation {
+    background: #fff8e1;
+    border: 2px dashed #ff6b35;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin: 16px 40px;
+    font-size: 13px;
+    color: #7a5a00;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .annotation .ann-icon { font-size: 18px; flex-shrink: 0; }
+  .annotation strong { color: #c45000; }
+
+  .footer-note { text-align: center; padding: 30px 40px; font-size: 12px; color: #bbb; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="logo"><span>NetRate</span> Mortgage</div>
+  <div class="nav">
+    <a href="#">Rates</a>
+    <a href="#">Services</a>
+    <a href="#">About</a>
+    <a href="#" class="btn-quote">Get a Quote</a>
+  </div>
+</div>
+
+<!-- Annotation: Mockup context -->
+<div class="annotation" style="margin-top: 20px;">
+  <div class="ann-icon">&#128204;</div>
+  <div><strong>MOCKUP — Option A + C Lead Capture</strong><br>This is a visual prototype showing the proposed "Get This Rate" buttons on each table row and on the recoup analysis cards. Orange <span class="new-badge" style="animation:none;">NEW</span> badges highlight what's been added. Click any button to see the modal.</div>
+</div>
+
+<!-- Banner -->
+<div class="banner">
+  <div>
+    <h2>NetRate Mortgage</h2>
+    <div class="sub">David Burson | NMLS 641790 | 1111861<br>303-444-5251 | david@netratemortgage.com</div>
+  </div>
+  <div class="date">
+    <div style="font-size:11px; text-transform:uppercase; letter-spacing:1px; opacity:0.8;">Today's Rates</div>
+    <strong>Effective 2/10/2026</strong>
+    <div style="font-size:12px; opacity:0.7;">Updated 10:30 AM ET</div>
+  </div>
+</div>
+
+<!-- Scenario -->
+<div class="scenario">
+  <h3>Your Scenario</h3>
+  <div class="scenario-grid">
+    <div class="field"><label>Loan Purpose</label><select><option>Rate/Term Refinance</option></select></div>
+    <div class="field"><label>Property Type</label><select><option>Single Family</option></select></div>
+    <div class="field"><label>Property Value</label><input value="500000"></div>
+    <div class="field"><label>Current Payoff</label><input value="400000"></div>
+    <div class="field"><label>Credit Score</label><select><option>760 - 779</option></select></div>
+    <div class="field"><label>Current Rate</label><input value="7.125"></div>
+  </div>
+  <div class="summary">Loan Amount: <strong>$400,000</strong> &nbsp; LTV: <strong>80.0%</strong> &nbsp; FICO Band: <strong>760-779</strong></div>
+</div>
+
+<!-- Rate Table -->
+<div class="rate-section">
+  <div class="rate-header">
+    <h3>Your Rate Options</h3>
+    <div class="meta">30yr Fixed | 30-Day Lock | AmWest Wholesale</div>
+  </div>
+  <div class="adjustments">
+    PRICE ADJUSTMENTS APPLIED &nbsp; FICO/LTV (760-779, 75.01-80): <span class="adj-value">+0.875</span>
+    <span class="adj-badge">Total: +0.875 pts</span>
+  </div>
+  <table class="rate-table">
+    <thead>
+      <tr>
+        <th>Rate</th>
+        <th>Monthly P&I</th>
+        <th>Monthly Savings</th>
+        <th>Credit / Charge</th>
+        <th>Net Cost ($)</th>
+        <th></th>
+        <th style="text-align:center;"><span class="new-badge">NEW</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="rate-val">6.000%</td>
+        <td>$2,398.20</td>
+        <td>-$297/mo</td>
+        <td class="credit">Credit 1.57%</td>
+        <td class="net-pos">+$6,266</td>
+        <td><span class="low-cost">Low Cost</span></td>
+        <td><button class="btn-get-rate" onclick="openModal('6.000%', '$2,398.20', '-$297/mo', 'Credit 1.57%')">Get This Rate</button></td>
+      </tr>
+      <tr>
+        <td class="rate-val">5.990%</td>
+        <td>$2,395.63</td>
+        <td>-$299/mo</td>
+        <td class="credit">Credit 1.42%</td>
+        <td class="net-pos">+$5,666</td>
+        <td><span class="low-cost">Low Cost</span></td>
+        <td><button class="btn-get-rate" onclick="openModal('5.990%', '$2,395.63', '-$299/mo', 'Credit 1.42%')">Get This Rate</button></td>
+      </tr>
+      <tr>
+        <td class="rate-val">5.875%</td>
+        <td>$2,366.15</td>
+        <td>-$329/mo</td>
+        <td class="credit">Credit 1.11%</td>
+        <td class="net-pos">+$4,459</td>
+        <td><span class="low-cost">Low Cost</span></td>
+        <td><button class="btn-get-rate" onclick="openModal('5.875%', '$2,366.15', '-$329/mo', 'Credit 1.11%')">Get This Rate</button></td>
+      </tr>
+      <tr>
+        <td class="rate-val">5.750%</td>
+        <td>$2,334.29</td>
+        <td>-$361/mo</td>
+        <td class="credit">Credit 0.50%</td>
+        <td class="net-pos">+$1,987</td>
+        <td></td>
+        <td><button class="btn-get-rate" onclick="openModal('5.750%', '$2,334.29', '-$361/mo', 'Credit 0.50%')">Get This Rate</button></td>
+      </tr>
+      <tr>
+        <td class="rate-val">5.625%</td>
+        <td>$2,302.63</td>
+        <td>-$392/mo</td>
+        <td class="credit">Credit 0.38%</td>
+        <td class="net-pos">+$1,506</td>
+        <td></td>
+        <td><button class="btn-get-rate" onclick="openModal('5.625%', '$2,302.63', '-$392/mo', 'Credit 0.38%')">Get This Rate</button></td>
+      </tr>
+      <tr>
+        <td class="rate-val">5.500%</td>
+        <td>$2,271.16</td>
+        <td>-$424/mo</td>
+        <td class="charge">Charge 0.18%</td>
+        <td class="net-neg">-$737</td>
+        <td></td>
+        <td><button class="btn-get-rate" onclick="openModal('5.500%', '$2,271.16', '-$424/mo', 'Charge 0.18%')">Get This Rate</button></td>
+      </tr>
+      <tr>
+        <td class="rate-val">5.375%</td>
+        <td>$2,239.88</td>
+        <td>-$455/mo</td>
+        <td class="charge">Charge 0.77%</td>
+        <td class="net-neg">-$3,087</td>
+        <td></td>
+        <td><button class="btn-get-rate" onclick="openModal('5.375%', '$2,239.88', '-$455/mo', 'Charge 0.77%')">Get This Rate</button></td>
+      </tr>
+      <tr>
+        <td class="rate-val">5.250%</td>
+        <td>$2,208.81</td>
+        <td>-$486/mo</td>
+        <td class="charge">Charge 1.73%</td>
+        <td class="net-neg">-$6,911</td>
+        <td></td>
+        <td><button class="btn-get-rate" onclick="openModal('5.250%', '$2,208.81', '-$486/mo', 'Charge 1.73%')">Get This Rate</button></td>
+      </tr>
+      <tr>
+        <td class="rate-val">5.125%</td>
+        <td>$2,177.95</td>
+        <td>-$517/mo</td>
+        <td class="charge">Charge 2.01%</td>
+        <td class="net-neg">-$8,059</td>
+        <td></td>
+        <td><button class="btn-get-rate" onclick="openModal('5.125%', '$2,177.95', '-$517/mo', 'Charge 2.01%')">Get This Rate</button></td>
+      </tr>
+      <tr>
+        <td class="rate-val">5.000%</td>
+        <td>$2,147.29</td>
+        <td>-$548/mo</td>
+        <td class="charge">Charge 2.69%</td>
+        <td class="net-neg">-$10,755</td>
+        <td></td>
+        <td><button class="btn-get-rate" onclick="openModal('5.000%', '$2,147.29', '-$548/mo', 'Charge 2.69%')">Get This Rate</button></td>
+      </tr>
+      <tr>
+        <td class="rate-val">4.875%</td>
+        <td>$2,116.83</td>
+        <td>-$578/mo</td>
+        <td class="charge">Charge 3.44%</td>
+        <td class="net-neg">-$13,778</td>
+        <td></td>
+        <td><button class="btn-get-rate" onclick="openModal('4.875%', '$2,116.83', '-$578/mo', 'Charge 3.44%')">Get This Rate</button></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Recoup Analysis -->
+  <div class="recoup">
+    <div class="recoup-label">Recoup Analysis (For Refinance) <span class="new-badge">NEW CTA</span></div>
+    <div class="recoup-cards">
+      <div class="recoup-card">
+        <div class="rc-rate">5.500%</div>
+        <div class="rc-detail">Save $424/mo | Cost $2,032</div>
+        <div class="rc-recoup">4.8 months to recoup</div>
+        <button class="btn-get-rate-card" onclick="openModal('5.500%', '$2,271.16', '-$424/mo', 'Charge 0.18%')">Get This Rate</button>
+      </div>
+      <div class="recoup-card">
+        <div class="rc-rate">5.375%</div>
+        <div class="rc-detail">Save $455/mo | Cost $4,382</div>
+        <div class="rc-recoup">9.6 months to recoup</div>
+        <button class="btn-get-rate-card" onclick="openModal('5.375%', '$2,239.88', '-$455/mo', 'Charge 0.77%')">Get This Rate</button>
+      </div>
+      <div class="recoup-card">
+        <div class="rc-rate">5.250%</div>
+        <div class="rc-detail">Save $486/mo | Cost $8,206</div>
+        <div class="rc-recoup">16.9 months to recoup</div>
+        <button class="btn-get-rate-card" onclick="openModal('5.250%', '$2,208.81', '-$486/mo', 'Charge 1.73%')">Get This Rate</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="disclaimer">Rates approximate based on today's pricing. Lender Fees: $1,295. Contact for exact quote with full cost breakdown.</div>
+
+<!-- Collapsible -->
+<div class="scenario" style="margin: 10px 40px; cursor: pointer;">
+  <div style="display:flex; justify-content:space-between; align-items:center;">
+    <h3 style="margin:0;">How Rate Pricing Works</h3>
+    <span style="font-size:20px; color:#999;">+</span>
+  </div>
+</div>
+
+<!-- Bottom form (updated copy) -->
+<div class="bottom-form">
+  <h3>Not Sure Which Rate? Let Us Help.</h3>
+  <p>Tell us about your situation and we'll send you a personalized recommendation with full fee breakdown, cash to close, and savings analysis.</p>
+  <div class="form-row">
+    <input type="text" placeholder="Full Name">
+    <input type="text" placeholder="Phone Number">
+  </div>
+  <input type="email" placeholder="Email Address" style="width:100%; padding:12px 14px; border:1px solid #ddd; border-radius:6px; font-size:14px; margin-bottom:12px;">
+  <textarea placeholder="Any details or questions? (optional)"></textarea>
+  <button class="btn-submit">Request My Personalized Quote</button>
+</div>
+
+<div class="disclaimer" style="margin-bottom: 10px;">
+  Rates shown are approximate based on today's wholesale pricing and standard loan-level adjustments. Actual rates depend on full credit review, property appraisal, and underwriting. Not a commitment to lend. NetRate Mortgage | NMLS 641790 | 1111861 | 357 South McCaslin Blvd., #200, Louisville, CO 80027
+</div>
+
+<div class="footer-note">This is a design mockup for internal review. Not a live page.</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">&times;</button>
+    <h3>Get Your Exact Quote</h3>
+    <p class="modal-subtitle">I'll send you a full fee breakdown, cash to close, and savings analysis for this rate.</p>
+
+    <div class="selected-rate-display">
+      <div>
+        <div class="sr-rate" id="modalRate">5.625%</div>
+        <div style="font-size:12px; color:#666; margin-top:2px;">30yr Fixed | Rate/Term Refi</div>
+      </div>
+      <div class="sr-details">
+        <div>P&I: <strong id="modalPI">$2,302.63</strong></div>
+        <div>Savings: <strong id="modalSavings">-$392/mo</strong></div>
+        <div id="modalCredit" style="margin-top:2px; font-size:12px; color:#0a8a98; font-weight:600;">Credit 0.38%</div>
+      </div>
+    </div>
+
+    <div class="form-group"><input type="text" placeholder="Full Name"></div>
+    <div class="form-group"><input type="tel" placeholder="Phone Number"></div>
+    <div class="form-group"><input type="email" placeholder="Email Address"></div>
+    <button class="btn-modal-submit">Send Me My Exact Quote</button>
+    <div class="privacy-note">No credit pull. No obligation. Just real numbers.</div>
+  </div>
+</div>
+
+<script>
+function openModal(rate, pi, savings, credit) {
+  document.getElementById('modalRate').textContent = rate;
+  document.getElementById('modalPI').textContent = pi;
+  document.getElementById('modalSavings').textContent = savings;
+  document.getElementById('modalCredit').textContent = credit;
+  document.getElementById('modalCredit').style.color = credit.includes('Credit') ? '#0a8a98' : '#d9534f';
+  document.getElementById('modalOverlay').classList.add('active');
+}
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('active');
+}
+document.getElementById('modalOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+</script>
+
+</body>
+</html>

@@ -53,12 +53,23 @@ The following are defined in `netrate-governance/GOVERNANCE.md` and apply to ALL
 
 | Department | Folder | Responsibilities |
 |------------|--------|------------------|
-| WebDev | `Work/WebDev/` | Website build, rate tool port, SEO, public pages |
-| Products | `Work/Products/` | Borrower reports, calculators, client-facing tools |
-| Integrations | `Work/Integrations/` | Email reading, CRM hooks, public API endpoints |
+| WebDev | `Work/WebDev/` (docs) + `Work/Development/netrate-mortgage-site/` (code) | Website build, rate tool port, SEO, public pages |
+| Products | `Work/Products/` (docs) + code in Development/ | Borrower reports, calculators, client-facing tools |
+| Integrations | `Work/Integrations/` (docs) + code in Development/ | Email reading, CRM hooks, public API endpoints |
+| Marketing | `Work/Marketing/` (docs) + code in Development/ | Content, copy, lead capture, trust signals |
 | Admin | `Work/Admin/` | PC-side admin (minimal — process docs only, NO trackers) |
 | Setup | Root files | CLAUDE.md, Work/SESSION-LOG.md, folder structure |
 | Auditor | None (read-only) | Independent system review |
+
+## Session Launch Rules
+
+| Session Type | Launch From |
+|---|---|
+| Dev / WebDev / Products / Integrations / Marketing | `Work/Development/netrate-mortgage-site/` |
+| Setup | This repo root (`netrate-pc-ops/`) |
+| Auditor | This repo root |
+
+All code sessions launch from the project directory. CLAUDE.md files cascade up from project → Development/ → root, giving full context automatically.
 
 **Ownership rules:**
 - Only modify files in YOUR department's folder
@@ -95,7 +106,7 @@ Ask: "Which department should I work as? (WebDev, Products, Integrations, Admin,
 Mac writes marketing copy → pushes to netrate-ops → PC reads from GitHub
 Mac writes rate tool source → pushes to netrate-ops → PC reads for porting
 Mac Clerk updates trackers → pushes to netrate-ops → Vercel TrackerPortal reflects
-PC builds website → pushes to netrate-mortgage-site → Vercel auto-deploys
+PC builds website → pushes to netrate-pc-ops → Vercel auto-deploys from Work/Development/netrate-mortgage-site/
 PC completes work → logs in PC SESSION-LOG → David relays to Mac → Mac Clerk updates tracker
 Cross-device proposals/questions → post to RELAY.md in netrate-governance → other device pulls and reads
 ```
@@ -128,16 +139,24 @@ Cross-device proposals/questions → post to RELAY.md in netrate-governance → 
 
 ```
 netrate-pc-ops/
-├── CLAUDE.md              ← This file (PC-specific rules)
+├── CLAUDE.md                          ← This file (PC-specific rules)
 ├── Work/
-│   ├── SESSION-LOG.md     ← PC session log
-│   ├── WebDev/            ← Website, rate tool, SEO, public pages
-│   ├── Products/          ← Borrower reports, calculators, client tools
-│   ├── Integrations/      ← Email reading, CRM hooks, public APIs
-│   └── Admin/             ← PC-side admin (process docs only)
+│   ├── SESSION-LOG.md                 ← ONE log for ALL PC sessions
+│   ├── Development/
+│   │   ├── CLAUDE.md                  ← Dev department rules
+│   │   └── netrate-mortgage-site/     ← Website + portal codebase
+│   │       ├── CLAUDE.md              ← Project tech stack
+│   │       ├── src/                   ← Next.js app code
+│   │       ├── prisma/                ← Database schema
+│   │       └── ...
+│   ├── WebDev/                        ← Docs: architecture plans, specs
+│   ├── Marketing/                     ← Docs: playbook, brand, dev briefs
+│   ├── Products/                      ← Docs: calculator specs
+│   ├── Integrations/                  ← Docs: Twilio, Zoho, GCS reference
+│   └── Admin/                         ← PC-side admin (process docs only)
 ├── .claude/
-│   ├── agents/            ← (empty for now — no Clerk on PC)
-│   ├── scripts/           ← (empty for now — no tracker hooks needed)
+│   ├── agents/
+│   ├── scripts/
 │   └── settings.local.json
 ```
 
@@ -145,13 +164,14 @@ netrate-pc-ops/
 
 ## Active Projects
 
-### Website Build (WEBSITE-2026 — tracked on Mac)
-- **Repo:** `netrate-mortgage-site` (separate GitHub repo)
-- **Hosting:** Vercel (free tier)
-- **Stack:** Next.js 14 + Tailwind CSS 3.4 + React 18
+### Website + Portal (WEBSITE-2026 — tracked on Mac)
+- **Code:** `Work/Development/netrate-mortgage-site/` (in this repo)
+- **Hosting:** Vercel (deploys from this repo, root dir = `Work/Development/netrate-mortgage-site`)
+- **Stack:** Next.js 14, Tailwind CSS 3.4, React 18, Prisma 6, Neon Postgres
 - **GA4 Measurement ID:** G-QPEE5ZSZ79
 - **GSC:** Verified via GoDaddy DNS
 - **Domain:** netratemortgage.com (GoDaddy → Vercel)
+- **Git history:** Pre-migration commits archived in `bicklehoff/netrate-mortgage-site` (read-only)
 
 ---
 
