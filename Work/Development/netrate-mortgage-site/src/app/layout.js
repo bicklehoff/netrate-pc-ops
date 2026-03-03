@@ -218,7 +218,7 @@ export default function RootLayout({ children }) {
                 Not a commitment to lend. Equal Housing Opportunity.
               </p>
               <p>
-                Locus Companies, LLC d/b/a NetRate Mortgage is an Equal Housing Opportunity company. In
+                NetRate Mortgage LLC is an Equal Housing Opportunity company. In
                 accordance with the Equal Housing Opportunity Act, NetRate Mortgage does not discriminate
                 against any applicant on the basis of race, color, religion, creed, national origin,
                 ancestry, sex, marital status, familial status (number and age of children), sexual

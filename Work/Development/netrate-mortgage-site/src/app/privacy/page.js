@@ -11,7 +11,7 @@ export default function PrivacyPage() {
 
       <div className="prose prose-sm prose-gray max-w-none space-y-6 text-gray-600 leading-relaxed">
         <p>
-          Welcome to the Locus Companies, LLC website, d/b/a NetRate Mortgage, available at
+          Welcome to the NetRate Mortgage LLC website, available at
           www.netratemortgage.com (this &ldquo;Site&rdquo;). This statement discloses the privacy practices
           and notices (&ldquo;Policy&rdquo;) for the Site and describes how we collect, protect, and use
           information we receive from visitors to our Site.
@@ -89,8 +89,8 @@ export default function PrivacyPage() {
         </ul>
         <p>
           By providing your mobile number and opting in (for example, by submitting a form that states you
-          agree to receive text messages), you consent to receive text messages and/or calls from Locus
-          Companies, LLC d/b/a NetRate Mortgage regarding:
+          agree to receive text messages), you consent to receive text messages and/or calls from
+          NetRate Mortgage LLC regarding:
         </p>
         <ul className="list-disc pl-5 space-y-1">
           <li>Your mortgage inquiry or application;</li>
@@ -200,14 +200,14 @@ export default function PrivacyPage() {
 
         <h2 className="text-lg font-semibold text-gray-900 mt-8">Contact Us</h2>
         <p>
-          NetRate Mortgage (Locus Companies, LLC)<br />
+          NetRate Mortgage LLC<br />
           357 South McCaslin Blvd., #200, Louisville, CO 80027<br />
           Phone: 303-444-5251<br />
           Email: david@netratemortgage.com
         </p>
 
         <p className="text-xs text-gray-400 mt-8 pt-4 border-t border-gray-200">
-          &copy; {new Date().getFullYear()} Locus Companies, LLC d/b/a NetRate Mortgage. NMLS ID 1111861.
+          &copy; {new Date().getFullYear()} NetRate Mortgage LLC. NMLS ID 1111861.
           Equal Housing Opportunity.
         </p>
       </div>

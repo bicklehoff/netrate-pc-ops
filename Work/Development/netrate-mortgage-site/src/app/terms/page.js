@@ -12,7 +12,7 @@ export default function TermsPage() {
       <div className="prose prose-sm prose-gray max-w-none space-y-6 text-gray-600 leading-relaxed">
         <p>
           These Terms &amp; Conditions (&ldquo;Terms&rdquo;) govern your access to and use of the website
-          operated by Locus Companies, LLC, doing business as NetRate Mortgage (&ldquo;NetRate,&rdquo;
+          operated by NetRate Mortgage LLC (&ldquo;NetRate,&rdquo;
           &ldquo;we,&rdquo; &ldquo;us,&rdquo; or &ldquo;our&rdquo;), including any content, features,
           forms, and services made available through netratemortgage.com (the &ldquo;Site&rdquo;).
         </p>
@@ -53,7 +53,7 @@ export default function TermsPage() {
         <h2 className="text-lg font-semibold text-gray-900 mt-8">5. SMS/Text Messaging Terms</h2>
         <p>
           If you provide your phone number and opt in to receive text messages, you consent to receive
-          Customer Care and Marketing SMS from NetRate Mortgage (Locus Companies, LLC). Message frequency
+          Customer Care and Marketing SMS from NetRate Mortgage LLC. Message frequency
           may vary. Standard message and data rates may apply. Reply STOP to opt out. Reply HELP for help.
         </p>
         <p>
@@ -123,7 +123,7 @@ export default function TermsPage() {
 
         <h2 className="text-lg font-semibold text-gray-900 mt-8">14. Contact Us</h2>
         <p>
-          NetRate Mortgage (Locus Companies, LLC)<br />
+          NetRate Mortgage LLC<br />
           357 South McCaslin Blvd., #200, Louisville, CO 80027<br />
           Phone: 303-444-5251<br />
           Email: david@netratemortgage.com

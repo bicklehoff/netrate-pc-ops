@@ -87,7 +87,7 @@ export default function DoNotSellPage() {
           contact us:
         </p>
         <p>
-          NetRate Mortgage (Locus Companies, LLC)<br />
+          NetRate Mortgage LLC<br />
           357 South McCaslin Blvd., #200, Louisville, CO 80027<br />
           Phone: <a href="tel:303-444-5251" className="text-brand hover:text-brand-dark">303-444-5251</a><br />
           Email: <a href="mailto:david@netratemortgage.com" className="text-brand hover:text-brand-dark">david@netratemortgage.com</a>

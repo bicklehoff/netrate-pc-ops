@@ -1,6 +1,6 @@
 export const metadata = {
   title: 'Licensing | NetRate Mortgage',
-  description: 'State licensing information for NetRate Mortgage (Locus Companies, LLC). NMLS #1111861.',
+  description: 'State licensing information for NetRate Mortgage LLC. NMLS #1111861.',
 };
 
 export default function LicensingPage() {
@@ -47,7 +47,7 @@ export default function LicensingPage() {
 
         <h2 className="text-lg font-semibold text-gray-900 mt-8">Equal Housing Opportunity</h2>
         <p>
-          Locus Companies, LLC d/b/a NetRate Mortgage is an Equal Housing Opportunity company. In accordance
+          NetRate Mortgage LLC is an Equal Housing Opportunity company. In accordance
           with the Equal Housing Opportunity Act, NetRate Mortgage does not discriminate against any applicant
           on the basis of race, color, religion, creed, national origin, ancestry, sex, marital status,
           familial status (number and age of children), sexual orientation, age (provided that the applicant
