@@ -154,6 +154,49 @@ export const step5Schema = z.object({
   }),
 });
 
+// ─── Co-Borrower Schemas ──────────────────────────────────────
+
+// Identity fields collected in Step 3 when adding a co-borrower
+export const coBorrowerIdentitySchema = z.object({
+  firstName: z.string().min(1, 'First name is required').max(100),
+  lastName: z.string().min(1, 'Last name is required').max(100),
+  email: z.string().email('Please enter a valid email'),
+  phone: z.string().min(10, 'Please enter a valid phone number').max(20),
+  dob: z.string().min(1, 'Date of birth is required'),
+  ssn: z
+    .string()
+    .regex(/^\d{3}-?\d{2}-?\d{4}$/, 'Please enter a valid SSN (XXX-XX-XXXX)')
+    .transform((val) => val.replace(/\D/g, '')),
+  relationship: z.enum(['spouse', 'parent', 'other'], {
+    required_error: 'Please select relationship',
+  }),
+});
+
+// Co-borrower address fields (same shape as primary)
+export const coBorrowerAddressSchema = z.object({
+  currentAddress: z.object({
+    street: z.string().min(1, 'Street address is required'),
+    city: z.string().min(1, 'City is required'),
+    state: z.string().min(1, 'State is required'),
+    zip: z.string().min(5, 'ZIP code is required'),
+  }),
+  addressYears: requiredNumber('Please enter years at address'),
+  addressMonths: optionalNumber,
+  mailingAddressSame: z.boolean().optional(),
+  mailingAddress: z.object({
+    street: z.string().optional(),
+    city: z.string().optional(),
+    state: z.string().optional(),
+    zip: z.string().optional(),
+  }).optional().nullable(),
+});
+
+// Co-borrower employment (same shape as step4)
+export const coBorrowerEmploymentSchema = step4Schema;
+
+// Co-borrower declarations (same shape as step5)
+export const coBorrowerDeclarationsSchema = step5Schema;
+
 // ─── Full Application (all steps combined for final submission) ──
 
 export const fullApplicationSchema = z.object({

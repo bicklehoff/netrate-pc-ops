@@ -72,7 +72,11 @@ export default function Step6Review({ onBack }) {
   // Check if PII fields are present (they are stripped from sessionStorage on refresh)
   const missingSSN = !data.ssn || data.ssn.replace(/\D/g, '').length !== 9;
   const missingDOB = !data.dob;
-  const hasMissingPII = missingSSN || missingDOB;
+  const hasCoBorrowers = data.coBorrowers?.length > 0;
+  const coBorrowerMissingPII = hasCoBorrowers && data.coBorrowers.some(
+    (cb) => !cb.ssn || cb.ssn.replace(/\D/g, '').length !== 9 || !cb.dob
+  );
+  const hasMissingPII = missingSSN || missingDOB || coBorrowerMissingPII;
 
   // Auto-redirect to Step 1 when PII is missing (e.g., after page refresh)
   useEffect(() => {
@@ -168,6 +172,33 @@ export default function Step6Review({ onBack }) {
         <ReviewItem label="Loan Purpose" value={mapLabel('purpose', data.purpose)} />
       </ReviewSection>
 
+      {/* Co-Borrowers */}
+      {hasCoBorrowers && data.coBorrowers.map((cb, i) => {
+        const cbMissingSSN = !cb.ssn || cb.ssn.replace(/\D/g, '').length !== 9;
+        const cbMissingDOB = !cb.dob;
+        const cbDecl = cb.declarations || {};
+        return (
+          <ReviewSection key={cb.id} title={`Co-Borrower ${i + 1}: ${cb.firstName || ''} ${cb.lastName || ''}`} step={3}>
+            <ReviewItem label="Relationship" value={cb.relationship || '—'} />
+            <ReviewItem label="Name" value={`${cb.firstName || ''} ${cb.lastName || ''}`} />
+            <ReviewItem label="Email" value={cb.email} />
+            <ReviewItem label="Phone" value={cb.phone} />
+            <ReviewItem
+              label="Date of Birth"
+              value={cbMissingDOB ? '⚠ Re-enter on Step 3' : cb.dob}
+            />
+            <ReviewItem
+              label="SSN"
+              value={cbMissingSSN ? '⚠ Re-enter on Step 3' : `***-**-${cb.ssn.replace(/\D/g, '').slice(-4)}`}
+            />
+            <ReviewItem label="Current Address" value={formatAddress(cb.currentAddress)} />
+            <ReviewItem label="Employment" value={mapLabel('employmentStatus', cb.employmentStatus)} />
+            <ReviewItem label="Monthly Income" value={formatCurrency(cb.monthlyBaseIncome)} />
+            <ReviewItem label="Citizenship" value={mapLabel('citizenshipStatus', cbDecl.citizenshipStatus)} />
+          </ReviewSection>
+        );
+      })}
+
       {/* Property */}
       <ReviewSection title="Property" step={2}>
         <ReviewItem label="Occupancy" value={mapLabel('occupancy', data.occupancy)} />
@@ -252,7 +283,8 @@ export default function Step6Review({ onBack }) {
             className="w-4 h-4 mt-0.5 rounded border-gray-300 text-brand focus:ring-brand"
           />
           <span className="text-sm text-gray-600">
-            I authorize NetRate Mortgage to verify the information provided in this application.
+            I authorize NetRate Mortgage to verify the information provided in this application
+            {hasCoBorrowers ? ', including information for all co-borrowers listed above' : ''}.
             I understand that this is not a commitment to lend and that my information will be
             encrypted and handled securely.
           </span>

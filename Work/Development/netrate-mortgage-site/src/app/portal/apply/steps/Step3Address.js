@@ -1,5 +1,6 @@
-// Step 3: Address History
+// Step 3: Address History + Co-Borrower
 // Fields: Current Address (with same-as-subject option), Duration, Mailing Address, Marital Status
+// Co-borrower: If married, prompts to add spouse. Collects identity + address for each co-borrower.
 
 'use client';
 
@@ -9,6 +10,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { step3Schema } from '@/lib/validations/application';
 import { useApplication } from '@/components/Portal/ApplicationContext';
 import { TextField, SelectField, AddressGroup } from '@/components/Portal/FormFields';
+import CoBorrowerPrompt from '@/components/Portal/CoBorrowerPrompt';
+import CoBorrowerIdentityForm from '@/components/Portal/CoBorrowerIdentityForm';
+import BorrowerTabs from '@/components/Portal/BorrowerTabs';
 
 const MARITAL_OPTIONS = [
   { value: 'married', label: 'Married' },
@@ -17,15 +21,20 @@ const MARITAL_OPTIONS = [
 ];
 
 export default function Step3Address({ onNext, onBack }) {
-  const { data, updateData } = useApplication();
+  const { data, updateData, addCoBorrower, removeCoBorrower, updateCoBorrower } = useApplication();
 
   // Track whether current address is same as subject property
   const [sameAsProperty, setSameAsProperty] = useState(
     data.currentAddressSameAsProperty ?? false
   );
 
+  // Active tab for co-borrower address section
+  const [activeAddressTab, setActiveAddressTab] = useState('primary');
+
   // Only show checkbox if we have a property address from Step 2
   const hasPropertyAddress = data.propertyAddress?.street?.trim();
+
+  const hasCoBorrowers = data.coBorrowers?.length > 0;
 
   const {
     register,
@@ -46,6 +55,7 @@ export default function Step3Address({ onNext, onBack }) {
   });
 
   const mailingAddressSame = watch('mailingAddressSame');
+  const maritalStatus = watch('maritalStatus');
 
   // When same-as-property is toggled on, fill address from property data
   useEffect(() => {
@@ -56,6 +66,15 @@ export default function Step3Address({ onNext, onBack }) {
       setValue('currentAddress.zip', data.propertyAddress.zip || '');
     }
   }, [sameAsProperty, data.propertyAddress, setValue]);
+
+  const handleAddCoBorrower = () => {
+    addCoBorrower({ relationship: 'spouse' });
+  };
+
+  const handleRemoveCoBorrower = (id) => {
+    removeCoBorrower(id);
+    setActiveAddressTab('primary');
+  };
 
   const onSubmit = (stepData) => {
     // If mailing is same, clear mailing address data
@@ -68,74 +87,111 @@ export default function Step3Address({ onNext, onBack }) {
     onNext();
   };
 
+  // Check if a co-borrower's address is complete (for tab badges)
+  const isAddressTabComplete = (tabId) => {
+    if (tabId === 'primary') {
+      return !!(data.currentAddress?.street && data.currentAddress?.city);
+    }
+    const cb = data.coBorrowers?.find((c) => c.id === tabId);
+    return !!(cb?.currentAddress?.street && cb?.currentAddress?.city);
+  };
+
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
       <div className="bg-white rounded-xl border border-gray-200 p-8 shadow-sm space-y-5">
-        {/* Same as subject property checkbox */}
-        {hasPropertyAddress && (
-          <div>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={sameAsProperty}
-                onChange={(e) => setSameAsProperty(e.target.checked)}
-                className="w-4 h-4 rounded border-gray-300 text-brand focus:ring-brand"
-              />
-              <span className="text-sm text-gray-700">My current address is the same as the subject property</span>
-            </label>
-          </div>
+
+        {/* ── Primary Borrower Address ─────────────────────────── */}
+
+        {/* Show tabs when co-borrowers exist */}
+        {hasCoBorrowers && (
+          <BorrowerTabs
+            coBorrowers={data.coBorrowers}
+            activeTab={activeAddressTab}
+            onTabChange={setActiveAddressTab}
+            isTabComplete={isAddressTabComplete}
+          />
         )}
 
-        <AddressGroup
-          prefix="currentAddress"
-          register={register}
-          errors={errors}
-          label="Current Address"
-          disabled={sameAsProperty}
-          setValue={setValue}
-        />
+        {/* Primary borrower address (always shown, or when primary tab active) */}
+        {(!hasCoBorrowers || activeAddressTab === 'primary') && (
+          <>
+            {/* Same as subject property checkbox */}
+            {hasPropertyAddress && (
+              <div>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={sameAsProperty}
+                    onChange={(e) => setSameAsProperty(e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-300 text-brand focus:ring-brand"
+                  />
+                  <span className="text-sm text-gray-700">My current address is the same as the subject property</span>
+                </label>
+              </div>
+            )}
 
-        <div className="grid grid-cols-2 gap-4">
-          <TextField
-            label="Years at This Address"
-            name="addressYears"
-            type="number"
-            register={register}
-            errors={errors}
-            required
-            placeholder="5"
-          />
-          <TextField
-            label="Months (if less than 1 year)"
-            name="addressMonths"
-            type="number"
-            register={register}
-            errors={errors}
-            placeholder="0"
-          />
-        </div>
-
-        {/* Mailing Address Toggle */}
-        <div>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              {...register('mailingAddressSame')}
-              className="w-4 h-4 rounded border-gray-300 text-brand focus:ring-brand"
+            <AddressGroup
+              prefix="currentAddress"
+              register={register}
+              errors={errors}
+              label="Current Address"
+              disabled={sameAsProperty}
+              setValue={setValue}
             />
-            <span className="text-sm text-gray-700">Mailing address is the same as current address</span>
-          </label>
-        </div>
 
-        {!mailingAddressSame && (
-          <AddressGroup
-            prefix="mailingAddress"
-            register={register}
-            errors={errors}
-            label="Mailing Address"
-            setValue={setValue}
+            <div className="grid grid-cols-2 gap-4">
+              <TextField
+                label="Years at This Address"
+                name="addressYears"
+                type="number"
+                register={register}
+                errors={errors}
+                required
+                placeholder="5"
+              />
+              <TextField
+                label="Months (if less than 1 year)"
+                name="addressMonths"
+                type="number"
+                register={register}
+                errors={errors}
+                placeholder="0"
+              />
+            </div>
+
+            {/* Mailing Address Toggle */}
+            <div>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  {...register('mailingAddressSame')}
+                  className="w-4 h-4 rounded border-gray-300 text-brand focus:ring-brand"
+                />
+                <span className="text-sm text-gray-700">Mailing address is the same as current address</span>
+              </label>
+            </div>
+
+            {!mailingAddressSame && (
+              <AddressGroup
+                prefix="mailingAddress"
+                register={register}
+                errors={errors}
+                label="Mailing Address"
+                setValue={setValue}
+              />
+            )}
+          </>
+        )}
+
+        {/* Co-borrower address tab content */}
+        {hasCoBorrowers && activeAddressTab !== 'primary' && (
+          <CoBorrowerAddressSection
+            coBorrower={data.coBorrowers.find((cb) => cb.id === activeAddressTab)}
+            onUpdate={updateCoBorrower}
           />
         )}
+
+        {/* ── Marital Status ──────────────────────────────────── */}
 
         <SelectField
           label="Marital Status"
@@ -146,7 +202,26 @@ export default function Step3Address({ onNext, onBack }) {
           required
         />
 
-        {/* Navigation */}
+        {/* ── Co-Borrower Prompt ──────────────────────────────── */}
+        <CoBorrowerPrompt
+          maritalStatus={maritalStatus}
+          hasCoBorrowers={hasCoBorrowers}
+          coBorrowerCount={data.coBorrowers?.length || 0}
+          onAddSpouse={handleAddCoBorrower}
+        />
+
+        {/* ── Co-Borrower Identity Forms ──────────────────────── */}
+        {data.coBorrowers?.map((cb, i) => (
+          <CoBorrowerIdentityForm
+            key={cb.id}
+            coBorrower={cb}
+            index={i}
+            onUpdate={updateCoBorrower}
+            onRemove={handleRemoveCoBorrower}
+          />
+        ))}
+
+        {/* ── Navigation ──────────────────────────────────────── */}
         <div className="flex justify-between pt-4">
           <button
             type="button"
@@ -164,5 +239,86 @@ export default function Step3Address({ onNext, onBack }) {
         </div>
       </div>
     </form>
+  );
+}
+
+// ─── Co-Borrower Address Section (shown in tab) ─────────────────
+// Inline component for co-borrower address fields within the tab.
+// Uses controlled inputs (not react-hook-form) since co-borrower data
+// is managed via ApplicationContext, not the form's own state.
+
+function CoBorrowerAddressSection({ coBorrower, onUpdate }) {
+  if (!coBorrower) return null;
+
+  const handleChange = (field, value) => {
+    onUpdate(coBorrower.id, { [field]: value });
+  };
+
+  const handleAddressChange = (field, value) => {
+    onUpdate(coBorrower.id, {
+      currentAddress: { ...coBorrower.currentAddress, [field]: value },
+    });
+  };
+
+  return (
+    <div className="space-y-4">
+      <fieldset>
+        <legend className="text-sm font-medium text-gray-700 mb-2">Current Address</legend>
+        <div className="space-y-3">
+          <input
+            placeholder="Street address"
+            value={coBorrower.currentAddress?.street || ''}
+            onChange={(e) => handleAddressChange('street', e.target.value)}
+            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg outline-none transition-colors focus:ring-2 focus:ring-brand/20 focus:border-brand"
+          />
+          <div className="grid grid-cols-6 gap-3">
+            <input
+              className="col-span-3 px-4 py-2.5 border border-gray-300 rounded-lg outline-none transition-colors focus:ring-2 focus:ring-brand/20 focus:border-brand"
+              placeholder="City"
+              value={coBorrower.currentAddress?.city || ''}
+              onChange={(e) => handleAddressChange('city', e.target.value)}
+            />
+            <input
+              className="col-span-1 px-4 py-2.5 border border-gray-300 rounded-lg outline-none transition-colors uppercase focus:ring-2 focus:ring-brand/20 focus:border-brand"
+              placeholder="ST"
+              maxLength={2}
+              value={coBorrower.currentAddress?.state || ''}
+              onChange={(e) => handleAddressChange('state', e.target.value)}
+            />
+            <input
+              className="col-span-2 px-4 py-2.5 border border-gray-300 rounded-lg outline-none transition-colors focus:ring-2 focus:ring-brand/20 focus:border-brand"
+              placeholder="ZIP"
+              maxLength={5}
+              inputMode="numeric"
+              value={coBorrower.currentAddress?.zip || ''}
+              onChange={(e) => handleAddressChange('zip', e.target.value)}
+            />
+          </div>
+        </div>
+      </fieldset>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Years at This Address</label>
+          <input
+            type="number"
+            placeholder="5"
+            value={coBorrower.addressYears ?? ''}
+            onChange={(e) => handleChange('addressYears', e.target.value)}
+            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg outline-none transition-colors focus:ring-2 focus:ring-brand/20 focus:border-brand"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Months (if less than 1 year)</label>
+          <input
+            type="number"
+            placeholder="0"
+            value={coBorrower.addressMonths ?? ''}
+            onChange={(e) => handleChange('addressMonths', e.target.value)}
+            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg outline-none transition-colors focus:ring-2 focus:ring-brand/20 focus:border-brand"
+          />
+        </div>
+      </div>
+    </div>
   );
 }

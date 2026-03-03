@@ -1,9 +1,10 @@
 // API: Submit Loan Application
 // POST /api/portal/apply
 //
-// Receives all form data, creates borrower + loan records.
+// Receives all form data, creates borrower + loan + co-borrower records.
 // Encrypts SSN and DOB before storage.
 // Creates initial loan_event for the submission.
+// Supports up to 3 co-borrowers (4 total borrowers per loan).
 
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
@@ -27,6 +28,51 @@ function safeJson(val) {
   return val;
 }
 
+// ─── Create or find a Borrower record ──────────────────────
+async function upsertBorrower({ firstName, lastName, email, phone, ssn, dob }) {
+  const emailLower = email.toLowerCase().trim();
+  const ssnDigits = String(ssn).replace(/\D/g, '');
+  if (ssnDigits.length !== 9) {
+    throw new Error(`SSN must contain exactly 9 digits (got ${ssnDigits.length})`);
+  }
+
+  const ssnEncrypted = encrypt(ssnDigits);
+  const dobEncrypted = encrypt(String(dob));
+  const lastFour = ssnLastFour(ssnDigits);
+
+  let borrower = await prisma.borrower.findUnique({
+    where: { email: emailLower },
+  });
+
+  if (borrower) {
+    borrower = await prisma.borrower.update({
+      where: { email: emailLower },
+      data: {
+        firstName,
+        lastName,
+        phone: phone || null,
+        dobEncrypted,
+        ssnEncrypted,
+        ssnLastFour: lastFour,
+      },
+    });
+  } else {
+    borrower = await prisma.borrower.create({
+      data: {
+        email: emailLower,
+        firstName,
+        lastName,
+        phone: phone || null,
+        dobEncrypted,
+        ssnEncrypted,
+        ssnLastFour: lastFour,
+      },
+    });
+  }
+
+  return borrower;
+}
+
 export async function POST(request) {
   try {
     const body = await request.json();
@@ -48,52 +94,15 @@ export async function POST(request) {
       );
     }
 
-    const email = body.email.toLowerCase().trim();
-
-    // ─── Encrypt PII ─────────────────────────────────────────
-    const ssnDigits = String(body.ssn).replace(/\D/g, '');
-    if (ssnDigits.length !== 9) {
-      return NextResponse.json(
-        { error: 'SSN must contain exactly 9 digits' },
-        { status: 400 }
-      );
-    }
-    const ssnEncrypted = encrypt(ssnDigits);
-    const dobEncrypted = encrypt(String(body.dob));
-    const lastFour = ssnLastFour(ssnDigits);
-
-    // ─── Create or Find Borrower ─────────────────────────────
-    let borrower = await prisma.borrower.findUnique({
-      where: { email },
+    // ─── Create Primary Borrower ──────────────────────────────
+    const borrower = await upsertBorrower({
+      firstName: body.firstName,
+      lastName: body.lastName,
+      email: body.email,
+      phone: body.phone,
+      ssn: body.ssn,
+      dob: body.dob,
     });
-
-    if (borrower) {
-      // Existing borrower — update their info
-      borrower = await prisma.borrower.update({
-        where: { email },
-        data: {
-          firstName: body.firstName,
-          lastName: body.lastName,
-          phone: body.phone || null,
-          dobEncrypted,
-          ssnEncrypted,
-          ssnLastFour: lastFour,
-        },
-      });
-    } else {
-      // New borrower
-      borrower = await prisma.borrower.create({
-        data: {
-          email,
-          firstName: body.firstName,
-          lastName: body.lastName,
-          phone: body.phone || null,
-          dobEncrypted,
-          ssnEncrypted,
-          ssnLastFour: lastFour,
-        },
-      });
-    }
 
     // ─── Build Declarations Object (1003 Sections 5a & 5b) ──
     const declarations = {
@@ -124,6 +133,9 @@ export async function POST(request) {
       citizenshipStatus: body.citizenshipStatus || null,
     };
 
+    const coBorrowers = body.coBorrowers || [];
+    const numBorrowers = 1 + coBorrowers.length;
+
     // ─── Create Loan Record ──────────────────────────────────
     const loan = await prisma.loan.create({
       data: {
@@ -132,6 +144,7 @@ export async function POST(request) {
         ballInCourt: 'mlo',
         purpose: body.purpose,
         occupancy: body.occupancy || null,
+        numBorrowers,
 
         // Property
         propertyAddress: safeJson(body.propertyAddress),
@@ -144,14 +157,14 @@ export async function POST(request) {
         refiPurpose: body.refiPurpose || null,
         cashOutAmount: safeDecimal(body.cashOutAmount),
 
-        // Address
+        // Address (primary borrower — kept on Loan for backward compat)
         currentAddress: safeJson(body.currentAddress),
         addressYears: safeInt(body.addressYears),
         addressMonths: safeInt(body.addressMonths),
         mailingAddress: body.mailingAddressSame ? null : safeJson(body.mailingAddress),
         maritalStatus: body.maritalStatus || null,
 
-        // Employment
+        // Employment (primary borrower — kept on Loan for backward compat)
         employmentStatus: body.employmentStatus || null,
         employerName: body.employerName || null,
         positionTitle: body.positionTitle || null,
@@ -160,7 +173,7 @@ export async function POST(request) {
         otherMonthlyIncome: safeDecimal(body.otherMonthlyIncome),
         otherIncomeSource: body.otherIncomeSource || null,
 
-        // Declarations
+        // Declarations (primary borrower)
         declarations,
 
         // Metadata
@@ -168,6 +181,69 @@ export async function POST(request) {
         submittedAt: new Date(),
       },
     });
+
+    // ─── Create LoanBorrower for Primary ─────────────────────
+    await prisma.loanBorrower.create({
+      data: {
+        loanId: loan.id,
+        borrowerId: borrower.id,
+        borrowerType: 'primary',
+        ordinal: 0,
+        maritalStatus: body.maritalStatus || null,
+        currentAddress: safeJson(body.currentAddress),
+        addressYears: safeInt(body.addressYears),
+        addressMonths: safeInt(body.addressMonths),
+        mailingAddress: body.mailingAddressSame ? null : safeJson(body.mailingAddress),
+        employmentStatus: body.employmentStatus || null,
+        employerName: body.employerName || null,
+        positionTitle: body.positionTitle || null,
+        yearsInPosition: safeInt(body.yearsInPosition),
+        monthlyBaseIncome: safeDecimal(body.monthlyBaseIncome),
+        otherMonthlyIncome: safeDecimal(body.otherMonthlyIncome),
+        otherIncomeSource: body.otherIncomeSource || null,
+        declarations,
+      },
+    });
+
+    // ─── Create Co-Borrower Records ──────────────────────────
+    for (let i = 0; i < coBorrowers.length; i++) {
+      const cb = coBorrowers[i];
+      if (!cb.firstName || !cb.lastName || !cb.email || !cb.ssn || !cb.dob) {
+        continue; // Skip incomplete co-borrowers
+      }
+
+      const cbBorrower = await upsertBorrower({
+        firstName: cb.firstName,
+        lastName: cb.lastName,
+        email: cb.email,
+        phone: cb.phone,
+        ssn: cb.ssn,
+        dob: cb.dob,
+      });
+
+      await prisma.loanBorrower.create({
+        data: {
+          loanId: loan.id,
+          borrowerId: cbBorrower.id,
+          borrowerType: 'co_borrower',
+          ordinal: i + 1,
+          relationship: cb.relationship || null,
+          maritalStatus: body.maritalStatus || null, // Shared marital status
+          currentAddress: safeJson(cb.currentAddress),
+          addressYears: safeInt(cb.addressYears),
+          addressMonths: safeInt(cb.addressMonths),
+          mailingAddress: cb.mailingAddressSame ? null : safeJson(cb.mailingAddress),
+          employmentStatus: cb.employmentStatus || null,
+          employerName: cb.employerName || null,
+          positionTitle: cb.positionTitle || null,
+          yearsInPosition: safeInt(cb.yearsInPosition),
+          monthlyBaseIncome: safeDecimal(cb.monthlyBaseIncome),
+          otherMonthlyIncome: safeDecimal(cb.otherMonthlyIncome),
+          otherIncomeSource: cb.otherIncomeSource || null,
+          declarations: cb.declarations || null,
+        },
+      });
+    }
 
     // ─── Audit Trail ─────────────────────────────────────────
     await prisma.loanEvent.create({
@@ -178,7 +254,11 @@ export async function POST(request) {
         actorId: borrower.id,
         oldValue: 'draft',
         newValue: 'applied',
-        details: { source: 'web_application' },
+        details: {
+          source: 'web_application',
+          numBorrowers,
+          coBorrowerNames: coBorrowers.map((cb) => `${cb.firstName} ${cb.lastName}`),
+        },
       },
     });
 

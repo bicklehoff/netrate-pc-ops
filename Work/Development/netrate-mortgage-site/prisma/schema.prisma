@@ -1,6 +1,6 @@
 // NetRate Mortgage — Prisma Schema
 // Database: Neon Postgres (via Vercel Marketplace)
-// Schema evolution: init → add_dialer_tables → add_loan_processing_foundation
+// Schema evolution: init → add_dialer_tables → add_loan_processing_foundation → add_co_borrower_support
 
 generator client {
   provider   = "prisma-client"
@@ -44,6 +44,7 @@ model Borrower {
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
   loans           Loan[]
+  loanBorrowers   LoanBorrower[]
   contact         Contact?
 
   @@map("borrowers")
@@ -121,6 +122,9 @@ model Loan {
   // Declarations (flexible JSONB)
   declarations    Json?     @db.JsonB
 
+  // Co-borrower count (quick filter, updated on submission)
+  numBorrowers    Int       @default(1) @map("num_borrowers")
+
   // Metadata
   applicationStep Int       @default(1) @map("application_step")
   submittedAt     DateTime? @map("submitted_at")
@@ -130,6 +134,7 @@ model Loan {
   // Relations
   borrower        Borrower  @relation(fields: [borrowerId], references: [id])
   mlo             Mlo?      @relation(fields: [mloId], references: [id])
+  loanBorrowers   LoanBorrower[]
   events          LoanEvent[]
   documents       Document[]
 
@@ -140,6 +145,49 @@ model Loan {
   tasks           LoanTask[]
 
   @@map("loans")
+}
+
+// ─── Loan Borrowers (Co-Borrower Junction) ──────────────────
+// Links multiple borrowers to a single loan. Each borrower gets their own
+// Borrower record (with encrypted PII). Per-borrower-per-loan data
+// (address, employment, declarations) lives here.
+
+model LoanBorrower {
+  id              String    @id @default(uuid()) @db.Uuid
+  loanId          String    @map("loan_id") @db.Uuid
+  borrowerId      String    @map("borrower_id") @db.Uuid
+  borrowerType    String    @map("borrower_type")   // 'primary' | 'co_borrower'
+  ordinal         Int       @default(0)              // 0 = primary, 1-3 = co-borrowers
+  relationship    String?                             // 'spouse' | 'parent' | 'other' (to primary)
+  maritalStatus   String?   @map("marital_status")   // 'married' | 'unmarried' | 'separated'
+
+  // Address History (per-borrower)
+  currentAddress  Json?     @map("current_address") @db.JsonB
+  addressYears    Int?      @map("address_years")
+  addressMonths   Int?      @map("address_months")
+  mailingAddress  Json?     @map("mailing_address") @db.JsonB
+
+  // Employment & Income (per-borrower)
+  employmentStatus     String?   @map("employment_status")
+  employerName         String?   @map("employer_name")
+  positionTitle        String?   @map("position_title")
+  yearsInPosition      Int?      @map("years_in_position")
+  monthlyBaseIncome    Decimal?  @map("monthly_base_income") @db.Decimal(12, 2)
+  otherMonthlyIncome   Decimal?  @map("other_monthly_income") @db.Decimal(12, 2)
+  otherIncomeSource    String?   @map("other_income_source")
+
+  // Declarations (per-borrower, flexible JSONB)
+  declarations    Json?     @db.JsonB
+
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  loan            Loan      @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  borrower        Borrower  @relation(fields: [borrowerId], references: [id])
+
+  @@unique([loanId, borrowerId])
+  @@unique([loanId, ordinal])
+  @@map("loan_borrowers")
 }
 
 // ─── Loan Events (Audit Trail) ──────────────────────────────

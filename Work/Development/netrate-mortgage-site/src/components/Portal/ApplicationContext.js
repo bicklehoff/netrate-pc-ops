@@ -50,6 +50,9 @@ const DEFAULT_DATA = {
   mailingAddress: { street: '', city: '', state: '', zip: '' },
   maritalStatus: '',
 
+  // Co-borrowers (up to 3; added via Step 3 when married)
+  coBorrowers: [],
+
   // Step 4: Employment & Income
   employmentStatus: '',
   employerName: '',
@@ -132,8 +135,19 @@ function loadFromStorage() {
 function saveToStorage(data, currentStep) {
   try {
     const safeData = { ...data };
+    // Strip primary borrower PII
     for (const field of PII_FIELDS) {
       delete safeData[field];
+    }
+    // Strip co-borrower PII
+    if (safeData.coBorrowers?.length) {
+      safeData.coBorrowers = safeData.coBorrowers.map((cb) => {
+        const safeCb = { ...cb };
+        for (const field of PII_FIELDS) {
+          delete safeCb[field];
+        }
+        return safeCb;
+      });
     }
     sessionStorage.setItem(
       STORAGE_KEY,
@@ -174,6 +188,58 @@ export function ApplicationProvider({ children }) {
     setData((prev) => ({ ...prev, ...stepData }));
   }, []);
 
+  // ─── Co-borrower helpers ────────────────────────────────────
+
+  const addCoBorrower = useCallback((coBorrower) => {
+    setData((prev) => {
+      if (prev.coBorrowers.length >= 3) return prev; // Max 3 co-borrowers (4 total)
+      const newCb = {
+        id: crypto.randomUUID(),
+        relationship: 'spouse',
+        firstName: '',
+        lastName: '',
+        email: '',
+        phone: '',
+        dob: '',   // PII
+        ssn: '',   // PII
+        // Address
+        currentAddress: { street: '', city: '', state: '', zip: '' },
+        addressYears: '',
+        addressMonths: '',
+        mailingAddressSame: true,
+        mailingAddress: { street: '', city: '', state: '', zip: '' },
+        // Employment
+        employmentStatus: '',
+        employerName: '',
+        positionTitle: '',
+        yearsInPosition: '',
+        monthlyBaseIncome: '',
+        otherMonthlyIncome: '',
+        otherIncomeSource: '',
+        // Declarations
+        declarations: null,
+        ...coBorrower,
+      };
+      return { ...prev, coBorrowers: [...prev.coBorrowers, newCb] };
+    });
+  }, []);
+
+  const removeCoBorrower = useCallback((id) => {
+    setData((prev) => ({
+      ...prev,
+      coBorrowers: prev.coBorrowers.filter((cb) => cb.id !== id),
+    }));
+  }, []);
+
+  const updateCoBorrower = useCallback((id, updates) => {
+    setData((prev) => ({
+      ...prev,
+      coBorrowers: prev.coBorrowers.map((cb) =>
+        cb.id === id ? { ...cb, ...updates } : cb
+      ),
+    }));
+  }, []);
+
   const resetData = useCallback(() => {
     setData(DEFAULT_DATA);
     setCurrentStep(1);
@@ -200,6 +266,9 @@ export function ApplicationProvider({ children }) {
         currentStep,
         setCurrentStep,
         stepCompletions,
+        addCoBorrower,
+        removeCoBorrower,
+        updateCoBorrower,
       }}
     >
       {children}
