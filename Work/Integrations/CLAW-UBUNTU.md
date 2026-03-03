@@ -17,7 +17,7 @@ Code moved from `bicklehoff/netrate-mortgage-site` to `bicklehoff/netrate-pc-ops
 
 **Steps to update Claw:**
 
-1. **Update GitHub token** — Go to GitHub → Settings → Developer Settings → Fine-grained PATs → `ubuntu-agent-readonly` → add `bicklehoff/netrate-pc-ops` to repo access
+1. ~~**Update GitHub token**~~ — **DONE (Mar 2).** Token now scoped to both `netrate-mortgage-site` and `netrate-pc-ops`. Same token value, no regeneration needed.
 2. **Re-clone or update remote:**
    ```bash
    cd ~
@@ -41,4 +41,6 @@ Code moved from `bicklehoff/netrate-mortgage-site` to `bicklehoff/netrate-pc-ops
 
 ## Status
 
-Pending update — Claw still points at old repo as of Mar 2, 2026.
+- **Token:** Updated (Mar 2) — includes both repos, read-only
+- **Remote:** Pending — Claw still points at old repo, needs `git remote set-url` to `netrate-pc-ops`
+- **Watcher:** No update needed — runs independently, uploads to GCS directly
