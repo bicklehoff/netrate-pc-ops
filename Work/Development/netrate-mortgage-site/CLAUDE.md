@@ -23,9 +23,23 @@ Production website + borrower portal + MLO dashboard. Deployed to Vercel at netr
 
 ## Database Models (Prisma)
 
-Borrower, Mlo, Loan, LoanEvent, Document, Contact, CallLog, CallNote, SmsMessage
+**Original (9):** Borrower, Mlo, Loan, LoanEvent, Document, Contact, CallLog, CallNote, SmsMessage
 
-Schema: `prisma/schema.prisma` (263 lines)
+**Phase 1 — CORE Foundation (4 new, in schema but migration not yet run):**
+- `LoanDates` — 30+ milestone dates (1:1 with Loan)
+- `Condition` — loan conditions tracking (stage, status, blocking, borrower-facing)
+- `LoanNote` — operational notes (separate from LoanEvent audit trail)
+- `LoanTask` — per-loan task management (priority, assignment, due dates)
+
+**New Loan fields (Phase 1):** loanType, lenderName, loanNumber, loanAmount, interestRate, loanTerm
+
+**Phases 2-3 designed, not yet in schema.** Full plan at `C:\Users\bickl\.claude\plans\iterative-weaving-abelson.md`.
+
+Schema: `prisma/schema.prisma`
+
+## Picklist Constants
+
+`src/lib/constants/` — loan-types.js, lenders.js (more coming in future phases)
 
 ## Key Directories
 

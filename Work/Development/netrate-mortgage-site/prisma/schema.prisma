@@ -1,6 +1,6 @@
-// Borrower Portal — Prisma Schema
-// Based on PORTAL-ARCHITECTURE-PLAN.md (Feb 23, 2026)
+// NetRate Mortgage — Prisma Schema
 // Database: Neon Postgres (via Vercel Marketplace)
+// Schema evolution: init → add_dialer_tables → add_loan_processing_foundation
 
 generator client {
   provider   = "prisma-client"
@@ -80,6 +80,14 @@ model Loan {
   purpose         String?   // 'purchase' | 'refinance'
   occupancy       String?   // 'primary' | 'secondary' | 'investment'
 
+  // Loan classification (Phase 1 — CORE foundation)
+  loanType        String?   @map("loan_type")        // 'conventional' | 'fha' | 'va' | 'usda' | 'other'
+  lenderName      String?   @map("lender_name")       // Free text, e.g. "UWM", "Plaza"
+  loanNumber      String?   @map("loan_number")        // Lender's tracking number
+  loanAmount      Decimal?  @map("loan_amount") @db.Decimal(12, 2)
+  interestRate    Decimal?  @map("interest_rate") @db.Decimal(5, 4)
+  loanTerm        Int?      @map("loan_term")          // Months (360, 180, etc.)
+
   // Property
   propertyAddress Json?     @map("property_address") @db.JsonB
   propertyType    String?   @map("property_type")
@@ -125,6 +133,12 @@ model Loan {
   events          LoanEvent[]
   documents       Document[]
 
+  // Phase 1 relations
+  dates           LoanDates?
+  conditions      Condition[]
+  loanNotes       LoanNote[]
+  tasks           LoanTask[]
+
   @@map("loans")
 }
 
@@ -165,6 +179,7 @@ model Document {
 
   loan            Loan      @relation(fields: [loanId], references: [id])
   requestedBy     Mlo?      @relation("RequestedBy", fields: [requestedById], references: [id])
+  conditions      Condition[]
 
   @@map("documents")
 }
@@ -260,4 +275,152 @@ model SmsMessage {
   @@index([contactId])
   @@index([twilioMessageSid])
   @@map("sms_messages")
+}
+
+// ─── Loan Dates (Phase 1 — CORE Foundation) ─────────────────
+
+model LoanDates {
+  id                  String    @id @default(uuid()) @db.Uuid
+  loanId              String    @unique @map("loan_id") @db.Uuid
+
+  // Application & Lock
+  applicationDate     DateTime? @map("application_date")
+  lockedDate          DateTime? @map("locked_date")
+  lockExpiration      DateTime? @map("lock_expiration")
+  lockTerm            Int?      @map("lock_term")           // Days
+
+  // Credit
+  creditPulledDate    DateTime? @map("credit_pulled_date")
+  creditExpiration    DateTime? @map("credit_expiration")
+
+  // Appraisal
+  appraisalOrdered    DateTime? @map("appraisal_ordered")
+  appraisalScheduled  DateTime? @map("appraisal_scheduled")
+  appraisalReceived   DateTime? @map("appraisal_received")
+  appraisalDue        DateTime? @map("appraisal_due")
+  appraisalDeadline   DateTime? @map("appraisal_deadline")
+  appraisalExpiry     DateTime? @map("appraisal_expiry")
+  appraisalWaiver     Boolean   @default(false) @map("appraisal_waiver")
+
+  // Title
+  titleOrdered        DateTime? @map("title_ordered")
+  titleReceived       DateTime? @map("title_received")
+  titleExpiry         DateTime? @map("title_expiry")
+
+  // Insurance
+  hoiOrdered          DateTime? @map("hoi_ordered")
+  hoiReceived         DateTime? @map("hoi_received")
+  hoiBound            DateTime? @map("hoi_bound")
+  floodCertOrdered    DateTime? @map("flood_cert_ordered")
+  floodCertReceived   DateTime? @map("flood_cert_received")
+
+  // Closing & Funding
+  estimatedClosing    DateTime? @map("estimated_closing")
+  closingDate         DateTime? @map("closing_date")
+  estimatedFunding    DateTime? @map("estimated_funding")
+  fundingDate         DateTime? @map("funding_date")
+  firstPaymentDate    DateTime? @map("first_payment_date")
+
+  // Submission milestones
+  submittedToUwDate   DateTime? @map("submitted_to_uw_date")
+  condApprovedDate    DateTime? @map("cond_approved_date")
+  ctcDate             DateTime? @map("ctc_date")
+  docsOutDate         DateTime? @map("docs_out_date")
+
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  loan                Loan      @relation(fields: [loanId], references: [id], onDelete: Cascade)
+
+  @@map("loan_dates")
+}
+
+// ─── Conditions (Phase 1 — CORE Foundation) ─────────────────
+
+model Condition {
+  id                  String    @id @default(uuid()) @db.Uuid
+  loanId              String    @map("loan_id") @db.Uuid
+
+  // Classification
+  title               String
+  description         String?
+  conditionType       String    @map("condition_type")
+  // 'appraisal' | 'lender' | 'client' | 'realtor' | 'title' | 'credit' |
+  // 'doc' | 'hoi' | 'income' | 'investment' | 'land' | 'loe' | 'purchase'
+
+  stage               String    @default("prior_to_docs")
+  // 'prior_to_docs' | 'prior_to_funding' | 'at_closing'
+
+  // Lifecycle
+  status              String    @default("needed")
+  // 'needed' | 'requested' | 're_requested' | 'received' | 'submitted' | 'cleared' | 'waived'
+
+  // Ownership & Assignment
+  ownerRole           String?   @map("owner_role")       // 'processor' | 'mlo'
+  assignedToId        String?   @map("assigned_to_id") @db.Uuid
+  requestedDate       DateTime? @map("requested_date")
+  dueDate             DateTime? @map("due_date")
+
+  // Visibility & Blocking
+  borrowerFacing      Boolean   @default(false) @map("borrower_facing")
+  blockingProgress    Boolean   @default(false) @map("blocking_progress")
+
+  // Content
+  internalNotes       Json?     @map("internal_notes") @db.JsonB  // Array of {note, author, timestamp}
+  fileUrl             String?   @map("file_url")
+  fileName            String?   @map("file_name")
+
+  // Link to existing Document (optional — some conditions ARE document requests)
+  documentId          String?   @map("document_id") @db.Uuid
+
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  loan                Loan      @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  document            Document? @relation(fields: [documentId], references: [id])
+
+  @@index([loanId])
+  @@index([loanId, status])
+  @@map("conditions")
+}
+
+// ─── Loan Notes (Phase 1 — CORE Foundation) ─────────────────
+
+model LoanNote {
+  id              String    @id @default(uuid()) @db.Uuid
+  loanId          String    @map("loan_id") @db.Uuid
+  content         String
+  authorId        String    @map("author_id") @db.Uuid
+  authorType      String    @map("author_type")   // 'mlo' | 'borrower' | 'system'
+  source          String?                          // 'portal' | 'dialer' | 'import' | 'system'
+  isPinned        Boolean   @default(false) @map("is_pinned")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  loan            Loan      @relation(fields: [loanId], references: [id], onDelete: Cascade)
+
+  @@index([loanId])
+  @@map("loan_notes")
+}
+
+// ─── Loan Tasks (Phase 1 — CORE Foundation) ─────────────────
+
+model LoanTask {
+  id              String    @id @default(uuid()) @db.Uuid
+  loanId          String    @map("loan_id") @db.Uuid
+  title           String
+  description     String?
+  priority        String    @default("later")       // 'today' | 'tomorrow' | 'later'
+  status          String    @default("pending")      // 'pending' | 'in_progress' | 'completed'
+  dueDate         DateTime? @map("due_date")
+  assignedToId    String?   @map("assigned_to_id") @db.Uuid
+  createdById     String    @map("created_by_id") @db.Uuid
+  completedAt     DateTime? @map("completed_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  loan            Loan      @relation(fields: [loanId], references: [id], onDelete: Cascade)
+
+  @@index([loanId])
+  @@index([assignedToId, status])
+  @@map("loan_tasks")
 }

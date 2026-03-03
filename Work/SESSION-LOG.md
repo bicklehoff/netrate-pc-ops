@@ -598,6 +598,45 @@ Use this file to coordinate across PC work chats. Each session should read this 
 **Open items:**
 - [ ] **David** — Reconfigure Vercel: connect `bicklehoff/netrate-pc-ops`, set root dir to `Work/Development/netrate-mortgage-site`, set ignored build step
 - [ ] **David** — Archive `bicklehoff/netrate-mortgage-site` on GitHub (Settings → Archive)
-- [ ] **David** — Update Claw's GitHub token scope from `netrate-mortgage-site` to `netrate-pc-ops`
+- [x] ~~**David** — Update Claw's GitHub token scope from `netrate-mortgage-site` to `netrate-pc-ops`~~ (done — March 2 WebDev session)
 - [ ] **David** — Confirm what to do with 3 loose files in `D:\PROJECTS\` root
 - [ ] **David → Mac** — Relay: "PC completed one-repo migration. Code now lives in pc-ops/Work/Development/netrate-mortgage-site/. Matches Mac's pattern."
+
+---
+
+## Session: March 2, 2026 (cont'd) - GCS Cache Fix + Claw Token Update (WebDev)
+
+**Chat focus:** Fixed stale rate data caused by Next.js fetch cache, updated Claw's GitHub token to include `netrate-pc-ops` repo.
+
+**What was done:**
+
+*GCS Cache Fix:*
+- Claw reported uploading 3/2/2026 rates but website still showed 2/26/2026 data
+- Investigated: Vercel CDN cache was NOT the issue this time (`x-vercel-cache: PRERENDER`, `Age: 0`)
+- Root cause: Next.js 14 caches `fetch()` responses by default, even in route handlers. The `fetchGCSFile()` function in `src/lib/gcs.js` was missing `cache: 'no-store'`, so GCS API responses were cached in Next.js's internal data cache
+- Fix: Added `cache: 'no-store'` to the fetch call in `fetchGCSFile()`
+- Committed as `78cb007`, pushed to main, Vercel deployed
+- Verified: API now returns 3/2/2026 rates with `x-vercel-cache: MISS`, `Age: 0`, `source: gcs`
+- Also verified locally via dev server — `/api/rates` returns `effectiveDate: 3/2/2026`
+
+*Claw GitHub Token Update:*
+- Edited `ubuntu-agent-readonly` fine-grained token on GitHub
+- Changed from "All repositories" → "Only select repositories"
+- Added `bicklehoff/netrate-pc-ops` (now 2 repos: netrate-mortgage-site + netrate-pc-ops)
+- Permissions unchanged: Contents Read-only, Metadata Read-only, no account permissions
+- Token value unchanged — Claw's existing `github_pat_11B5B2KQ...` works immediately with the new repo
+- Claw needs to re-point remote: `git remote set-url origin https://bicklehoff:<TOKEN>@github.com/bicklehoff/netrate-pc-ops.git`
+
+**Commits (netrate-mortgage-site):**
+- `78cb007` — Fix stale GCS data by disabling Next.js fetch cache
+
+**Files modified:**
+- `src/lib/gcs.js` — Added `cache: 'no-store'` to `fetchGCSFile()` fetch call
+
+**Key decisions:**
+- Two separate caching layers have now been fixed across two sessions: (1) Vercel CDN TTLs reduced on Feb 27 (`c64fc1e`), (2) Next.js internal fetch cache disabled on Mar 2 (`78cb007`). Rate pipeline worst-case staleness is now ~3 min.
+
+**Open items:**
+- [ ] **Claw** — Re-point git remote to `netrate-pc-ops` and pull (token already has access)
+- [ ] **David** — Reconfigure Vercel: connect `netrate-pc-ops`, set root dir (carried forward)
+- [ ] **David** — Archive `netrate-mortgage-site` on GitHub (carried forward)
