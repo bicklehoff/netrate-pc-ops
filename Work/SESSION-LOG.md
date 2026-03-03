@@ -703,3 +703,48 @@ Use this file to coordinate across PC work chats. Each session should read this 
 - [ ] **David** — Reconfigure Vercel: connect `netrate-pc-ops`, set root dir (carried forward)
 - [ ] **WebDev** — Prisma schema has new Phase 1 models (LoanDates, Condition, LoanNote, LoanTask) but migration has NOT been run — do NOT run until reviewed
 - [ ] **David** — Ask senders of important emails from past few days to resend (bounced emails are unrecoverable)
+
+---
+
+## Session: March 3, 2026 - GBP Rename Prep Checklist (Marketing)
+
+**Chat focus:** Created a 26-directory, 6-phase citation seeding checklist for the eventual Google Business Profile rename, and added it to the marketing portal.
+
+**What was done:**
+- Researched top citation directories for mortgage/financial services businesses — identified the 4 core data aggregators (Data Axle, Neustar Localeze, Foursquare, Factual), 8 major directories, 7 industry-specific directories, and 9 secondary/social platforms
+- Created `D:\netrate-gbp-rename-checklist.md` — master reference copy with full 6-phase plan:
+  - Phase 0: Pre-work (signage, business registration, NMLS verification)
+  - Phase 1: Core data aggregators (Week 1-2) — these feed 100+ downstream directories each
+  - Phase 2: Major directories (Week 2-3) — BBB, Bing, Apple, Yelp, Facebook, LinkedIn, YP
+  - Phase 3: Industry-specific (Week 3-4) — NMLS, Zillow, LendingTree, Bankrate, NerdWallet, Colorado MBA
+  - Phase 4: Secondary & social (Week 4-5) — Manta, Hotfrog, YouTube, Twitter/X, Instagram, Trustpilot
+  - Phase 5: GBP rename (Week 5-6) — only after 20+ directories seeded
+  - Phase 6: Post-rename cleanup
+- Includes: citation tracking table, key rules, NAP reference block, video verification guidance
+- Created portal page at `/portal/mlo/gbp-checklist` (admin-only, same pattern as marketing playbook page)
+- Added "GBP Rename →" link to MLO dashboard nav (next to "Marketing Playbook →")
+- Updated marketing playbook (both D:\ master and portal copy) with cross-reference to the checklist
+- All code changes were committed by a prior session (`4e305a6`) — this session authored the content and files
+
+**Key decisions:**
+- Strategy is "seed citations before touching GBP" — Google cross-references directories during verification
+- Aggregators first (Data Axle + Neustar = highest leverage, feed 170+ downstream directories)
+- Name-only change on GBP (never change name + address + phone simultaneously)
+- No GBP edits for 2 weeks before the rename attempt
+- If video verification triggered, request live video call (higher approval rate than recorded video)
+
+**Files created:**
+- `D:\netrate-gbp-rename-checklist.md` — Master copy (not in a repo, D:\ root reference file)
+- `Work/Development/netrate-mortgage-site/src/data/gbp-rename-checklist.md` — Portal content (in monorepo)
+- `Work/Development/netrate-mortgage-site/src/app/portal/mlo/gbp-checklist/page.js` — Portal page (in monorepo)
+
+**Files modified:**
+- `Work/Development/netrate-mortgage-site/src/app/portal/mlo/page.js` — Added GBP Rename nav link
+- `Work/Development/netrate-mortgage-site/src/data/marketing-playbook.md` — Added cross-reference to checklist
+- `D:\netrate-marketing-playbook.md` — Same cross-reference (master copy)
+
+**Open items:**
+- [ ] **David** — Order permanent "NetRate Mortgage" office plaque/sign (for video verification)
+- [ ] **David** — When ready to rename: work through Phase 1-4 citation seeding (4-5 weeks), then Phase 5 GBP rename
+- [ ] **David** — Reconfigure Vercel: connect `netrate-pc-ops`, set root dir (BLOCKING — old repo is archived, can't push new code until this is done)
+- [ ] **Integrations** — Twilio A2P carrier approval still pending (carried forward)
