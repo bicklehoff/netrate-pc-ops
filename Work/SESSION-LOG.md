@@ -639,4 +639,67 @@ Use this file to coordinate across PC work chats. Each session should read this 
 **Open items:**
 - [ ] **Claw** — Re-point git remote to `netrate-pc-ops` and pull (token already has access)
 - [ ] **David** — Reconfigure Vercel: connect `netrate-pc-ops`, set root dir (carried forward)
-- [ ] **David** — Archive `netrate-mortgage-site` on GitHub (carried forward)
+- [x] ~~**David** — Archive `netrate-mortgage-site` on GitHub~~ (done)
+
+---
+
+## Session: March 2-3, 2026 - Twilio A2P, Legal Name Fix, DNS/Email Recovery (WebDev/Integrations)
+
+**Chat focus:** Assisted David through Twilio A2P 10DLC registration, fixed legal entity name across all compliance pages (CA DFPI flagged DBA issue), recovered email by restoring missing MX records.
+
+**What was done:**
+
+*Twilio A2P 10DLC Registration (assisted David in Twilio Console):*
+- Customer Profile: Approved (Primary, Bundle SID `BUdcf0050723a1627790403f09f5aec130`)
+- Brand Registration: Registered (Low-Volume Standard, Locus Companies LLC — matches EIN, fine)
+- Campaign: Submitted (Low Volume Mixed, SID `CMa9e8fdc352317db81ffa73648e9741a6`, $1.50/mo + $15 vetting)
+- Messaging Service: "Low Volume Mixed A2P Messaging Service" — set use case to "Notify my users"
+- Sender Pool: Added +17205731236 to correct messaging service
+- A2P & Compliance: Campaign connected, status "In progress" — waiting for carrier approval (1-7 business days)
+- Provided all campaign copy: description, 5 sample messages, consent language, privacy/terms URLs
+
+*Legal Entity Name Fix (CA DFPI flagged):*
+- CA DFPI found "Locus Companies, LLC d/b/a NetRate Mortgage" on the site — WRONG
+- LLC name was changed to **NetRate Mortgage LLC** — there is NO DBA
+- Removed all 11 instances of "Locus Companies, LLC d/b/a" across 5 files in monorepo
+- Committed and pushed: `4f38a45`
+
+*DNS/Email Recovery:*
+- David reported not receiving emails at @locusmortgage.com
+- Checked GoDaddy DNS — MX records were missing (wiped during redirect setup)
+- David added 3 Zoho MX records (mx.zoho.com, mx2, mx3) + SPF TXT record
+- Email should be flowing again; recent senders may still be retrying (1-3 day retry window)
+- Older bounced emails are unrecoverable
+
+*GBP Rename Checklist (from other dev session):*
+- Committed GBP Rename Checklist page (`src/app/portal/mlo/gbp-checklist/page.js`) and link from MLO dashboard
+- 26-directory, 6-phase citation seeding checklist for Google Business Profile rename
+
+*Other:*
+- Committed Twilio SMS StatusCallback hardcode to production URL (`d5bc493`)
+- Updated MEMORY.md: project location → monorepo, entity name → NetRate Mortgage LLC
+- Updated twilio.md: full A2P 10DLC status with SIDs and next steps
+- Confirmed password wall is working (`SITE_PASSWORD` set in Vercel)
+
+**Commits (netrate-pc-ops):**
+- `4f38a45` — Fix legal entity name: NetRate Mortgage LLC (not a DBA)
+
+**Commits (netrate-mortgage-site — old repo, before migration awareness):**
+- `d5bc493` — Fix Twilio SMS StatusCallback to use production URL
+- `4e305a6` — Add GBP Rename Checklist page and link from MLO dashboard
+- `952e4f9` — Fix legal entity name (duplicate — also applied to monorepo)
+
+**Key decisions:**
+- Legal entity is **NetRate Mortgage LLC** — no DBA, no "Locus Companies" anywhere on site
+- Twilio A2P uses Low Volume Mixed campaign ($1.50/mo) — covers all SMS use cases
+- locusmortgage.com MX records restored — email flowing again
+- Old `netrate-mortgage-site` repo is archived on GitHub (confirmed)
+
+**Open items:**
+- [ ] **Integrations** — Twilio A2P: waiting for carrier approval (1-7 business days). Once approved, register phone number to campaign, then update `sendSms()` to use MessagingServiceSid
+- [ ] **Integrations** — Get full Messaging Service SID from Twilio Console (starts with `MG0eb6cca59bd54081d...`)
+- [ ] **WebDev** — Rate date issue still open: "claw" says it fetched today's rates but site showed stale date. Need Claw session to update its logs so we can debug the pipeline.
+- [ ] **David** — Verify locusmortgage.com email is working (send a test)
+- [ ] **David** — Reconfigure Vercel: connect `netrate-pc-ops`, set root dir (carried forward)
+- [ ] **WebDev** — Prisma schema has new Phase 1 models (LoanDates, Condition, LoanNote, LoanTask) but migration has NOT been run — do NOT run until reviewed
+- [ ] **David** — Ask senders of important emails from past few days to resend (bounced emails are unrecoverable)
