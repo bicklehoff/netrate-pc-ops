@@ -156,6 +156,86 @@
 
 ---
 
+## BATCH 1.5 — Homepage "De-AI" Redesign (Ship With or Right After Batch 1)
+
+**Problem:** The homepage looks AI-generated. Every section is center-aligned, every content block is a 3-column card grid, every section has identical visual weight. This is the default output pattern of AI code generators and it's increasingly recognizable. A borrower's first impression should be "this looks professional" not "this was made by ChatGPT."
+
+**The fingerprint to break:**
+- 5 separate 3-column grids on one page (Why NetRate, Reviews ×2 rows, What We Do)
+- 100% center-aligned — every heading, every paragraph, every button
+- White-on-white-on-white with no visual texture between sections
+- Every section follows the same rhythm: heading → text → cards → button
+- No visual hierarchy — every section has equal importance
+- No icons, illustrations, or visual interest in card sections
+- Generic rounded-corner card borders (default Tailwind)
+
+### Changes — Section by Section
+
+**A) Hero — Break the center, add a rate teaser**
+- Left-align the headline and subtext (or use a 2-column layout: text left, rate teaser right)
+- Add a live rate teaser on the right: "Today's 30yr Fixed: X.XX%" pulling from the rate API — this is the differentiator, show it immediately
+- Add a subtle background element: light geometric pattern, gradient, or brand-color accent shape. Pure white hero = AI flag #1
+- Keep the two CTAs but make "Check Today's Rates" visually dominant (larger, filled) and "Apply Now" clearly secondary
+
+**B) Trust Checkmark Bar — Keep as-is**
+- This is fine. Subtle, functional, not a problem.
+
+**C) "Live Rates, Updated Daily" — Merge into hero or remove**
+- This section says the same thing as the hero. Consolidate. The hero should communicate "we show live rates" and the CTA should go straight to /rates. Having a separate section that says "we have rates, click here to see them" is redundant and adds another generic centered block.
+
+**D) "Why NetRate" Cards — Break the 3-equal-columns pattern**
+- Option 1: Feature layout — one large card (left, 60% width) with the strongest message ("Rates Before Applications") + two smaller stacked cards (right, 40%)
+- Option 2: Number callouts — lead with big bold numbers: "0 credit pulls required" / "11 wholesale lenders" / "$26.6M funded in 2025" as oversized stat blocks, not paragraph cards
+- Option 3: Icon cards — add distinct icons/illustrations to each card to differentiate them visually. Right now they're indistinguishable text blocks.
+- **Do NOT use 3 identical cards in a row.** That's the single strongest AI-generated signal.
+
+**E) Reviews Section — Vary the layout**
+- Don't show 6 identical cards in a 3×2 grid. Options:
+  - Feature 1 large review prominently (bigger card, different background) + 2-3 smaller ones below
+  - Horizontal scrolling carousel instead of a grid
+  - Pull one quote as a large centered blockquote with attribution, then show 3 smaller cards below it
+- The "4.9 out of 5 / Based on 35 Google Reviews" headline area is good — keep that
+- Consider adding the Google "G" icon next to the star rating (not just in footer)
+
+**F) "What We Do" — Make it visual, not just text columns**
+- Current: 3 text-only columns (Refinance, Purchase, Rate Tool). No icons, no images, no visual distinction.
+- Add icons or illustrations for each service
+- Consider making these clickable cards with a hover state, not just static text
+- Or: consolidate into a 2-column layout where one side is a brief description and the other links to /services
+
+**G) "Licensed. Independent. Direct." — Make it a visual moment**
+- This section should feel different from the rest of the page — it's the credibility anchor
+- Use a light gray or off-white background to set it apart
+- Make the NMLS numbers, founding year, and state count feel like a badge row or stat bar, not flowing text
+- Consider: dark background with white text (like the CTA band below it) to create visual weight
+- The BBB seal, NMLS logo, and Equal Housing icon should be displayed as actual logos/badges in a row, not text links
+
+**H) Bottom CTA Band — Keep, but differentiate**
+- The teal band is actually the most visually distinct element on the page — keep it
+- Consider making the heading more specific: "See rates for your scenario in 30 seconds" instead of the current generic copy
+
+**I) Footer — Fine as-is**
+- The Google review bar (G + 4.9 + 35 reviews) above the footer is a nice touch
+
+### General Principles
+
+1. **Max 2 instances of 3-column layout per page.** Not 5.
+2. **Mix alignment** — left-align at least 2 sections. Not everything centered.
+3. **Vary section backgrounds** — alternate white / off-white / light gray / dark. Don't use the same white background for 7 consecutive sections.
+4. **Use bold numbers** — "$26.6M funded", "11 lenders", "4.9★", "Founded 2013" as oversized visual elements. Numbers break text monotony and feel designed.
+5. **One asymmetric section minimum** — at least one section should NOT be a centered heading + centered content block. Use a 2-column split, offset layout, or sidebar.
+6. **Add micro-texture** — subtle background patterns, section dividers that aren't just whitespace, gentle gradients. The goal isn't flashy — it's to prevent the "flat white plane" look.
+
+### What NOT to do
+- Don't add stock photography (we already decided this — it makes things worse)
+- Don't add animations just for the sake of it (subtle entrance animations are fine, bouncing elements are not)
+- Don't switch to a dark theme (works for Bayou's DSCR tool, wrong for a consumer mortgage site)
+- Don't over-design — the goal is "feels professionally designed" not "looks like a startup landing page"
+
+**Status:** APPROVED — include in Batch 1 work or ship immediately after. This is a perception issue that affects every visitor.
+
+---
+
 ## BATCH 3 — After Batch 2 Ships
 
 ### 13. AI Rate Advisor (Contextual Chat on Rate Tool)
