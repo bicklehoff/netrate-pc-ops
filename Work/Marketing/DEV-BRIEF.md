@@ -156,8 +156,69 @@
 
 ---
 
+## BATCH 3 — After Batch 2 Ships
+
+### 13. AI Rate Advisor (Contextual Chat on Rate Tool)
+
+**Concept:** An AI chat widget embedded on the rates page that reads the borrower's current scenario (loan type, amount, credit score, down payment, purpose) and surfaces contextual guidance, comparisons, and answers. Think Banking Bridge "AI Advisor" — but native to our rate engine, our voice, and our lead capture.
+
+**Competitive reference:** Banking Bridge offers this as a SaaS widget to lenders ($$$). Five Star Mortgage uses it. David previously subscribed, dropped it when he realized we could build it ourselves. The screenshots below describe what their version does — ours should match or exceed this.
+
+**What it does:**
+- Detects the active loan program (VA, FHA, Conventional, Jumbo) and surfaces 3-4 contextual quick-start questions. Examples for VA:
+  - "Am I exempt from the VA funding fee?"
+  - "What fees are lenders charging me?"
+  - "How does my VA entitlement work?"
+  - "Would a 15-year save me more money?"
+- Answers are scenario-aware — references the borrower's exact loan amount, down payment, rate, and P&I from the rate tool
+- Can run live comparisons by re-querying the rate API with different parameters (e.g., VA vs Conventional side-by-side for the same scenario)
+- Comparison output includes: rate, points, P&I for each program, monthly savings delta, and a "Bottom Line for You" recommendation with recoup analysis
+- After each answer, offers follow-up quick-reply buttons to guide the conversation deeper (no typing required)
+- Notices when points don't apply (e.g., "No PMI ever — but you're already at 20% down, so this doesn't apply to you currently")
+
+**Architecture:**
+- **Frontend:** Chat widget component on the rates page, below or beside the rate table
+- **AI backend:** Claude API (Anthropic) with tool-calling — the AI can call the rate API as a function to pull/compare rates
+- **Tools available to the AI:**
+  - `get_rates(params)` — query rate engine with specific scenario parameters
+  - `compare_programs(program_a, program_b, scenario)` — pull rates for two loan types and compute deltas
+  - `calculate_recoup(cost, monthly_savings)` — recoup analysis math
+  - `get_scenario()` — read the borrower's current rate tool inputs
+- **Knowledge base:** Mortgage program rules (VA funding fee schedule, FHA MIP rules, conventional PMI thresholds, jumbo requirements, etc.) — provided as system prompt context, not hardcoded responses
+- **Lead capture integration:** Conversations can end with a soft CTA ("Want a personalized quote? Enter your info") that opens the existing lead capture modal with scenario pre-filled
+
+**Quick-start questions by loan type:**
+
+| Loan Type | Suggested Quick Questions |
+|-----------|--------------------------|
+| VA | Funding fee exemption, VA vs conventional, entitlement, COE process |
+| FHA | MIP removal timeline, FHA vs conventional, credit score thresholds, down payment assistance |
+| Conventional | PMI removal at 80% LTV, points vs no-points tradeoff, 15yr vs 30yr, rate buydown math |
+| Jumbo | Jumbo vs conforming limit, reserve requirements, rate premium explanation, ARM vs fixed |
+
+**Key design principles:**
+- Scenario-aware — every response references the borrower's actual numbers, not generic info
+- Quick-reply buttons — minimize typing friction, guide the conversation
+- No hallucination on rates — AI MUST call the rate API for any pricing data, never guess
+- Lead capture is a natural endpoint, not a hard gate — the conversation itself is the value
+- Our voice — confident, direct, helpful, no corporate-speak (matches existing site tone)
+- Compliance: include disclaimer footer in chat ("For informational purposes only. Actual rates depend on individual qualification.")
+
+**Why this matters:**
+- Borrowers browsing rates have questions but aren't ready to call. This fills the gap.
+- Every chat interaction is a soft engagement signal — higher intent than passive browsing
+- Scenario-aware comparisons (VA vs Conventional with actual numbers) are a genuine conversion tool
+- Differentiator: most broker sites have nothing like this. Banking Bridge charges lenders monthly for an inferior version that isn't even connected to their actual pricing.
+
+**Dependencies:** Batch 1 lead capture must ship first (the advisor's CTA opens the existing modal). Rate API must be stable and queryable.
+
+**Status:** APPROVED CONCEPT — scope and build after Batch 2.
+
+---
+
 ## Reference
 
-- Full marketing playbook: `D:\netrate-marketing-playbook.md`
-- Rate tool lead capture mockup: `D:\mockup-rate-tool-lead-capture.html`
+- Full marketing playbook: `D:\netrate-marketing-playbook.md` (also at `Work/Marketing/PLAYBOOK.md`)
+- Rate tool lead capture mockup: `D:\mockup-rate-tool-lead-capture.html` (also at `Work/Marketing/mockups/`)
+- GBP rename checklist: Portal at `/portal/mlo/gbp-checklist`
 - Questions: Ask marketing (this doc's author)
