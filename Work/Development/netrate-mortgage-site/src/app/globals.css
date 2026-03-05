@@ -21,3 +21,24 @@ body {
   color: var(--text-body);
   background: var(--bg-page);
 }
+
+/* HECM Optimizer Print Styles */
+@media print {
+  body {
+    background: white;
+    font-size: 11px;
+  }
+
+  /* Hide nav and screen-only elements via data attribute */
+  nav, header, [data-print-hide] {
+    display: none !important;
+  }
+
+  .print-page {
+    page-break-inside: avoid;
+  }
+
+  .print-page-break {
+    page-break-before: always;
+  }
+}

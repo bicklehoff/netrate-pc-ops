@@ -26,7 +26,7 @@
 
 **a) Curated Reviews Section (Homepage)**
 - **What:** Reviews strip showing Google star rating + 2-3 curated pull quotes + "See all reviews on Google" link
-- **Where:** Below the "Why NetRate Mortgage" cards section on homepage
+- **Where:** Below the Tools & Calculators grid on homepage (see Batch 1.5 page flow)
 - **Implementation:** Manually hardcoded — no Google Places API needed. Just hardcode the star rating, count, and quotes below.
 - **Star rating:** 4.9 (display as filled/partial stars)
 - **Review count:** 35
@@ -156,83 +156,133 @@
 
 ---
 
-## BATCH 1.5 — Homepage "De-AI" Redesign (Ship With or Right After Batch 1)
+## BATCH 1.5 — Homepage Data Hub Redesign (Ship With or Right After Batch 1)
 
-**Problem:** The homepage looks AI-generated. Every section is center-aligned, every content block is a 3-column card grid, every section has identical visual weight. This is the default output pattern of AI code generators and it's increasingly recognizable. A borrower's first impression should be "this looks professional" not "this was made by ChatGPT."
+**Mockup:** Open `Work/Marketing/mockups/homepage-redesign.html` in a browser — this is the reference for the entire page layout.
 
-**The fingerprint to break:**
-- 5 separate 3-column grids on one page (Why NetRate, Reviews ×2 rows, What We Do)
-- 100% center-aligned — every heading, every paragraph, every button
-- White-on-white-on-white with no visual texture between sections
-- Every section follows the same rhythm: heading → text → cards → button
-- No visual hierarchy — every section has equal importance
-- No icons, illustrations, or visual interest in card sections
-- Generic rounded-corner card borders (default Tailwind)
+**Concept shift:** The homepage is now an **information hub**, not a brochure. Instead of selling ("why choose us"), it shows data — rates, trends, market updates, tools. The previous "Why NetRate" cards, "What We Do" services section, and "Live Rates Updated Daily" section are all removed. The homepage answers: "What are rates today? Where are they going? What tools are available?"
 
-### Changes — Section by Section
+### Page Flow — Top to Bottom
 
-**A) Hero — Break the center, add a rate teaser**
-- Left-align the headline and subtext (or use a 2-column layout: text left, rate teaser right)
-- Add a live rate teaser on the right: "Today's 30yr Fixed: X.XX%" pulling from the rate API — this is the differentiator, show it immediately
-- Add a subtle background element: light geometric pattern, gradient, or brand-color accent shape. Pure white hero = AI flag #1
-- Keep the two CTAs but make "Check Today's Rates" visually dominant (larger, filled) and "Apply Now" clearly secondary
+**A) Nav**
+- Links: Rates, Tools, Market, About, Apply Now (teal CTA button)
+- Sticky on scroll
 
-**B) Trust Checkmark Bar — Keep as-is**
-- This is fine. Subtle, functional, not a problem.
+**B) Hero — 2-column, left-aligned text + rate teaser card**
+- Background: subtle gradient wash (teal-tinted, not pure white). Faint radial glows for texture. NO stock photos.
+- **Left column:**
+  - Eyebrow badge: green pulsing dot + "Rates updated today" — pill-shaped, teal tint
+  - Headline: "See your actual mortgage rate **before you apply.**" (bold accent on the second part, brand color)
+  - Subtext: "Most lenders make you fill out an application before they show you numbers. We show you rates first — with the math behind them."
+  - Sub-subtext (lighter): "No application. No credit pull. Just rates."
+  - Two CTAs: "Check Today's Rates" (filled teal, primary) + "Apply Now" (outlined, secondary)
+  - **Trust strip below buttons** (separated by top border):
+    - Google badge: "G" icon (blue bg) + 5 gold stars + **4.9** + "· 35 reviews"
+    - Divider
+    - BBB badge: "BBB" icon (blue bg) + "A+ Rated" — dev should use real BBB seal (embed code in Batch 1 item #3)
+    - Divider
+    - NMLS badge: "N" icon (dark bg) + "NMLS #641790"
+    - Sizing: icons 32px, text ~15px, stars 16px. These need to be clearly visible, not tiny footnote text.
+- **Right column — Rate teaser card:**
+  - White card with shadow + subtle border
+  - Header: "TODAY'S 30-YEAR FIXED" (teal label, uppercase) + green "● LIVE" badge
+  - Rate: large bold number (e.g., 5.875%) — pulls from rate API
+  - Detail line: "760+ FICO · $400K loan · Rate/Term Refi"
+  - Comparison bar (green bg): "↓ 0.50% below national average (Freddie Mac X.XX%)" — pull Freddie Mac PMMS weekly average
+  - Meta row: P&I Payment, Points, Lenders (3 columns)
+  - Updated timestamp: "Updated today at 9:15 AM ET · Live wholesale pricing"
+  - CTA button: "See All Rate Options →" (teal, links to /rates)
 
-**C) "Live Rates, Updated Daily" — Merge into hero or remove**
-- This section says the same thing as the hero. Consolidate. The hero should communicate "we show live rates" and the CTA should go straight to /rates. Having a separate section that says "we have rates, click here to see them" is redundant and adds another generic centered block.
+**C) Trust Checkmark Bar — Keep as-is**
+- 3 checkmarks: No application or credit pull / Real wholesale rates, updated daily / Compare multiple loan options
+- Light gray background, subtle borders top and bottom
 
-**D) "Why NetRate" Cards — Break the 3-equal-columns pattern**
-- Option 1: Feature layout — one large card (left, 60% width) with the strongest message ("Rates Before Applications") + two smaller stacked cards (right, 40%)
-- Option 2: Number callouts — lead with big bold numbers: "0 credit pulls required" / "11 wholesale lenders" / "$26.6M funded in 2025" as oversized stat blocks, not paragraph cards
-- Option 3: Icon cards — add distinct icons/illustrations to each card to differentiate them visually. Right now they're indistinguishable text blocks.
-- **Do NOT use 3 identical cards in a row.** That's the single strongest AI-generated signal.
+**D) Today's Rates — Full product table**
+- Section header: "Today's Mortgage Rates" (left) + scenario context (right, gray text: "March 4, 2026 · 760+ FICO · $400K loan")
+- Table columns: Product | Rate | APR | Change | Mo. Payment | Action
+- 6 products:
+  - 30-Year Fixed
+  - 15-Year Fixed
+  - FHA 30-Year
+  - VA 30-Year
+  - Jumbo 30-Year (note: payment based on $800K)
+  - DSCR (Investor)
+- Change column: green down arrow = rate dropped, red up arrow = rate rose, gray dash = unchanged
+- Action column: "See options →" link (teal) — links to /rates with that product pre-selected
+- Footer disclaimer: scenario assumptions, "Updated daily from wholesale pricing"
+- **Data source:** Same rate engine that powers /rates. Rates are the day's best-execution for the default scenario.
 
-**E) Reviews Section — Vary the layout**
-- Don't show 6 identical cards in a 3×2 grid. Options:
-  - Feature 1 large review prominently (bigger card, different background) + 2-3 smaller ones below
-  - Horizontal scrolling carousel instead of a grid
-  - Pull one quote as a large centered blockquote with attribution, then show 3 smaller cards below it
-- The "4.9 out of 5 / Based on 35 Google Reviews" headline area is good — keep that
-- Consider adding the Google "G" icon next to the star rating (not just in footer)
+**E) Rate Trends + Market Updates — 2-column**
+- Light gray background section
+- **Left card: "30-Year Rate Trend"**
+  - Bar chart (sparkline-style) showing 8 weeks of rates
+  - Current rate highlighted as the last bar
+  - Summary text below: trend direction + brief outlook
+  - Data source: weekly rate snapshots from the rate engine or manually curated
+- **Right card: "Market Updates"**
+  - List of 4-5 market headlines with color-coded status dots:
+    - Green = positive for rates
+    - Amber = watch / mixed
+    - Blue = informational
+  - Each item has a date
+  - Data source: curated by marketing/agent, pushed via API endpoint or CMS field (same mechanism as Batch 2 item #12)
 
-**F) "What We Do" — Make it visual, not just text columns**
-- Current: 3 text-only columns (Refinance, Purchase, Rate Tool). No icons, no images, no visual distinction.
-- Add icons or illustrations for each service
-- Consider making these clickable cards with a hover state, not just static text
-- Or: consolidate into a 2-column layout where one side is a brief description and the other links to /services
+**F) Tools & Calculators — 4-column grid**
+- Header: "Tools & Calculators" (left) + "Real math, no guesswork." (right, gray)
+- 6 cards in a 4-column grid (first row: 4, second row: 2 + empty space):
+  1. **Rate Tool** (teal icon) — "Live wholesale rates across 11 lenders. See rate, points, payment, and lender credits side by side." → /rates
+  2. **DSCR Calculator** (green icon) — "Investment property? Enter rental income and expenses to see if your deal qualifies for a DSCR loan." → /dscr-calculator
+  3. **Reverse Mortgage** (amber icon) — "See how much equity you could access with a reverse mortgage. Age, home value, and rate — that's all we need." → /reverse-mortgage
+  4. **Refi Analyzer** (purple icon) — "Is refinancing worth it? Enter your current loan and we'll show the break-even timeline and total savings." → /rates (refi scenario)
+  5. **Purchase Calculator** (pink icon) — "Estimate your monthly payment, cash to close, and how much home you can afford." → /purchase-calculator
+  6. **Apply Online** (blue icon) — "Ready to go? Start your secure application. Takes about 15 minutes." → application link
+- Each card: colored gradient icon, title, description, arrow CTA
+- Hover: teal border, slight lift + shadow
 
-**G) "Licensed. Independent. Direct." — Make it a visual moment**
-- This section should feel different from the rest of the page — it's the credibility anchor
-- Use a light gray or off-white background to set it apart
-- Make the NMLS numbers, founding year, and state count feel like a badge row or stat bar, not flowing text
-- Consider: dark background with white text (like the CTA band below it) to create visual weight
-- The BBB seal, NMLS logo, and Equal Housing icon should be displayed as actual logos/badges in a row, not text links
+**G) Reviews — Compact, featured layout**
+- Gray background section
+- Header: Google "G" icon + **4.9** + 5 stars + "35 Google Reviews · Read all →" + "(Formerly Locus Mortgage)" in small gray text
+- Layout: 1 featured card (larger, teal border, "FEATURED" badge) + 4 supporting cards
+  - Featured card spans 2 rows in a 3-column grid
+  - Supporting cards fill remaining spots
+- Link goes to GBP: `https://www.google.com/maps/search/?api=1&query=Locus+Mortgage&query_place_id=ChIJa5-5jCXza4cRptwJxaP23eU`
+- Reviews to display — see Batch 1 item #2 for the curated quotes list
 
-**H) Bottom CTA Band — Keep, but differentiate**
-- The teal band is actually the most visually distinct element on the page — keep it
-- Consider making the heading more specific: "See rates for your scenario in 30 seconds" instead of the current generic copy
+**H) Credentials — Dark background band**
+- Keep as current: "Licensed. Independent. Direct."
+- Stats row: NMLS #641790 / CO, TX, OR (CA coming soon) / Founded 2013 / Direct-to-Consumer
+- Badge row: BBB A+ (use real seal), NMLS Consumer Access, Equal Housing Opportunity
 
-**I) Footer — Fine as-is**
-- The Google review bar (G + 4.9 + 35 reviews) above the footer is a nice touch
+**I) Bottom CTA — Teal band**
+- Headline: "See rates for your scenario in 30 seconds."
+- Subtext: "Tell us about your situation and we'll send you a personalized recommendation with full fee breakdown, cash to close, and savings analysis."
+- Two buttons: "Get a Free Quote" (white) + "Apply Now" (white outline)
 
-### General Principles
+**J) Footer Review Bar + Footer — Keep as-is**
+- Google G + 4.9 + 35 reviews bar above footer
 
-1. **Max 2 instances of 3-column layout per page.** Not 5.
-2. **Mix alignment** — left-align at least 2 sections. Not everything centered.
-3. **Vary section backgrounds** — alternate white / off-white / light gray / dark. Don't use the same white background for 7 consecutive sections.
-4. **Use bold numbers** — "$26.6M funded", "11 lenders", "4.9★", "Founded 2013" as oversized visual elements. Numbers break text monotony and feel designed.
-5. **One asymmetric section minimum** — at least one section should NOT be a centered heading + centered content block. Use a 2-column split, offset layout, or sidebar.
-6. **Add micro-texture** — subtle background patterns, section dividers that aren't just whitespace, gentle gradients. The goal isn't flashy — it's to prevent the "flat white plane" look.
+### Sections Removed (vs. current live site)
+- ❌ "Live Rates, Updated Daily" section — redundant with hero + rates table
+- ❌ "Why NetRate Mortgage" 3-column cards — generic "why us" doesn't belong on a data hub
+- ❌ "What We Do" 3-column services — replaced by Tools grid with actual links
+- ❌ Loan production numbers — removed per owner feedback
+- ❌ "11 wholesale lenders" trust badge — confusing to consumers
 
-### What NOT to do
-- Don't add stock photography (we already decided this — it makes things worse)
-- Don't add animations just for the sake of it (subtle entrance animations are fine, bouncing elements are not)
-- Don't switch to a dark theme (works for Bayou's DSCR tool, wrong for a consumer mortgage site)
-- Don't over-design — the goal is "feels professionally designed" not "looks like a startup landing page"
+### Design Principles
+1. **Data first, selling second.** Show rates, trends, tools. Let the data do the convincing.
+2. **Vary section backgrounds** — alternate white / gray / dark. No 7 consecutive white sections.
+3. **Left-align headings and content** where appropriate (hero, rates header, tools header). Not everything centered.
+4. **Max 1 traditional 3-column layout** (tools grid uses 4-column). Break the AI-generated 3-column pattern.
+5. **No stock photography.** No animations beyond subtle hover states.
+6. **Trust signals above the fold** — the hero trust strip is intentional. Borrowers need to see credibility instantly.
 
-**Status:** APPROVED — include in Batch 1 work or ship immediately after. This is a perception issue that affects every visitor.
+### What NOT to Do
+- Don't add stock photography
+- Don't switch to a dark theme (works for DSCR tools, wrong for a consumer mortgage homepage)
+- Don't over-design — "professionally built information site" not "startup landing page"
+- Don't add the old "Why NetRate" or "What We Do" sections back — they're brochure patterns
+
+**Status:** APPROVED — include in Batch 1 work or ship immediately after. Mockup is ready for reference.
 
 ---
 

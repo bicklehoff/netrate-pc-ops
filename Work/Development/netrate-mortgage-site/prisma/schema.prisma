@@ -66,6 +66,7 @@ model Mlo {
   callLogs        CallLog[]
   callNotes       CallNote[]
   smsMessages     SmsMessage[]
+  hecmScenarios   HecmScenario[]
 
   @@map("mlos")
 }
@@ -471,4 +472,83 @@ model LoanTask {
   @@index([loanId])
   @@index([assignedToId, status])
   @@map("loan_tasks")
+}
+
+// ─── HECM Scenarios (Reverse Mortgage Optimizer) ──────────────
+
+model HecmScenario {
+  id              String    @id @default(uuid()) @db.Uuid
+  mloId           String    @map("mlo_id") @db.Uuid
+  borrowerName    String    @map("borrower_name")
+  referenceNumber String?   @map("reference_number")
+  homeValue       Decimal?  @map("home_value") @db.Decimal(12, 2)
+  inputState      Json      @map("input_state") @db.JsonB
+  results         Json?     @db.JsonB
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  mlo             Mlo       @relation(fields: [mloId], references: [id])
+
+  @@index([mloId])
+  @@map("hecm_scenarios")
+}
+
+// ─── Lenders (Rate Pipeline) ──────────────────────────────────
+// Master list of wholesale lenders whose rate sheets we track.
+
+model Lender {
+  id              String    @id @default(uuid()) @db.Uuid
+  name            String    // Display name: "AmWest Wholesale"
+  code            String    @unique // Slug for lookups: "amwest", "sunwest"
+  lenderFees      Int       @default(0) @map("lender_fees") // Flat fee in dollars
+  lockExtension   String?   @map("lock_extension") // e.g. "2 bps/day (max 30 days)"
+  isActive        Boolean   @default(true) @map("is_active")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  rateSheets      RateSheet[]
+
+  @@map("lenders")
+}
+
+// ─── Rate Sheets (Rate Pipeline) ──────────────────────────────
+// One per lender per loan type per effective date. Contains LLPA
+// matrices as JSONB — the pricing engine applies them in code.
+
+model RateSheet {
+  id              String    @id @default(uuid()) @db.Uuid
+  lenderId        String    @map("lender_id") @db.Uuid
+  loanType        String    @map("loan_type") // 'conventional' | 'fha' | 'va' | 'usda' | 'nonqm'
+  term            Int       @default(360) // Months: 360=30yr, 180=15yr, 240=20yr
+  effectiveDate   DateTime  @map("effective_date") @db.Date
+  status          String    @default("active") // 'active' | 'superseded'
+
+  // LLPA matrices + adjustments — full pricing context as JSONB
+  // Shape: { ltvBands, purchaseLlpa, refiLlpa, cashoutLlpa, additionalLlpa, loanAmtAdj }
+  llpaData        Json      @map("llpa_data") @db.JsonB
+
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  lender          Lender    @relation(fields: [lenderId], references: [id])
+  rows            RateRow[]
+
+  @@index([loanType, status])
+  @@index([lenderId, loanType, status])
+  @@map("rate_sheets")
+}
+
+// ─── Rate Rows (Rate Pipeline) ────────────────────────────────
+// Individual rate/price options within a rate sheet.
+// e.g. rate=6.875, price30=-3.8119, price45=-3.6869
+
+model RateRow {
+  id              String    @id @default(uuid()) @db.Uuid
+  rateSheetId     String    @map("rate_sheet_id") @db.Uuid
+  rate            Decimal   @db.Decimal(5, 3) // e.g. 6.875
+  price30         Decimal   @map("price_30") @db.Decimal(7, 4) // 30-day lock price
+  price45         Decimal   @map("price_45") @db.Decimal(7, 4) // 45-day lock price
+
+  rateSheet       RateSheet @relation(fields: [rateSheetId], references: [id], onDelete: Cascade)
+
+  @@index([rateSheetId])
+  @@map("rate_rows")
 }

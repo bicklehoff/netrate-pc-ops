@@ -5,7 +5,7 @@
       "name": "dev",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
-      "cwd": "PROJECTS/netrate-mortgage-site",
+      "cwd": "D:/PROJECTS/netrate-pc-ops/Work/Development/netrate-mortgage-site",
       "port": 3000
     }
   ]

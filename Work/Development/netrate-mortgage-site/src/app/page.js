@@ -31,6 +31,12 @@ export default function HomePage() {
               Apply Now
             </Link>
           </div>
+          <Link
+            href="/tools/hecm-optimizer"
+            className="inline-block mt-4 text-sm text-cyan-600 hover:text-cyan-700 font-medium"
+          >
+            HECM Optimizer &rarr;
+          </Link>
         </div>
       </section>
 

@@ -89,6 +89,12 @@ export default function MloDashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <Link
+            href="/portal/mlo/tools/hecm-optimizer"
+            className="text-xs text-cyan-600 hover:text-cyan-700 font-medium transition-colors"
+          >
+            HECM Optimizer &rarr;
+          </Link>
           {session?.user?.role === 'admin' && (
             <>
               <Link

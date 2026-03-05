@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NetRate Mortgage — Homepage Redesign Mockup</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', system-ui, -apple-system, sans-serif; color: #1f2937; line-height: 1.6; }
+
+  /* ===== NAV ===== */
+  nav { display: flex; align-items: center; justify-content: space-between; padding: 16px 48px; border-bottom: 1px solid #e5e7eb; background: #fff; position: sticky; top: 0; z-index: 100; }
+  .logo { font-size: 20px; font-weight: 700; }
+  .logo span { color: #0891b2; }
+  .logo .mort { color: #6b7280; font-weight: 400; }
+  .nav-links { display: flex; gap: 28px; align-items: center; }
+  .nav-links a { text-decoration: none; color: #4b5563; font-size: 14px; font-weight: 500; }
+  .nav-cta { background: #0891b2; color: #fff !important; padding: 8px 20px; border-radius: 8px; font-weight: 600 !important; }
+
+  /* ===== HERO — 2 column, left-aligned ===== */
+  .hero-wrapper { background: linear-gradient(160deg, #f0fdfa 0%, #ecfeff 30%, #fff 70%, #f0f9ff 100%); position: relative; overflow: hidden; }
+  .hero-wrapper::before { content: ''; position: absolute; top: -120px; right: -80px; width: 500px; height: 500px; background: radial-gradient(circle, rgba(8,145,178,0.06) 0%, transparent 70%); pointer-events: none; }
+  .hero-wrapper::after { content: ''; position: absolute; bottom: -60px; left: -40px; width: 300px; height: 300px; background: radial-gradient(circle, rgba(8,145,178,0.04) 0%, transparent 70%); pointer-events: none; }
+  .hero { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; padding: 64px 48px 56px; max-width: 1200px; margin: 0 auto; align-items: center; position: relative; z-index: 1; }
+  .hero-eyebrow { display: inline-flex; align-items: center; gap: 8px; background: rgba(8,145,178,0.08); border: 1px solid rgba(8,145,178,0.15); border-radius: 20px; padding: 6px 14px; font-size: 13px; font-weight: 600; color: #0891b2; margin-bottom: 20px; }
+  .hero-eyebrow .dot { width: 7px; height: 7px; background: #10b981; border-radius: 50%; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .hero-text h1 { font-size: 44px; font-weight: 800; line-height: 1.15; color: #111827; }
+  .hero-text h1 .accent { color: #0891b2; }
+  .hero-text p { font-size: 18px; color: #6b7280; margin-top: 16px; max-width: 480px; }
+  .hero-sub { font-size: 14px; color: #9ca3af; margin-top: 8px; }
+  .hero-buttons { display: flex; gap: 12px; margin-top: 28px; }
+  .btn-primary { background: #0891b2; color: #fff; padding: 14px 32px; border-radius: 10px; font-size: 16px; font-weight: 700; text-decoration: none; border: none; cursor: pointer; }
+  .btn-secondary { background: #fff; color: #374151; padding: 14px 32px; border-radius: 10px; font-size: 16px; font-weight: 500; text-decoration: none; border: 1px solid #d1d5db; cursor: pointer; }
+  .hero-trust-strip { display: flex; align-items: center; gap: 28px; margin-top: 28px; padding-top: 24px; border-top: 1px solid #e5e7eb; flex-wrap: wrap; }
+  .trust-badge { display: inline-flex; align-items: center; gap: 10px; font-size: 15px; color: #374151; font-weight: 600; }
+  .trust-badge strong { color: #111827; font-weight: 800; font-size: 16px; }
+  .trust-badge .tb-icon { width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 800; flex-shrink: 0; }
+  .tb-google { background: #4285f4; color: #fff; }
+  .tb-bbb { background: #006eb7; color: #fff; font-size: 12px; }
+  .tb-nmls { background: #111827; color: #fff; font-size: 12px; }
+  .trust-badge .tb-stars { color: #f59e0b; letter-spacing: 2px; font-size: 16px; }
+  .trust-divider { width: 1px; height: 24px; background: #d1d5db; }
+
+  /* Rate teaser card */
+  .rate-teaser { background: #fff; border: 1px solid #e5e7eb; border-radius: 16px; padding: 32px; box-shadow: 0 8px 32px rgba(0,0,0,0.08), 0 2px 8px rgba(8,145,178,0.06); }
+  .rate-teaser-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .rate-teaser-label { font-size: 13px; font-weight: 600; color: #0891b2; text-transform: uppercase; letter-spacing: 0.05em; }
+  .rate-teaser-live { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: #10b981; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 3px 10px; }
+  .rate-teaser-live .dot { width: 6px; height: 6px; background: #10b981; border-radius: 50%; animation: pulse 2s infinite; }
+  .rate-teaser-rate { font-size: 56px; font-weight: 800; color: #111827; line-height: 1; margin-top: 4px; }
+  .rate-teaser-rate .pct { font-size: 32px; color: #6b7280; }
+  .rate-teaser-detail { font-size: 14px; color: #6b7280; margin-top: 8px; }
+  .rate-teaser-compare { display: flex; align-items: center; gap: 8px; margin-top: 16px; padding: 10px 14px; background: #f0fdf4; border-radius: 8px; border: 1px solid #dcfce7; }
+  .rate-teaser-compare .arrow { color: #16a34a; font-weight: 800; font-size: 16px; }
+  .rate-teaser-compare .compare-text { font-size: 13px; color: #374151; }
+  .rate-teaser-compare .compare-text strong { color: #16a34a; font-weight: 700; }
+  .rate-teaser-meta { display: flex; gap: 24px; margin-top: 20px; padding-top: 20px; border-top: 1px solid #f3f4f6; }
+  .rate-teaser-meta div { }
+  .rate-teaser-meta .label { font-size: 11px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.05em; }
+  .rate-teaser-meta .value { font-size: 18px; font-weight: 700; color: #111827; }
+  .rate-teaser-updated { font-size: 12px; color: #9ca3af; margin-top: 16px; }
+  .rate-teaser-cta { display: block; text-align: center; margin-top: 20px; padding: 12px; background: #0891b2; color: #fff; border-radius: 10px; font-size: 14px; font-weight: 700; text-decoration: none; }
+
+  /* ===== TRUST BAR ===== */
+  .trust-bar { display: flex; justify-content: center; gap: 40px; padding: 16px 48px; background: #f9fafb; border-top: 1px solid #f3f4f6; border-bottom: 1px solid #f3f4f6; }
+  .trust-item { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #6b7280; }
+  .trust-check { color: #0891b2; font-weight: bold; font-size: 16px; }
+
+  /* ===== TODAY'S RATES TABLE ===== */
+  .rates-section { padding: 56px 48px; max-width: 1200px; margin: 0 auto; }
+  .rates-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 24px; }
+  .rates-header h2 { font-size: 24px; font-weight: 800; color: #111827; }
+  .rates-header .rates-updated { font-size: 13px; color: #9ca3af; }
+  .rates-table { width: 100%; border-collapse: collapse; }
+  .rates-table thead th { text-align: left; font-size: 11px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.06em; padding: 10px 16px; border-bottom: 2px solid #e5e7eb; }
+  .rates-table tbody td { padding: 14px 16px; border-bottom: 1px solid #f3f4f6; font-size: 14px; color: #374151; }
+  .rates-table tbody tr:hover { background: #f9fafb; }
+  .rates-table .rt-product { font-weight: 600; color: #111827; }
+  .rates-table .rt-rate { font-size: 20px; font-weight: 800; color: #111827; }
+  .rates-table .rt-change { font-size: 13px; font-weight: 600; }
+  .rt-down { color: #16a34a; }
+  .rt-up { color: #dc2626; }
+  .rt-flat { color: #9ca3af; }
+  .rates-table .rt-payment { color: #6b7280; }
+  .rates-table .rt-action { text-align: right; }
+  .rates-table .rt-action a { color: #0891b2; font-weight: 600; font-size: 13px; text-decoration: none; }
+  .rates-disclaimer { font-size: 11px; color: #9ca3af; margin-top: 12px; line-height: 1.5; }
+
+  /* ===== MARKET UPDATE / RATE TRENDS ===== */
+  .trends-section { padding: 48px 48px 56px; background: #f9fafb; border-top: 1px solid #f3f4f6; border-bottom: 1px solid #f3f4f6; }
+  .trends-inner { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+  .trend-card { background: #fff; border-radius: 14px; border: 1px solid #e5e7eb; padding: 28px; }
+  .trend-card h3 { font-size: 16px; font-weight: 700; color: #111827; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .trend-card h3 .trend-icon { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+  .trend-icon-chart { background: #ecfeff; color: #0891b2; }
+  .trend-icon-news { background: #fef3c7; color: #d97706; }
+
+  /* Sparkline area */
+  .sparkline-area { height: 120px; background: linear-gradient(180deg, #ecfeff 0%, #fff 100%); border-radius: 8px; border: 1px solid #f3f4f6; margin-bottom: 16px; position: relative; overflow: hidden; display: flex; align-items: flex-end; padding: 0 12px; }
+  .spark-bar { background: #0891b2; border-radius: 3px 3px 0 0; flex: 1; margin: 0 3px; min-height: 8px; opacity: 0.7; }
+  .spark-bar:last-child { opacity: 1; background: #0891b2; }
+  .sparkline-label { position: absolute; top: 10px; left: 14px; font-size: 11px; color: #9ca3af; }
+  .sparkline-rate { position: absolute; top: 10px; right: 14px; font-size: 16px; font-weight: 800; color: #0891b2; }
+
+  .trend-summary { font-size: 14px; color: #6b7280; line-height: 1.6; }
+  .trend-summary strong { color: #111827; }
+  .trend-items { list-style: none; padding: 0; }
+  .trend-items li { padding: 10px 0; border-bottom: 1px solid #f3f4f6; font-size: 14px; color: #374151; display: flex; align-items: center; gap: 10px; }
+  .trend-items li:last-child { border-bottom: none; }
+  .trend-items .trend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .trend-items .dot-green { background: #16a34a; }
+  .trend-items .dot-amber { background: #d97706; }
+  .trend-items .dot-blue { background: #0891b2; }
+  .trend-items .trend-date { font-size: 12px; color: #9ca3af; margin-left: auto; white-space: nowrap; }
+
+  /* ===== TOOLS GRID ===== */
+  .tools-section { padding: 56px 48px; max-width: 1200px; margin: 0 auto; }
+  .tools-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 28px; }
+  .tools-header h2 { font-size: 24px; font-weight: 800; color: #111827; }
+  .tools-header .tools-sub { font-size: 14px; color: #9ca3af; }
+  .tools-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+  .tool-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 24px; text-decoration: none; color: inherit; transition: all 0.2s; cursor: pointer; display: flex; flex-direction: column; }
+  .tool-card:hover { border-color: #0891b2; box-shadow: 0 4px 16px rgba(8,145,178,0.1); transform: translateY(-2px); }
+  .tool-card-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 14px; font-size: 20px; }
+  .tool-icon-rates { background: linear-gradient(135deg, #ecfeff, #cffafe); color: #0891b2; }
+  .tool-icon-dscr { background: linear-gradient(135deg, #f0fdf4, #dcfce7); color: #16a34a; }
+  .tool-icon-reverse { background: linear-gradient(135deg, #fef3c7, #fde68a); color: #d97706; }
+  .tool-icon-refi { background: linear-gradient(135deg, #ede9fe, #ddd6fe); color: #7c3aed; }
+  .tool-icon-purchase { background: linear-gradient(135deg, #fce7f3, #fbcfe8); color: #db2777; }
+  .tool-icon-apply { background: linear-gradient(135deg, #e0f2fe, #bae6fd); color: #0284c7; }
+  .tool-card h3 { font-size: 15px; font-weight: 700; color: #111827; margin-bottom: 6px; }
+  .tool-card p { font-size: 13px; color: #6b7280; line-height: 1.5; flex-grow: 1; }
+  .tool-card .tool-arrow { font-size: 13px; color: #0891b2; font-weight: 600; margin-top: 12px; }
+
+  /* ===== REVIEWS — Featured + supporting ===== */
+  .reviews-section { padding: 72px 48px; background: #f9fafb; }
+  .reviews-inner { max-width: 1200px; margin: 0 auto; }
+  .reviews-header { display: flex; align-items: center; gap: 16px; margin-bottom: 40px; }
+  .reviews-header .g-icon { width: 32px; height: 32px; background: #4285f4; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 18px; }
+  .reviews-stars { color: #f59e0b; font-size: 22px; letter-spacing: 2px; }
+  .reviews-count { font-size: 14px; color: #6b7280; }
+  .reviews-rating { font-size: 28px; font-weight: 800; color: #111827; }
+
+  .reviews-layout { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 20px; }
+  .review-card { background: #fff; border-radius: 12px; padding: 28px; border: 1px solid #e5e7eb; }
+  .review-featured { grid-row: 1 / 3; border: 2px solid #0891b2; background: #fff; position: relative; }
+  .review-featured::before { content: "FEATURED"; position: absolute; top: 16px; right: 16px; background: #0891b2; color: #fff; font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 4px; letter-spacing: 0.05em; }
+  .review-stars { color: #f59e0b; font-size: 14px; margin-bottom: 12px; }
+  .review-text { font-size: 15px; color: #374151; line-height: 1.65; }
+  .review-featured .review-text { font-size: 17px; }
+  .review-author { font-size: 13px; color: #9ca3af; margin-top: 16px; }
+  .review-link { text-align: center; margin-top: 32px; }
+  .review-link a { color: #0891b2; text-decoration: none; font-weight: 600; font-size: 14px; }
+  .review-link .formerly { font-size: 12px; color: #9ca3af; display: block; margin-top: 4px; }
+
+  /* (services section replaced by tools grid above) */
+
+  /* ===== CREDENTIALS — dark band ===== */
+  .credentials { background: #111827; padding: 56px 48px; }
+  .credentials-inner { max-width: 1200px; margin: 0 auto; }
+  .credentials h2 { font-size: 28px; font-weight: 800; color: #fff; text-align: center; margin-bottom: 36px; }
+  .credential-row { display: flex; justify-content: center; gap: 48px; flex-wrap: wrap; }
+  .credential { text-align: center; }
+  .credential .value { font-size: 20px; font-weight: 700; color: #0891b2; }
+  .credential .label { font-size: 13px; color: #9ca3af; margin-top: 4px; }
+  .badge-row { display: flex; justify-content: center; gap: 32px; margin-top: 32px; align-items: center; }
+  .badge { display: flex; align-items: center; gap: 8px; color: #9ca3af; font-size: 13px; }
+  .badge-icon { width: 28px; height: 28px; background: #1f2937; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #6b7280; }
+
+  /* ===== BOTTOM CTA ===== */
+  .bottom-cta { background: #0891b2; padding: 64px 48px; text-align: center; }
+  .bottom-cta h2 { font-size: 30px; font-weight: 800; color: #fff; }
+  .bottom-cta p { font-size: 16px; color: #ccfbf1; margin-top: 12px; max-width: 520px; margin-left: auto; margin-right: auto; }
+  .bottom-cta .buttons { display: flex; justify-content: center; gap: 12px; margin-top: 28px; }
+  .btn-white { background: #fff; color: #0891b2; padding: 14px 32px; border-radius: 10px; font-size: 16px; font-weight: 700; text-decoration: none; border: none; cursor: pointer; }
+  .btn-outline-white { background: transparent; color: #fff; padding: 14px 32px; border-radius: 10px; font-size: 16px; font-weight: 500; text-decoration: none; border: 2px solid rgba(255,255,255,0.4); cursor: pointer; }
+
+  /* ===== FOOTER REVIEW BAR ===== */
+  .footer-reviews { display: flex; justify-content: center; align-items: center; gap: 8px; padding: 14px; background: #1f2937; }
+  .footer-reviews .g { color: #4285f4; font-weight: 800; font-size: 16px; }
+  .footer-reviews .star { color: #f59e0b; }
+  .footer-reviews .rating { color: #fff; font-weight: 700; font-size: 14px; }
+  .footer-reviews .count { color: #9ca3af; font-size: 13px; }
+  .footer-reviews a { color: #9ca3af; text-decoration: none; }
+
+  /* ===== FOOTER ===== */
+  footer { background: #111827; padding: 48px 48px 24px; }
+  .footer-inner { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 48px; }
+  .footer-col { }
+  .footer-col .logo { margin-bottom: 12px; }
+  .footer-col p { font-size: 13px; color: #6b7280; line-height: 1.5; }
+  .footer-col h4 { font-size: 13px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 16px; }
+  .footer-col a { display: block; font-size: 13px; color: #6b7280; text-decoration: none; margin-bottom: 8px; }
+  .footer-legal { max-width: 1200px; margin: 32px auto 0; padding-top: 24px; border-top: 1px solid #1f2937; font-size: 11px; color: #4b5563; line-height: 1.6; }
+
+  /* ===== COMPARISON BANNER ===== */
+  .comparison-note { background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 10px 16px; font-size: 12px; color: #92400e; text-align: center; margin: 16px 48px 0; }
+  .comparison-note strong { font-weight: 700; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="logo">Net<span>Rate</span> <span class="mort">Mortgage</span></div>
+  <div class="nav-links">
+    <a href="#">Rates</a>
+    <a href="#">Tools</a>
+    <a href="#">Market</a>
+    <a href="#">About</a>
+    <a href="#" class="nav-cta">Apply Now</a>
+  </div>
+</nav>
+
+<!-- HERO — 2-column, left-aligned text + rate teaser -->
+<div class="hero-wrapper">
+<section class="hero">
+  <div class="hero-text">
+    <div class="hero-eyebrow"><span class="dot"></span> Rates updated today</div>
+    <h1>See your actual mortgage rate <span class="accent">before you apply.</span></h1>
+    <p>Most lenders make you fill out an application before they show you numbers. We show you rates first — with the math behind them.</p>
+    <div class="hero-sub">No application. No credit pull. Just rates.</div>
+    <div class="hero-buttons">
+      <a href="#" class="btn-primary">Check Today's Rates</a>
+      <a href="#" class="btn-secondary">Apply Now</a>
+    </div>
+    <div class="hero-trust-strip">
+      <div class="trust-badge">
+        <span class="tb-icon tb-google">G</span>
+        <span class="tb-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
+        <strong>4.9</strong> &middot; 35 reviews
+      </div>
+      <div class="trust-divider"></div>
+      <div class="trust-badge">
+        <span class="tb-icon tb-bbb">BBB</span>
+        A+ Rated
+      </div>
+      <div class="trust-divider"></div>
+      <div class="trust-badge">
+        <span class="tb-icon tb-nmls">N</span>
+        NMLS #641790
+      </div>
+    </div>
+  </div>
+  <div class="rate-teaser">
+    <div class="rate-teaser-header">
+      <div class="rate-teaser-label">Today's 30-Year Fixed</div>
+      <div class="rate-teaser-live"><span class="dot"></span> LIVE</div>
+    </div>
+    <div class="rate-teaser-rate">5.875<span class="pct">%</span></div>
+    <div class="rate-teaser-detail">760+ FICO &middot; $400K loan &middot; Rate/Term Refi</div>
+    <div class="rate-teaser-compare">
+      <span class="arrow">&#8595;</span>
+      <span class="compare-text"><strong>0.50% below</strong> national average (Freddie Mac 6.37%)</span>
+    </div>
+    <div class="rate-teaser-meta">
+      <div>
+        <div class="label">P&I Payment</div>
+        <div class="value">$2,366</div>
+      </div>
+      <div>
+        <div class="label">Points</div>
+        <div class="value">0.125</div>
+      </div>
+      <div>
+        <div class="label">Lenders</div>
+        <div class="value">11</div>
+      </div>
+    </div>
+    <div class="rate-teaser-updated">Updated today at 9:15 AM ET &middot; Live wholesale pricing</div>
+    <a href="#" class="rate-teaser-cta">See All Rate Options &rarr;</a>
+  </div>
+</section>
+</div>
+
+<!-- TRUST BAR -->
+<div class="trust-bar">
+  <div class="trust-item"><span class="trust-check">&#10003;</span> No application or credit pull</div>
+  <div class="trust-item"><span class="trust-check">&#10003;</span> Real wholesale rates, updated daily</div>
+  <div class="trust-item"><span class="trust-check">&#10003;</span> Compare multiple loan options</div>
+</div>
+
+<!-- TODAY'S RATES — full table -->
+<section class="rates-section">
+  <div class="rates-header">
+    <h2>Today's Mortgage Rates</h2>
+    <div class="rates-updated">March 4, 2026 &middot; 760+ FICO &middot; $400K loan</div>
+  </div>
+  <table class="rates-table">
+    <thead>
+      <tr>
+        <th>Product</th>
+        <th>Rate</th>
+        <th>APR</th>
+        <th>Change</th>
+        <th>Mo. Payment</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="rt-product">30-Year Fixed</td>
+        <td class="rt-rate">5.875%</td>
+        <td>5.94%</td>
+        <td class="rt-change rt-down">&#9660; 0.125</td>
+        <td class="rt-payment">$2,366</td>
+        <td class="rt-action"><a href="#">See options &rarr;</a></td>
+      </tr>
+      <tr>
+        <td class="rt-product">15-Year Fixed</td>
+        <td class="rt-rate">5.250%</td>
+        <td>5.38%</td>
+        <td class="rt-change rt-down">&#9660; 0.250</td>
+        <td class="rt-payment">$3,213</td>
+        <td class="rt-action"><a href="#">See options &rarr;</a></td>
+      </tr>
+      <tr>
+        <td class="rt-product">FHA 30-Year</td>
+        <td class="rt-rate">5.500%</td>
+        <td>6.12%</td>
+        <td class="rt-change rt-flat">&#8212; 0.000</td>
+        <td class="rt-payment">$2,271</td>
+        <td class="rt-action"><a href="#">See options &rarr;</a></td>
+      </tr>
+      <tr>
+        <td class="rt-product">VA 30-Year</td>
+        <td class="rt-rate">5.375%</td>
+        <td>5.52%</td>
+        <td class="rt-change rt-down">&#9660; 0.125</td>
+        <td class="rt-payment">$2,240</td>
+        <td class="rt-action"><a href="#">See options &rarr;</a></td>
+      </tr>
+      <tr>
+        <td class="rt-product">Jumbo 30-Year</td>
+        <td class="rt-rate">6.250%</td>
+        <td>6.31%</td>
+        <td class="rt-change rt-up">&#9650; 0.125</td>
+        <td class="rt-payment">$4,928 <span style="font-size:11px;color:#9ca3af">($800K)</span></td>
+        <td class="rt-action"><a href="#">See options &rarr;</a></td>
+      </tr>
+      <tr>
+        <td class="rt-product">DSCR (Investor)</td>
+        <td class="rt-rate">7.125%</td>
+        <td>7.28%</td>
+        <td class="rt-change rt-flat">&#8212; 0.000</td>
+        <td class="rt-payment">$2,694</td>
+        <td class="rt-action"><a href="#">See options &rarr;</a></td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="rates-disclaimer">Rates assume 760+ FICO, rate/term refinance, $400K loan, 75% LTV. Jumbo based on $800K. DSCR based on investment property, 1.25x coverage. Actual rates depend on your specific scenario. Updated daily from wholesale pricing.</div>
+</section>
+
+<!-- RATE TRENDS + MARKET UPDATE — 2-column -->
+<section class="trends-section">
+  <div class="trends-inner">
+    <!-- Left: Rate trend chart -->
+    <div class="trend-card">
+      <h3><span class="trend-icon trend-icon-chart">&#9650;</span> 30-Year Rate Trend</h3>
+      <div class="sparkline-area">
+        <div class="sparkline-label">8 weeks</div>
+        <div class="sparkline-rate">5.875%</div>
+        <div class="spark-bar" style="height:70%"></div>
+        <div class="spark-bar" style="height:75%"></div>
+        <div class="spark-bar" style="height:72%"></div>
+        <div class="spark-bar" style="height:68%"></div>
+        <div class="spark-bar" style="height:65%"></div>
+        <div class="spark-bar" style="height:60%"></div>
+        <div class="spark-bar" style="height:55%"></div>
+        <div class="spark-bar" style="height:50%"></div>
+      </div>
+      <div class="trend-summary">
+        <strong>Trending down.</strong> The 30-year fixed has dropped 0.375% over the last 8 weeks. If the Fed holds in March, wholesale pricing should stay favorable through Q2.
+      </div>
+    </div>
+
+    <!-- Right: Market headlines -->
+    <div class="trend-card">
+      <h3><span class="trend-icon trend-icon-news">&#9733;</span> Market Updates</h3>
+      <ul class="trend-items">
+        <li>
+          <span class="trend-dot dot-green"></span>
+          <span>Fed holds rates steady — mortgage rates ease</span>
+          <span class="trend-date">Mar 1</span>
+        </li>
+        <li>
+          <span class="trend-dot dot-amber"></span>
+          <span>Jobs report stronger than expected — watch for bond sell-off</span>
+          <span class="trend-date">Feb 28</span>
+        </li>
+        <li>
+          <span class="trend-dot dot-blue"></span>
+          <span>Wholesale lenders reprice lower after 10-year drops to 4.15%</span>
+          <span class="trend-date">Feb 26</span>
+        </li>
+        <li>
+          <span class="trend-dot dot-green"></span>
+          <span>Refi applications up 12% week-over-week (MBA data)</span>
+          <span class="trend-date">Feb 24</span>
+        </li>
+        <li>
+          <span class="trend-dot dot-amber"></span>
+          <span>CPI comes in at 2.8% — slightly above expectations</span>
+          <span class="trend-date">Feb 20</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- TOOLS — grid of calculators and tools -->
+<section class="tools-section">
+  <div class="tools-header">
+    <h2>Tools &amp; Calculators</h2>
+    <div class="tools-sub">Real math, no guesswork.</div>
+  </div>
+  <div class="tools-grid">
+    <a href="#" class="tool-card">
+      <div class="tool-card-icon tool-icon-rates">&#9776;</div>
+      <h3>Rate Tool</h3>
+      <p>Live wholesale rates across 11 lenders. See rate, points, payment, and lender credits side by side.</p>
+      <div class="tool-arrow">Try it &rarr;</div>
+    </a>
+    <a href="#" class="tool-card">
+      <div class="tool-card-icon tool-icon-dscr">&#936;</div>
+      <h3>DSCR Calculator</h3>
+      <p>Investment property? Enter rental income and expenses to see if your deal qualifies for a DSCR loan.</p>
+      <div class="tool-arrow">Calculate &rarr;</div>
+    </a>
+    <a href="#" class="tool-card">
+      <div class="tool-card-icon tool-icon-reverse">&#8617;</div>
+      <h3>Reverse Mortgage</h3>
+      <p>See how much equity you could access with a reverse mortgage. Age, home value, and rate — that's all we need.</p>
+      <div class="tool-arrow">Estimate &rarr;</div>
+    </a>
+    <a href="#" class="tool-card">
+      <div class="tool-card-icon tool-icon-refi">&#8635;</div>
+      <h3>Refi Analyzer</h3>
+      <p>Is refinancing worth it? Enter your current loan and we'll show the break-even timeline and total savings.</p>
+      <div class="tool-arrow">Analyze &rarr;</div>
+    </a>
+    <a href="#" class="tool-card">
+      <div class="tool-card-icon tool-icon-purchase">&#8962;</div>
+      <h3>Purchase Calculator</h3>
+      <p>Estimate your monthly payment, cash to close, and how much home you can afford.</p>
+      <div class="tool-arrow">Calculate &rarr;</div>
+    </a>
+    <a href="#" class="tool-card">
+      <div class="tool-card-icon tool-icon-apply">&#10004;</div>
+      <h3>Apply Online</h3>
+      <p>Ready to go? Start your secure application. Takes about 15 minutes.</p>
+      <div class="tool-arrow">Start &rarr;</div>
+    </a>
+  </div>
+</section>
+
+<!-- REVIEWS — compact strip -->
+<section class="reviews-section">
+  <div class="reviews-inner">
+    <div class="reviews-header">
+      <div class="g-icon">G</div>
+      <div>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <span class="reviews-rating">4.9</span>
+          <span class="reviews-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
+        </div>
+        <div class="reviews-count">35 Google Reviews &middot; <a href="#" style="color:#0891b2; text-decoration:none; font-weight:600;">Read all &rarr;</a> <span style="font-size:11px; color:#9ca3af;">(Formerly Locus Mortgage)</span></div>
+      </div>
+    </div>
+
+    <div class="reviews-layout">
+      <div class="review-card review-featured">
+        <div class="review-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        <div class="review-text">"My family and I have worked with David a few times and he is absolutely incredible! He is very knowledgeable, extremely responsive, and truly a wonderful person who helps you through the entire loan process."</div>
+        <div class="review-author">Sohayla R. &middot; 4 weeks ago</div>
+      </div>
+      <div class="review-card">
+        <div class="review-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        <div class="review-text">"I've worked with Jamie on multiple transactions — two purchases and a refinance — and every single time he delivered exceptional service."</div>
+        <div class="review-author">Alex Z. &middot; 12 weeks ago</div>
+      </div>
+      <div class="review-card">
+        <div class="review-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        <div class="review-text">"David was an excellent partner in helping me close on a refinance. He worked hard to get me the best rate and was communicative throughout."</div>
+        <div class="review-author">Charlie B. &middot; Nov 2024</div>
+      </div>
+      <div class="review-card">
+        <div class="review-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        <div class="review-text">"Whenever he quoted us he was correct and there were no surprises. If you want someone honest, use David."</div>
+        <div class="review-author">Ben W. &middot; May 2019</div>
+      </div>
+      <div class="review-card">
+        <div class="review-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        <div class="review-text">"Some of the best mortgage rates around. Very knowledgeable, totally straight forward, friendly, available off hours and weekends."</div>
+        <div class="review-author">Steven P. &middot; 2023</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CREDENTIALS — Dark background band -->
+<section class="credentials">
+  <div class="credentials-inner">
+    <h2>Licensed. Independent. Direct.</h2>
+    <div class="credential-row">
+      <div class="credential">
+        <div class="value">NMLS #641790</div>
+        <div class="label">Federally Registered Broker</div>
+      </div>
+      <div class="credential">
+        <div class="value">CO, TX, OR</div>
+        <div class="label">Licensed States (CA coming soon)</div>
+      </div>
+      <div class="credential">
+        <div class="value">Founded 2013</div>
+        <div class="label">Over a Decade of Origination</div>
+      </div>
+      <div class="credential">
+        <div class="value">Direct-to-Consumer</div>
+        <div class="label">Not a Bank. Not a Realtor.</div>
+      </div>
+    </div>
+    <div class="badge-row">
+      <div class="badge"><div class="badge-icon">BBB</div> A+ Rated &middot; Accredited Since 2013</div>
+      <div class="badge"><div class="badge-icon">&#9872;</div> NMLS Consumer Access</div>
+      <div class="badge"><div class="badge-icon">&#8962;</div> Equal Housing Opportunity</div>
+    </div>
+  </div>
+</section>
+
+<!-- BOTTOM CTA -->
+<section class="bottom-cta">
+  <h2>See rates for your scenario in 30 seconds.</h2>
+  <p>Tell us about your situation and we'll send you a personalized recommendation with full fee breakdown, cash to close, and savings analysis.</p>
+  <div class="buttons">
+    <a href="#" class="btn-white">Get a Free Quote</a>
+    <a href="#" class="btn-outline-white">Apply Now</a>
+  </div>
+</section>
+
+<!-- FOOTER REVIEW BAR -->
+<div class="footer-reviews">
+  <span class="g">G</span>
+  <span class="star">&#9733;</span>
+  <span class="rating">4.9</span>
+  <a href="#"><span class="count">35 reviews</span></a>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-col">
+      <div class="logo">Net<span style="color:#0891b2">Rate</span> <span style="color:#6b7280;font-weight:400">Mortgage</span></div>
+      <p style="margin-top:12px;">David Burson — Mortgage Broker<br>NMLS #641790 | Company NMLS #1111861<br>303-444-5251 | david@netratemortgage.com</p>
+    </div>
+    <div class="footer-col">
+      <h4>Services</h4>
+      <a href="#">Today's Rates</a>
+      <a href="#">Refinance</a>
+      <a href="#">Home Purchase</a>
+      <a href="#">Get a Quote</a>
+      <a href="#">Apply Online</a>
+    </div>
+    <div class="footer-col">
+      <h4>Legal</h4>
+      <a href="#">Privacy Policy</a>
+      <a href="#">Terms & Conditions</a>
+      <a href="#">Licensing</a>
+      <a href="#">Accessibility</a>
+      <a href="#">Do Not Sell My Info</a>
+    </div>
+  </div>
+  <div class="footer-legal">
+    NetRate Mortgage | NMLS #1111861 | 357 South McCaslin Blvd., #200, Louisville, CO 80027. Rates shown are approximate based on wholesale pricing and standard loan-level adjustments. Actual rates depend on full credit review, property appraisal, and underwriting. Not a commitment to lend. Equal Housing Opportunity.
+  </div>
+</footer>
+
+<!-- COMPARISON NOTE -->
+<div style="text-align:center; padding:32px 48px; background:#f9fafb; border-top:1px solid #e5e7eb;">
+  <div style="font-size:12px; color:#9ca3af; max-width:700px; margin:0 auto;">
+    <strong style="color:#6b7280;">MOCKUP NOTE:</strong> Data hub homepage concept. All rate data is placeholder. Page flow: Hero with rate teaser &rarr; Rates table (all products) &rarr; Rate trends + market updates &rarr; Tools/calculators grid (Rate Tool, DSCR, Reverse Mortgage, Refi Analyzer, Purchase Calc, Apply) &rarr; Reviews &rarr; Credentials &rarr; CTA. The homepage is an information hub, not a brochure. Rates table and market updates would be dynamic (populated from rate engine + curated market notes).
+  </div>
+</div>
+
+</body>
+</html>
