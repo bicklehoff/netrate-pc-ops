@@ -746,5 +746,110 @@ Use this file to coordinate across PC work chats. Each session should read this 
 **Open items:**
 - [ ] **David** — Order permanent "NetRate Mortgage" office plaque/sign (for video verification)
 - [ ] **David** — When ready to rename: work through Phase 1-4 citation seeding (4-5 weeks), then Phase 5 GBP rename
-- [ ] **David** — Reconfigure Vercel: connect `netrate-pc-ops`, set root dir (BLOCKING — old repo is archived, can't push new code until this is done)
+- [x] **David** — Reconfigure Vercel: connect `netrate-pc-ops`, set root dir — **DONE** (March 5, Setup session)
 - [ ] **Integrations** — Twilio A2P carrier approval still pending (carried forward)
+
+---
+
+## Session: March 5, 2026 - One-Repo Migration Completion + CORE Schema Foundation (Setup)
+
+**Chat focus:** Completed one-repo migration housekeeping, removed retired Clerk infrastructure, acknowledged Mac's architecture update, designed and began implementing CORE schema expansion for loan processing, ran EOD protocol v2.
+
+**What was done:**
+
+*Vercel Reconfiguration (completed):*
+- Root Directory set to `Work/Development/netrate-mortgage-site` — builds succeeding
+- Ignored Build Step configured: `git diff --quiet HEAD^ HEAD -- Work/Development/netrate-mortgage-site/` — prevents rebuilds when non-site files change in monorepo
+- Confirmed site live at netratemortgage.com deploying from `netrate-pc-ops`
+
+*One-Repo Migration Housekeeping:*
+- Archived `bicklehoff/netrate-mortgage-site` on GitHub (old standalone repo — all code now in `netrate-pc-ops/Work/Development/netrate-mortgage-site/`)
+- Deleted 3 loose files from `D:\PROJECTS\`: `app_full_version.py`, `test_zoho_token.py`, `mostadvancedcoderequirements.txt`
+- Created `Work/Integrations/CLAW-UBUNTU.md` — reference doc for Claw (Ubuntu rate-fetching agent): current setup, token scope, required post-migration updates, key file paths
+
+*Mac Relay — Clerk Retirement + Architecture Update:*
+- Mac sent relay: Clerk protocol retired, SQLite backend for all trackers, EOD protocol updated to 6 steps (new step 2: Check CLAUDE.md), Session protocol updated (step 1: check RELAY.md)
+- **Removed all Clerk infrastructure from PC:**
+  - Deleted `.claude/agents/clerk.md` (Clerk subagent definition)
+  - Deleted `.claude/scripts/validate-tracker-write.sh` (write guard hook)
+  - Removed PreToolUse hooks from `.claude/settings.local.json`
+  - Updated root `CLAUDE.md`: removed Clerk Protocol section, updated Tracker Architecture to reference SQLite on Mac + TrackerPortal API, updated Cross-Device Data Flow
+- Acknowledged Mac's relay in `RELAY.md` (governance repo)
+- Confirmed: "All tracker data lives in SQLite on Mac. All departments write trackers via TrackerPortal API. David relays to Mac → Mac updates tracker via API."
+
+*CORE Schema Expansion — Design:*
+- David shared `CORE.ds` (Zoho Creator app schema, 37 forms, 500+ fields) — his complete loan processing system
+- Analyzed all 37 forms and mapped to Prisma models
+- Decided: **Stay on Neon Postgres** (SQLite doesn't work in Vercel serverless — each function gets fresh filesystem)
+- Designed 3-phase schema expansion plan (saved to `C:\Users\bickl\.claude\plans\iterative-weaving-abelson.md`):
+  - **Phase 1 (Foundation):** LoanDates, Condition, LoanNote, LoanTask + 6 new Loan fields
+  - **Phase 2 (Team/Providers):** LoanBorrower, Role, LoanTeamMember, ServiceProvider, LoanProvider
+  - **Phase 3 (Advanced):** LoanChecklist (JSONB), ConditionTemplate, BorrowerNeed, ParsedDocument
+- Key architectural decisions: Conditions ≠ Documents (a condition *may* link to a doc), JSONB for checklists (not 100 columns), TypeScript constants for picklists (not DB enums)
+
+*CORE Schema Expansion — Phase 1 Implementation (partial):*
+- Updated `prisma/schema.prisma`:
+  - Added 6 nullable fields to Loan: `loanType`, `lenderName`, `loanNumber`, `loanAmount` (Decimal 12,2), `interestRate` (Decimal 5,4), `loanTerm` (Int)
+  - Added 4 new relation fields to Loan: `dates`, `conditions`, `loanNotes`, `tasks`
+  - Added `conditions Condition[]` relation to Document model
+  - Added 4 new models: `LoanDates` (~30 date fields, 1:1 with Loan), `Condition` (full lifecycle with stage/status/blocking/borrower-facing), `LoanNote` (operational notes, separate from LoanEvent audit trail), `LoanTask` (priority/assignment/due dates)
+- Created `src/lib/constants/loan-types.js` — LOAN_TYPES, LOAN_TYPE_LABELS, LOAN_TERMS, LOAN_TERM_LABELS, LOAN_PURPOSES
+- Created `src/lib/constants/lenders.js` — 18 wholesale lenders from CORE
+- **Migration was NOT run by this session** — DEV-website session later ran migrations
+
+*DEV-website Session Additions (after Setup EOD):*
+- DEV-website session pulled forward `LoanBorrower` from Phase 2 and added: `HecmScenario`, `Lender`, `RateSheet`, `RateRow`, `numBorrowers` field on Loan
+- Migrations were run: `add_co_borrower_support` (which may have included Phase 1 models)
+- Current schema comment: `init → add_dialer_tables → add_loan_processing_foundation → add_co_borrower_support`
+
+*EOD Protocol v2 Execution:*
+- Step 1: Stopped new work
+- Step 2: Updated project CLAUDE.md with Phase 1 models info + picklist constants
+- Step 3: Committed all changes (`3526f65`)
+- Step 4: Pushed to remote
+- Step 5: SESSION-LOG included in commit
+- Step 6: Reported out with full summary + paste-ready EOD prompts for 4 other sessions (DEV-CLAW, DEV-website, Files, MARKETING)
+
+**Commits (netrate-pc-ops):**
+- `ecfdd10` — Add Claw (Ubuntu agent) reference doc
+- `192254e` — Update CLAW-UBUNTU.md — token scope update complete
+- `3fe708e` — Remove retired Clerk infrastructure, update to TrackerPortal API
+- `3526f65` — Add Phase 1 CORE schema foundation + cleanup stale Clerk refs
+
+**Commits (netrate-governance):**
+- `9d9585b` — PC → Mac: One-repo migration complete, EOD protocol active
+- `64cad07` — PC → Mac: Acknowledge architecture update, Clerk refs removed
+
+**Key decisions:**
+- **Stay on Neon Postgres** — SQLite can't write in Vercel serverless; Neon is the right backend for multi-user deployed app
+- **Conditions ≠ Documents** — A condition is a processing requirement that *may* link to a Document. "Appraisal must meet value" has no file; "Provide bank statement" links to a Document.
+- **JSONB for checklists** — Different loan types need different sections (VA has COE/DD214, FHA has case number). Items change often. JSONB avoids a migration every time.
+- **TypeScript constants for picklists** — Adding a lender or provider type shouldn't require a DB migration. Constants live in `src/lib/constants/`
+- **Clerk protocol fully retired on PC** — All tracker writes now go through Mac's TrackerPortal API. No more JSON trackers, no more Clerk subagent.
+- **EOD Protocol v2 adopted** — 6 steps (Stop → Check CLAUDE.md → Commit → Push → SESSION-LOG → Report)
+- **Session Protocol updated** — Step 1 is now "Pull governance and check RELAY.md first"
+
+**Files created:**
+- `Work/Integrations/CLAW-UBUNTU.md` — Claw (Ubuntu agent) reference doc
+- `Work/Development/netrate-mortgage-site/src/lib/constants/loan-types.js` — Loan type/term/purpose constants
+- `Work/Development/netrate-mortgage-site/src/lib/constants/lenders.js` — 18 wholesale lender names
+- `C:\Users\bickl\.claude\plans\iterative-weaving-abelson.md` — Full 3-phase CORE schema expansion plan
+
+**Files modified:**
+- `CLAUDE.md` (root) — Removed Clerk Protocol, updated Tracker Architecture to SQLite/TrackerPortal API, updated Cross-Device Data Flow, added EOD Protocol
+- `Work/Development/netrate-mortgage-site/CLAUDE.md` — Added Phase 1 models + Picklist Constants sections
+- `Work/Development/netrate-mortgage-site/prisma/schema.prisma` — 4 new models + 6 new Loan fields + Document relation
+- `.claude/settings.local.json` — Removed PreToolUse hooks (Clerk write guard)
+
+**Files deleted:**
+- `.claude/agents/clerk.md` — Retired Clerk subagent
+- `.claude/scripts/validate-tracker-write.sh` — Retired write guard hook
+
+**Open items:**
+- [ ] **WebDev** — Verify Phase 1 migration ran correctly (DEV-website session may have included it in `add_co_borrower_support`). Run `npx prisma migrate status` to confirm.
+- [ ] **WebDev** — Remaining Phase 1 constants files not yet created: `condition-types.js`, `property-types.js` (Phase 2/3 deferred: `provider-types.js`)
+- [ ] **WebDev** — Wire Phase 1 models into portal UI: conditions panel, dates card, notes tab, tasks tab on LoanDetailView
+- [ ] **WebDev** — Phase 2 & 3 schema models designed but not yet written (see plan file). Note: LoanBorrower was pulled forward by DEV-website.
+- [ ] **Marketing** — Marketing inbox still not built
+- [ ] **Integrations** — Twilio A2P carrier approval still pending (carried forward)
+- [ ] **Setup** — Governance v2.0 upgrade committed (`f7feac1`) — MCP knowledge layer + three-device architecture. New sessions should read updated root CLAUDE.md.
