@@ -4,17 +4,64 @@
 
 This device handles all public-facing work: website, borrower products, calculators, integrations, and client-facing tools.
 
-**Governance version:** v1.0 — Pull `netrate-governance` repo for shared rules. If your copy differs from Mac, flag it in SESSION-LOG for David to resolve.
+**Governance version:** v2.0 — Mac is the authority for the base layer. Pull `netrate-governance` repo for shared rules.
+
+---
+
+## Device Architecture (Three-Device Network)
+
+| Device | Role | Repos |
+|--------|------|-------|
+| **Mac** | Back office — processing, compliance, trackers, internal tools. Governance authority. | `netrate-ops` |
+| **PC** | Public facing — website, rate tool, calculators, borrower products, integrations | `netrate-pc-ops` |
+| **Dave** (Ubuntu) | Third device — role TBD | TBD |
+
+All devices share context via the **MCP knowledge layer** (Neon Postgres).
+
+## Actor Vocabulary
+
+| Actor | Meaning |
+|-------|---------|
+| `david` | David Burson (human operator) |
+| `admin` | Mac Admin department |
+| `dev` | Mac Dev department |
+| `pc-dev` | PC Dev / WebDev / Products / Integrations department |
+| `pc-marketing` | PC Marketing department |
+| `dave` | Dave (Ubuntu device) |
+
+Use these identifiers in MCP tool calls (`source` fields), RELAY entries, and completion reports.
+
+---
+
+## Session Protocol (MCP-Connected)
+
+**At the START of every new chat:**
+1. Call `get_briefing(device="pc", department=<yours>)` via MCP to get full context: recent sessions (own + cross-device), active decisions, open items, capture stats
+2. Review the briefing — summarize anything important for David before starting work
+3. If MCP is unavailable, fall back to: pull `netrate-governance`, check `RELAY.md`, read `Work/SESSION-LOG.md`
+
+**DURING a session — update Work/SESSION-LOG.md immediately if:**
+- Another department would need to know this to do their job
+- Paths, folders, or file structures changed
+- A major or permanent decision was made
+- Something was created that other chats will reference
+
+*Rule of thumb: If you'd tell a coworker "hey, heads up..." — log it now.*
+
+**At the END of every session:**
+1. Update `Work/SESSION-LOG.md` with what was done
+2. Call `log_session(device="pc", department=<yours>, summary=..., keyDecisions=[...], filesModified=[...], openItems=[...])` via MCP
+3. Use MCP tools to capture any reusable knowledge: `capture_thought` for facts/insights, `log_decision` for decisions made
 
 ---
 
 ## Shared Rules (from Governance)
 
 The following are defined in `netrate-governance/GOVERNANCE.md` and apply to ALL devices:
-- Session Protocol (read log → work → log)
+- Session Protocol (MCP briefing → work → MCP log)
 - Department Model (concept)
 - EOD Protocol (end of day wrap-up)
-- Tracker Architecture (SQLite — see GOVERNANCE.md)
+- Tracker Architecture (Neon Postgres — shared database)
 - Spotter Protocol (friction scanner)
 - Auditor Role (independent review)
 - Document Generation rules
@@ -86,15 +133,22 @@ Ask: "Which department should I work as? (WebDev, Products, Integrations, Admin,
 
 **This PC has NO tracker write access.**
 
-- All tracker data lives in SQLite on Mac
-- All departments write trackers via TrackerPortal API routes
-- PC views trackers via TrackerPortal on Vercel (read-only dashboard)
+- Tracker data lives in Neon Postgres (shared database — Mac is authority)
+- Mac writes ops/finance/compliance data. PC writes loans/borrower data.
+- PC views ops trackers via TrackerPortal on Vercel (read-only dashboard)
 
-**When PC completes work:**
-1. Log it in PC's `Work/SESSION-LOG.md`
-2. David relays to Mac → Mac updates tracker via API
+**When PC completes tracked work, write a completion report to RELAY.md:**
 
-PC has no Clerk agent and no write-guard hook. The Clerk pattern is retired across all devices.
+```
+## [DATE] — PC → Mac: Completion Report
+Project: {project_id}
+Instruction: {instruction_id}
+Outcome: {what was done}
+Assertions: { key: value }
+Actor: pc-dev
+```
+
+This structured format lets Mac's enforcement system validate the completion.
 
 ---
 
@@ -103,13 +157,14 @@ PC has no Clerk agent and no write-guard hook. The Clerk pattern is retired acro
 ```
 Mac writes marketing copy → pushes to netrate-ops → PC reads from GitHub
 Mac writes rate tool source → pushes to netrate-ops → PC reads for porting
-Mac updates trackers via API → TrackerPortal on Vercel reflects changes
+Mac updates trackers → Neon Postgres reflects changes → TrackerPortal dashboard
 PC builds website → pushes to netrate-pc-ops → Vercel auto-deploys from Work/Development/netrate-mortgage-site/
-PC completes work → logs in PC SESSION-LOG → David relays to Mac → Mac updates tracker via API
+PC completes tracked work → writes completion report to RELAY.md → Mac validates via enforcement system
+All devices share context → MCP knowledge layer (Neon Postgres) → get_briefing / log_session / capture_thought
 Cross-device proposals/questions → post to RELAY.md in netrate-governance → other device pulls and reads
 ```
 
-**RELAY.md:** For cross-device communication (proposals, questions, handoffs), post to `netrate-governance/RELAY.md` instead of relaying through David verbally. David says "check RELAY.md" to signal new messages. Pull before reading, push after writing.
+**RELAY.md:** For cross-device communication (proposals, questions, handoffs, completion reports), post to `netrate-governance/RELAY.md`. David says "check RELAY.md" to signal new messages. Pull before reading, push after writing.
 
 ## Key Resources on Mac (Read via GitHub)
 
@@ -118,8 +173,29 @@ Cross-device proposals/questions → post to RELAY.md in netrate-governance → 
 | Rate tool source | `Work/Development/RateTool/` | Port to website |
 | Marketing copy | `Work/Marketing/Website/copy/` | Website content |
 | Brand guide | `Work/Marketing/Brand/BRAND_GUIDE.md` | Colors, fonts, logo specs |
-| Tracker schema | SQLite — see `GOVERNANCE.md` Tracker Architecture section | Reference only |
+| Tracker schema | Neon Postgres — see GOVERNANCE.md | Reference only |
 | Production data | `Work/Admin/mcr/PRODUCTION-SUMMARY.json` | Business metrics |
+
+---
+
+## MCP Knowledge Layer
+
+PC connects to the shared knowledge layer via `.mcp.json` in repo root. The MCP server (`netrate-governance/mcp-server/`) provides 12 tools:
+
+| Tool | Use |
+|------|-----|
+| `get_briefing` | Session start — full context dump |
+| `log_session` | Session end — structured session record |
+| `capture_thought` | Save a knowledge atom (fact, preference, insight, rule, pattern) |
+| `search_thoughts` | Find knowledge by text, category, source, topics |
+| `log_decision` | Record an architectural or business decision with rationale |
+| `search_decisions` | Search decisions before re-asking David |
+| `list_thoughts` / `list_decisions` | Full context audits |
+| `update_thought` / `update_decision` | Mark as superseded, change confidence |
+| `get_recent_sessions` | Session history across devices |
+| `prune_sessions` | Cleanup sessions older than 90 days |
+
+**Database:** Neon Postgres (same instance as the website). Connection via `DATABASE_URL` in `.mcp.json`.
 
 ---
 
@@ -138,6 +214,7 @@ Cross-device proposals/questions → post to RELAY.md in netrate-governance → 
 ```
 netrate-pc-ops/
 ├── CLAUDE.md                          ← This file (PC-specific rules)
+├── .mcp.json                          ← MCP server config (knowledge layer)
 ├── Work/
 │   ├── SESSION-LOG.md                 ← ONE log for ALL PC sessions
 │   ├── Development/
@@ -173,4 +250,4 @@ netrate-pc-ops/
 
 ---
 
-*This file captures PC-specific operations context. Shared rules live in netrate-governance. Changes to shared rules require approval from both devices via David.*
+*This file captures PC-specific operations context. Shared rules live in netrate-governance. Governance changes are authored by Mac (base layer authority) and propagated to all devices.*
