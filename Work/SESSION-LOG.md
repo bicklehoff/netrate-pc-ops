@@ -894,6 +894,106 @@ Use this file to coordinate across PC work chats. Each session should read this 
 - [ ] **Marketing** — Duplicate CTA issue: hero "Check Today's Rates" and rate card "Compare Your Options" both go to /rates — consider differentiating destinations
 - [ ] **Marketing** — David brainstormed MBS/Treasury chart ideas, inverted MBS chart, national rate tracker — capture for future market data section
 - [ ] **Marketing** — Brand guide capture to MCP context layer still pending (from Mac)
+- [x] ~~**WebDev** — Live rate data wiring~~ (done in WebDev Mar 5, commit b115091)
 - [ ] **WebDev** — Mobile responsiveness pass needed (chart, ticker, hero grid stacking)
 - [ ] **Marketing** — Marketing inbox still not built (carried forward)
 - [ ] **Integrations** — Twilio A2P carrier approval still pending (carried forward)
+
+---
+
+## Session: March 5, 2026 - Live Rates Wired + Dev Launch Plan (WebDev / PC-Dev)
+
+**Chat focus:** Wired live GCS rate data into homepage, then built comprehensive dev launch plan mapping Marketing's playbook to dev milestones. Captured all infrastructure config to MCP knowledge layer.
+
+**What was done:**
+
+### Live Rate Wiring (committed + pushed as `b115091`)
+- Created `src/lib/rates/homepage.js` — server-side rate computation utility
+  - Wraps pricing engine (`priceRates` + `calculatePI` from `engine.js`)
+  - Reference scenario: 760+ FICO, $400K loan, 75% LTV, rate/term refi
+  - Finds par rate (adjPrice closest to 0), computes APR via binary search
+  - Exports: `computeHomepageRates(lenderData)`, `formatEffectiveDate()`, `formatEffectiveDateShort()`
+- Converted `src/app/page.js` to async server component with ISR (`revalidate = 300`)
+  - Fetches live data from GCS (live/manifest.json → live/amwest.json) with static fallback
+  - Wired live data into: ticker, hero card, rates table, comparison chart, sparkline
+  - Ticker format: "NetRate Mortgage 30-Yr X.XXX% APR X.XX%"
+  - All 4 consumer-facing rate quotes use full "NetRate Mortgage" name + APR
+  - Other products (15yr, FHA, VA, Jumbo, DSCR) remain as placeholders until pipeline supports them
+  - Change column renders "—" when no historical data available
+
+### Trademark/Compliance Decision (logged to MCP)
+- Anywhere we quote a NetRate rate: must say "NetRate Mortgage" (full name) + always include APR
+- APR compliance gap identified: current calc uses lender fees + points only, missing third-party fees (title, settlement, appraisal) per Reg Z §1026.24
+- NetRate comp is lender-paid (baked into rate) — no originator fee gap
+- RELAY sent to Mac compliance with 3 questions: (1) which fees for advertising APR, (2) disclaimer sufficiency, (3) dollar estimates for missing fees
+- Fix when compliance responds: one number addition in `homepage.js` → `calculateAPR()`
+
+### Dev Launch Plan (saved to `.claude/plans/silly-stirring-swan.md`)
+- Reviewed Marketing PLAYBOOK.md (Batch 1-3) and DEV-BRIEF.md (Batch 1-2)
+- Reviewed PORTAL-ARCHITECTURE-PLAN.md (borrower portal, MLO processing, auth, state machine)
+- Reviewed full Prisma schema (23 models) and existing codebase inventory
+- Built 6-milestone plan with 2 parallel tracks:
+  - **Track A:** Public site + lead capture (Marketing Batch 1 items)
+  - **Track B:** Borrower portal + MLO processing dashboard
+  - **Shared foundation:** DB migration for pending schema models
+  - **Go public** when both tracks ready
+  - **Post-launch:** Marketing Batch 2 (AI discoverability, state pages, market data)
+
+### Infrastructure Audit (all captured to MCP knowledge layer)
+- **Configured:** DATABASE_URL, DIRECT_URL, PII_ENCRYPTION_KEY, NEXTAUTH_SECRET, GCS (bucket + service account), Twilio (full stack: account, verify, voice, SMS, phone +17205731236), Google Maps API, GA4, SITE_PASSWORD
+- **Partially configured:** Zoho CRM (reportedly in Vercel but NOT in local .env — needs verification)
+- **Not configured:** ZOHO_MAIL_REFRESH_TOKEN (empty), ZOHO_VOICE_REFRESH_TOKEN (empty), ZOHO_VOICE_SENDER_NUMBER (empty)
+- **Note:** Twilio Verify is fully configured as alternative to Zoho Voice for borrower OTP
+
+### Governance Decision (logged to MCP)
+- All infrastructure config must be captured in MCP knowledge layer without exception
+
+**Key decisions:**
+- **Show both par + full spectrum** — par rate highlighted in hero card, full rate spectrum in rates table
+- **"NetRate Mortgage" trademark rule** — full name + APR on every consumer-facing rate quote
+- **Parallel build tracks** — lead capture + portal simultaneously, go public when both ready
+- **No JSONB for new business values** — proper typed columns; existing JSONB fine as-is
+- **Everything deterministic** — defined state machine, typed columns, predictable outcomes
+
+**Files created/modified:**
+- `src/lib/rates/homepage.js` (NEW) — rate computation utility
+- `src/app/page.js` (MODIFIED) — async server component with live GCS data
+- `.claude/plans/silly-stirring-swan.md` (NEW) — full dev launch plan
+
+**Schema models NOT yet migrated (pending for Milestone 1):**
+- LoanDates, Condition, LoanNote, LoanTask, LoanBorrower
+- Lender, RateSheet, RateRow
+- New Loan fields: loanType, lenderName, loanNumber, loanAmount, interestRate, loanTerm, numBorrowers
+
+**What exists but needs end-to-end wiring (next session READ THESE):**
+- Portal routes: `/portal/apply/*` (6-step wizard), `/portal/dashboard/*`, `/portal/mlo/*`
+- Portal components: FormFields, StepIndicator, DocumentList, LoanDetailView, LoanTimeline, PipelineTable, LoanStatusCard, BorrowerTabs, CoBorrowerPrompt, ApplicationContext
+- Auth: middleware.js (password wall + MLO NextAuth + borrower JWT), auth.js, borrower-session.js
+- API routes: /api/portal/apply, /api/portal/loans/*, /api/portal/mlo/*, /api/portal/sms/*, /api/portal/auth/*
+- Libraries: encryption.js, loan-states.js, zoho-voice.js, utm.js, validations/application.js
+- RateTool: LeadCapture.js, RateQuoteModal.js, RateResults.js, ScenarioForm.js
+- Dialer: Full Twilio integration (contacts, calls, SMS, voicemail, recording)
+- HECM Optimizer: Full calculator with save/load and print view
+
+**Open items:**
+- [ ] **WebDev** — Run Milestone 1: `prisma migrate dev` for pending schema models
+- [ ] **WebDev** — Seed MLO accounts: David (admin) + Jamie (MLO)
+- [ ] **David** — Verify Zoho CRM env vars in Vercel dashboard
+- [ ] **David** — Set up ZOHO_MAIL_REFRESH_TOKEN + portal@netratemortgage.com alias
+- [ ] **David** — Set up ZOHO_VOICE vars (or confirm using Twilio Verify instead)
+- [ ] **Compliance (Mac)** — APR fee review (RELAY sent, awaiting response)
+- [ ] **WebDev** — Wire lead capture: "Get This Rate" → RateQuoteModal → /api/lead → Zoho CRM
+- [ ] **WebDev** — Trust signals: checkmark bar, Google reviews section, BBB seal
+- [ ] **WebDev** — Application wizard: harden 6-step form, validation, save/resume
+- [ ] **WebDev** — MLO processing: pipeline view, status transitions, conditions
+- [ ] **Marketing** — Mobile responsiveness pass (carried forward)
+- [ ] **Integrations** — Twilio A2P carrier approval (carried forward)
+
+**Critical files for next session to read:**
+1. `.claude/plans/silly-stirring-swan.md` — full dev launch plan (6 milestones, all tasks, file refs)
+2. `prisma/schema.prisma` — complete database schema (23 models)
+3. `Work/WebDev/PORTAL-ARCHITECTURE-PLAN.md` — portal architecture, state machine, auth, routes
+4. `Work/Marketing/DEV-BRIEF.md` — Marketing's dev tasks (Batch 1-3)
+5. `Work/Marketing/PLAYBOOK.md` — full marketing playbook
+6. `src/middleware.js` — auth + password wall logic
+7. `src/lib/loan-states.js` — loan state machine transitions
