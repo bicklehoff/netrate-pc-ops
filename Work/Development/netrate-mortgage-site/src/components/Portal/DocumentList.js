@@ -88,6 +88,7 @@ export default function DocumentList({ loan }) {
                     <input
                       type="file"
                       className="hidden"
+                      accept=".pdf,.png,.jpg,.jpeg"
                       onChange={(e) => {
                         if (e.target.files?.[0]) {
                           handleUpload(doc.id, e.target.files[0]);
@@ -137,6 +138,7 @@ export default function DocumentList({ loan }) {
           <input
             type="file"
             className="hidden"
+            accept=".pdf,.png,.jpg,.jpeg"
             onChange={(e) => {
               if (e.target.files?.[0]) {
                 handleUpload(null, e.target.files[0]);
@@ -151,6 +153,7 @@ export default function DocumentList({ loan }) {
             {uploading === 'new' ? 'Uploading...' : 'Upload additional document'}
           </span>
         </label>
+        <p className="text-xs text-gray-400 mt-1">PDF, PNG, or JPG — 10 MB max</p>
       </div>
 
       {uploadError && (

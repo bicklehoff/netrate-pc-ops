@@ -7,8 +7,85 @@
 // Supports up to 3 co-borrowers (4 total borrowers per loan).
 
 import { NextResponse } from 'next/server';
+import { headers } from 'next/headers';
 import prisma from '@/lib/prisma';
 import { encrypt, ssnLastFour } from '@/lib/encryption';
+
+// ─── Rate Limiting (in-memory, per IP) ──────────────────────
+// 5 submissions per hour per IP. Map auto-cleans expired entries.
+const rateLimitMap = new Map();
+const RATE_LIMIT_MAX = 5;
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+
+function checkRateLimit(ip) {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+
+  // Clean expired entries periodically (every 100 checks)
+  if (rateLimitMap.size > 100) {
+    for (const [key, val] of rateLimitMap) {
+      if (now - val.windowStart > RATE_LIMIT_WINDOW_MS) {
+        rateLimitMap.delete(key);
+      }
+    }
+  }
+
+  if (!entry || now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
+    rateLimitMap.set(ip, { count: 1, windowStart: now });
+    return { allowed: true, remaining: RATE_LIMIT_MAX - 1 };
+  }
+
+  if (entry.count >= RATE_LIMIT_MAX) {
+    return { allowed: false, remaining: 0 };
+  }
+
+  entry.count++;
+  return { allowed: true, remaining: RATE_LIMIT_MAX - entry.count };
+}
+
+// ─── Input Validation Helpers ───────────────────────────────
+function validateEmail(email) {
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return re.test(email);
+}
+
+function validateSSN(ssn) {
+  const digits = String(ssn).replace(/\D/g, '');
+  if (digits.length !== 9) return 'SSN must contain exactly 9 digits';
+  // Invalid SSN patterns (IRS rules)
+  if (digits.startsWith('000')) return 'Invalid SSN';
+  if (digits.substring(3, 5) === '00') return 'Invalid SSN';
+  if (digits.substring(5) === '0000') return 'Invalid SSN';
+  if (digits === '999999999') return 'Invalid SSN';
+  // Known test/invalid SSNs
+  if (['123456789', '111111111', '222222222', '333333333', '444444444',
+       '555555555', '666666666', '777777777', '888888888'].includes(digits)) {
+    return 'Invalid SSN';
+  }
+  return null;
+}
+
+function validateDOB(dob) {
+  const date = new Date(dob);
+  if (isNaN(date.getTime())) return 'Invalid date of birth';
+  const now = new Date();
+  const age = (now - date) / (365.25 * 24 * 60 * 60 * 1000);
+  if (age < 18) return 'Applicant must be at least 18 years old';
+  if (age > 100) return 'Invalid date of birth';
+  return null;
+}
+
+function validatePhone(phone) {
+  if (!phone) return null; // Phone is optional
+  const digits = String(phone).replace(/\D/g, '');
+  if (digits.length !== 10 && digits.length !== 11) return 'Phone must be 10 digits';
+  return null;
+}
+
+function sanitize(str) {
+  if (typeof str !== 'string') return str;
+  return str.trim().replace(/[<>]/g, '');
+}
 
 // ─── Safe parsers (return null instead of NaN) ─────────────
 function safeInt(val) {
@@ -30,10 +107,17 @@ function safeJson(val) {
 
 // ─── Create or find a Borrower record ──────────────────────
 async function upsertBorrower({ firstName, lastName, email, phone, ssn, dob }) {
-  const emailLower = email.toLowerCase().trim();
+  const emailLower = sanitize(email).toLowerCase().trim();
   const ssnDigits = String(ssn).replace(/\D/g, '');
-  if (ssnDigits.length !== 9) {
-    throw new Error(`SSN must contain exactly 9 digits (got ${ssnDigits.length})`);
+
+  const ssnError = validateSSN(ssn);
+  if (ssnError) {
+    throw new Error(ssnError);
+  }
+
+  const dobError = validateDOB(dob);
+  if (dobError) {
+    throw new Error(dobError);
   }
 
   const ssnEncrypted = encrypt(ssnDigits);
@@ -48,9 +132,9 @@ async function upsertBorrower({ firstName, lastName, email, phone, ssn, dob }) {
     borrower = await prisma.borrower.update({
       where: { email: emailLower },
       data: {
-        firstName,
-        lastName,
-        phone: phone || null,
+        firstName: sanitize(firstName),
+        lastName: sanitize(lastName),
+        phone: phone ? sanitize(phone) : null,
         dobEncrypted,
         ssnEncrypted,
         ssnLastFour: lastFour,
@@ -60,9 +144,9 @@ async function upsertBorrower({ firstName, lastName, email, phone, ssn, dob }) {
     borrower = await prisma.borrower.create({
       data: {
         email: emailLower,
-        firstName,
-        lastName,
-        phone: phone || null,
+        firstName: sanitize(firstName),
+        lastName: sanitize(lastName),
+        phone: phone ? sanitize(phone) : null,
         dobEncrypted,
         ssnEncrypted,
         ssnLastFour: lastFour,
@@ -75,6 +159,19 @@ async function upsertBorrower({ firstName, lastName, email, phone, ssn, dob }) {
 
 export async function POST(request) {
   try {
+    // ─── Rate Limiting ─────────────────────────────────────────
+    const headersList = await headers();
+    const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim()
+      || headersList.get('x-real-ip')
+      || 'unknown';
+    const rateCheck = checkRateLimit(ip);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { error: 'Too many submissions. Please try again later.' },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
 
     // ─── Basic Validation ────────────────────────────────────
@@ -83,6 +180,30 @@ export async function POST(request) {
         { error: 'Missing required fields' },
         { status: 400 }
       );
+    }
+
+    // ─── Input Validation ────────────────────────────────────
+    if (!validateEmail(body.email)) {
+      return NextResponse.json({ error: 'Invalid email address' }, { status: 400 });
+    }
+
+    const ssnError = validateSSN(body.ssn);
+    if (ssnError) {
+      return NextResponse.json({ error: ssnError }, { status: 400 });
+    }
+
+    const dobError = validateDOB(body.dob);
+    if (dobError) {
+      return NextResponse.json({ error: dobError }, { status: 400 });
+    }
+
+    const phoneError = validatePhone(body.phone);
+    if (phoneError) {
+      return NextResponse.json({ error: phoneError }, { status: 400 });
+    }
+
+    if (!['purchase', 'refinance'].includes(body.purpose)) {
+      return NextResponse.json({ error: 'Invalid loan purpose' }, { status: 400 });
     }
 
     // ─── Environment Check ───────────────────────────────────

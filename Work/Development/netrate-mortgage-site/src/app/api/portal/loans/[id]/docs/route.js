@@ -65,6 +65,27 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
+    // ─── File Type Validation ────────────────────────────────
+    const ALLOWED_TYPES = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
+    const ALLOWED_EXTENSIONS = ['.pdf', '.png', '.jpg', '.jpeg'];
+    const fileExt = '.' + file.name.split('.').pop().toLowerCase();
+
+    if (!ALLOWED_TYPES.includes(file.type) && !ALLOWED_EXTENSIONS.includes(fileExt)) {
+      return NextResponse.json(
+        { error: 'Only PDF, PNG, and JPG files are accepted.' },
+        { status: 400 }
+      );
+    }
+
+    // ─── File Size Validation (10 MB max) ────────────────────
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json(
+        { error: 'File size exceeds 10 MB limit.' },
+        { status: 400 }
+      );
+    }
+
     // Upload to Vercel Blob
     const blob = await put(`loans/${loanId}/${file.name}`, file, {
       access: 'public', // Behind auth check, so URL alone isn't enough

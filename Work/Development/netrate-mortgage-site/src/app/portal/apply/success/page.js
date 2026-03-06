@@ -27,8 +27,8 @@ export default function SuccessPage() {
         Application Received!
       </h1>
       <p className="text-gray-500 max-w-md mx-auto mb-8">
-        We&apos;ve received your application and a confirmation has been sent to your email.
-        You&apos;ll receive a link to track your loan status and upload any requested documents.
+        We&apos;ve received your application. A member of our team will review it
+        and reach out to you within 1 business day.
       </p>
 
       <div className="bg-blue-50 border border-blue-100 rounded-xl p-6 mb-8 max-w-md mx-auto">
@@ -40,13 +40,22 @@ export default function SuccessPage() {
           </li>
           <li className="flex gap-2">
             <span className="font-bold text-brand">2.</span>
-            <span>We may request additional documents via email</span>
+            <span>Your loan officer will contact you directly with next steps</span>
           </li>
           <li className="flex gap-2">
             <span className="font-bold text-brand">3.</span>
-            <span>Your loan officer will be in touch with next steps</span>
+            <span>We&apos;ll request any needed documents and keep you updated</span>
           </li>
         </ol>
+      </div>
+
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-8 max-w-md mx-auto">
+        <p className="text-sm text-gray-600">
+          <strong>Questions?</strong> Call us at{' '}
+          <a href="tel:3034445251" className="text-brand hover:underline">303-444-5251</a>{' '}
+          or email{' '}
+          <a href="mailto:david@netratemortgage.com" className="text-brand hover:underline">david@netratemortgage.com</a>
+        </p>
       </div>
 
       <div className="flex items-center justify-center gap-4">
