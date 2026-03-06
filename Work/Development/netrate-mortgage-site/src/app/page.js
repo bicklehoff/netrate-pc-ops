@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import TrustBar from '@/components/TrustBar';
+import HomepageRatesTable from '@/components/HomepageRatesTable';
 import { fetchGCSFile, isGCSConfigured } from '@/lib/gcs';
 import staticAmwest from '@/data/rates/amwest.json';
 import { computeHomepageRates } from '@/lib/rates/homepage';
@@ -171,13 +172,18 @@ export default async function HomePage() {
                 <span className="text-white font-bold text-sm">4.9</span>
               </a>
               <a
-                href="https://www.bbb.org/us/co/louisville/profile/mortgage-lenders/locus-mortgage-1296-90159653"
+                href="https://www.bbb.org/us/co/louisville/profile/mortgage-lenders/locus-mortgage-1296-90159653#sealclick"
                 target="_blank"
                 rel="nofollow noopener noreferrer"
                 className="inline-flex items-center gap-2 bg-white/[0.07] rounded-full pl-2 pr-3.5 py-1.5 hover:bg-white/[0.12] transition-colors"
               >
-                <span className="w-6 h-6 rounded-md bg-[#006eb7] text-white flex items-center justify-center text-[9px] font-extrabold flex-shrink-0">BBB</span>
-                <span className="text-sm font-semibold text-gray-300">A+</span>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="https://seal-denver.bbb.org/seals/blue-seal-120-61-bbb-90159653.png"
+                  alt="BBB Accredited Business — A+ Rating"
+                  className="h-6 w-auto"
+                  loading="lazy"
+                />
               </a>
               <a
                 href="https://nmlsconsumeraccess.org/EntityDetails.aspx/COMPANY/1111861"
@@ -329,51 +335,11 @@ export default async function HomePage() {
           <h2 className="text-2xl font-extrabold text-gray-900">Today&apos;s Mortgage Rates</h2>
           <span className="text-sm text-gray-400">{effectiveDateFull} &middot; 760+ FICO &middot; $400K loan</span>
         </div>
-        <div className="overflow-x-auto -mx-6 px-6">
-          <table className="w-full min-w-[640px]">
-            <thead>
-              <tr className="border-b-2 border-gray-200">
-                <th className="text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider py-2.5 px-4">Product</th>
-                <th className="text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider py-2.5 px-4">Rate</th>
-                <th className="text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider py-2.5 px-4">APR</th>
-                <th className="text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider py-2.5 px-4">Change</th>
-                <th className="text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider py-2.5 px-4">Mo. Payment</th>
-                <th className="py-2.5 px-4"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {tableProducts.map((row) => (
-                <tr key={row.product} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                  <td className="py-3.5 px-4 font-semibold text-gray-900">{row.product}</td>
-                  <td className="py-3.5 px-4 text-xl font-extrabold text-gray-900">{row.rate}</td>
-                  <td className="py-3.5 px-4 text-sm text-gray-600">{row.apr}</td>
-                  <td className="py-3.5 px-4">
-                    {row.change != null ? (
-                      <span className={`text-sm font-semibold ${row.change < 0 ? 'text-green-600' : row.change > 0 ? 'text-red-600' : 'text-gray-400'}`}>
-                        {row.change < 0 ? '▼' : row.change > 0 ? '▲' : '—'}{' '}
-                        {Math.abs(row.change).toFixed(3)}
-                      </span>
-                    ) : (
-                      <span className="text-sm text-gray-300">—</span>
-                    )}
-                  </td>
-                  <td className="py-3.5 px-4 text-sm text-gray-500">
-                    {row.payment}
-                    {row.note && <span className="text-[11px] text-gray-400 ml-1">{row.note}</span>}
-                  </td>
-                  <td className="py-3.5 px-4 text-right">
-                    <Link href="/rates" className="text-brand font-semibold text-sm hover:text-brand-dark transition-colors">
-                      See options &rarr;
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <p className="text-[11px] text-gray-400 mt-3 leading-relaxed">
-          Rates assume 760+ FICO, rate/term refinance, $400K loan, 75% LTV. Jumbo based on $800K. DSCR based on investment property, 1.25x coverage. Actual rates depend on your specific scenario. Updated daily from wholesale pricing.
-        </p>
+        <HomepageRatesTable
+          products={tableProducts}
+          effectiveDate={effectiveDateFull}
+          disclaimer="Rates assume 760+ FICO, rate/term refinance, $400K loan, 75% LTV. Jumbo based on $800K. DSCR based on investment property, 1.25x coverage. Actual rates depend on your specific scenario. Updated daily from wholesale pricing."
+        />
       </section>
 
       {/* ===== RATE TRENDS + MARKET UPDATES ===== */}
@@ -589,12 +555,18 @@ export default async function HomePage() {
           </div>
           <div className="flex flex-wrap justify-center gap-8 mt-8 items-center">
             <a
-              href="https://www.bbb.org/us/co/louisville/profile/mortgage-lenders/locus-mortgage-1296-90159653"
+              href="https://www.bbb.org/us/co/louisville/profile/mortgage-lenders/locus-mortgage-1296-90159653#sealclick"
               target="_blank"
               rel="nofollow noopener noreferrer"
-              className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-300 transition-colors"
+              className="flex items-center gap-3 text-sm text-gray-400 hover:text-gray-300 transition-colors"
             >
-              <span className="w-7 h-7 bg-gray-800 rounded-md flex items-center justify-center text-[11px] text-gray-500 font-bold">BBB</span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="https://seal-denver.bbb.org/seals/blue-seal-120-61-bbb-90159653.png"
+                alt="BBB Accredited Business — A+ Rating"
+                className="h-8 w-auto"
+                loading="lazy"
+              />
               A+ Rated &middot; Accredited Since 2013
             </a>
             <a
@@ -617,7 +589,7 @@ export default async function HomePage() {
       {/* ===== BOTTOM CTA ===== */}
       <section className="bg-brand py-16 text-center">
         <div className="max-w-6xl mx-auto px-6">
-          <h2 className="text-3xl font-extrabold text-white">See rates for your scenario in 30 seconds.</h2>
+          <h2 className="text-3xl font-extrabold text-white">Not Sure Which Rate? Let Us Help.</h2>
           <p className="text-base text-cyan-100 mt-3 max-w-xl mx-auto">
             Tell us about your situation and we&apos;ll send you a personalized recommendation with full fee breakdown, cash to close, and savings analysis.
           </p>

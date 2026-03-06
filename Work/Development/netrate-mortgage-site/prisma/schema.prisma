@@ -493,6 +493,36 @@ model HecmScenario {
   @@map("hecm_scenarios")
 }
 
+// ─── Leads (Website Lead Capture) ────────────────────────────────
+// Captures leads from homepage rate table, rate tool, contact form, etc.
+// Primary storage — Zoho CRM sync is optional and fire-and-forget.
+
+model Lead {
+  id              String    @id @default(uuid()) @db.Uuid
+  name            String
+  email           String
+  phone           String?
+  message         String?                         // Rate details, scenario info, free-text
+  source          String    @default("website")   // 'homepage_rate_table' | 'rate_tool' | 'contact_form' | 'website'
+  sourceDetail    String?   @map("source_detail") // Product clicked, scenario summary, etc.
+  status          String    @default("new")       // 'new' | 'contacted' | 'converted' | 'closed'
+
+  // UTM tracking
+  utmSource       String?   @map("utm_source")
+  utmMedium       String?   @map("utm_medium")
+  utmCampaign     String?   @map("utm_campaign")
+
+  // CRM sync
+  zohoLeadId      String?   @map("zoho_lead_id")
+
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  @@index([email])
+  @@index([status])
+  @@index([createdAt])
+  @@map("leads")
+}
+
 // ─── Lenders (Rate Pipeline) ──────────────────────────────────
 // Master list of wholesale lenders whose rate sheets we track.
 

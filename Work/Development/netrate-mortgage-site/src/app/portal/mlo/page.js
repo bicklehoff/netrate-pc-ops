@@ -120,6 +120,20 @@ export default function MloDashboardPage() {
         </div>
       </div>
 
+      {/* Leads Banner */}
+      <Link
+        href="/portal/mlo/leads"
+        className="block mb-4 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl p-4 transition-colors shadow-sm"
+      >
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold">Website Leads</h2>
+            <p className="text-cyan-100 text-sm mt-0.5">View and manage incoming leads from the website</p>
+          </div>
+          <span className="text-2xl">&rarr;</span>
+        </div>
+      </Link>
+
       {/* Status Filter Tabs */}
       <div className="flex gap-1 mb-4 overflow-x-auto pb-1">
         {STATUS_FILTERS.map((f) => (
