@@ -1,7 +1,70 @@
 import Link from 'next/link';
 import TrustBar from '@/components/TrustBar';
+import { fetchGCSFile, isGCSConfigured } from '@/lib/gcs';
+import staticAmwest from '@/data/rates/amwest.json';
+import { computeHomepageRates } from '@/lib/rates/homepage';
 
-export default function HomePage() {
+// Revalidate every 5 minutes (ISR) — matches /api/rates and /rates page
+export const revalidate = 300;
+
+const GCS_BUCKET = process.env.GCS_BUCKET_NAME || 'netrate-rates';
+
+/**
+ * Fetch rate data for homepage display.
+ * Tries GCS live data first, falls back to static bundled data.
+ */
+async function getHomepageRateData() {
+  if (isGCSConfigured()) {
+    try {
+      const manifest = await fetchGCSFile(GCS_BUCKET, 'live/manifest.json');
+      const lenderData = await fetchGCSFile(GCS_BUCKET, `live/${manifest.lenders[0].file}`);
+      return lenderData;
+    } catch (err) {
+      console.error('Homepage GCS fetch failed, using static fallback:', err.message);
+    }
+  }
+  return staticAmwest;
+}
+
+export default async function HomePage() {
+  // ─── Live Rate Data ─────────────────────────────────────────
+  const lenderData = await getHomepageRateData();
+  let liveRates = null;
+  try {
+    liveRates = computeHomepageRates(lenderData);
+  } catch (err) {
+    console.error('Homepage rate computation failed:', err.message);
+  }
+
+  // ─── Display Values (live → fallback) ──────────────────────
+  const d = liveRates;
+  const conv30Rate = d ? `${d.conv30.rate.toFixed(3)}%` : '5.875%';
+  const conv30Apr = d ? `${d.conv30.apr.toFixed(2)}%` : '5.94%';
+  const conv30Payment = d ? `$${d.conv30.payment.toLocaleString()}` : '$2,366';
+  const conv30RateNum = d ? d.conv30.rate : 5.875;
+  const effectiveDateFull = d?.effectiveDateFormatted || 'March 5, 2026';
+  const effectiveDateShort = d?.effectiveDateShort || 'Mar 5, 2026';
+  const effectiveTime = d?.effectiveTime || '3:30 PM ET';
+  const nationalAvg30 = 6.37; // Hardcoded until market.json pipeline
+  const savingsGap = (nationalAvg30 - conv30RateNum).toFixed(2);
+
+  // Hero card products (30-yr from live data, rest placeholder)
+  const heroProducts = [
+    { product: '30-Yr Fixed', rate: conv30Rate, apr: conv30Apr },
+    { product: '15-Yr Fixed', rate: '5.250%', apr: '5.38%' },
+    { product: 'FHA 30-Yr', rate: '5.500%', apr: '6.12%' },
+    { product: 'VA 30-Yr', rate: '5.375%', apr: '5.52%' },
+  ];
+
+  // Full rates table (30-yr from live data, rest placeholder)
+  const tableProducts = [
+    { product: '30-Year Fixed', rate: conv30Rate, apr: conv30Apr, change: null, payment: conv30Payment, note: null },
+    { product: '15-Year Fixed', rate: '5.250%', apr: '5.38%', change: null, payment: '$3,213', note: null },
+    { product: 'FHA 30-Year', rate: '5.500%', apr: '6.12%', change: null, payment: '$2,271', note: null },
+    { product: 'VA 30-Year', rate: '5.375%', apr: '5.52%', change: null, payment: '$2,240', note: null },
+    { product: 'Jumbo 30-Year', rate: '6.250%', apr: '6.31%', change: null, payment: '$4,928', note: '($800K)' },
+    { product: 'DSCR (Investor)', rate: '7.125%', apr: '7.28%', change: null, payment: '$2,694', note: null },
+  ];
   return (
     <div>
       {/* ===== MARKET TICKER (animated) ===== */}
@@ -29,9 +92,9 @@ export default function HomePage() {
               </div>
               <div className="w-px h-3.5 bg-gray-800" />
               <div className="flex items-center gap-1.5">
-                <span className="text-gray-400">NetRate 30-Yr</span>
-                <span className="text-brand-light font-bold">5.875%</span>
-                <span className="text-emerald-400 font-semibold">&#9660; 0.125</span>
+                <span className="text-gray-400">NetRate Mortgage 30-Yr</span>
+                <span className="text-brand-light font-bold">{conv30Rate}</span>
+                <span className="text-gray-400 text-[11px]">APR {conv30Apr}</span>
               </div>
               <div className="w-px h-3.5 bg-gray-800" />
               <div className="flex items-center gap-1.5">
@@ -40,7 +103,7 @@ export default function HomePage() {
                 <span className="text-green-400 font-semibold">&#9650; 0.3%</span>
               </div>
               <div className="w-px h-3.5 bg-gray-800" />
-              <span className="text-gray-600 text-[11px]">Mar 5, 2026 &middot; 3:30 PM ET</span>
+              <span className="text-gray-600 text-[11px]">{effectiveDateShort} &middot; {effectiveTime}</span>
             </div>
           ))}
         </div>
@@ -146,12 +209,7 @@ export default function HomePage() {
                 </tr>
               </thead>
               <tbody>
-                {[
-                  { product: '30-Yr Fixed', rate: '5.875%', apr: '5.94%' },
-                  { product: '15-Yr Fixed', rate: '5.250%', apr: '5.38%' },
-                  { product: 'FHA 30-Yr', rate: '5.500%', apr: '6.12%' },
-                  { product: 'VA 30-Yr', rate: '5.375%', apr: '5.52%' },
-                ].map((row, i) => (
+                {heroProducts.map((row, i) => (
                   <tr key={row.product} className={i < 3 ? 'border-b border-gray-100' : ''}>
                     <td className="py-2.5 px-6 text-sm font-semibold text-gray-700">{row.product}</td>
                     <td className="py-2.5 px-3 text-right text-[17px] font-extrabold text-gray-900">{row.rate}</td>
@@ -174,7 +232,7 @@ export default function HomePage() {
               </Link>
             </div>
             <div className="px-6 pb-4">
-              <p className="text-[11px] text-gray-400 text-center">760+ FICO &middot; $400K &middot; Rate/Term Refi &middot; Updated today</p>
+              <p className="text-[11px] text-gray-400 text-center">760+ FICO &middot; $400K &middot; Rate/Term Refi &middot; 0 pts &middot; {effectiveDateShort}</p>
             </div>
           </div>
         </div>
@@ -184,7 +242,7 @@ export default function HomePage() {
           <div className="bg-white/[0.06] backdrop-blur-sm border border-white/10 rounded-2xl p-6 lg:p-8">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-5">
               <div>
-                <h3 className="text-base font-bold text-white">National Average vs. NetRate</h3>
+                <h3 className="text-base font-bold text-white">National Average vs. NetRate Mortgage</h3>
                 <p className="text-[13px] text-gray-400 mt-0.5">30-Year Fixed &middot; 6-month trend</p>
               </div>
               <div className="flex items-center gap-5 text-[12px]">
@@ -194,7 +252,7 @@ export default function HomePage() {
                 </span>
                 <span className="flex items-center gap-1.5">
                   <span className="w-5 h-[2px] bg-brand-light inline-block rounded" />
-                  <span className="text-brand-light">NetRate</span>
+                  <span className="text-brand-light">NetRate Mortgage</span>
                 </span>
               </div>
             </div>
@@ -248,15 +306,15 @@ export default function HomePage() {
               <circle cx="650" cy="110" r="5" fill="#0891b2" stroke="#22d3ee" strokeWidth="2" />
               {/* End labels */}
               <text x="662" y="68" className="text-[12px] font-bold" fill="#9ca3af">6.37%</text>
-              <text x="662" y="115" className="text-[12px] font-bold" fill="#22d3ee">5.875%</text>
+              <text x="662" y="115" className="text-[12px] font-bold" fill="#22d3ee">{conv30Rate}</text>
             </svg>
             {/* Savings callout */}
             <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/10">
               <span className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-400">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
-                0.50% below the national average
+                {savingsGap}% below the national average
               </span>
-              <span className="text-[12px] text-gray-500">Source: Freddie Mac PMMS &middot; NetRate wholesale pricing</span>
+              <span className="text-[12px] text-gray-500">Source: Freddie Mac PMMS &middot; NetRate Mortgage wholesale pricing</span>
             </div>
           </div>
         </div>
@@ -269,7 +327,7 @@ export default function HomePage() {
       <section id="rates" className="max-w-6xl mx-auto px-6 py-14">
         <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2 mb-6">
           <h2 className="text-2xl font-extrabold text-gray-900">Today&apos;s Mortgage Rates</h2>
-          <span className="text-sm text-gray-400">March 5, 2026 &middot; 760+ FICO &middot; $400K loan</span>
+          <span className="text-sm text-gray-400">{effectiveDateFull} &middot; 760+ FICO &middot; $400K loan</span>
         </div>
         <div className="overflow-x-auto -mx-6 px-6">
           <table className="w-full min-w-[640px]">
@@ -284,23 +342,20 @@ export default function HomePage() {
               </tr>
             </thead>
             <tbody>
-              {[
-                { product: '30-Year Fixed', rate: '5.875%', apr: '5.94%', change: -0.125, payment: '$2,366', note: null },
-                { product: '15-Year Fixed', rate: '5.250%', apr: '5.38%', change: -0.250, payment: '$3,213', note: null },
-                { product: 'FHA 30-Year', rate: '5.500%', apr: '6.12%', change: 0, payment: '$2,271', note: null },
-                { product: 'VA 30-Year', rate: '5.375%', apr: '5.52%', change: -0.125, payment: '$2,240', note: null },
-                { product: 'Jumbo 30-Year', rate: '6.250%', apr: '6.31%', change: 0.125, payment: '$4,928', note: '($800K)' },
-                { product: 'DSCR (Investor)', rate: '7.125%', apr: '7.28%', change: 0, payment: '$2,694', note: null },
-              ].map((row) => (
+              {tableProducts.map((row) => (
                 <tr key={row.product} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                   <td className="py-3.5 px-4 font-semibold text-gray-900">{row.product}</td>
                   <td className="py-3.5 px-4 text-xl font-extrabold text-gray-900">{row.rate}</td>
                   <td className="py-3.5 px-4 text-sm text-gray-600">{row.apr}</td>
                   <td className="py-3.5 px-4">
-                    <span className={`text-sm font-semibold ${row.change < 0 ? 'text-green-600' : row.change > 0 ? 'text-red-600' : 'text-gray-400'}`}>
-                      {row.change < 0 ? '▼' : row.change > 0 ? '▲' : '—'}{' '}
-                      {Math.abs(row.change).toFixed(3)}
-                    </span>
+                    {row.change != null ? (
+                      <span className={`text-sm font-semibold ${row.change < 0 ? 'text-green-600' : row.change > 0 ? 'text-red-600' : 'text-gray-400'}`}>
+                        {row.change < 0 ? '▼' : row.change > 0 ? '▲' : '—'}{' '}
+                        {Math.abs(row.change).toFixed(3)}
+                      </span>
+                    ) : (
+                      <span className="text-sm text-gray-300">—</span>
+                    )}
                   </td>
                   <td className="py-3.5 px-4 text-sm text-gray-500">
                     {row.payment}
@@ -333,7 +388,7 @@ export default function HomePage() {
             {/* Sparkline bars */}
             <div className="relative h-28 bg-gradient-to-b from-cyan-50 to-white rounded-lg border border-gray-100 flex items-end px-3 mb-4 overflow-hidden">
               <span className="absolute top-2.5 left-3.5 text-[11px] text-gray-400">8 weeks</span>
-              <span className="absolute top-2.5 right-3.5 text-base font-extrabold text-brand">5.875%</span>
+              <span className="absolute top-2.5 right-3.5 text-base font-extrabold text-brand">{conv30Rate}</span>
               {[70, 75, 72, 68, 65, 60, 55, 50].map((h, i) => (
                 <div
                   key={i}
