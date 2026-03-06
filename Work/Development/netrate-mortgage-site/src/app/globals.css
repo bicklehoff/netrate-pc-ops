@@ -22,6 +22,21 @@ body {
   background: var(--bg-page);
 }
 
+/* Market ticker scrolling animation */
+@keyframes ticker-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.ticker-track {
+  display: flex;
+  animation: ticker-scroll 30s linear infinite;
+}
+
+.ticker-track:hover {
+  animation-play-state: paused;
+}
+
 /* HECM Optimizer Print Styles */
 @media print {
   body {

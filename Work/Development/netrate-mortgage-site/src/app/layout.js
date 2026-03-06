@@ -126,9 +126,9 @@ export default function RootLayout({ children }) {
             </a>
             <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
               <a href="/rates" className="text-gray-600 hover:text-brand transition-colors">Rates</a>
-              <a href="/services" className="text-gray-600 hover:text-brand transition-colors">Services</a>
+              <a href="/#tools" className="text-gray-600 hover:text-brand transition-colors">Tools</a>
+              <a href="/#market" className="text-gray-600 hover:text-brand transition-colors">Market</a>
               <a href="/about" className="text-gray-600 hover:text-brand transition-colors">About</a>
-              <a href="/contact" className="text-gray-600 hover:text-brand transition-colors">Contact</a>
               <a href="/portal/apply" className="bg-brand text-white px-4 py-2 rounded-lg hover:bg-brand-dark transition-colors">
                 Apply Now
               </a>

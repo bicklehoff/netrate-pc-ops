@@ -853,3 +853,47 @@ Use this file to coordinate across PC work chats. Each session should read this 
 - [ ] **Marketing** — Marketing inbox still not built
 - [ ] **Integrations** — Twilio A2P carrier approval still pending (carried forward)
 - [ ] **Setup** — Governance v2.0 upgrade committed (`f7feac1`) — MCP knowledge layer + three-device architecture. New sessions should read updated root CLAUDE.md.
+
+---
+
+## Session: March 5, 2026 - Homepage Redesign Iteration — Hero, Ticker, Chart (Marketing / WebDev)
+
+**Chat focus:** Continued iterative homepage redesign with David — focused on above-the-fold elements: trust strip, rate card philosophy, CTA copy, animated market ticker, and rate comparison chart. Spanned two context windows.
+
+**What was done:**
+- Updated TrustBar.js to dark theme (bg-gray-800) with 4 quantitative proof points: 11 Wholesale Lenders, 13 Years, $26.6M Funded, 87.7% App-to-Fund Rate
+- Compacted hero trust strip badges to pill-style (Google 4.9★, BBB A+, NMLS) with links, fixed NMLS wrapping issue
+- Replaced single big rate teaser with mini 4-row rate table (Product, Rate, APR) — transparency over teasing
+- Added green checkmarks: "No application / No credit pull / Just rates"
+- Iterated CTA copy through multiple rounds → landed on "Compare Your Options →"
+- Added market ticker strip (bg-gray-950) with 10-Yr Treasury, UMBS 5.0, Nat'l Avg, NetRate 30-Yr, S&P 500
+- Made ticker animate with CSS marquee scroll (30s loop, pauses on hover)
+- Built dual-line SVG rate comparison chart (National Avg vs NetRate, 6-month trend) in dark-themed glassmorphic card, placed inside hero section (above the fold)
+- Updated nav in layout.js: Rates, Tools (/#tools), Market (/#market), About
+- Built full below-fold sections: rates table, rate trends + market updates, tools grid, featured reviews layout, credentials dark band, bottom CTA
+- Created product marketing context framework (.agents/product-marketing-context.md)
+
+**Key decisions:**
+- **Transparency over teasing** — Don't show a single big rate number (anyone can do that). Show a mini rate table with Rate + APR, and tease the full math (points, credits, payment) behind the CTA
+- **APR always accompanies rates** — compliance requirement, never show rate without APR
+- **"Compare Your Options" CTA** — not "math" (intimidating), not "pay" (wrong framing), not "full breakdown" (vague) — "compare" is the right verb for what the rate tool does
+- **Green checkmarks for differentiation** — "No application / No credit pull / Just rates" as proactive framing instead of negative ("No app required")
+- **Market ticker with animation** — financial hub feel with real market data points, scrolls continuously, hover to pause
+- **Chart placement above the fold** — inside hero section as a glassmorphic card, not alongside the rates table (that was "wonky")
+- **National Avg vs NetRate framing** — dashed gray line for national average, solid teal for NetRate, shaded gap = savings. Green badge: "0.50% below the national average"
+
+**Files modified:**
+- `src/app/page.js` — Full homepage rewrite (hero, ticker, chart, rates table, trends, tools, reviews, credentials, CTA)
+- `src/app/layout.js` — Nav link updates (Rates, Tools, Market, About)
+- `src/app/globals.css` — Added ticker-scroll keyframes animation
+- `src/components/TrustBar.js` — Dark theme with quantitative stats
+- `.agents/product-marketing-context.md` — Created (brand voice, personas, positioning)
+
+**Open items:**
+- [ ] **WebDev** — Live rate data wiring (replace placeholder data in ticker, chart, rate tables with API/CMS data)
+- [ ] **Marketing** — Duplicate CTA issue: hero "Check Today's Rates" and rate card "Compare Your Options" both go to /rates — consider differentiating destinations
+- [ ] **Marketing** — David brainstormed MBS/Treasury chart ideas, inverted MBS chart, national rate tracker — capture for future market data section
+- [ ] **Marketing** — Brand guide capture to MCP context layer still pending (from Mac)
+- [ ] **WebDev** — Mobile responsiveness pass needed (chart, ticker, hero grid stacking)
+- [ ] **Marketing** — Marketing inbox still not built (carried forward)
+- [ ] **Integrations** — Twilio A2P carrier approval still pending (carried forward)
