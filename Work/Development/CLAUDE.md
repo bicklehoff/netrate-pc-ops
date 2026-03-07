@@ -29,4 +29,4 @@ Build and maintain the mortgage website, borrower portal, MLO dashboard, and all
 | Integrations | Twilio, Zoho CRM, GCS rate pipeline, email |
 | Marketing | Content, copy, lead capture, trust signals |
 
-All launch from `netrate-mortgage-site/` below. Department reference docs live in sibling folders (`../WebDev/`, `../Integrations/`, etc.).
+All four departments share **full write access** to `netrate-mortgage-site/`. Any file in this codebase is considered "in your department's folder" for the purpose of the refuse-by-default rule — no need to ask David before editing code here. Ownership boundaries only apply to **docs folders** (sibling folders like `../WebDev/`, `../Marketing/`, etc.).

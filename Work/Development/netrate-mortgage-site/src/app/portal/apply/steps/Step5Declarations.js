@@ -11,6 +11,7 @@ import { step5Schema } from '@/lib/validations/application';
 import { useApplication } from '@/components/Portal/ApplicationContext';
 import { YesNoField, SelectField, CurrencyField } from '@/components/Portal/FormFields';
 import BorrowerTabs from '@/components/Portal/BorrowerTabs';
+import CoBorrowerNav from '@/components/Portal/CoBorrowerNav';
 
 const CITIZENSHIP_OPTIONS = [
   { value: 'citizen', label: 'U.S. Citizen' },
@@ -295,21 +296,32 @@ export default function Step5Declarations({ onNext, onBack }) {
         )}
 
         {/* Navigation */}
-        <div className="flex justify-between pt-4">
-          <button
-            type="button"
-            onClick={onBack}
-            className="text-gray-500 hover:text-gray-700 px-4 py-2.5 font-medium transition-colors"
-          >
-            &larr; Back
-          </button>
-          <button
-            type="submit"
-            className="bg-brand text-white px-6 py-2.5 rounded-lg font-medium hover:bg-brand-dark transition-colors"
-          >
-            Next: Review &rarr;
-          </button>
-        </div>
+        {hasCoBorrowers ? (
+          <CoBorrowerNav
+            activeTab={activeTab}
+            coBorrowers={data.coBorrowers}
+            onBack={onBack}
+            onTabChange={setActiveTab}
+            nextStepLabel="Review"
+            isTabComplete={isTabComplete}
+          />
+        ) : (
+          <div className="flex justify-between pt-4">
+            <button
+              type="button"
+              onClick={onBack}
+              className="text-gray-500 hover:text-gray-700 px-4 py-2.5 font-medium transition-colors"
+            >
+              &larr; Back
+            </button>
+            <button
+              type="submit"
+              className="bg-brand text-white px-6 py-2.5 rounded-lg font-medium hover:bg-brand-dark transition-colors"
+            >
+              Next: Review &rarr;
+            </button>
+          </div>
+        )}
       </div>
     </form>
   );

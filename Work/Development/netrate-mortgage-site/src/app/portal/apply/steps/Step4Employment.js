@@ -11,6 +11,7 @@ import { step4Schema } from '@/lib/validations/application';
 import { useApplication } from '@/components/Portal/ApplicationContext';
 import { TextField, SelectField, CurrencyField } from '@/components/Portal/FormFields';
 import BorrowerTabs from '@/components/Portal/BorrowerTabs';
+import CoBorrowerNav from '@/components/Portal/CoBorrowerNav';
 
 const EMPLOYMENT_OPTIONS = [
   { value: 'employed', label: 'Employed' },
@@ -173,21 +174,32 @@ export default function Step4Employment({ onNext, onBack }) {
         )}
 
         {/* Navigation */}
-        <div className="flex justify-between pt-4">
-          <button
-            type="button"
-            onClick={onBack}
-            className="text-gray-500 hover:text-gray-700 px-4 py-2.5 font-medium transition-colors"
-          >
-            &larr; Back
-          </button>
-          <button
-            type="submit"
-            className="bg-brand text-white px-6 py-2.5 rounded-lg font-medium hover:bg-brand-dark transition-colors"
-          >
-            Next: Declarations &rarr;
-          </button>
-        </div>
+        {hasCoBorrowers ? (
+          <CoBorrowerNav
+            activeTab={activeTab}
+            coBorrowers={data.coBorrowers}
+            onBack={onBack}
+            onTabChange={setActiveTab}
+            nextStepLabel="Declarations"
+            isTabComplete={isTabComplete}
+          />
+        ) : (
+          <div className="flex justify-between pt-4">
+            <button
+              type="button"
+              onClick={onBack}
+              className="text-gray-500 hover:text-gray-700 px-4 py-2.5 font-medium transition-colors"
+            >
+              &larr; Back
+            </button>
+            <button
+              type="submit"
+              className="bg-brand text-white px-6 py-2.5 rounded-lg font-medium hover:bg-brand-dark transition-colors"
+            >
+              Next: Declarations &rarr;
+            </button>
+          </div>
+        )}
       </div>
     </form>
   );

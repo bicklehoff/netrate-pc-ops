@@ -216,8 +216,19 @@ export function ApplicationProvider({ children }) {
         monthlyBaseIncome: '',
         otherMonthlyIncome: '',
         otherIncomeSource: '',
-        // Declarations
-        declarations: null,
+        // Declarations — prefill with false defaults so Yes/No buttons start on "No"
+        declarations: {
+          coSignerOnDebt: false,
+          outstandingJudgments: false,
+          delinquentFederalDebt: false,
+          lawsuitParty: false,
+          deedInLieu: false,
+          preForeclosureSale: false,
+          foreclosure: false,
+          bankruptcy: false,
+          bankruptcyChapter: '',
+          citizenshipStatus: '',
+        },
         ...coBorrower,
       };
       return { ...prev, coBorrowers: [...prev.coBorrowers, newCb] };

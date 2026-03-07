@@ -107,17 +107,12 @@ function safeJson(val) {
 
 // ─── Create or find a Borrower record ──────────────────────
 async function upsertBorrower({ firstName, lastName, email, phone, ssn, dob }) {
-  const emailLower = sanitize(email).toLowerCase().trim();
+  const emailLower = (sanitize(email) || email || '').toLowerCase().trim();
   const ssnDigits = String(ssn).replace(/\D/g, '');
 
-  const ssnError = validateSSN(ssn);
-  if (ssnError) {
-    throw new Error(ssnError);
-  }
-
-  const dobError = validateDOB(dob);
-  if (dobError) {
-    throw new Error(dobError);
+  // Validation already handled in POST handler — just check digit count here
+  if (ssnDigits.length !== 9) {
+    throw new Error('SSN must contain exactly 9 digits');
   }
 
   const ssnEncrypted = encrypt(ssnDigits);
@@ -391,6 +386,13 @@ export async function POST(request) {
 
   } catch (error) {
     console.error('Application submission error:', error?.message, error?.stack);
+
+    // Surface validation-style errors (from upsertBorrower) with 400 instead of 500
+    const msg = error?.message || '';
+    if (msg.includes('SSN') || msg.includes('date of birth') || msg.includes('Invalid') || msg.includes('must be')) {
+      return NextResponse.json({ error: msg }, { status: 400 });
+    }
+
     return NextResponse.json(
       { error: 'Something went wrong. Please try again or contact support.' },
       { status: 500 }

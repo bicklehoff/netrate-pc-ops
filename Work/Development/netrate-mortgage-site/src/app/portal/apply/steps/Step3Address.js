@@ -13,6 +13,7 @@ import { TextField, SelectField, AddressGroup } from '@/components/Portal/FormFi
 import CoBorrowerPrompt from '@/components/Portal/CoBorrowerPrompt';
 import CoBorrowerIdentityForm from '@/components/Portal/CoBorrowerIdentityForm';
 import BorrowerTabs from '@/components/Portal/BorrowerTabs';
+import CoBorrowerNav from '@/components/Portal/CoBorrowerNav';
 
 const MARITAL_OPTIONS = [
   { value: 'married', label: 'Married' },
@@ -222,21 +223,32 @@ export default function Step3Address({ onNext, onBack }) {
         ))}
 
         {/* ── Navigation ──────────────────────────────────────── */}
-        <div className="flex justify-between pt-4">
-          <button
-            type="button"
-            onClick={onBack}
-            className="text-gray-500 hover:text-gray-700 px-4 py-2.5 font-medium transition-colors"
-          >
-            &larr; Back
-          </button>
-          <button
-            type="submit"
-            className="bg-brand text-white px-6 py-2.5 rounded-lg font-medium hover:bg-brand-dark transition-colors"
-          >
-            Next: Employment &rarr;
-          </button>
-        </div>
+        {hasCoBorrowers ? (
+          <CoBorrowerNav
+            activeTab={activeAddressTab}
+            coBorrowers={data.coBorrowers}
+            onBack={onBack}
+            onTabChange={setActiveAddressTab}
+            nextStepLabel="Employment"
+            isTabComplete={isAddressTabComplete}
+          />
+        ) : (
+          <div className="flex justify-between pt-4">
+            <button
+              type="button"
+              onClick={onBack}
+              className="text-gray-500 hover:text-gray-700 px-4 py-2.5 font-medium transition-colors"
+            >
+              &larr; Back
+            </button>
+            <button
+              type="submit"
+              className="bg-brand text-white px-6 py-2.5 rounded-lg font-medium hover:bg-brand-dark transition-colors"
+            >
+              Next: Employment &rarr;
+            </button>
+          </div>
+        )}
       </div>
     </form>
   );

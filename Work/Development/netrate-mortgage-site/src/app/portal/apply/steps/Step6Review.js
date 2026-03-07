@@ -283,10 +283,11 @@ export default function Step6Review({ onBack }) {
             className="w-4 h-4 mt-0.5 rounded border-gray-300 text-brand focus:ring-brand"
           />
           <span className="text-sm text-gray-600">
-            I authorize NetRate Mortgage to verify the information provided in this application
-            {hasCoBorrowers ? ', including information for all co-borrowers listed above' : ''}.
-            I understand that this is not a commitment to lend and that my information will be
-            encrypted and handled securely.
+            I authorize NetRate Mortgage LLC (NMLS #1111861) to verify the information provided
+            in this application{hasCoBorrowers ? ', including information for all co-borrowers listed above' : ''}.
+            I authorize NetRate Mortgage to obtain my credit report and credit score for the
+            purpose of evaluating my mortgage application. I understand that this is not a
+            commitment to lend and that my information will be encrypted and handled securely.
           </span>
         </label>
       </div>

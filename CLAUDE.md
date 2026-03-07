@@ -37,8 +37,9 @@ Use these identifiers in MCP tool calls (`source` fields), RELAY entries, and co
 
 **At the START of every new chat:**
 1. Call `get_briefing(device="pc", department=<yours>)` via MCP to get full context: recent sessions (own + cross-device), active decisions, open items, capture stats
-2. Review the briefing — summarize anything important for David before starting work
-3. If MCP is unavailable, fall back to: pull `netrate-governance`, check `RELAY.md`, read `Work/SESSION-LOG.md`
+2. Read `Work/SESSION-LOG.md` (last 3–5 entries) to check for in-progress work, recent file changes, or handoff notes from other departments
+3. Review both sources — summarize anything important for David before starting work
+4. If MCP is unavailable, fall back to: pull `netrate-governance`, check `RELAY.md`, read `Work/SESSION-LOG.md`
 
 **DURING a session — update Work/SESSION-LOG.md immediately if:**
 - Another department would need to know this to do their job
@@ -98,15 +99,17 @@ The following are defined in `netrate-governance/GOVERNANCE.md` and apply to ALL
 
 ## PC Departments
 
-| Department | Folder | Responsibilities |
-|------------|--------|------------------|
-| WebDev | `Work/WebDev/` (docs) + `Work/Development/netrate-mortgage-site/` (code) | Website build, rate tool port, SEO, public pages |
-| Products | `Work/Products/` (docs) + code in Development/ | Borrower reports, calculators, client-facing tools |
-| Integrations | `Work/Integrations/` (docs) + code in Development/ | Email reading, CRM hooks, public API endpoints |
-| Marketing | `Work/Marketing/` (docs) + code in Development/ | Content, copy, lead capture, trust signals |
-| Admin | `Work/Admin/` | PC-side admin (minimal — process docs only, NO trackers) |
-| Setup | Root files | CLAUDE.md, Work/SESSION-LOG.md, folder structure |
-| Auditor | None (read-only) | Independent system review |
+| Department | Docs Folder | Code Access | Responsibilities |
+|------------|-------------|-------------|------------------|
+| WebDev | `Work/WebDev/` | Full — `netrate-mortgage-site/` | Website build, rate tool port, SEO, public pages |
+| Products | `Work/Products/` | Full — `netrate-mortgage-site/` | Borrower reports, calculators, client-facing tools |
+| Integrations | `Work/Integrations/` | Full — `netrate-mortgage-site/` | Email reading, CRM hooks, public API endpoints |
+| Marketing | `Work/Marketing/` | Full — `netrate-mortgage-site/` | Content, copy, lead capture, trust signals |
+| Admin | `Work/Admin/` | None | PC-side admin (minimal — process docs only, NO trackers) |
+| Setup | Root files | None | CLAUDE.md, Work/SESSION-LOG.md, folder structure |
+| Auditor | None (read-only) | Read only | Independent system review |
+
+All code departments (WebDev, Products, Integrations, Marketing) share write access to `Work/Development/netrate-mortgage-site/`. Ownership rules apply to **docs folders** — don't write to another department's docs folder without asking David.
 
 ## Session Launch Rules
 
@@ -119,9 +122,10 @@ The following are defined in `netrate-governance/GOVERNANCE.md` and apply to ALL
 All code sessions launch from the project directory. CLAUDE.md files cascade up from project → Development/ → root, giving full context automatically.
 
 **Ownership rules:**
-- Only modify files in YOUR department's folder
-- You may READ other departments' files but not edit them
-- Only add YOUR OWN entries to Work/SESSION-LOG.md
+- All code departments may freely edit code in `Work/Development/netrate-mortgage-site/`
+- Only modify files in YOUR department's **docs folder** (e.g. `Work/WebDev/`, `Work/Marketing/`)
+- You may READ other departments' docs but not edit them
+- All departments may write their own entries to `Work/SESSION-LOG.md`
 - If you need something from another department, note it as an "open item"
 
 **If David doesn't assign a department:**
