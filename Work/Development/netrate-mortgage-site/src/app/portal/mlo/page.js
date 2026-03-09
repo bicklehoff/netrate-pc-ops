@@ -9,6 +9,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import PipelineTable from '@/components/Portal/PipelineTable';
+import XmlImportModal from '@/components/Portal/XmlImportModal';
 
 const STATUS_FILTERS = [
   { value: 'all', label: 'All' },
@@ -32,6 +33,7 @@ export default function MloDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState('active');
+  const [importOpen, setImportOpen] = useState(false);
 
   useEffect(() => {
     if (authStatus === 'unauthenticated') {
@@ -111,6 +113,15 @@ export default function MloDashboardPage() {
               </Link>
             </>
           )}
+          <button
+            onClick={() => setImportOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-brand rounded-lg hover:bg-brand-dark transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+            Import XML
+          </button>
           <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-brand/10 text-brand">
             {activeCount} Active
           </span>
@@ -168,6 +179,19 @@ export default function MloDashboardPage() {
       ) : (
         <PipelineTable loans={filteredLoans} />
       )}
+
+      {/* MISMO XML Import Modal */}
+      <XmlImportModal
+        open={importOpen}
+        onClose={() => {
+          setImportOpen(false);
+          // Refresh pipeline after import
+          fetch('/api/portal/mlo/pipeline')
+            .then((res) => res.json())
+            .then((data) => setLoans(data.loans || []))
+            .catch(() => {});
+        }}
+      />
     </div>
   );
 }
