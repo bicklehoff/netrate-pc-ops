@@ -15,6 +15,7 @@ export const STATUS_LABELS = {
   docs_out: 'Docs Out',
   funded: 'Funded',
   denied: 'Denied',
+  archived: 'Archived',
 };
 
 // ─── Valid Transitions ──────────────────────────────────────
@@ -28,8 +29,9 @@ export const TRANSITIONS = {
   suspended: ['processing', 'submitted_uw', 'denied'],
   ctc: ['docs_out'],
   docs_out: ['funded'],
-  funded: [],   // Terminal
-  denied: [],   // Terminal
+  funded: [],     // Terminal
+  denied: [],     // Terminal
+  archived: [],   // Terminal — soft-delete
 };
 
 // ─── Ball-in-Court Rules ────────────────────────────────────
@@ -43,8 +45,9 @@ export const BALL_IN_COURT = {
   suspended: 'mlo',
   ctc: 'mlo',
   docs_out: 'lender',
-  funded: null,   // Complete
-  denied: null,   // Complete
+  funded: null,     // Complete
+  denied: null,     // Complete
+  archived: null,   // Soft-deleted
 };
 
 // ─── Email Triggers ─────────────────────────────────────────

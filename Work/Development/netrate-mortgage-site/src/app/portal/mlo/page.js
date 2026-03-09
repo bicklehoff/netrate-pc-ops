@@ -23,9 +23,10 @@ const STATUS_FILTERS = [
   { value: 'ctc', label: 'CTC' },
   { value: 'funded', label: 'Funded' },
   { value: 'denied', label: 'Denied' },
+  { value: 'archived', label: 'Archived' },
 ];
 
-const TERMINAL_STATUSES = ['funded', 'denied'];
+const TERMINAL_STATUSES = ['funded', 'denied', 'archived'];
 
 const STATUS_LABELS = {
   draft: 'Draft',
@@ -38,12 +39,13 @@ const STATUS_LABELS = {
   docs_out: 'Docs Out',
   funded: 'Funded',
   denied: 'Denied',
+  archived: 'Archived',
 };
 
 const ALL_STATUSES = [
   'draft', 'applied', 'processing', 'submitted_uw',
   'cond_approved', 'ctc', 'docs_out', 'funded',
-  'suspended', 'denied',
+  'suspended', 'denied', 'archived',
 ];
 
 // ─── Bulk Action Bar ──────────────────────────────────────────
@@ -147,6 +149,18 @@ function BulkActionBar({ count, mloList, onBulkUpdate, onClear }) {
             </div>
           )}
         </div>
+
+        {/* Archive */}
+        <button
+          onClick={() => applyUpdate({ status: 'archived' })}
+          disabled={applying}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-red-900/60 hover:bg-red-800 rounded-lg transition-colors disabled:opacity-50"
+        >
+          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+          </svg>
+          Archive
+        </button>
 
         <div className="w-px h-5 bg-gray-600" />
 

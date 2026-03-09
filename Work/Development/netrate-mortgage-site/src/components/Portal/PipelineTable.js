@@ -25,6 +25,7 @@ const STATUS_LABELS = {
   docs_out: 'Docs Out',
   funded: 'Funded',
   denied: 'Denied',
+  archived: 'Archived',
 };
 
 const STATUS_COLORS = {
@@ -38,12 +39,13 @@ const STATUS_COLORS = {
   docs_out: 'bg-green-100 text-green-800',
   funded: 'bg-green-200 text-green-900',
   denied: 'bg-red-100 text-red-800',
+  archived: 'bg-gray-200 text-gray-500',
 };
 
 const ALL_STATUSES = [
   'draft', 'applied', 'processing', 'submitted_uw',
   'cond_approved', 'ctc', 'docs_out', 'funded',
-  'suspended', 'denied',
+  'suspended', 'denied', 'archived',
 ];
 
 function formatCurrency(val) {
