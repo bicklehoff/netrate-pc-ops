@@ -1,0 +1,256 @@
+// WorkDrive File Browser Panel
+// Embedded file manager for loan folders — SUBMITTED, EXTRA, CLOSING tabs.
+// Lists files, upload per-folder, download, delete. All via /api/portal/mlo/loans/:id/files.
+
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+
+const FOLDER_TABS = [
+  { key: 'SUBMITTED', label: 'Submitted', icon: '📄', desc: 'Lender-ready docs' },
+  { key: 'EXTRA', label: 'Extra', icon: '📎', desc: 'Supporting docs' },
+  { key: 'CLOSING', label: 'Closing', icon: '🏠', desc: 'Closing docs' },
+];
+
+function formatBytes(bytes) {
+  if (!bytes) return '—';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
+function fileIcon(name) {
+  if (!name) return '📄';
+  const ext = name.split('.').pop()?.toLowerCase();
+  if (ext === 'pdf') return '📕';
+  if (['png', 'jpg', 'jpeg'].includes(ext)) return '🖼️';
+  return '📄';
+}
+
+export default function WorkDrivePanel({ loanId }) {
+  const [activeTab, setActiveTab] = useState('SUBMITTED');
+  const [allFiles, setAllFiles] = useState({ SUBMITTED: [], EXTRA: [], CLOSING: [] });
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
+  const [hasWorkDrive, setHasWorkDrive] = useState(false);
+
+  const fetchFiles = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/portal/mlo/loans/${loanId}/files`);
+      if (!res.ok) throw new Error('Failed to load');
+      const data = await res.json();
+
+      if (!data.hasWorkDrive) {
+        setHasWorkDrive(false);
+        setLoading(false);
+        return;
+      }
+
+      setHasWorkDrive(true);
+      setAllFiles({
+        SUBMITTED: data.files?.SUBMITTED || [],
+        EXTRA: data.files?.EXTRA || [],
+        CLOSING: data.files?.CLOSING || [],
+      });
+    } catch {
+      setError('Failed to load files');
+    } finally {
+      setLoading(false);
+    }
+  }, [loanId]);
+
+  useEffect(() => {
+    fetchFiles();
+  }, [fetchFiles]);
+
+  const handleUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setError('');
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folder', activeTab);
+      const res = await fetch(`/api/portal/mlo/loans/${loanId}/files`, {
+        method: 'PUT',
+        body: formData,
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || 'Upload failed');
+        return;
+      }
+      await fetchFiles();
+    } catch {
+      setError('Upload failed');
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleDownload = async (fileId) => {
+    try {
+      const res = await fetch(`/api/portal/mlo/loans/${loanId}/files?download=${fileId}`);
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      // Open download URL in new tab
+      window.open(data.downloadUrl, '_blank');
+    } catch {
+      setError('Download failed');
+    }
+  };
+
+  const handleDelete = async (fileId, fileName) => {
+    if (!confirm(`Delete "${fileName}"?`)) return;
+    try {
+      const res = await fetch(
+        `/api/portal/mlo/loans/${loanId}/files?fileId=${fileId}&fileName=${encodeURIComponent(fileName)}`,
+        { method: 'DELETE' }
+      );
+      if (!res.ok) throw new Error();
+      await fetchFiles();
+    } catch {
+      setError('Delete failed');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+        <div className="animate-pulse space-y-3">
+          <div className="h-5 bg-gray-200 rounded w-40" />
+          <div className="h-10 bg-gray-100 rounded" />
+          <div className="h-20 bg-gray-100 rounded" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!hasWorkDrive) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+        <h2 className="text-lg font-semibold text-gray-900 mb-2">Loan Files</h2>
+        <p className="text-sm text-gray-400">
+          No WorkDrive folder for this loan. Folders are created automatically when a new application is submitted.
+        </p>
+      </div>
+    );
+  }
+
+  const currentFiles = allFiles[activeTab] || [];
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      {/* Header */}
+      <div className="px-6 pt-5 pb-3 flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-gray-900">Loan Files</h2>
+        <label className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg cursor-pointer transition-colors ${
+          uploading
+            ? 'bg-gray-100 text-gray-400 pointer-events-none'
+            : 'bg-brand/10 text-brand hover:bg-brand/20 border border-brand/20'
+        }`}>
+          {uploading ? 'Uploading...' : `📎 Upload to ${activeTab}`}
+          <input
+            type="file"
+            accept=".pdf,.png,.jpg,.jpeg"
+            onChange={handleUpload}
+            className="hidden"
+            disabled={uploading}
+          />
+        </label>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex border-b border-gray-200 px-6">
+        {FOLDER_TABS.map((tab) => {
+          const count = (allFiles[tab.key] || []).length;
+          return (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
+                activeTab === tab.key
+                  ? 'border-brand text-brand'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <span>{tab.icon}</span>
+              <span>{tab.label}</span>
+              {count > 0 && (
+                <span className={`ml-1 px-1.5 py-0.5 text-xs rounded-full ${
+                  activeTab === tab.key ? 'bg-brand/10 text-brand' : 'bg-gray-100 text-gray-500'
+                }`}>
+                  {count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Error */}
+      {error && (
+        <div className="mx-6 mt-3 bg-red-50 border border-red-200 rounded-lg p-2 flex items-center justify-between">
+          <p className="text-sm text-red-700">{error}</p>
+          <button onClick={() => setError('')} className="text-xs text-red-500 hover:underline">Dismiss</button>
+        </div>
+      )}
+
+      {/* File list */}
+      <div className="px-6 py-3 min-h-[120px]">
+        {currentFiles.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-8 text-gray-400">
+            <span className="text-3xl mb-2">📂</span>
+            <p className="text-sm">No files in {activeTab}</p>
+            <p className="text-xs mt-1">{FOLDER_TABS.find(t => t.key === activeTab)?.desc}</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-100">
+            {currentFiles.map((file) => (
+              <div
+                key={file.id}
+                className="flex items-center justify-between py-2.5 group"
+              >
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <span className="text-lg flex-shrink-0">{fileIcon(file.name)}</span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-800 truncate">{file.name}</p>
+                    <div className="flex items-center gap-2 text-xs text-gray-400">
+                      {file.size && <span>{formatBytes(file.size)}</span>}
+                      {file.modifiedTime && <span>{formatDate(file.modifiedTime)}</span>}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={() => handleDownload(file.id, file.name)}
+                    className="px-2 py-1 text-xs text-brand hover:bg-brand/10 rounded transition-colors"
+                    title="Download"
+                  >
+                    ⬇ Download
+                  </button>
+                  <button
+                    onClick={() => handleDelete(file.id, file.name)}
+                    className="px-2 py-1 text-xs text-red-500 hover:bg-red-50 rounded transition-colors"
+                    title="Delete"
+                  >
+                    🗑
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

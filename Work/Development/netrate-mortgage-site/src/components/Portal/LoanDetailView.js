@@ -4,6 +4,7 @@
 'use client';
 
 import { useState } from 'react';
+import WorkDrivePanel from './WorkDrivePanel';
 
 const STATUS_LABELS = {
   draft: 'Draft',
@@ -111,6 +112,7 @@ export default function LoanDetailView({ loan, onRefresh }) {
   const [docForm, setDocForm] = useState({ open: false, docType: 'pay_stub', label: '', notes: '' });
   const [docLoading, setDocLoading] = useState(false);
   const [reviewLoading, setReviewLoading] = useState(null);
+  const [uploadLoading, setUploadLoading] = useState(false);
   const [actionError, setActionError] = useState('');
 
   if (!loan) return null;
@@ -230,6 +232,35 @@ export default function LoanDetailView({ loan, onRefresh }) {
       setActionError('Failed to update document');
     } finally {
       setReviewLoading(null);
+    }
+  };
+
+  // ─── MLO File Upload ───
+  const handleMloUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadLoading(true);
+    setActionError('');
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('docType', 'other');
+      formData.append('label', file.name);
+      const res = await fetch(`/api/portal/mlo/loans/${loan.id}/docs`, {
+        method: 'PUT',
+        body: formData,
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setActionError(data.error || 'Upload failed');
+        return;
+      }
+      onRefresh();
+    } catch {
+      setActionError('Upload failed');
+    } finally {
+      setUploadLoading(false);
+      e.target.value = ''; // Reset file input
     }
   };
 
@@ -413,12 +444,24 @@ export default function LoanDetailView({ loan, onRefresh }) {
       <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-gray-900">Documents</h2>
-          <button
-            onClick={() => setDocForm({ ...docForm, open: !docForm.open })}
-            className="text-sm text-brand hover:underline"
-          >
-            + Request Document
-          </button>
+          <div className="flex items-center gap-3">
+            <label className={`text-sm text-brand hover:underline cursor-pointer ${uploadLoading ? 'opacity-50 pointer-events-none' : ''}`}>
+              {uploadLoading ? 'Uploading...' : '📎 Upload File'}
+              <input
+                type="file"
+                accept=".pdf,.png,.jpg,.jpeg"
+                onChange={handleMloUpload}
+                className="hidden"
+                disabled={uploadLoading}
+              />
+            </label>
+            <button
+              onClick={() => setDocForm({ ...docForm, open: !docForm.open })}
+              className="text-sm text-brand hover:underline"
+            >
+              + Request Document
+            </button>
+          </div>
         </div>
 
         {/* Document Request Form */}
@@ -540,6 +583,9 @@ export default function LoanDetailView({ loan, onRefresh }) {
           </div>
         )}
       </div>
+
+      {/* ─── WorkDrive File Browser ─── */}
+      <WorkDrivePanel loanId={loan.id} />
 
       {/* ─── Notes ─── */}
       <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
