@@ -5,6 +5,7 @@
 
 import { useState } from 'react';
 import WorkDrivePanel from './WorkDrivePanel';
+import PayrollSection from './PayrollSection';
 
 const STATUS_LABELS = {
   draft: 'Draft',
@@ -69,6 +70,8 @@ const EVENT_ICONS = {
   doc_requested: '📋',
   doc_uploaded: '📎',
   doc_deleted: '🗑',
+  cd_uploaded: '📕',
+  payroll_sent: '💰',
   field_updated: '✏️',
   note_added: '💬',
   ssn_revealed: '🔓',
@@ -543,6 +546,9 @@ export default function LoanDetailView({ loan, onRefresh }) {
 
           {/* WorkDrive File Browser */}
           <WorkDrivePanel loanId={loan.id} />
+
+          {/* Payroll — shows only for funded loans */}
+          <PayrollSection loan={loan} onRefresh={onRefresh} />
         </div>
 
         {/* ─── Right Column (1/3 width) ─── */}
@@ -619,6 +625,10 @@ function formatEventMessage(event) {
       return `Document uploaded: ${event.newValue || 'Unknown'}`;
     case 'doc_deleted':
       return `Document deleted: ${event.newValue || 'Unknown'}`;
+    case 'cd_uploaded':
+      return `Closing Disclosure uploaded: ${event.newValue || 'Unknown'}`;
+    case 'payroll_sent':
+      return 'Sent to payroll for commission processing';
     case 'note_added':
       return `Note: ${event.newValue || ''}`;
     case 'ssn_revealed':

@@ -130,6 +130,11 @@ model Loan {
   workDriveFolderId   String?   @map("work_drive_folder_id")   // Root loan folder ID in WorkDrive
   workDriveSubfolders Json?     @map("work_drive_subfolders") @db.JsonB  // { "1-Application": "id", ... }
 
+  // Payroll (Closing Disclosure → Mac)
+  cdWorkDriveFileId   String?   @map("cd_work_drive_file_id")  // WorkDrive file ID of the final Closing Disclosure
+  cdFileName          String?   @map("cd_file_name")           // Original file name of the CD PDF
+  payrollSentAt       DateTime? @map("payroll_sent_at")        // When "Send to Payroll" was clicked
+
   // Metadata
   applicationStep Int       @default(1) @map("application_step")
   submittedAt     DateTime? @map("submitted_at")

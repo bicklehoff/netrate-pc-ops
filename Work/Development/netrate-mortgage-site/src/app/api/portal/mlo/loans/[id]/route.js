@@ -57,6 +57,8 @@ export async function GET(request, { params }) {
     // Convert Decimal fields to numbers
     const serialized = {
       ...loan,
+      loanAmount: loan.loanAmount ? Number(loan.loanAmount) : null,
+      interestRate: loan.interestRate ? Number(loan.interestRate) : null,
       purchasePrice: loan.purchasePrice ? Number(loan.purchasePrice) : null,
       downPayment: loan.downPayment ? Number(loan.downPayment) : null,
       estimatedValue: loan.estimatedValue ? Number(loan.estimatedValue) : null,
