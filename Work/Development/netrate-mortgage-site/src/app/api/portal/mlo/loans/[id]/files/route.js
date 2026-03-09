@@ -10,7 +10,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
-import { listFolder, uploadFile, getDownloadUrl, deleteResource } from '@/lib/zoho-workdrive';
+import { listFolder, uploadFile, downloadFile, deleteResource } from '@/lib/zoho-workdrive';
 import { put } from '@vercel/blob';
 
 async function verifyMloAccess(loanId, session) {
@@ -36,10 +36,14 @@ export async function GET(request, { params }) {
     const downloadFileId = searchParams.get('download');
     const folderName = searchParams.get('folder');
 
-    // ─── Download redirect ─────────────────────────────────
+    // ─── Download (proxy stream) ───────────────────────────
     if (downloadFileId) {
-      const url = await getDownloadUrl(downloadFileId);
-      return NextResponse.json({ downloadUrl: url });
+      const { stream, contentType, contentDisposition, contentLength } = await downloadFile(downloadFileId);
+      const headers = new Headers();
+      if (contentType) headers.set('Content-Type', contentType);
+      if (contentDisposition) headers.set('Content-Disposition', contentDisposition);
+      if (contentLength) headers.set('Content-Length', contentLength);
+      return new Response(stream, { headers });
     }
 
     // ─── List folder contents ──────────────────────────────
@@ -64,8 +68,19 @@ export async function GET(request, { params }) {
       });
     }
 
-    // Otherwise return all three subfolders' contents
+    // List all folders' contents including FLOOR (root folder files)
     const allFiles = {};
+
+    // FLOOR = files in root loan folder (excluding subfolder directories)
+    const subfolderIds = new Set(Object.values(subfolders));
+    try {
+      const rootContents = await listFolder(loan.workDriveFolderId);
+      allFiles['FLOOR'] = rootContents.filter(item => !item.isFolder && !subfolderIds.has(item.id));
+    } catch {
+      allFiles['FLOOR'] = [];
+    }
+
+    // Subfolders (SUBMITTED, EXTRA, CLOSING)
     for (const [name, folderId] of Object.entries(subfolders)) {
       try {
         allFiles[name] = await listFolder(folderId);
@@ -98,7 +113,7 @@ export async function PUT(request, { params }) {
 
     const formData = await request.formData();
     const file = formData.get('file');
-    const targetFolder = formData.get('folder') || 'SUBMITTED';
+    const targetFolder = formData.get('folder') || 'FLOOR';
     const docType = formData.get('docType') || 'other';
 
     if (!file) {
@@ -119,9 +134,17 @@ export async function PUT(request, { params }) {
     let fileUrl;
     let storageType = 'blob';
 
-    if (loan.workDriveFolderId && subfolders && subfolders[targetFolder]) {
+    // Determine target folder ID: FLOOR = root folder, others = subfolder
+    let targetFolderId = null;
+    if (targetFolder === 'FLOOR' && loan.workDriveFolderId) {
+      targetFolderId = loan.workDriveFolderId;
+    } else if (subfolders && subfolders[targetFolder]) {
+      targetFolderId = subfolders[targetFolder];
+    }
+
+    if (targetFolderId) {
       try {
-        const uploaded = await uploadFile(file, file.name, subfolders[targetFolder], true);
+        const uploaded = await uploadFile(file, file.name, targetFolderId, true);
         fileUrl = uploaded.url || `workdrive://${uploaded.id}`;
         storageType = 'workdrive';
       } catch (wdError) {
@@ -192,7 +215,7 @@ export async function DELETE(request, { params }) {
     await prisma.loanEvent.create({
       data: {
         loanId: id,
-        eventType: 'doc_uploaded', // Reusing event type — details clarify it's a delete
+        eventType: 'doc_deleted',
         actorType: 'mlo',
         actorId: session.user.id,
         newValue: `Deleted: ${fileName || fileId}`,

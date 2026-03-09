@@ -1,5 +1,5 @@
 // WorkDrive File Browser Panel
-// Embedded file manager for loan folders — SUBMITTED, EXTRA, CLOSING tabs.
+// Embedded file manager for loan folders — FLOOR, SUBMITTED, EXTRA, CLOSING tabs.
 // Lists files, upload per-folder, download, delete. All via /api/portal/mlo/loans/:id/files.
 
 'use client';
@@ -7,7 +7,8 @@
 import { useState, useEffect, useCallback } from 'react';
 
 const FOLDER_TABS = [
-  { key: 'SUBMITTED', label: 'Submitted', icon: '📄', desc: 'Lender-ready docs' },
+  { key: 'FLOOR', label: 'Floor', icon: '📥', desc: 'Unsorted / incoming docs' },
+  { key: 'SUBMITTED', label: 'Submitted', icon: '📄', desc: 'Submitted to lender' },
   { key: 'EXTRA', label: 'Extra', icon: '📎', desc: 'Supporting docs' },
   { key: 'CLOSING', label: 'Closing', icon: '🏠', desc: 'Closing docs' },
 ];
@@ -34,8 +35,8 @@ function fileIcon(name) {
 }
 
 export default function WorkDrivePanel({ loanId }) {
-  const [activeTab, setActiveTab] = useState('SUBMITTED');
-  const [allFiles, setAllFiles] = useState({ SUBMITTED: [], EXTRA: [], CLOSING: [] });
+  const [activeTab, setActiveTab] = useState('FLOOR');
+  const [allFiles, setAllFiles] = useState({ FLOOR: [], SUBMITTED: [], EXTRA: [], CLOSING: [] });
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
@@ -55,6 +56,7 @@ export default function WorkDrivePanel({ loanId }) {
 
       setHasWorkDrive(true);
       setAllFiles({
+        FLOOR: data.files?.FLOOR || [],
         SUBMITTED: data.files?.SUBMITTED || [],
         EXTRA: data.files?.EXTRA || [],
         CLOSING: data.files?.CLOSING || [],
@@ -97,16 +99,9 @@ export default function WorkDrivePanel({ loanId }) {
     }
   };
 
-  const handleDownload = async (fileId) => {
-    try {
-      const res = await fetch(`/api/portal/mlo/loans/${loanId}/files?download=${fileId}`);
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      // Open download URL in new tab
-      window.open(data.downloadUrl, '_blank');
-    } catch {
-      setError('Download failed');
-    }
+  const handleDownload = (fileId) => {
+    // Open the proxy download URL directly — API streams the file with proper auth
+    window.open(`/api/portal/mlo/loans/${loanId}/files?download=${fileId}`, '_blank');
   };
 
   const handleDelete = async (fileId, fileName) => {
@@ -158,7 +153,7 @@ export default function WorkDrivePanel({ loanId }) {
             ? 'bg-gray-100 text-gray-400 pointer-events-none'
             : 'bg-brand/10 text-brand hover:bg-brand/20 border border-brand/20'
         }`}>
-          {uploading ? 'Uploading...' : `📎 Upload to ${activeTab}`}
+          {uploading ? 'Uploading...' : `📎 Upload to ${FOLDER_TABS.find(t => t.key === activeTab)?.label || activeTab}`}
           <input
             type="file"
             accept=".pdf,.png,.jpg,.jpeg"
@@ -230,20 +225,20 @@ export default function WorkDrivePanel({ loanId }) {
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-1.5 opacity-60 group-hover:opacity-100 transition-opacity">
                   <button
-                    onClick={() => handleDownload(file.id, file.name)}
-                    className="px-2 py-1 text-xs text-brand hover:bg-brand/10 rounded transition-colors"
+                    onClick={() => handleDownload(file.id)}
+                    className="px-3 py-2 text-sm text-brand hover:bg-brand/10 rounded-lg transition-colors"
                     title="Download"
                   >
                     ⬇ Download
                   </button>
                   <button
                     onClick={() => handleDelete(file.id, file.name)}
-                    className="px-2 py-1 text-xs text-red-500 hover:bg-red-50 rounded transition-colors"
-                    title="Delete"
+                    className="p-2.5 text-sm text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    title="Delete file"
                   >
-                    🗑
+                    🗑 Delete
                   </button>
                 </div>
               </div>

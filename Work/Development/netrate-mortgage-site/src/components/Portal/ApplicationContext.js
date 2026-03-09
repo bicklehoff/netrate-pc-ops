@@ -52,6 +52,7 @@ const DEFAULT_DATA = {
 
   // Co-borrowers (up to 3; added via Step 3 when married)
   coBorrowers: [],
+  coBorrowerDecisionMade: false, // Tracks if married borrower chose add-spouse or solo
 
   // Step 4: Employment & Income
   employmentStatus: '',
@@ -83,6 +84,11 @@ const DEFAULT_DATA = {
   bankruptcy: false,
   bankruptcyChapter: '',
   citizenshipStatus: '',
+
+  // HMDA Demographics (optional — Government Monitoring)
+  hmdaEthnicity: '',
+  hmdaRace: [],
+  hmdaSex: '',
 };
 
 // Fields that must NEVER be saved to sessionStorage (PII)

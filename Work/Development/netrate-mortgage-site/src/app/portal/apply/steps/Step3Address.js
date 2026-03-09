@@ -32,6 +32,9 @@ export default function Step3Address({ onNext, onBack }) {
   // Active tab for co-borrower address section
   const [activeAddressTab, setActiveAddressTab] = useState('primary');
 
+  // Track whether spouse/solo validation error should show
+  const [showCoBorrowerError, setShowCoBorrowerError] = useState(false);
+
   // Only show checkbox if we have a property address from Step 2
   const hasPropertyAddress = data.propertyAddress?.street?.trim();
 
@@ -70,6 +73,13 @@ export default function Step3Address({ onNext, onBack }) {
 
   const handleAddCoBorrower = () => {
     addCoBorrower({ relationship: 'spouse' });
+    updateData({ coBorrowerDecisionMade: true });
+    setShowCoBorrowerError(false);
+  };
+
+  const handleDeclineCoBorrower = () => {
+    updateData({ coBorrowerDecisionMade: true });
+    setShowCoBorrowerError(false);
   };
 
   const handleRemoveCoBorrower = (id) => {
@@ -78,6 +88,12 @@ export default function Step3Address({ onNext, onBack }) {
   };
 
   const onSubmit = (stepData) => {
+    // Block if married but hasn't chosen add-spouse or solo
+    if (stepData.maritalStatus === 'married' && !hasCoBorrowers && !data.coBorrowerDecisionMade) {
+      setShowCoBorrowerError(true);
+      return;
+    }
+
     // If mailing is same, clear mailing address data
     if (stepData.mailingAddressSame) {
       stepData.mailingAddress = null;
@@ -148,7 +164,6 @@ export default function Step3Address({ onNext, onBack }) {
                 register={register}
                 errors={errors}
                 required
-                placeholder="5"
               />
               <TextField
                 label="Months (if less than 1 year)"
@@ -156,7 +171,6 @@ export default function Step3Address({ onNext, onBack }) {
                 type="number"
                 register={register}
                 errors={errors}
-                placeholder="0"
               />
             </div>
 
@@ -209,6 +223,8 @@ export default function Step3Address({ onNext, onBack }) {
           hasCoBorrowers={hasCoBorrowers}
           coBorrowerCount={data.coBorrowers?.length || 0}
           onAddSpouse={handleAddCoBorrower}
+          onDeclineCoBorrower={handleDeclineCoBorrower}
+          showError={showCoBorrowerError}
         />
 
         {/* ── Co-Borrower Identity Forms ──────────────────────── */}
@@ -314,7 +330,6 @@ function CoBorrowerAddressSection({ coBorrower, onUpdate }) {
           <label className="block text-sm font-medium text-gray-700 mb-1">Years at This Address</label>
           <input
             type="number"
-            placeholder="5"
             value={coBorrower.addressYears ?? ''}
             onChange={(e) => handleChange('addressYears', e.target.value)}
             className="w-full px-4 py-2.5 border border-gray-300 rounded-lg outline-none transition-colors focus:ring-2 focus:ring-brand/20 focus:border-brand"
@@ -324,7 +339,6 @@ function CoBorrowerAddressSection({ coBorrower, onUpdate }) {
           <label className="block text-sm font-medium text-gray-700 mb-1">Months (if less than 1 year)</label>
           <input
             type="number"
-            placeholder="0"
             value={coBorrower.addressMonths ?? ''}
             onChange={(e) => handleChange('addressMonths', e.target.value)}
             className="w-full px-4 py-2.5 border border-gray-300 rounded-lg outline-none transition-colors focus:ring-2 focus:ring-brand/20 focus:border-brand"

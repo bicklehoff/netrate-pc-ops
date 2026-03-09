@@ -65,7 +65,8 @@ function ReviewItem({ label, value }) {
 export default function Step6Review({ onBack }) {
   const router = useRouter();
   const { data, resetData, setCurrentStep } = useApplication();
-  const [consented, setConsented] = useState(false);
+  const [authorizeVerification, setAuthorizeVerification] = useState(false);
+  const [authorizeCreditPull, setAuthorizeCreditPull] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -90,7 +91,7 @@ export default function Step6Review({ onBack }) {
   }, [hasMissingPII, router, setCurrentStep]);
 
   const handleSubmit = async () => {
-    if (!consented) return;
+    if (!authorizeVerification) return;
 
     // Guard: block submit if PII is missing
     if (hasMissingPII) {
@@ -107,7 +108,11 @@ export default function Step6Review({ onBack }) {
       const res = await fetch('/api/portal/apply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          ...data,
+          authorizeVerification,
+          authorizeCreditPull,
+        }),
       });
 
       const result = await res.json();
@@ -273,21 +278,65 @@ export default function Step6Review({ onBack }) {
         <ReviewItem label="Citizenship" value={mapLabel('citizenshipStatus', data.citizenshipStatus)} />
       </ReviewSection>
 
-      {/* Consent */}
-      <div className="border-t border-gray-200 pt-5">
+      {/* HMDA Demographics (if provided) */}
+      {(data.hmdaEthnicity || data.hmdaRace?.length > 0 || data.hmdaSex) && (
+        <ReviewSection title="Government Monitoring (HMDA)" step={5}>
+          {data.hmdaEthnicity && (
+            <ReviewItem
+              label="Ethnicity"
+              value={data.hmdaEthnicity === 'hispanic' ? 'Hispanic or Latino' : data.hmdaEthnicity === 'not_hispanic' ? 'Not Hispanic or Latino' : 'Declined'}
+            />
+          )}
+          {data.hmdaRace?.length > 0 && (
+            <ReviewItem
+              label="Race"
+              value={data.hmdaRace.includes('decline') ? 'Declined' : data.hmdaRace.map(r => ({
+                american_indian: 'American Indian or Alaska Native',
+                asian: 'Asian',
+                black: 'Black or African American',
+                pacific_islander: 'Native Hawaiian or Other Pacific Islander',
+                white: 'White',
+              }[r] || r)).join(', ')}
+            />
+          )}
+          {data.hmdaSex && (
+            <ReviewItem
+              label="Sex"
+              value={data.hmdaSex === 'female' ? 'Female' : data.hmdaSex === 'male' ? 'Male' : 'Declined'}
+            />
+          )}
+        </ReviewSection>
+      )}
+
+      {/* Consent — two separate authorizations */}
+      <div className="border-t border-gray-200 pt-5 space-y-4">
         <label className="flex items-start gap-3 cursor-pointer">
           <input
             type="checkbox"
-            checked={consented}
-            onChange={(e) => setConsented(e.target.checked)}
+            checked={authorizeVerification}
+            onChange={(e) => setAuthorizeVerification(e.target.checked)}
             className="w-4 h-4 mt-0.5 rounded border-gray-300 text-brand focus:ring-brand"
           />
           <span className="text-sm text-gray-600">
+            <span className="font-medium text-gray-700">Required:</span>{' '}
             I authorize NetRate Mortgage LLC (NMLS #1111861) to verify the information provided
             in this application{hasCoBorrowers ? ', including information for all co-borrowers listed above' : ''}.
+            I understand that this is not a commitment to lend and that my information will be
+            encrypted and handled securely.
+          </span>
+        </label>
+
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={authorizeCreditPull}
+            onChange={(e) => setAuthorizeCreditPull(e.target.checked)}
+            className="w-4 h-4 mt-0.5 rounded border-gray-300 text-brand focus:ring-brand"
+          />
+          <span className="text-sm text-gray-600">
+            <span className="font-medium text-gray-700">Optional:</span>{' '}
             I authorize NetRate Mortgage to obtain my credit report and credit score for the
-            purpose of evaluating my mortgage application. I understand that this is not a
-            commitment to lend and that my information will be encrypted and handled securely.
+            purpose of evaluating my mortgage application.
           </span>
         </label>
       </div>
@@ -324,7 +373,7 @@ export default function Step6Review({ onBack }) {
         <button
           type="button"
           onClick={handleSubmit}
-          disabled={!consented || submitting || hasMissingPII}
+          disabled={!authorizeVerification || submitting || hasMissingPII}
           className="bg-brand text-white px-8 py-2.5 rounded-lg font-medium hover:bg-brand-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
         >
           {submitting ? (

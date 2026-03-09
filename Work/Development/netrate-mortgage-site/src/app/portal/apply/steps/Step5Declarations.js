@@ -131,6 +131,21 @@ export default function Step5Declarations({ onNext, onBack }) {
               Please answer these questions honestly. They are required on all mortgage applications per federal guidelines.
             </p>
 
+            {/* ─── Citizenship (moved to top) ────────────────────────── */}
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
+                Citizenship
+              </h3>
+              <SelectField
+                label="Citizenship Status"
+                name="citizenshipStatus"
+                register={register}
+                errors={errors}
+                options={CITIZENSHIP_OPTIONS}
+                required
+              />
+            </div>
+
             {/* ─── Section 5a: About this Property and Your Money ───── */}
             <div>
               <h3 className="text-sm font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
@@ -269,20 +284,9 @@ export default function Step5Declarations({ onNext, onBack }) {
               </div>
             </div>
 
-            {/* ─── General ──────────────────────────────────────────── */}
-            <div>
-              <h3 className="text-sm font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
-                Citizenship
-              </h3>
-              <SelectField
-                label="Citizenship Status"
-                name="citizenshipStatus"
-                register={register}
-                errors={errors}
-                options={CITIZENSHIP_OPTIONS}
-                required
-              />
-            </div>
+            {/* ─── Government Monitoring (HMDA Demographics) ─────────── */}
+            <HmdaSection data={data} updateData={updateData} />
+
           </>
         )}
 
@@ -348,6 +352,28 @@ function CoBorrowerDeclarationsSection({ coBorrower, onUpdate }) {
         Please answer these questions for {coBorrower.firstName || 'the co-borrower'}.
       </p>
 
+      {/* Citizenship (moved to top) */}
+      <div>
+        <h3 className="text-sm font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
+          Citizenship
+        </h3>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Citizenship Status <span className="text-red-400">*</span>
+          </label>
+          <select
+            value={decl.citizenshipStatus || ''}
+            onChange={(e) => setDecl('citizenshipStatus', e.target.value)}
+            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg outline-none transition-colors bg-white focus:ring-2 focus:ring-brand/20 focus:border-brand"
+          >
+            <option value="">Select...</option>
+            {CITIZENSHIP_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       {/* Section 5b — Finances */}
       <div>
         <h3 className="text-sm font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
@@ -381,25 +407,122 @@ function CoBorrowerDeclarationsSection({ coBorrower, onUpdate }) {
         </div>
       </div>
 
-      {/* Citizenship */}
+    </div>
+  );
+}
+
+// ─── HMDA Demographics Section ─────────────────────────────────
+// Government Monitoring — optional demographic data per HMDA requirements.
+// All fields are optional with explicit "I do not wish to provide" options.
+
+const ETHNICITY_OPTIONS = [
+  { value: 'hispanic', label: 'Hispanic or Latino' },
+  { value: 'not_hispanic', label: 'Not Hispanic or Latino' },
+  { value: 'decline', label: 'I do not wish to provide this information' },
+];
+
+const RACE_OPTIONS = [
+  { value: 'american_indian', label: 'American Indian or Alaska Native' },
+  { value: 'asian', label: 'Asian' },
+  { value: 'black', label: 'Black or African American' },
+  { value: 'pacific_islander', label: 'Native Hawaiian or Other Pacific Islander' },
+  { value: 'white', label: 'White' },
+  { value: 'decline', label: 'I do not wish to provide this information' },
+];
+
+const SEX_OPTIONS = [
+  { value: 'female', label: 'Female' },
+  { value: 'male', label: 'Male' },
+  { value: 'decline', label: 'I do not wish to provide this information' },
+];
+
+function HmdaSection({ data, updateData }) {
+  const ethnicity = data.hmdaEthnicity || '';
+  const race = data.hmdaRace || [];
+  const sex = data.hmdaSex || '';
+
+  const handleRaceToggle = (value) => {
+    let next;
+    if (value === 'decline') {
+      // "Decline" clears all other selections
+      next = race.includes('decline') ? [] : ['decline'];
+    } else {
+      // Selecting a race category clears "decline"
+      const withoutDecline = race.filter((r) => r !== 'decline');
+      next = withoutDecline.includes(value)
+        ? withoutDecline.filter((r) => r !== value)
+        : [...withoutDecline, value];
+    }
+    updateData({ hmdaRace: next });
+  };
+
+  return (
+    <div>
+      <h3 className="text-sm font-semibold text-gray-900 mb-2 pb-2 border-b border-gray-200">
+        Government Monitoring (HMDA)
+      </h3>
+      <p className="text-xs text-gray-400 mb-5">
+        The following information is requested by the federal government in order to monitor compliance
+        with federal statutes that prohibit discrimination in housing. You are not required to furnish
+        this information, but are encouraged to do so. The law provides that a lender may not discriminate
+        either on the basis of this information, or on whether you choose to furnish it.
+      </p>
+
+      {/* Ethnicity */}
+      <div className="mb-5">
+        <label className="block text-sm font-medium text-gray-700 mb-2">Ethnicity</label>
+        <div className="space-y-2">
+          {ETHNICITY_OPTIONS.map((opt) => (
+            <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="hmdaEthnicity"
+                value={opt.value}
+                checked={ethnicity === opt.value}
+                onChange={() => updateData({ hmdaEthnicity: opt.value })}
+                className="w-4 h-4 text-brand focus:ring-brand border-gray-300"
+              />
+              <span className="text-sm text-gray-700">{opt.label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Race */}
+      <div className="mb-5">
+        <label className="block text-sm font-medium text-gray-700 mb-2">Race <span className="text-xs text-gray-400 font-normal">(select all that apply)</span></label>
+        <div className="space-y-2">
+          {RACE_OPTIONS.map((opt) => (
+            <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={race.includes(opt.value)}
+                onChange={() => handleRaceToggle(opt.value)}
+                className="w-4 h-4 rounded text-brand focus:ring-brand border-gray-300"
+              />
+              <span className="text-sm text-gray-700">{opt.label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Sex */}
       <div>
-        <h3 className="text-sm font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
-          Citizenship
-        </h3>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Citizenship Status <span className="text-red-400">*</span>
-          </label>
-          <select
-            value={decl.citizenshipStatus || ''}
-            onChange={(e) => setDecl('citizenshipStatus', e.target.value)}
-            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg outline-none transition-colors bg-white focus:ring-2 focus:ring-brand/20 focus:border-brand"
-          >
-            <option value="">Select...</option>
-            {CITIZENSHIP_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Sex</label>
+        <div className="space-y-2">
+          {SEX_OPTIONS.map((opt) => (
+            <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="hmdaSex"
+                value={opt.value}
+                checked={sex === opt.value}
+                onChange={() => updateData({ hmdaSex: opt.value })}
+                className="w-4 h-4 text-brand focus:ring-brand border-gray-300"
+              />
+              <span className="text-sm text-gray-700">{opt.label}</span>
+            </label>
+          ))}
         </div>
       </div>
     </div>

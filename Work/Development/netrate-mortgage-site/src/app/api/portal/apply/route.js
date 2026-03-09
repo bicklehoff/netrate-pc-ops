@@ -248,6 +248,15 @@ export async function POST(request) {
 
       // General
       citizenshipStatus: body.citizenshipStatus || null,
+
+      // HMDA Demographics (optional)
+      hmdaEthnicity: body.hmdaEthnicity || null,
+      hmdaRace: body.hmdaRace?.length > 0 ? body.hmdaRace : null,
+      hmdaSex: body.hmdaSex || null,
+
+      // Consent
+      authorizeVerification: body.authorizeVerification ?? false,
+      authorizeCreditPull: body.authorizeCreditPull ?? false,
     };
 
     const coBorrowers = body.coBorrowers || [];

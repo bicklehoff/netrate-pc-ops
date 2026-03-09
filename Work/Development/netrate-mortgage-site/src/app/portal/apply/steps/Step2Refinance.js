@@ -60,6 +60,18 @@ export default function Step2Refinance({ onNext, onBack }) {
 
   const refiPurpose = watch('refiPurpose');
   const propertyType = watch('propertyType');
+  const estimatedValue = watch('estimatedValue');
+  const currentBalance = watch('currentBalance');
+  const cashOutAmount = watch('cashOutAmount');
+
+  // Compute LTV for refinances
+  const ltvPct = (() => {
+    const val = parseFloat(estimatedValue) || 0;
+    const bal = parseFloat(currentBalance) || 0;
+    const cash = refiPurpose === 'cash_out' ? (parseFloat(cashOutAmount) || 0) : 0;
+    if (val <= 0) return null;
+    return ((bal + cash) / val) * 100;
+  })();
 
   const onSubmit = (stepData) => {
     updateData(stepData);
@@ -107,6 +119,35 @@ export default function Step2Refinance({ onNext, onBack }) {
             watch={watch}
           />
         </div>
+
+        {/* LTV Indicator — computed from estimated value and balance */}
+        {ltvPct !== null && (
+          <div className="rounded-lg border border-gray-200 p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-700">Estimated Loan-to-Value (LTV)</span>
+              <span className={`text-sm font-semibold ${
+                ltvPct <= 80 ? 'text-green-600' : ltvPct <= 90 ? 'text-amber-600' : 'text-red-600'
+              }`}>
+                {ltvPct.toFixed(1)}%
+              </span>
+            </div>
+            <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-300 ${
+                  ltvPct <= 80 ? 'bg-green-500' : ltvPct <= 90 ? 'bg-amber-500' : 'bg-red-500'
+                }`}
+                style={{ width: `${Math.min(ltvPct, 100)}%` }}
+              />
+            </div>
+            <p className="text-xs text-gray-400">
+              {ltvPct <= 80
+                ? 'Great — under 80% LTV typically means no private mortgage insurance (PMI).'
+                : ltvPct <= 90
+                  ? 'Between 80-90% LTV — PMI may be required.'
+                  : 'Over 90% LTV — higher rates and PMI are likely. Consider adjusting your cash-out amount.'}
+            </p>
+          </div>
+        )}
 
         {refiPurpose === 'cash_out' && (
           <CurrencyField

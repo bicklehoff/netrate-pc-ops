@@ -75,15 +75,22 @@ async function getAccessToken() {
 async function wdFetch(path, options = {}) {
   const token = await getAccessToken();
   const url = path.startsWith('http') ? path : `${WORKDRIVE_BASE}${path}`;
+  const method = (options.method || 'GET').toUpperCase();
+
+  const headers = {
+    Authorization: `Zoho-oauthtoken ${token}`,
+    Accept: 'application/vnd.api+json',
+    ...options.headers,
+  };
+
+  // Only set Content-Type for requests that have a body (POST, PUT, PATCH)
+  if (method !== 'DELETE' && method !== 'GET') {
+    headers['Content-Type'] = 'application/vnd.api+json';
+  }
 
   const res = await fetch(url, {
     ...options,
-    headers: {
-      Authorization: `Zoho-oauthtoken ${token}`,
-      Accept: 'application/vnd.api+json',
-      'Content-Type': 'application/vnd.api+json',
-      ...options.headers,
-    },
+    headers,
   });
 
   if (!res.ok) {
@@ -256,15 +263,32 @@ export async function uploadFile(file, fileName, folderId, override = false) {
 }
 
 /**
- * Get a download URL for a file.
+ * Download a file from WorkDrive, returning the response stream.
+ * Proxies through our server so the client never sees the access token.
  * @param {string} fileId — File resource ID
- * @returns {Promise<string>} Download URL
+ * @returns {Promise<{stream: ReadableStream, contentType: string, contentDisposition: string, contentLength: string}>}
  */
-export async function getDownloadUrl(fileId) {
+export async function downloadFile(fileId) {
   const token = await getAccessToken();
-  // WorkDrive download endpoint returns the file directly
-  // We return the authenticated URL for the client to use
-  return `${WORKDRIVE_BASE}/download/${fileId}?access_token=${token}`;
+  const url = `${WORKDRIVE_BASE}/download/${fileId}`;
+
+  const res = await fetch(url, {
+    headers: {
+      Authorization: `Zoho-oauthtoken ${token}`,
+    },
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`WorkDrive download failed: ${res.status} ${text}`);
+  }
+
+  return {
+    stream: res.body,
+    contentType: res.headers.get('content-type'),
+    contentDisposition: res.headers.get('content-disposition'),
+    contentLength: res.headers.get('content-length'),
+  };
 }
 
 /**

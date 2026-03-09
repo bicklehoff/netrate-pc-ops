@@ -53,7 +53,7 @@ export default function MloLoanDetailPage() {
 
   if (authStatus === 'loading' || loading) {
     return (
-      <div className="max-w-4xl mx-auto py-8">
+      <div className="max-w-6xl mx-auto py-8">
         <div className="animate-pulse space-y-4">
           <div className="h-6 bg-gray-200 rounded w-32" />
           <div className="h-48 bg-gray-200 rounded" />
@@ -65,7 +65,7 @@ export default function MloLoanDetailPage() {
 
   if (error) {
     return (
-      <div className="max-w-4xl mx-auto py-8">
+      <div className="max-w-6xl mx-auto py-8">
         <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
           <p className="text-red-700 mb-4">{error}</p>
           <button
@@ -80,7 +80,7 @@ export default function MloLoanDetailPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-6xl mx-auto">
       <button
         onClick={() => router.push('/portal/mlo')}
         className="text-sm text-gray-500 hover:text-gray-700 mb-4 inline-flex items-center gap-1"
