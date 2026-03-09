@@ -1,12 +1,16 @@
 // API: MLO Pipeline
-// GET /api/portal/mlo/pipeline
+// GET  /api/portal/mlo/pipeline — List all loans with inline-editable fields
+// PATCH /api/portal/mlo/pipeline — Bulk update loans (status, mloId)
+//
 // Returns all loans for the authenticated MLO (or all loans if admin).
-// Includes borrower name, status, ball-in-court, and pending doc count.
+// Includes borrower name, status, ball-in-court, pending doc count, and
+// editable fields (loanNumber, lenderName, mloId).
 
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import { getBallInCourt } from '@/lib/loan-states';
 
 export async function GET() {
   try {
@@ -28,7 +32,7 @@ export async function GET() {
           select: { id: true, status: true },
         },
         mlo: {
-          select: { firstName: true, lastName: true },
+          select: { id: true, firstName: true, lastName: true },
         },
       },
       orderBy: { updatedAt: 'desc' },
@@ -46,9 +50,13 @@ export async function GET() {
       propertyType: loan.propertyType,
       purchasePrice: loan.purchasePrice ? Number(loan.purchasePrice) : null,
       estimatedValue: loan.estimatedValue ? Number(loan.estimatedValue) : null,
+      loanAmount: loan.loanAmount ? Number(loan.loanAmount) : null,
+      loanNumber: loan.loanNumber,
+      lenderName: loan.lenderName,
+      mloId: loan.mloId,
+      mloName: loan.mlo ? `${loan.mlo.firstName} ${loan.mlo.lastName}` : null,
       pendingDocs: loan.documents.filter((d) => d.status === 'requested').length,
       totalDocs: loan.documents.length,
-      mloName: loan.mlo ? `${loan.mlo.firstName} ${loan.mlo.lastName}` : null,
       submittedAt: loan.submittedAt,
       updatedAt: loan.updatedAt,
       createdAt: loan.createdAt,
@@ -58,5 +66,103 @@ export async function GET() {
   } catch (error) {
     console.error('Pipeline error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+// ─── Bulk Update ─────────────────────────────────────────────
+// Body: { loanIds: string[], updates: { status?, mloId? } }
+// Creates audit events for each loan updated.
+
+export async function PATCH(request) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.userType !== 'mlo') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { loanIds, updates } = body;
+
+    if (!loanIds || !Array.isArray(loanIds) || loanIds.length === 0) {
+      return NextResponse.json({ error: 'loanIds array is required' }, { status: 400 });
+    }
+    if (!updates || typeof updates !== 'object') {
+      return NextResponse.json({ error: 'updates object is required' }, { status: 400 });
+    }
+
+    // Only allow specific fields for bulk update
+    const allowedFields = ['status', 'mloId'];
+    const updateKeys = Object.keys(updates).filter((k) => allowedFields.includes(k));
+    if (updateKeys.length === 0) {
+      return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
+    }
+
+    const isAdmin = session.user.role === 'admin';
+
+    // Verify access to all loans
+    const loans = await prisma.loan.findMany({
+      where: { id: { in: loanIds } },
+    });
+
+    if (loans.length !== loanIds.length) {
+      return NextResponse.json({ error: 'One or more loans not found' }, { status: 404 });
+    }
+
+    if (!isAdmin) {
+      const unauthorized = loans.find((l) => l.mloId !== session.user.id);
+      if (unauthorized) {
+        return NextResponse.json({ error: 'Unauthorized access to one or more loans' }, { status: 403 });
+      }
+    }
+
+    // Update each loan individually (for audit trail with old/new values)
+    let updatedCount = 0;
+    for (const loan of loans) {
+      const data = {};
+      const events = [];
+
+      if (updates.status && updates.status !== loan.status) {
+        const pendingDocs = await prisma.document.count({
+          where: { loanId: loan.id, status: 'requested' },
+        });
+        data.status = updates.status;
+        data.ballInCourt = getBallInCourt(updates.status, pendingDocs > 0);
+        events.push({
+          loanId: loan.id,
+          eventType: 'status_change',
+          actorType: 'mlo',
+          actorId: session.user.id,
+          oldValue: loan.status,
+          newValue: updates.status,
+          details: { source: 'bulk_update' },
+        });
+      }
+
+      if (updates.mloId !== undefined && updates.mloId !== loan.mloId) {
+        data.mloId = updates.mloId || null;
+        events.push({
+          loanId: loan.id,
+          eventType: 'field_updated',
+          actorType: 'mlo',
+          actorId: session.user.id,
+          oldValue: loan.mloId,
+          newValue: updates.mloId || null,
+          details: { field: 'mloId', source: 'bulk_update' },
+        });
+      }
+
+      if (Object.keys(data).length > 0) {
+        await prisma.loan.update({ where: { id: loan.id }, data });
+        for (const event of events) {
+          await prisma.loanEvent.create({ data: event });
+        }
+        updatedCount++;
+      }
+    }
+
+    return NextResponse.json({ success: true, updatedCount });
+  } catch (error) {
+    console.error('Bulk update error:', error);
+    return NextResponse.json({ error: 'Bulk update failed' }, { status: 500 });
   }
 }

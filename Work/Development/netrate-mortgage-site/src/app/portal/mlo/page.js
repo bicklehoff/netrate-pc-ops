@@ -1,10 +1,11 @@
 // MLO Dashboard — Pipeline View
 // Auth required (MLO or Admin role via NextAuth)
 // Shows all loans assigned to the current MLO in a sortable table.
+// Supports inline editing (status, LO, lender, loan #) and bulk updates.
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -26,14 +27,153 @@ const STATUS_FILTERS = [
 
 const TERMINAL_STATUSES = ['funded', 'denied'];
 
+const STATUS_LABELS = {
+  draft: 'Draft',
+  applied: 'Applied',
+  processing: 'Processing',
+  submitted_uw: 'In UW',
+  cond_approved: 'Cond. Approved',
+  suspended: 'Suspended',
+  ctc: 'Clear to Close',
+  docs_out: 'Docs Out',
+  funded: 'Funded',
+  denied: 'Denied',
+};
+
+const ALL_STATUSES = [
+  'draft', 'applied', 'processing', 'submitted_uw',
+  'cond_approved', 'ctc', 'docs_out', 'funded',
+  'suspended', 'denied',
+];
+
+// ─── Bulk Action Bar ──────────────────────────────────────────
+// Floating bar at the bottom when 1+ loans are selected.
+// Offers "Change Status" and "Assign LO" dropdowns, plus Clear.
+
+function BulkActionBar({ count, mloList, onBulkUpdate, onClear }) {
+  const [activeAction, setActiveAction] = useState(null); // 'status' | 'mlo' | null
+  const [applying, setApplying] = useState(false);
+  const barRef = useRef(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClick(e) {
+      if (barRef.current && !barRef.current.contains(e.target)) {
+        setActiveAction(null);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  const applyUpdate = async (updates) => {
+    setApplying(true);
+    try {
+      await onBulkUpdate(updates);
+      setActiveAction(null);
+    } finally {
+      setApplying(false);
+    }
+  };
+
+  return (
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+      <div
+        ref={barRef}
+        className="flex items-center gap-3 px-5 py-3 bg-gray-900 text-white rounded-xl shadow-2xl border border-gray-700"
+      >
+        <span className="text-sm font-medium whitespace-nowrap">
+          {count} loan{count !== 1 ? 's' : ''} selected
+        </span>
+
+        <div className="w-px h-5 bg-gray-600" />
+
+        {/* Change Status */}
+        <div className="relative">
+          <button
+            onClick={() => setActiveAction(activeAction === 'status' ? null : 'status')}
+            disabled={applying}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50"
+          >
+            Change Status
+            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          {activeAction === 'status' && (
+            <div className="absolute bottom-full mb-2 left-0 bg-white text-gray-900 rounded-lg shadow-xl border border-gray-200 py-1 min-w-[160px] max-h-64 overflow-y-auto">
+              {ALL_STATUSES.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => applyUpdate({ status: s })}
+                  className="block w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 transition-colors"
+                >
+                  {STATUS_LABELS[s] || s}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Assign LO */}
+        <div className="relative">
+          <button
+            onClick={() => setActiveAction(activeAction === 'mlo' ? null : 'mlo')}
+            disabled={applying}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50"
+          >
+            Assign LO
+            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          {activeAction === 'mlo' && (
+            <div className="absolute bottom-full mb-2 left-0 bg-white text-gray-900 rounded-lg shadow-xl border border-gray-200 py-1 min-w-[180px] max-h-64 overflow-y-auto">
+              <button
+                onClick={() => applyUpdate({ mloId: null })}
+                className="block w-full text-left px-3 py-1.5 text-sm text-gray-400 hover:bg-gray-100 transition-colors"
+              >
+                Unassigned
+              </button>
+              {mloList.map((m) => (
+                <button
+                  key={m.id}
+                  onClick={() => applyUpdate({ mloId: m.id })}
+                  className="block w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 transition-colors"
+                >
+                  {m.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="w-px h-5 bg-gray-600" />
+
+        {/* Clear selection */}
+        <button
+          onClick={onClear}
+          className="px-3 py-1.5 text-xs font-medium text-gray-400 hover:text-white transition-colors"
+        >
+          Clear
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Pipeline Page ────────────────────────────────────────────
+
 export default function MloDashboardPage() {
   const { data: session, status: authStatus } = useSession();
   const router = useRouter();
   const [loans, setLoans] = useState([]);
+  const [mloList, setMloList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState('active');
   const [importOpen, setImportOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
 
   useEffect(() => {
     if (authStatus === 'unauthenticated') {
@@ -41,24 +181,75 @@ export default function MloDashboardPage() {
     }
   }, [authStatus, router]);
 
-  useEffect(() => {
-    async function fetchPipeline() {
-      try {
-        const res = await fetch('/api/portal/mlo/pipeline');
-        if (!res.ok) throw new Error('Failed to load');
-        const data = await res.json();
-        setLoans(data.loans || []);
-      } catch {
-        setError('Failed to load pipeline.');
-      } finally {
-        setLoading(false);
-      }
+  // Fetch pipeline + MLO list on mount
+  const fetchPipeline = useCallback(async () => {
+    try {
+      const res = await fetch('/api/portal/mlo/pipeline');
+      if (!res.ok) throw new Error('Failed to load');
+      const data = await res.json();
+      setLoans(data.loans || []);
+    } catch {
+      setError('Failed to load pipeline.');
+    } finally {
+      setLoading(false);
     }
+  }, []);
 
+  useEffect(() => {
     if (authStatus === 'authenticated') {
       fetchPipeline();
+
+      // Fetch MLO list for LO assignment dropdown
+      fetch('/api/portal/mlo/list')
+        .then((res) => res.json())
+        .then((data) => setMloList(data.mlos || []))
+        .catch(() => {}); // Non-critical — LO column just won't have dropdown options
     }
-  }, [authStatus]);
+  }, [authStatus, fetchPipeline]);
+
+  // ─── Inline edit handler (single loan) ────────────────────
+  const handleLoanUpdate = useCallback(async (loanId, updates) => {
+    const res = await fetch(`/api/portal/mlo/loans/${loanId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'Update failed');
+    }
+
+    // Optimistic-ish: refresh pipeline to get clean data
+    const pipelineRes = await fetch('/api/portal/mlo/pipeline');
+    if (pipelineRes.ok) {
+      const data = await pipelineRes.json();
+      setLoans(data.loans || []);
+    }
+  }, []);
+
+  // ─── Bulk update handler ──────────────────────────────────
+  const handleBulkUpdate = useCallback(async (updates) => {
+    const ids = Array.from(selectedIds);
+    const res = await fetch('/api/portal/mlo/pipeline', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ loanIds: ids, updates }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'Bulk update failed');
+    }
+
+    // Refresh pipeline and clear selection
+    const pipelineRes = await fetch('/api/portal/mlo/pipeline');
+    if (pipelineRes.ok) {
+      const data = await pipelineRes.json();
+      setLoans(data.loans || []);
+    }
+    setSelectedIds(new Set());
+  }, [selectedIds]);
 
   // Filter loans
   const filteredLoans = loans.filter((loan) => {
@@ -67,11 +258,16 @@ export default function MloDashboardPage() {
     return loan.status === filter;
   });
 
+  // Clear selection when filter changes (selected IDs may no longer be visible)
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [filter]);
+
   const activeCount = loans.filter((l) => !TERMINAL_STATUSES.includes(l.status)).length;
 
   if (authStatus === 'loading' || loading) {
     return (
-      <div className="max-w-5xl mx-auto py-8">
+      <div className="max-w-7xl mx-auto py-8">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-gray-200 rounded w-48" />
           <div className="h-4 bg-gray-200 rounded w-72" />
@@ -82,7 +278,7 @@ export default function MloDashboardPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="max-w-7xl mx-auto">
       <div className="flex items-start justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Loan Pipeline</h1>
@@ -177,7 +373,23 @@ export default function MloDashboardPage() {
           </p>
         </div>
       ) : (
-        <PipelineTable loans={filteredLoans} />
+        <PipelineTable
+          loans={filteredLoans}
+          mloList={mloList}
+          selectedIds={selectedIds}
+          onSelectionChange={setSelectedIds}
+          onLoanUpdate={handleLoanUpdate}
+        />
+      )}
+
+      {/* Bulk Action Bar — appears when loans are selected */}
+      {selectedIds.size > 0 && (
+        <BulkActionBar
+          count={selectedIds.size}
+          mloList={mloList}
+          onBulkUpdate={handleBulkUpdate}
+          onClear={() => setSelectedIds(new Set())}
+        />
       )}
 
       {/* MISMO XML Import Modal */}
@@ -186,10 +398,7 @@ export default function MloDashboardPage() {
         onClose={() => {
           setImportOpen(false);
           // Refresh pipeline after import
-          fetch('/api/portal/mlo/pipeline')
-            .then((res) => res.json())
-            .then((data) => setLoans(data.loans || []))
-            .catch(() => {});
+          fetchPipeline();
         }}
       />
     </div>

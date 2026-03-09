@@ -161,6 +161,35 @@ export async function PATCH(request, { params }) {
       return NextResponse.json({ loan: updated });
     }
 
+    // Handle inline field updates (lenderName, loanNumber)
+    const inlineFields = ['lenderName', 'loanNumber'];
+    const fieldUpdate = inlineFields.find((f) => body[f] !== undefined);
+    if (fieldUpdate) {
+      const data = {};
+      const details = {};
+      for (const field of inlineFields) {
+        if (body[field] !== undefined) {
+          data[field] = body[field] || null;
+          details[field] = { old: loan[field], new: body[field] || null };
+        }
+      }
+
+      const updated = await prisma.loan.update({ where: { id }, data });
+
+      await prisma.loanEvent.create({
+        data: {
+          loanId: id,
+          eventType: 'field_updated',
+          actorType: 'mlo',
+          actorId: session.user.id,
+          newValue: JSON.stringify(data),
+          details: { fields: details, source: 'inline_edit' },
+        },
+      });
+
+      return NextResponse.json({ loan: updated });
+    }
+
     return NextResponse.json({ error: 'No valid update provided' }, { status: 400 });
   } catch (error) {
     console.error('Loan update error:', error);
