@@ -6,7 +6,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
-import { canTransition, getBallInCourt } from '@/lib/loan-states';
+import { getBallInCourt } from '@/lib/loan-states';
 
 export async function GET(request, { params }) {
   try {
@@ -93,15 +93,8 @@ export async function PATCH(request, { params }) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
-    // Handle status change
+    // Handle status change (free jumps — rules enforced later)
     if (body.status && body.status !== loan.status) {
-      if (!canTransition(loan.status, body.status)) {
-        return NextResponse.json(
-          { error: `Cannot transition from ${loan.status} to ${body.status}` },
-          { status: 400 }
-        );
-      }
-
       const pendingDocs = await prisma.document.count({
         where: { loanId: id, status: 'requested' },
       });

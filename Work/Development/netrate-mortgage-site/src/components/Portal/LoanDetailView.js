@@ -32,18 +32,12 @@ const STATUS_COLORS = {
   denied: 'bg-red-100 text-red-800',
 };
 
-const TRANSITIONS = {
-  draft: ['applied'],
-  applied: ['processing', 'denied'],
-  processing: ['submitted_uw', 'suspended', 'denied'],
-  submitted_uw: ['cond_approved', 'suspended', 'denied'],
-  cond_approved: ['ctc', 'suspended', 'denied'],
-  suspended: ['processing', 'submitted_uw', 'denied'],
-  ctc: ['docs_out'],
-  docs_out: ['funded'],
-  funded: [],
-  denied: [],
-};
+// All statuses available from any state (free jumps — rules come later)
+const ALL_STATUSES = [
+  'draft', 'applied', 'processing', 'submitted_uw',
+  'cond_approved', 'ctc', 'docs_out', 'funded',
+  'suspended', 'denied',
+];
 
 const DOC_TYPES = [
   { value: 'pay_stub', label: 'Pay Stub' },
@@ -117,7 +111,7 @@ export default function LoanDetailView({ loan, onRefresh }) {
 
   if (!loan) return null;
 
-  const nextStatuses = TRANSITIONS[loan.status] || [];
+  const nextStatuses = ALL_STATUSES.filter((s) => s !== loan.status);
 
   // ─── Status Change ───
   const handleStatusChange = async (newStatus) => {

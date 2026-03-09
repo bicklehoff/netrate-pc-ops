@@ -61,7 +61,7 @@ export async function PUT(request) {
     const formData = await request.formData();
     const file = formData.get('file');
     const statusOverride = formData.get('status') || 'processing';
-    const assignToSelf = formData.get('assignToSelf') !== 'false';
+    const mloId = formData.get('mloId') || null;
 
     if (!file || typeof file === 'string') {
       return NextResponse.json({ error: 'No XML file provided' }, { status: 400 });
@@ -100,7 +100,7 @@ export async function PUT(request) {
     const loan = await prisma.loan.create({
       data: {
         borrowerId: borrower.id,
-        mloId: assignToSelf ? session.user.id : null,
+        mloId: mloId || null,
         status: statusOverride,
         ballInCourt: 'mlo',
         purpose: loanData.purpose,

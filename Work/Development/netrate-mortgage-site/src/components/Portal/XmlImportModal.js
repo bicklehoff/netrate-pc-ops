@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 const STATUS_OPTIONS = [
@@ -37,10 +37,26 @@ export default function XmlImportModal({ open, onClose }) {
 
   // Import options
   const [status, setStatus] = useState('processing');
-  const [assignToSelf, setAssignToSelf] = useState(true);
+  const [mloId, setMloId] = useState('');
+  const [mloList, setMloList] = useState([]);
 
   // Import result
   const [result, setResult] = useState(null);
+
+  // Fetch MLO list when modal opens
+  useEffect(() => {
+    if (!open) return;
+    fetch('/api/portal/mlo/list')
+      .then((res) => res.json())
+      .then((data) => {
+        setMloList(data.mlos || []);
+        // Default to first MLO if available
+        if (data.mlos?.length > 0 && !mloId) {
+          setMloId(data.mlos[0].id);
+        }
+      })
+      .catch(() => {});
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const reset = useCallback(() => {
     setPhase('upload');
@@ -50,7 +66,7 @@ export default function XmlImportModal({ open, onClose }) {
     setDragOver(false);
     setPreview(null);
     setStatus('processing');
-    setAssignToSelf(true);
+    setMloId(mloList[0]?.id || '');
     setResult(null);
   }, []);
 
@@ -131,7 +147,7 @@ export default function XmlImportModal({ open, onClose }) {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('status', status);
-      formData.append('assignToSelf', String(assignToSelf));
+      if (mloId) formData.append('mloId', mloId);
 
       const res = await fetch('/api/portal/mlo/loans/import', {
         method: 'PUT',
@@ -331,16 +347,18 @@ export default function XmlImportModal({ open, onClose }) {
                       ))}
                     </select>
                   </div>
-                  <div className="flex items-end">
-                    <label className="flex items-center gap-2 cursor-pointer pb-2">
-                      <input
-                        type="checkbox"
-                        checked={assignToSelf}
-                        onChange={(e) => setAssignToSelf(e.target.checked)}
-                        className="w-4 h-4 rounded border-gray-300 text-brand focus:ring-brand"
-                      />
-                      <span className="text-sm text-gray-700">Assign to me</span>
-                    </label>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Assign to LO</label>
+                    <select
+                      value={mloId}
+                      onChange={(e) => setMloId(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none"
+                    >
+                      <option value="">Unassigned</option>
+                      {mloList.map((m) => (
+                        <option key={m.id} value={m.id}>{m.name}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
               </div>

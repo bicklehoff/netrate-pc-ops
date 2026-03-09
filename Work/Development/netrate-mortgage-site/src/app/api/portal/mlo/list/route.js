@@ -1,0 +1,40 @@
+// API: MLO List
+// GET /api/portal/mlo/list — Returns all MLOs (id, name) for assignment dropdowns.
+// Auth: MLO or Admin required.
+
+import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import prisma from '@/lib/prisma';
+
+export async function GET() {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.userType !== 'mlo') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const mlos = await prisma.mlo.findMany({
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        role: true,
+      },
+      orderBy: { firstName: 'asc' },
+    });
+
+    return NextResponse.json({
+      mlos: mlos.map((m) => ({
+        id: m.id,
+        name: `${m.firstName} ${m.lastName}`,
+        email: m.email,
+        role: m.role,
+      })),
+    });
+  } catch (error) {
+    console.error('MLO list error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
