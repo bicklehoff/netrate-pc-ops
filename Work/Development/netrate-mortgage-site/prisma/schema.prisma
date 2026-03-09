@@ -126,6 +126,10 @@ model Loan {
   // Co-borrower count (quick filter, updated on submission)
   numBorrowers    Int       @default(1) @map("num_borrowers")
 
+  // Document storage (Zoho WorkDrive)
+  workDriveFolderId   String?   @map("work_drive_folder_id")   // Root loan folder ID in WorkDrive
+  workDriveSubfolders Json?     @map("work_drive_subfolders") @db.JsonB  // { "1-Application": "id", ... }
+
   // Metadata
   applicationStep Int       @default(1) @map("application_step")
   submittedAt     DateTime? @map("submitted_at")

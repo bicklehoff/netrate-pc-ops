@@ -2,12 +2,16 @@
 // GET /api/portal/loans/[id]/docs — List documents for a loan
 // POST /api/portal/loans/[id]/docs — Upload a document
 //
+// Uploads go to Zoho WorkDrive (loan folder → subfolder by doc type).
+// Falls back to Vercel Blob if WorkDrive folder doesn't exist yet.
+//
 // Requires authenticated borrower session.
 
 import { NextResponse } from 'next/server';
 import { put } from '@vercel/blob';
 import prisma from '@/lib/prisma';
 import { requireBorrowerAuth } from '@/lib/borrower-session';
+import { uploadFile, getSubfolderForDocType } from '@/lib/zoho-workdrive';
 
 export async function GET(request, { params }) {
   try {
@@ -60,6 +64,7 @@ export async function POST(request, { params }) {
     const formData = await request.formData();
     const file = formData.get('file');
     const documentId = formData.get('documentId'); // If uploading to a requested doc
+    const docType = formData.get('docType') || 'other'; // For subfolder routing
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
@@ -86,11 +91,53 @@ export async function POST(request, { params }) {
       );
     }
 
-    // Upload to Vercel Blob
-    const blob = await put(`loans/${loanId}/${file.name}`, file, {
-      access: 'public', // Behind auth check, so URL alone isn't enough
-      addRandomSuffix: true,
-    });
+    // ─── Upload to Storage ───────────────────────────────────
+    // Primary: Zoho WorkDrive (if loan has folder IDs)
+    // Fallback: Vercel Blob (if WorkDrive not set up yet)
+    let fileUrl;
+    let storageType = 'blob'; // Track where the file went
+
+    const subfolders = loan.workDriveSubfolders;
+
+    if (loan.workDriveFolderId && subfolders) {
+      // Route to correct subfolder based on doc type
+      // If uploading to an existing document request, use that doc's type
+      let effectiveDocType = docType;
+      if (documentId) {
+        const existingDoc = await prisma.document.findUnique({
+          where: { id: documentId },
+          select: { docType: true },
+        });
+        if (existingDoc?.docType) {
+          effectiveDocType = existingDoc.docType;
+        }
+      }
+
+      const subfolderName = getSubfolderForDocType(effectiveDocType);
+      const targetFolderId = subfolders[subfolderName] || loan.workDriveFolderId;
+
+      try {
+        const uploaded = await uploadFile(file, file.name, targetFolderId, true);
+        fileUrl = uploaded.url || `workdrive://${uploaded.id}`;
+        storageType = 'workdrive';
+        console.log(`Doc uploaded to WorkDrive: ${file.name} → ${subfolderName} (${uploaded.id})`);
+      } catch (wdError) {
+        // WorkDrive failed — fall back to Vercel Blob
+        console.error('WorkDrive upload failed, falling back to Blob:', wdError?.message);
+        const blob = await put(`loans/${loanId}/${file.name}`, file, {
+          access: 'public',
+          addRandomSuffix: true,
+        });
+        fileUrl = blob.url;
+      }
+    } else {
+      // No WorkDrive folder — use Vercel Blob
+      const blob = await put(`loans/${loanId}/${file.name}`, file, {
+        access: 'public',
+        addRandomSuffix: true,
+      });
+      fileUrl = blob.url;
+    }
 
     if (documentId) {
       // Update existing document request with the upload
@@ -98,7 +145,7 @@ export async function POST(request, { params }) {
         where: { id: documentId },
         data: {
           status: 'uploaded',
-          fileUrl: blob.url,
+          fileUrl,
           fileName: file.name,
           fileSize: file.size,
           uploadedAt: new Date(),
@@ -113,7 +160,7 @@ export async function POST(request, { params }) {
           actorType: 'borrower',
           actorId: session.borrowerId,
           newValue: doc.label,
-          details: { documentId: doc.id, fileName: file.name },
+          details: { documentId: doc.id, fileName: file.name, storageType },
         },
       });
 
@@ -123,10 +170,10 @@ export async function POST(request, { params }) {
       const doc = await prisma.document.create({
         data: {
           loanId,
-          docType: 'other',
+          docType: docType || 'other',
           label: file.name,
           status: 'uploaded',
-          fileUrl: blob.url,
+          fileUrl,
           fileName: file.name,
           fileSize: file.size,
           uploadedAt: new Date(),
@@ -141,7 +188,7 @@ export async function POST(request, { params }) {
           actorType: 'borrower',
           actorId: session.borrowerId,
           newValue: file.name,
-          details: { documentId: doc.id, fileName: file.name },
+          details: { documentId: doc.id, fileName: file.name, storageType },
         },
       });
 

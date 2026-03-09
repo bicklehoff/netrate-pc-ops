@@ -265,6 +265,17 @@ export default function LoanDetailView({ loan, onRefresh }) {
             <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[loan.status]}`}>
               {STATUS_LABELS[loan.status] || loan.status}
             </span>
+            {loan.workDriveFolderId && (
+              <a
+                href={`https://workdrive.zoho.com/folder/${loan.workDriveFolderId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-teal-700 bg-teal-50 rounded-lg hover:bg-teal-100 transition-colors border border-teal-200"
+                title="Open loan folder in WorkDrive"
+              >
+                📁 Folder
+              </a>
+            )}
             <button
               onClick={handleXmlExport}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"

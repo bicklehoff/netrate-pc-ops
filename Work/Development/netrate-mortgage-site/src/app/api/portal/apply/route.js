@@ -10,6 +10,7 @@ import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import prisma from '@/lib/prisma';
 import { encrypt, ssnLastFour } from '@/lib/encryption';
+import { createLoanFolder } from '@/lib/zoho-workdrive';
 
 // ─── Rate Limiting (in-memory, per IP) ──────────────────────
 // 5 submissions per hour per IP. Map auto-cleans expired entries.
@@ -377,6 +378,31 @@ export async function POST(request) {
         },
       },
     });
+
+    // ─── WorkDrive Folder Creation (non-blocking) ──────────
+    // Create loan folder in Zoho WorkDrive for document storage.
+    // Wrapped in try/catch — WorkDrive failure should NOT block submission.
+    try {
+      const folder = await createLoanFolder({
+        borrowerFirstName: sanitize(body.firstName),
+        borrowerLastName: sanitize(body.lastName),
+        purpose: body.purpose,
+      });
+
+      // Store folder IDs on the loan for doc upload routing
+      await prisma.loan.update({
+        where: { id: loan.id },
+        data: {
+          workDriveFolderId: folder.rootFolderId,
+          workDriveSubfolders: folder.subfolders,
+        },
+      });
+
+      console.log(`WorkDrive folder created for loan ${loan.id}: ${folder.rootFolderId}`);
+    } catch (wdError) {
+      // Log but don't fail the application
+      console.error('WorkDrive folder creation failed (non-fatal):', wdError?.message);
+    }
 
     return NextResponse.json({
       success: true,
