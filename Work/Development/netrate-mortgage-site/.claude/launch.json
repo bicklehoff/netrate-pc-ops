@@ -3,9 +3,8 @@
   "configurations": [
     {
       "name": "dev",
-      "runtimeExecutable": "npm",
+      "runtimeExecutable": "npm.cmd",
       "runtimeArgs": ["run", "dev"],
-      "cwd": "D:/PROJECTS/netrate-pc-ops/Work/Development/netrate-mortgage-site",
       "port": 3000
     }
   ]

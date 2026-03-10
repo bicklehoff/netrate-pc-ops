@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dev",
+      "runtimeExecutable": "C:\\Program Files\\nodejs\\node.exe",
+      "runtimeArgs": ["D:\\PROJECTS\\netrate-pc-ops\\Work\\Development\\netrate-mortgage-site\\node_modules\\next\\dist\\bin\\next", "dev", "-p", "3002"],
+      "port": 3002,
+      "autoPort": false
+    }
+  ]
+}
