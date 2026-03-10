@@ -59,6 +59,8 @@ model Mlo {
   lastName        String    @map("last_name")
   passwordHash    String    @map("password_hash")
   role            String    @default("mlo") // 'mlo' | 'admin'
+  ldoxOfficerId   Int?      @unique @map("ldox_officer_id")  // LDox loan officer ID (e.g. 180707 = Jamie)
+  nmls            String?                                     // NMLS ID
   createdAt       DateTime  @default(now()) @map("created_at")
 
   loans           Loan[]
@@ -145,6 +147,10 @@ model Loan {
   referralSource      String?   @map("referral_source")        // Free text referral info
   leadSource          String?   @map("lead_source")            // 'homepage_rate_table' | 'rate_tool' | 'referral' | 'direct' | etc.
   applicationChannel  String?   @map("application_channel")    // 'online' | 'branch' | 'phone'
+
+  // LDox integration
+  ldoxLoanId      String?   @unique @map("ldox_loan_id") @db.Uuid  // LDox UUID — primary merge key
+  creditScore     Int?      @map("credit_score")
 
   // Metadata
   applicationStep Int       @default(1) @map("application_step")
