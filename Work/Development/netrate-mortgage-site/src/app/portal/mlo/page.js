@@ -73,6 +73,9 @@ function BulkActionBar({ count, mloList, onBulkUpdate, onClear }) {
     try {
       await onBulkUpdate(updates);
       setActiveAction(null);
+    } catch (err) {
+      console.error('Bulk update failed:', err);
+      alert(`Bulk update failed: ${err.message}`);
     } finally {
       setApplying(false);
     }
