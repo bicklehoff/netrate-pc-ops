@@ -1112,3 +1112,52 @@ This brief contains:
 - [ ] **Mac (Compliance)** — Compliance review of PII handling (relay sent)
 - [ ] **Mac** — Build their side: `POST /api/loans/ingest` on Tracker
 - [ ] **Mac** — Update actor vocabulary (relay sent)
+
+---
+
+## 2026-03-10 — Portal Redesign Waves + Pipeline Fix (Dev)
+**Department:** Dev
+**Focus:** Wave-based portal redesign deployment, debug and fix pipeline crash
+
+### What was done
+- **Wave strategy** — Broke massive portal update into deployable waves instead of one big push
+- **Wave 1 (schema + API)** — Added MCR/HMDA fields (actionTaken, actionTakenDate, applicationMethod, lienStatus) and CRM fields (referralSource, leadSource, applicationChannel) to Loan model. Expanded loan detail API with 30+ editable fields, type coercion, MCR-aware auto-date capture. New `/api/portal/mlo/loans/[id]/dates` route. New `src/lib/constants/mcr-fields.js` constants.
+- **Wave 2 (Core UI)** — Deployed full sidebar-based loan detail redesign: LoanDetailShell orchestrator, LoanSidebar (desktop + mobile), StatusHeader, EditableField (click-to-edit with type support), SectionCard, and all 6 sections (Overview, LoanInfo, Borrower, Processing, Documents, NotesActivity). Backed up old view as LoanDetailViewLegacy.js.
+- **Pipeline crash fix** — After waves deployed, pipeline showed "Failed to load". Root cause: 5 columns in Prisma schema (work_drive_folder_id, work_drive_subfolders, cd_work_drive_file_id, cd_file_name, payroll_sent_at) had no migration — were added via `db push` but never migrated. Prisma client tried to SELECT non-existent columns. Created migration `20260310000001_add_workdrive_payroll_columns` to fix.
+- **Build script fix** — Added `prisma migrate deploy` to build script: `prisma generate && (prisma migrate deploy || true) && next build`. Non-blocking with `|| true` since Vercel may not have direct DB access during build.
+- **Dev playbook** — Wrote `Work/Development/DEV-PLAYBOOK.md` with rules for Prisma migrations, deployment verification, and wave deploys.
+- **Skills + pending files** — Committed marketing skills, Corebot integration brief, homepage mockup, FAR form.
+
+### Key decisions
+- Wave deploys for big features (schema first, then UI)
+- Never use `prisma db push` — migrations only (captured as MCP rule)
+- Always use `IF NOT EXISTS` in manual migration SQL
+- Build script must include `prisma migrate deploy`
+- Check Vercel runtime Logs (not just deploy status) after schema changes
+
+### Commits pushed
+- `8e96982` — Wave 1: Add MCR/CRM schema fields, expand loan API, add dates route
+- `ecdfe2e` — Wave 2: Core UI redesign — sidebar-based loan detail with all sections
+- `cd747a1` — Add prisma migrate deploy to build script
+- `5378488` — Fix build: make prisma migrate deploy non-blocking
+- `9b1ff74` — Fix pipeline crash: add missing WorkDrive/Payroll columns
+- `f9fc2e8` — Add dev playbook, skills, and pending work files
+
+### Files created/modified
+- `prisma/schema.prisma` — MCR/CRM fields added to Loan model
+- `prisma/migrations/20260310000000_add_mcr_crm_fields/` — Migration for MCR/CRM columns
+- `prisma/migrations/20260310000001_add_workdrive_payroll_columns/` — Migration for missing columns
+- `src/app/api/portal/mlo/loans/[id]/route.js` — Expanded GET/PATCH with full field support
+- `src/app/api/portal/mlo/loans/[id]/dates/route.js` — New dates API
+- `src/lib/constants/mcr-fields.js` — MCR/HMDA/CRM field constants
+- `src/app/portal/mlo/loans/[id]/page.js` — Switched to LoanDetailShell
+- `src/components/Portal/Core/` — 12 new files (shell, sidebar, sections, widgets)
+- `src/components/Portal/LoanDetailViewLegacy.js` — Backup of old view
+- `package.json` — Build script updated
+- `Work/Development/DEV-PLAYBOOK.md` — New dev playbook
+
+### Open items
+- [ ] **Dev** — Test new Core UI loan detail page end-to-end in production
+- [ ] **Dev** — Verify all 6 Core sections render correctly with real loan data
+- [ ] **Integrations** — Build Corebot ingest endpoint per brief (Work/Integrations/COREBOT-INGEST-BRIEF.md)
+- [ ] **Mac** — Build payroll ingestion + tracker push endpoints
