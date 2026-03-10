@@ -26,8 +26,9 @@ All devices share context via the **MCP knowledge layer** (Neon Postgres).
 | `admin` | Mac Admin department |
 | `dev` | Mac Dev department |
 | `pc-dev` | PC Dev / WebDev / Products / Integrations department |
+| `pc-setup` | PC Setup department |
 | `pc-marketing` | PC Marketing department |
-| `dave` | Dave (Ubuntu device) |
+| `claw` | Claw (Lenovo Legion / Ubuntu device) |
 
 Use these identifiers in MCP tool calls (`source` fields), RELAY entries, and completion reports.
 

@@ -997,3 +997,118 @@ Use this file to coordinate across PC work chats. Each session should read this 
 5. `Work/Marketing/PLAYBOOK.md` — full marketing playbook
 6. `src/middleware.js` — auth + password wall logic
 7. `src/lib/loan-states.js` — loan state machine transitions
+
+---
+
+## 2026-03-07 — Setup — PC Setup & Relay Handling
+
+**Department:** Setup
+**Actor:** pc-dev
+
+**What was done:**
+1. Checked relay — resolved 2 open messages from Mac:
+   - Test message (info) — acknowledged and resolved
+   - Governance pull action — pulled governance (commit 647a22b), verified PC CLAUDE.md has department table with folder ownership. Resolved.
+2. Fixed excessive file permission prompts on PC:
+   - **Root cause:** Department table in CLAUDE.md had vague folder definitions ("code in Development/") for Products, Integrations, Marketing. Combined with governance "refuse by default" rule, Claude couldn't determine ownership and asked David on every write.
+   - **Fix 1:** Updated root CLAUDE.md department table — split into Docs Folder + Code Access columns, explicitly grants all code departments shared write access to `netrate-mortgage-site/`
+   - **Fix 2:** Updated `Work/Development/CLAUDE.md` — added explicit note that all code files pass the refuse-by-default check; ownership boundaries only apply to docs folders
+   - **Fix 3:** Deleted junk nested `.claude/.claude/settings.local.json`
+3. Added SESSION-LOG.md reading to session start protocol (step 2 in root CLAUDE.md). Sent relay to Mac proposing governance-level addition.
+4. Claw setup assist — provided SSH key setup instructions for GitHub on Lenovo Legion (Ubuntu). Claw cloning governance. Role: legal/biz planning (not taking over PC role). Dave is retired. MCP updates deferred.
+
+**Files modified:**
+- `CLAUDE.md` (root) — updated department table, ownership rules, session start protocol
+- `Work/Development/CLAUDE.md` — added shared code access note for refuse-by-default rule
+- Deleted `.claude/.claude/settings.local.json` (junk nested file)
+
+**Key decisions:**
+- All code departments share write access to `netrate-mortgage-site/` — ownership rules only gate docs folders
+- SESSION-LOG.md reading added as mandatory session start step (proposed to governance via relay)
+- Claw device architecture updates deferred until role solidifies
+
+**Open items:**
+- [ ] **Mac** — Review governance proposal: add SESSION-LOG.md reading to session start protocol (relay sent)
+- [ ] **David** — Confirm Claw finishes cloning governance and gets SSH working
+- [ ] **Setup** — Update device architecture in CLAUDE.md and MCP once Claw's role is defined
+
+---
+
+## 2026-03-09 — Setup — Core Architecture & Corebot Spec
+
+**Department:** Setup
+**Actor:** pc-setup
+
+**What was done:**
+1. Architecture decision with David: Core (PC) is the system of record for loans, CRM, borrower portal, origination. LDox stays as Jamie's workspace and compliance LOS. Corebot syncs LDox → Core. On fund/ship, Core pushes finance data one-way to Tracker (Mac). Decision logged in MCP: cmmjbv8w50001krp481fg99n3.
+2. Received and analyzed real LDox JSON payload — mapped all fields to Core's Prisma schema. Identified what exists, what needs adding, what needs manual entry.
+3. Received revised Tracker ingest spec from Mac (MCR FV7 compliant) — 39 fields total. Mapped field sources: ~18 from LDox auto, ~4 derivable, ~14 manual entry, ~3 system.
+4. Wrote full Corebot integration brief: `Work/Integrations/COREBOT-INGEST-BRIEF.md`
+5. Updated actor vocabulary: added `pc-setup`, replaced `dave` with `claw`. Relayed to Mac.
+6. Flagged PII security review to Claw (legal) and Mac (compliance).
+
+**Files modified:**
+- `CLAUDE.md` (root) — actor vocabulary updated
+- `Work/Integrations/COREBOT-INGEST-BRIEF.md` — **FULL COREBOT SPEC** (created + revised)
+- `Work/Development/CLAUDE.md` — shared code access note (earlier in session)
+
+**Key decisions:**
+- Core is the system of record (MCP decision cmmjbv8w50001krp481fg99n3)
+- LDox stays for compliance / Jamie — Core outgrows it by end of 2026
+- One-way push: Core → Tracker (Mac) on status changes
+- Actor vocab: pc-setup added, dave → claw
+
+## 2026-03-10 — PC Dev Session (continued)
+**Department:** Dev
+**Focus:** Pipeline inline editing, archive, CD payroll bugfix
+
+### What was done
+- **Pipeline inline editing** — Zoho CRM-style click-to-edit for Status, LO, Lender, Loan # columns. Bulk selection with checkboxes + floating action bar for batch status changes and LO assignment. All edits create audit trail events.
+- **Archive (soft delete)** — Added `archived` as terminal status. Bulk archive via action bar. Archived loans hidden from Active view, visible under Archived tab, recoverable via inline edit.
+- **ballInCourt null fix** — `ballInCourt` is a required String but `getBallInCourt()` returns null for terminal statuses (funded/denied/archived). Added `|| 'none'` fallback in both pipeline and loan PATCH routes.
+- **Bulk update error handling** — Added try/catch with alert to BulkActionBar so API errors surface to user.
+- **David tested** — Archive, LO assignment, and CD upload all confirmed working.
+
+### Files modified
+- `src/app/portal/mlo/page.js` — BulkActionBar, MLO list fetch, selection state, archive tab
+- `src/components/Portal/PipelineTable.js` — EditableText, EditableSelect, checkboxes, archived status
+- `src/app/api/portal/mlo/pipeline/route.js` — PATCH bulk endpoint, ballInCourt fix
+- `src/app/api/portal/mlo/loans/[id]/route.js` — lenderName/loanNumber inline support, ballInCourt fix
+- `src/lib/loan-states.js` — Added archived status to state machine
+
+### Commits pushed
+- `e655599` — Add inline editing + bulk updates to Pipeline view
+- `7605297` — Add soft-delete archive status for pipeline loans
+- `731e78f` — Add error alert to bulk update action bar
+- `0a61779` — Fix ballInCourt null crash for terminal statuses
+
+### Open items
+- [ ] **Mac** — Build payroll ingestion: query `payrollSentAt IS NOT NULL`, pull CD from WorkDrive, OCR, feed to payroll tracker
+- [ ] **preview_start** — Doesn't work on PC (Windows spawn EINVAL + port 3000 conflict with Mac tracker). Pushing to Vercel for verification as workaround.
+
+---
+
+## ⚠️ NEXT DEV SESSION — READ THIS FIRST
+
+**Corebot integration is ready to build.** Full spec at:
+📄 **`Work/Integrations/COREBOT-INGEST-BRIEF.md`**
+
+This brief contains:
+- Part 1: Corebot Ingest endpoint (LDox → Core) — field mapping, merge logic
+- Part 2: Tracker Push endpoint (Core → Mac) — full MCR FV7 payload spec
+- Part 3: Schema migration — all new Prisma fields (copy-paste ready)
+- Part 4: Security requirements
+- Part 5: Build order (12 steps)
+- Open questions for David (8 items — need answers during build)
+
+**Build order starts with:** Schema migration → Ingest endpoint → Field mapping → Merge logic
+
+**Open items:**
+- [ ] **Integrations (Dev)** — Build Corebot ingest endpoint per brief
+- [ ] **Integrations (Dev)** — Build Tracker push function per brief
+- [ ] **Integrations (Dev)** — Schema migration: add ~30 new fields to Loan, LoanDates, Mlo
+- [ ] **David** — Answer 8 open questions in brief (LDox statuses, Jamie's officer ID, webhook URL, etc.)
+- [ ] **Claw (Legal)** — PII security review of Core's encryption model
+- [ ] **Mac (Compliance)** — Compliance review of PII handling (relay sent)
+- [ ] **Mac** — Build their side: `POST /api/loans/ingest` on Tracker
+- [ ] **Mac** — Update actor vocabulary (relay sent)
