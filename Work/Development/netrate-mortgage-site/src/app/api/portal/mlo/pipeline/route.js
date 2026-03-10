@@ -126,7 +126,7 @@ export async function PATCH(request) {
           where: { loanId: loan.id, status: 'requested' },
         });
         data.status = updates.status;
-        data.ballInCourt = getBallInCourt(updates.status, pendingDocs > 0);
+        data.ballInCourt = getBallInCourt(updates.status, pendingDocs > 0) || 'none';
         events.push({
           loanId: loan.id,
           eventType: 'status_change',

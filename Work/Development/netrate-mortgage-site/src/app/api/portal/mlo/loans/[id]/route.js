@@ -105,7 +105,7 @@ export async function PATCH(request, { params }) {
         where: { id },
         data: {
           status: body.status,
-          ballInCourt: getBallInCourt(body.status, pendingDocs > 0),
+          ballInCourt: getBallInCourt(body.status, pendingDocs > 0) || 'none',
         },
       });
 
