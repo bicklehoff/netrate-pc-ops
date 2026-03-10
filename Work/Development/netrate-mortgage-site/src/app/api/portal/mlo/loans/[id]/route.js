@@ -1,12 +1,55 @@
 // API: MLO Loan Detail
-// GET /api/portal/mlo/loans/:id — Full loan detail with borrower info, docs, events
-// PATCH /api/portal/mlo/loans/:id — Update loan status or fields
+// GET /api/portal/mlo/loans/:id — Full loan detail with all related data
+// PATCH /api/portal/mlo/loans/:id — Update loan status, fields, or add notes
+//
+// Core UI Redesign: Expanded GET includes dates, conditions, loanBorrowers, tasks.
+// Expanded PATCH accepts all editable fields + MCR-aware status→date auto-capture.
 
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { getBallInCourt } from '@/lib/loan-states';
+
+// Status → LoanDates field mapping for MCR-aware auto-date capture
+const STATUS_DATE_MAP = {
+  applied: 'applicationDate',
+  submitted_uw: 'submittedToUwDate',
+  cond_approved: 'condApprovedDate',
+  ctc: 'ctcDate',
+  docs_out: 'docsOutDate',
+  funded: 'fundingDate',
+};
+
+// All loan fields that can be updated via inline edit
+const EDITABLE_FIELDS = [
+  // Loan terms
+  'loanType', 'loanAmount', 'interestRate', 'loanTerm', 'lienStatus', 'numBorrowers',
+  // Property
+  'propertyType', 'numUnits', 'purchasePrice', 'downPayment', 'estimatedValue', 'currentBalance',
+  // Purpose
+  'purpose', 'occupancy', 'refiPurpose', 'cashOutAmount',
+  // Lender
+  'lenderName', 'loanNumber',
+  // Employment/Income
+  'employmentStatus', 'employerName', 'positionTitle', 'yearsInPosition',
+  'monthlyBaseIncome', 'otherMonthlyIncome', 'otherIncomeSource',
+  'presentHousingExpense', 'maritalStatus',
+  // MCR
+  'actionTaken', 'actionTakenDate', 'applicationMethod',
+  // CRM
+  'referralSource', 'leadSource', 'applicationChannel',
+];
+
+// Fields that need Decimal conversion
+const DECIMAL_FIELDS = [
+  'loanAmount', 'interestRate', 'purchasePrice', 'downPayment',
+  'estimatedValue', 'currentBalance', 'cashOutAmount',
+  'monthlyBaseIncome', 'otherMonthlyIncome', 'presentHousingExpense',
+];
+
+// Fields that need Integer conversion
+const INT_FIELDS = ['loanTerm', 'numUnits', 'yearsInPosition', 'numBorrowers'];
 
 export async function GET(request, { params }) {
   try {
@@ -42,6 +85,22 @@ export async function GET(request, { params }) {
           orderBy: { createdAt: 'desc' },
           take: 50,
         },
+        // ─── New includes for Core UI ───
+        dates: true,
+        conditions: {
+          orderBy: [{ stage: 'asc' }, { createdAt: 'asc' }],
+        },
+        loanBorrowers: {
+          orderBy: { ordinal: 'asc' },
+          include: {
+            borrower: {
+              select: { id: true, firstName: true, lastName: true, email: true },
+            },
+          },
+        },
+        tasks: {
+          orderBy: [{ priority: 'asc' }, { createdAt: 'desc' }],
+        },
       },
     });
 
@@ -67,6 +126,12 @@ export async function GET(request, { params }) {
       monthlyBaseIncome: loan.monthlyBaseIncome ? Number(loan.monthlyBaseIncome) : null,
       otherMonthlyIncome: loan.otherMonthlyIncome ? Number(loan.otherMonthlyIncome) : null,
       presentHousingExpense: loan.presentHousingExpense ? Number(loan.presentHousingExpense) : null,
+      // LoanBorrower decimal fields
+      loanBorrowers: (loan.loanBorrowers || []).map((lb) => ({
+        ...lb,
+        monthlyBaseIncome: lb.monthlyBaseIncome ? Number(lb.monthlyBaseIncome) : null,
+        otherMonthlyIncome: lb.otherMonthlyIncome ? Number(lb.otherMonthlyIncome) : null,
+      })),
     };
 
     return NextResponse.json({ loan: serialized });
@@ -95,7 +160,7 @@ export async function PATCH(request, { params }) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
-    // Handle status change (free jumps — rules enforced later)
+    // ─── Handle status change (with MCR-aware date auto-capture) ───
     if (body.status && body.status !== loan.status) {
       const pendingDocs = await prisma.document.count({
         where: { loanId: id, status: 'requested' },
@@ -121,10 +186,30 @@ export async function PATCH(request, { params }) {
         },
       });
 
+      // MCR-aware: auto-capture date on LoanDates when status changes
+      const dateField = STATUS_DATE_MAP[body.status];
+      if (dateField) {
+        await prisma.loanDates.upsert({
+          where: { loanId: id },
+          create: {
+            loanId: id,
+            [dateField]: new Date(),
+          },
+          update: {
+            // Only set if not already set (don't overwrite manual entries)
+            ...(await (async () => {
+              const existing = await prisma.loanDates.findUnique({ where: { loanId: id } });
+              if (existing && existing[dateField]) return {};
+              return { [dateField]: new Date() };
+            })()),
+          },
+        });
+      }
+
       return NextResponse.json({ loan: updated });
     }
 
-    // Handle note addition
+    // ─── Handle note addition ───
     if (body.note) {
       await prisma.loanEvent.create({
         data: {
@@ -139,7 +224,7 @@ export async function PATCH(request, { params }) {
       return NextResponse.json({ success: true });
     }
 
-    // Handle MLO assignment
+    // ─── Handle MLO assignment ───
     if (body.mloId !== undefined) {
       const updated = await prisma.loan.update({
         where: { id },
@@ -161,20 +246,37 @@ export async function PATCH(request, { params }) {
       return NextResponse.json({ loan: updated });
     }
 
-    // Handle inline field updates (lenderName, loanNumber)
-    const inlineFields = ['lenderName', 'loanNumber'];
-    const fieldUpdate = inlineFields.find((f) => body[f] !== undefined);
-    if (fieldUpdate) {
-      const data = {};
-      const details = {};
-      for (const field of inlineFields) {
-        if (body[field] !== undefined) {
-          data[field] = body[field] || null;
-          details[field] = { old: loan[field], new: body[field] || null };
-        }
-      }
+    // ─── Handle inline field updates (expanded for Core UI) ───
+    const fieldUpdates = {};
+    const fieldDetails = {};
 
-      const updated = await prisma.loan.update({ where: { id }, data });
+    for (const field of EDITABLE_FIELDS) {
+      if (body[field] !== undefined) {
+        let value = body[field];
+
+        // Type coerce
+        if (value === '' || value === null) {
+          value = null;
+        } else if (DECIMAL_FIELDS.includes(field)) {
+          value = parseFloat(value);
+          if (isNaN(value)) value = null;
+        } else if (INT_FIELDS.includes(field)) {
+          value = parseInt(value, 10);
+          if (isNaN(value)) value = null;
+        } else if (field === 'actionTakenDate') {
+          value = value ? new Date(value) : null;
+        }
+
+        fieldUpdates[field] = value;
+        fieldDetails[field] = { old: loan[field], new: value };
+      }
+    }
+
+    if (Object.keys(fieldUpdates).length > 0) {
+      const updated = await prisma.loan.update({
+        where: { id },
+        data: fieldUpdates,
+      });
 
       await prisma.loanEvent.create({
         data: {
@@ -182,8 +284,8 @@ export async function PATCH(request, { params }) {
           eventType: 'field_updated',
           actorType: 'mlo',
           actorId: session.user.id,
-          newValue: JSON.stringify(data),
-          details: { fields: details, source: 'inline_edit' },
+          newValue: JSON.stringify(fieldUpdates),
+          details: { fields: fieldDetails, source: 'core_inline_edit' },
         },
       });
 

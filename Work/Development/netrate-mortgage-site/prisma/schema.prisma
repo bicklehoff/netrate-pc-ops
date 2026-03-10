@@ -135,6 +135,17 @@ model Loan {
   cdFileName          String?   @map("cd_file_name")           // Original file name of the CD PDF
   payrollSentAt       DateTime? @map("payroll_sent_at")        // When "Send to Payroll" was clicked
 
+  // MCR / HMDA reporting fields
+  actionTaken         String?   @map("action_taken")           // 'originated' | 'denied' | 'withdrawn' | 'incomplete' | 'purchased'
+  actionTakenDate     DateTime? @map("action_taken_date")
+  applicationMethod   String?   @map("application_method")     // 'face_to_face' | 'phone' | 'internet'
+  lienStatus          String?   @map("lien_status")            // 'first' | 'subordinate' | 'unsecured'
+
+  // CRM / Production fields
+  referralSource      String?   @map("referral_source")        // Free text referral info
+  leadSource          String?   @map("lead_source")            // 'homepage_rate_table' | 'rate_tool' | 'referral' | 'direct' | etc.
+  applicationChannel  String?   @map("application_channel")    // 'online' | 'branch' | 'phone'
+
   // Metadata
   applicationStep Int       @default(1) @map("application_step")
   submittedAt     DateTime? @map("submitted_at")
