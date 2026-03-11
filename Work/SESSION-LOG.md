@@ -1213,3 +1213,34 @@ This brief contains:
 - [ ] **Integrations** — Handle edge cases: missing borrower email, duplicate loan numbers
 - [ ] **Mac** — Build payroll ingestion + tracker push endpoints
 - [ ] **Dev** — Test Core UI loan detail page with real LDox-ingested loan data
+
+---
+
+## Session: March 11, 2026 — Reverse Mortgage Marketing Strategy + HECM Explorer Brief (Marketing)
+
+**Chat focus:** Researched Bruce Simmons (ALM Denver) marketing model, analyzed reverse mortgage SEO landscape, identified content gaps, designed borrower-facing HECM Explorer tool, delivered dev brief.
+
+### What was done
+- **Competitive analysis:** Deep-dive on Bruce Simmons (NMLS #409914, ALM Denver) — his radio strategy, SEO approach, CE referral pipeline, "first CRMP in Colorado" positioning. Analyzed via web research, not for personal info — purely marketing/business model.
+- **SEO gap analysis:** Researched reverse mortgage keyword landscape for Colorado. Key finding: nobody publishes cost-transparent content with real math. The "lower fees = more money" angle is completely unoccupied in search.
+- **Content strategy:** Identified 5 blog post topics for capturing reverse mortgage search traffic (cost breakdown, fees impact, vs HELOC, scam debunking, local Louisville/Boulder). Multi-state angle (CO, TX, OR, CA pending) noted.
+- **HECM Explorer product spec:** Designed a borrower-facing reverse mortgage calculator at `/tools/reverse-mortgage-calculator` — simplified inputs with sliders, auto-calculation via existing HECM engine, Recharts visualization (cost bar chart, LOC growth line chart), ARM vs Fixed comparison cards, educational tooltips, lead capture.
+- **Dev brief delivered:** Full spec saved to `Work/Marketing/HECM-EXPLORER-DEV-BRIEF.md` — ready for Dev department pickup.
+- **Relay acknowledged:** Two relays from Claw (EOD legal FYI + Bruce Simmons research target).
+
+### Key decisions
+- Borrower HECM tool is a NEW route (`/tools/reverse-mortgage-calculator`), not a modification of the MLO optimizer
+- Existing HECM calculation engine (src/lib/hecm/) reused as-is — no new math, just a borrower-friendly wrapper
+- Recharts added as visualization library (bar charts, line charts)
+- Blog posts are Phase 3 — tool comes first (Phase 1), then content points to tool
+- Multi-state play: CO first, then TX/OR versions of cost content (same math, different home values)
+- David confirmed he can originate HECMs and his angle is identical to forward: collect less, borrower gets more
+
+### Files created
+- `Work/Marketing/HECM-EXPLORER-DEV-BRIEF.md` — Full dev brief for HECM Explorer tool
+
+### Open items
+- [ ] **Dev** — Execute HECM Explorer build per `Work/Marketing/HECM-EXPLORER-DEV-BRIEF.md`
+- [ ] **David** — Answer 4 open questions in brief (origination fee, target comp, third-party costs default, state list)
+- [ ] **Marketing** — Draft 5 reverse mortgage blog posts once blog infrastructure exists (Phase 3)
+- [ ] **Marketing** — Brief Dev on Phase 2 (forward mortgage visualization) and Phase 3 (blog infrastructure)
