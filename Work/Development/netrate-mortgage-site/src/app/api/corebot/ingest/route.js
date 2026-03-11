@@ -134,7 +134,7 @@ async function processLoan(loanData) {
   let mloId = null;
   if (loanData.loanOfficer) {
     const mlo = await prisma.mlo.findUnique({
-      where: { ldoxOfficerId: loanData.loanOfficer },
+      where: { ldoxOfficerId: parseInt(loanData.loanOfficer, 10) },
     });
     if (mlo) mloId = mlo.id;
   }
