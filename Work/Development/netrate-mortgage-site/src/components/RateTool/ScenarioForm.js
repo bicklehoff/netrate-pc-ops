@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import { getFicoBand } from '@/lib/rates/engine';
+import { STATE_DEFAULTS, getThirdPartyCosts } from '@/lib/rates/closing-costs';
 
 export default function ScenarioForm({ scenario, onChange }) {
   const update = (field, value) => onChange({ ...scenario, [field]: value });
@@ -93,12 +94,34 @@ export default function ScenarioForm({ scenario, onChange }) {
               className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
           </div>
         )}
+        <div>
+          <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">State</label>
+          <select value={scenario.state || 'CO'} onChange={e => {
+            const st = e.target.value;
+            onChange({ ...scenario, state: st, thirdPartyCosts: getThirdPartyCosts(st) });
+          }}
+            className="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white">
+            {Object.entries(STATE_DEFAULTS).map(([code, { label }]) => (
+              <option key={code} value={code}>{label}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">
+            Est. Third-Party Costs
+            <span className="ml-1 text-gray-400 normal-case tracking-normal" title="Title, escrow, appraisal, recording fees. Adjust based on your situation.">(?)</span>
+          </label>
+          <input type="number" step="100" value={scenario.thirdPartyCosts || ""} placeholder="$"
+            onChange={e => update("thirdPartyCosts", Number(e.target.value))}
+            className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+        </div>
       </div>
       {loanAmount > 0 && (
         <div className="mt-4 pt-3 border-t border-gray-100 flex flex-wrap gap-6 text-sm text-gray-600">
           <span>Loan Amount: <strong className="text-gray-800">${loanAmount.toLocaleString("en-US", { maximumFractionDigits: 0 })}</strong></span>
           <span>LTV: <strong className="text-gray-800">{ltv.toFixed(1)}%</strong></span>
           <span>FICO Band: <strong className="text-gray-800">{getFicoBand(scenario.fico)}</strong></span>
+          <span>State: <strong className="text-gray-800">{scenario.state || 'CO'}</strong></span>
         </div>
       )}
     </div>

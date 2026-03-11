@@ -37,7 +37,7 @@ body {
   animation-play-state: paused;
 }
 
-/* HECM Optimizer Print Styles */
+/* Print Styles (HECM Optimizer + Rate Quote) */
 @media print {
   body {
     background: white;
@@ -47,6 +47,11 @@ body {
   /* Hide nav and screen-only elements via data attribute */
   nav, header, [data-print-hide] {
     display: none !important;
+  }
+
+  /* Prevent constrained widths from clipping print layouts */
+  .max-w-4xl, .max-w-5xl, .max-w-6xl, .max-w-7xl {
+    max-width: 100% !important;
   }
 
   .print-page {

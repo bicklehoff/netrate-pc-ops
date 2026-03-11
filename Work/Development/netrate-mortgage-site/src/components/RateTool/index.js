@@ -7,6 +7,7 @@ import RateResults from './RateResults';
 import RateEducation from './RateEducation';
 import LeadCapture from './LeadCapture';
 import RateQuoteModal from './RateQuoteModal';
+import RateQuotePrintView from './RateQuotePrintView';
 import { LO_CONFIG } from '@/lib/rates/config';
 
 export default function RateTool({ initialRateData }) {
@@ -23,9 +24,21 @@ export default function RateTool({ initialRateData }) {
     fico: 760,
     loanAmount: 0,
     ltv: 0,
+    state: 'CO',
+    thirdPartyCosts: 2800,
   });
 
   const [selectedRate, setSelectedRate] = useState(null);
+  const [compareRates, setCompareRates] = useState([]);
+
+  const handleToggleCompare = (rate) => {
+    setCompareRates(prev => {
+      const exists = prev.find(r => r.rate === rate.rate);
+      if (exists) return prev.filter(r => r.rate !== rate.rate);
+      if (prev.length >= 3) return prev;
+      return [...prev, rate];
+    });
+  };
 
   return (
     <div>
@@ -41,14 +54,26 @@ export default function RateTool({ initialRateData }) {
             <p className="text-xs text-cyan-200/70 uppercase tracking-widest">Today&apos;s Rates</p>
             <p className="text-sm text-cyan-100">Effective {rateData.lender.effectiveDate}</p>
             <p className="text-xs text-cyan-200/50">Updated {rateData.lender.effectiveTime}</p>
+            <button
+              onClick={() => window.print()}
+              className="mt-2 text-xs font-semibold border border-white/40 text-white rounded-md px-3 py-1.5 hover:bg-white/10 transition-colors print:hidden"
+            >
+              Print My Quote
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Rate Tool Body */}
-      <div className="px-1">
+      {/* Rate Tool Body — hidden in print */}
+      <div className="px-1 print:hidden">
         <ScenarioForm scenario={scenario} onChange={setScenario} />
-        <RateResults scenario={scenario} rateData={rateData} onSelectRate={setSelectedRate} />
+        <RateResults
+          scenario={scenario}
+          rateData={rateData}
+          onSelectRate={setSelectedRate}
+          compareRates={compareRates}
+          onToggleCompare={handleToggleCompare}
+        />
         <RateEducation />
         <LeadCapture scenario={scenario} />
       </div>
@@ -62,8 +87,16 @@ export default function RateTool({ initialRateData }) {
         />
       )}
 
+      {/* Print View — hidden on screen, shown in print */}
+      <RateQuotePrintView
+        scenario={scenario}
+        rateData={rateData}
+        compareRates={compareRates}
+        selectedRate={selectedRate}
+      />
+
       {/* Disclaimer */}
-      <div className="text-xs text-gray-400 px-5 py-4 border-t border-gray-100 leading-relaxed">
+      <div className="text-xs text-gray-400 px-5 py-4 border-t border-gray-100 leading-relaxed print:hidden">
         <p>Rates shown are approximate based on today&apos;s wholesale pricing and standard loan-level adjustments. Actual rates depend on full credit review, property appraisal, and underwriting. Not a commitment to lend. {LO_CONFIG.company} | NMLS {LO_CONFIG.nmls} | {LO_CONFIG.address}</p>
       </div>
     </div>
