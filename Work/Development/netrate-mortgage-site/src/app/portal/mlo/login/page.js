@@ -27,10 +27,8 @@ export default function MloLoginPage() {
         redirect: false,
       });
 
-      console.log('[MLO Login] signIn result:', JSON.stringify(result));
-
       if (result?.error) {
-        setError(`Login failed: ${result.error} (status: ${result.status})`);
+        setError('Invalid email or password.');
         return;
       }
 
