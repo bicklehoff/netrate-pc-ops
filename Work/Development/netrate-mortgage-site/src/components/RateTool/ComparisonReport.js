@@ -17,6 +17,7 @@ export default function ComparisonReport({ compareRates, scenario, rateData, onC
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState(null);
+  const [pdfBusy, setPdfBusy] = useState(false);
   const containerRef = useRef(null);
 
   // Close on Escape
@@ -72,7 +73,7 @@ export default function ComparisonReport({ compareRates, scenario, rateData, onC
           email: form.email,
           phone: form.phone,
           message: description,
-          leadSource: 'Rate Tool - Comparison Report',
+          leadSource: 'Rate Tool - Lock My Rate',
         }),
       });
       if (!res.ok) throw new Error('Something went wrong. Please try again or call us directly.');
@@ -84,10 +85,37 @@ export default function ComparisonReport({ compareRates, scenario, rateData, onC
     }
   };
 
-  const handlePrint = () => {
-    // Scroll to top of report before printing
-    if (containerRef.current) containerRef.current.scrollTop = 0;
-    setTimeout(() => window.print(), 100);
+  const handleDownloadPDF = async () => {
+    setPdfBusy(true);
+    try {
+      const [{ pdf }, { default: ReportPDF }] = await Promise.all([
+        import('@react-pdf/renderer'),
+        import('./ReportPDF'),
+      ]);
+      const blob = await pdf(
+        <ReportPDF
+          compareRates={ratesToShow}
+          scenario={scenario}
+          rateData={rateData}
+          llpa={llpa}
+        />
+      ).toBlob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `NetRate-Rate-Comparison-${new Date().toISOString().slice(0, 10)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('PDF generation failed:', err);
+      // Fallback to browser print
+      if (containerRef.current) containerRef.current.scrollTop = 0;
+      setTimeout(() => window.print(), 100);
+    } finally {
+      setPdfBusy(false);
+    }
   };
 
   // Column count for spanning
@@ -115,10 +143,11 @@ export default function ComparisonReport({ compareRates, scenario, rateData, onC
             </div>
             <div className="text-right print:hidden flex items-center gap-3">
               <button
-                onClick={handlePrint}
-                className="text-xs font-semibold border border-gray-300 text-gray-600 rounded-md px-3 py-1.5 hover:bg-gray-50 transition-colors"
+                onClick={handleDownloadPDF}
+                disabled={pdfBusy}
+                className="text-xs font-semibold border border-gray-300 text-gray-600 rounded-md px-3 py-1.5 hover:bg-gray-50 transition-colors disabled:opacity-50"
               >
-                Print Report
+                {pdfBusy ? 'Generating...' : 'Download PDF'}
               </button>
               <button
                 onClick={onClose}
@@ -459,7 +488,7 @@ export default function ComparisonReport({ compareRates, scenario, rateData, onC
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">Thank you!</h3>
                 <p className="text-sm text-gray-600">
-                  I&apos;ll review your scenario and send you an exact quote with the full cost breakdown within the hour.
+                  I&apos;ll review your scenario and reach out shortly to lock your rate and discuss next steps.
                 </p>
                 <p className="text-sm text-brand font-medium mt-3">
                   &mdash; {LO_CONFIG.name}, {LO_CONFIG.phone}
@@ -467,9 +496,9 @@ export default function ComparisonReport({ compareRates, scenario, rateData, onC
               </div>
             ) : (
               <div className="max-w-md mx-auto">
-                <h3 className="text-lg font-bold text-gray-900 text-center mb-1">Ready to Move Forward?</h3>
+                <h3 className="text-lg font-bold text-gray-900 text-center mb-1">Ready to Lock In Your Rate?</h3>
                 <p className="text-sm text-gray-500 text-center mb-4">
-                  Get your exact quote with a full fee breakdown, cash to close, and savings analysis.
+                  Like what you see? Drop your info and I&apos;ll reach out to lock your rate and walk you through next steps.
                 </p>
                 <form onSubmit={handleSubmit} className="space-y-3">
                   <input type="text" placeholder="Full Name" required value={form.name}
@@ -484,7 +513,7 @@ export default function ComparisonReport({ compareRates, scenario, rateData, onC
                   {error && <p className="text-sm text-red-600">{error}</p>}
                   <button type="submit" disabled={submitting}
                     className="w-full bg-brand text-white rounded-lg py-3 font-semibold hover:bg-brand-dark transition-colors disabled:opacity-50">
-                    {submitting ? 'Sending...' : 'Send Me My Exact Quote'}
+                    {submitting ? 'Sending...' : 'Lock My Rate'}
                   </button>
                 </form>
                 <p className="text-xs text-gray-400 text-center mt-3">No credit pull. No obligation. Just real numbers.</p>

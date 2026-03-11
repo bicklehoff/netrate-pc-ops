@@ -3,17 +3,20 @@
 import { useState } from 'react';
 
 export default function RateEducation() {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   return (
-    <div className="bg-white border border-gray-200 rounded-lg my-4 overflow-hidden">
+    <div className="bg-cyan-50/50 border border-cyan-200 rounded-lg my-4 overflow-hidden">
       <button onClick={() => setExpanded(!expanded)}
-        className="w-full px-5 py-4 flex justify-between items-center hover:bg-gray-50 transition-colors cursor-pointer">
-        <h2 className="text-base font-semibold text-gray-800">How Rate Pricing Works</h2>
+        className="w-full px-5 py-4 flex justify-between items-center hover:bg-cyan-50 transition-colors cursor-pointer">
+        <h2 className="text-base font-semibold text-gray-800 flex items-center gap-2">
+          <span className="text-cyan-600 text-sm">&#9432;</span>
+          How Rate Pricing Works
+        </h2>
         <span className="text-gray-400 text-lg">{expanded ? "\u2212" : "+"}</span>
       </button>
       {expanded && (
         <div className="px-5 pb-5 text-sm text-gray-600 leading-relaxed">
-          <div className="bg-cyan-50 rounded-lg p-4 mb-4">
+          <div className="bg-white rounded-lg p-4 mb-4 border border-cyan-100">
             <p className="font-semibold text-gray-800 mb-2">The Rate vs. Cost Tradeoff</p>
             <p>Every rate comes with a price. Rates <strong>above par</strong> come with a <strong className="text-green-700">lender credit</strong> — the lender gives you money to offset closing costs. Rates <strong>below par</strong> require <strong className="text-red-600">discount points</strong> — you pay upfront to buy the lower rate.</p>
           </div>
