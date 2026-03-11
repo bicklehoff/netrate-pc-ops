@@ -61,4 +61,20 @@ body {
   .print-page-break {
     page-break-before: always;
   }
+
+  /* Flatten modal overlay for print — removes backdrop, fixed positioning */
+  .report-overlay {
+    position: static !important;
+    background: none !important;
+    display: block !important;
+  }
+
+  .report-container {
+    max-width: 100% !important;
+    max-height: none !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
 }

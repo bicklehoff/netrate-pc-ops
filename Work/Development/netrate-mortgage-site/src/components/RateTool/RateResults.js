@@ -1,10 +1,8 @@
 'use client';
 
 import { calculateLLPA, calculatePI, priceRates } from '@/lib/rates/engine';
-import RateCostChart from './RateCostChart';
-import BreakEvenChart from './BreakEvenChart';
 
-export default function RateResults({ scenario, rateData, onSelectRate, compareRates = [], onToggleCompare }) {
+export default function RateResults({ scenario, rateData, compareRates = [], onToggleCompare, onViewReport }) {
   if (!scenario.loanAmount || scenario.loanAmount <= 0 || !scenario.propertyValue) {
     return (
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 my-4 text-center text-gray-500">
@@ -60,10 +58,9 @@ export default function RateResults({ scenario, rateData, onSelectRate, compareR
               <th className="text-right px-3 py-3">Monthly P&I</th>
               {currentPI && <th className="text-right px-3 py-3">Monthly Savings</th>}
               <th className="text-right px-3 py-3">Credit / Charge</th>
-              <th className="text-right px-5 py-3">Net Cost ($)</th>
+              <th className="text-right px-5 py-3">Lender Cost</th>
               <th className="px-3 py-3"></th>
               <th className="px-2 py-3 print:hidden"></th>
-              <th className="px-3 py-3"></th>
             </tr>
           </thead>
           <tbody>
@@ -85,14 +82,16 @@ export default function RateResults({ scenario, rateData, onSelectRate, compareR
                     </td>
                   )}
                   <td className={`text-right px-3 py-3 font-semibold ${isCredit ? "text-green-700" : "text-red-600"}`}>
-                    {isCredit ? "Credit" : "Charge"} {Math.abs(r.adjPrice).toFixed(2)}%
+                    {isCredit ? "Credit" : "Charge"}
                   </td>
                   <td className={`text-right px-5 py-3 font-mono font-semibold ${isCredit ? "text-green-700" : "text-red-600"}`}>
-                    {isCredit ? "+" : "-"}${Math.abs(r.creditDollars).toLocaleString("en-US", { maximumFractionDigits: 0 })}
+                    {isCredit
+                      ? `($${Math.abs(r.creditDollars).toLocaleString("en-US", { maximumFractionDigits: 0 })})`
+                      : `$${Math.abs(r.creditDollars).toLocaleString("en-US", { maximumFractionDigits: 0 })}`}
                   </td>
                   <td className="px-3 py-3">
-                    {isPar && <span className="text-xs text-white rounded px-2 py-1 bg-brand">PAR</span>}
-                    {!isPar && isCredit && r.adjPrice < -1 && <span className="text-xs bg-green-100 text-green-800 rounded px-2 py-1">Low Cost</span>}
+                    {isPar && <span className="text-xs text-white rounded px-2 py-1 whitespace-nowrap bg-brand">PAR</span>}
+                    {!isPar && isCredit && r.adjPrice < -1 && <span className="text-xs bg-green-100 text-green-800 rounded px-2 py-1 whitespace-nowrap">Low Cost</span>}
                   </td>
                   <td className="px-2 py-3 print:hidden">
                     {(() => {
@@ -112,14 +111,6 @@ export default function RateResults({ scenario, rateData, onSelectRate, compareR
                       );
                     })()}
                   </td>
-                  <td className="px-3 py-3">
-                    <button
-                      onClick={() => onSelectRate?.(r)}
-                      className="whitespace-nowrap text-xs font-semibold border border-brand text-brand rounded-md px-3 py-1.5 hover:bg-brand hover:text-white transition-colors"
-                    >
-                      Get This Rate
-                    </button>
-                  </td>
                 </tr>
               );
             })}
@@ -127,60 +118,27 @@ export default function RateResults({ scenario, rateData, onSelectRate, compareR
         </table>
       </div>
 
-      {/* Rate vs. Cost Chart */}
-      <RateCostChart
-        visibleRates={visibleRates}
-        lenderFees={rateData.lender.lenderFees}
-        thirdPartyCosts={scenario.thirdPartyCosts}
-      />
+      {/* Current rate nudge for refi when no current rate entered */}
+      {scenario.purpose !== 'purchase' && !currentPI && (
+        <div className="px-5 py-3 bg-amber-50 border-t border-amber-200 text-sm text-amber-800">
+          <strong>Tip:</strong> Enter your current rate above to see monthly savings and break-even analysis for each option.
+        </div>
+      )}
 
-      {/* Recoup Analysis for Refi */}
-      {currentPI && scenario.loanAmount > 0 && (() => {
-        const refiCandidates = visibleRates.filter(r => {
-          const netCost = r.creditDollars + rateData.lender.lenderFees + (scenario.thirdPartyCosts || 0);
-          const sav = currentPI - r.monthlyPI;
-          return netCost > 100 && sav > 0;
-        }).slice(0, 3);
-
-        return (
-          <>
-            <div className="px-5 py-4 bg-gray-50 border-t border-gray-200">
-              <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Recoup Analysis (for refinance)</p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {refiCandidates.map(r => {
-                  const sav = currentPI - r.monthlyPI;
-                  const cost = r.creditDollars + rateData.lender.lenderFees + (scenario.thirdPartyCosts || 0);
-                  const months = cost / sav;
-                  return (
-                    <div key={r.rate} className="bg-white rounded border border-gray-200 p-3 text-center">
-                      <p className="text-lg font-bold text-gray-800">{r.rate.toFixed(3)}%</p>
-                      <p className="text-xs text-gray-500 mt-1">Save ${sav.toFixed(0)}/mo | Cost ${cost.toLocaleString("en-US", { maximumFractionDigits: 0 })}</p>
-                      <p className="text-sm font-semibold text-brand mt-1">{months.toFixed(1)} months to recoup</p>
-                      <button
-                        onClick={() => onSelectRate?.(r)}
-                        className="mt-2 w-full text-xs font-semibold bg-brand text-white rounded-md px-3 py-2 hover:bg-brand-dark transition-colors"
-                      >
-                        Get This Rate
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Break-Even Visualizer */}
-            {refiCandidates.length > 0 && (
-              <BreakEvenChart
-                candidateRates={refiCandidates}
-                currentRate={scenario.currentRate}
-                loanAmount={scenario.loanAmount}
-                lenderFees={rateData.lender.lenderFees}
-                thirdPartyCosts={scenario.thirdPartyCosts}
-              />
-            )}
-          </>
-        );
-      })()}
+      {/* View Comparison Report CTA */}
+      {compareRates.length > 0 && (
+        <div className="px-5 py-4 bg-brand/5 border-t border-brand/20 flex items-center justify-between">
+          <p className="text-sm text-gray-700">
+            <strong>{compareRates.length}</strong> rate{compareRates.length > 1 ? 's' : ''} selected for comparison
+          </p>
+          <button
+            onClick={() => onViewReport?.()}
+            className="bg-brand text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-brand-dark transition-colors"
+          >
+            View Comparison Report
+          </button>
+        </div>
+      )}
 
       <div className="px-5 py-2 text-xs text-gray-400 border-t border-gray-100">
         Rates approximate based on today&apos;s pricing. Lender fees: ${rateData.lender.lenderFees.toLocaleString()}. Est. third-party costs: ${(scenario.thirdPartyCosts || 0).toLocaleString()}. Contact for exact quote with full cost breakdown.

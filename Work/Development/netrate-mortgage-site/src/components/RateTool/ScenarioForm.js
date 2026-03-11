@@ -92,6 +92,7 @@ export default function ScenarioForm({ scenario, onChange }) {
             <input type="number" step="0.125" value={scenario.currentRate || ""} placeholder="%"
               onChange={e => update("currentRate", Number(e.target.value))}
               className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+            <p className="text-xs text-gray-400 mt-1">Your existing mortgage rate &mdash; used to calculate savings</p>
           </div>
         )}
         <div>
@@ -105,15 +106,6 @@ export default function ScenarioForm({ scenario, onChange }) {
               <option key={code} value={code}>{label}</option>
             ))}
           </select>
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">
-            Est. Third-Party Costs
-            <span className="ml-1 text-gray-400 normal-case tracking-normal" title="Title, escrow, appraisal, recording fees. Adjust based on your situation.">(?)</span>
-          </label>
-          <input type="number" step="100" value={scenario.thirdPartyCosts || ""} placeholder="$"
-            onChange={e => update("thirdPartyCosts", Number(e.target.value))}
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
         </div>
       </div>
       {loanAmount > 0 && (
