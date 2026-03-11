@@ -1,8 +1,22 @@
 'use client';
 
+import { useEffect } from 'react';
 import { calculateLLPA, calculatePI, priceRates } from '@/lib/rates/engine';
+import { getAutoPickRates } from './reportUtils';
 
-export default function RateResults({ scenario, rateData, compareRates = [], onToggleCompare, onViewReport }) {
+export default function RateResults({ scenario, rateData, compareRates = [], onToggleCompare, onViewReport, onAutoSelect }) {
+  // Auto-select suggested rates when compareRates is empty and data is valid
+  useEffect(() => {
+    if (compareRates.length === 0 && scenario.loanAmount > 0 && scenario.propertyValue > 0 && onAutoSelect) {
+      const r = priceRates(scenario, rateData);
+      const lf = rateData.lender.lenderFees;
+      const tp = scenario.thirdPartyCosts || 0;
+      const picks = getAutoPickRates(r, lf, tp);
+      if (picks.length > 0) onAutoSelect(picks);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scenario.loanAmount]);
+
   if (!scenario.loanAmount || scenario.loanAmount <= 0 || !scenario.propertyValue) {
     return (
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 my-4 text-center text-gray-500">
@@ -23,7 +37,19 @@ export default function RateResults({ scenario, rateData, compareRates = [], onT
 
   const showStart = Math.max(0, parIdx - 5);
   const showEnd = Math.min(rates.length, parIdx + 6);
-  const visibleRates = rates.slice(showStart, showEnd);
+  // Reverse so table displays lowest rate first (ascending)
+  const visibleRates = rates.slice(showStart, showEnd).reverse();
+
+  // Compute badge thresholds
+  const lenderFees = rateData.lender.lenderFees;
+  const thirdPartyCosts = scenario.thirdPartyCosts || 0;
+  const totalFixed = lenderFees + thirdPartyCosts;
+
+  // Find the best-value (discounted) rate for badge
+  const costRates = rates.filter(r => r.adjPrice >= 0.25);
+  const bestValueRate = costRates.length > 0
+    ? costRates.reduce((best, r) => Math.abs(r.adjPrice - 0.75) < Math.abs(best.adjPrice - 0.75) ? r : best)
+    : null;
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg my-4 overflow-hidden">
@@ -55,7 +81,7 @@ export default function RateResults({ scenario, rateData, compareRates = [], onT
           <div className="flex items-center gap-2 text-sm text-gray-700">
             <span className="font-semibold text-brand">{compareRates.length}</span>
             <span>rate{compareRates.length > 1 ? 's' : ''} selected:</span>
-            {compareRates.map(r => (
+            {[...compareRates].sort((a, b) => a.rate - b.rate).map(r => (
               <span key={r.rate} className="bg-white border border-brand/30 text-brand-dark font-mono font-semibold rounded px-2 py-0.5 text-xs">
                 {r.rate.toFixed(3)}%
               </span>
@@ -89,10 +115,11 @@ export default function RateResults({ scenario, rateData, compareRates = [], onT
               const isCredit = r.adjPrice < 0;
               const isPar = Math.abs(r.adjPrice) < 0.15;
               const savings = currentPI ? currentPI - r.monthlyPI : 0;
-              const actualIdx = showStart + i;
+              const isNoCost = (totalFixed + r.creditDollars) <= 0;
+              const isBestValue = bestValueRate && r.rate === bestValueRate.rate;
               return (
                 <tr key={r.rate}
-                  className={`border-b border-gray-100 ${isPar ? "bg-cyan-50" : actualIdx % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-cyan-50 transition-colors`}>
+                  className={`border-b border-gray-100 ${isPar ? "bg-cyan-50" : i % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-cyan-50 transition-colors`}>
                   <td className="px-5 py-3 font-semibold text-gray-800">{r.rate.toFixed(3)}%</td>
                   <td className="text-right px-3 py-3 font-mono text-gray-700">
                     ${r.monthlyPI.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -111,8 +138,9 @@ export default function RateResults({ scenario, rateData, compareRates = [], onT
                       : `$${Math.abs(r.creditDollars).toLocaleString("en-US", { maximumFractionDigits: 0 })}`}
                   </td>
                   <td className="px-3 py-3">
-                    {isPar && <span className="text-xs text-white rounded px-2 py-1 whitespace-nowrap bg-brand">PAR</span>}
-                    {!isPar && isCredit && r.adjPrice < -1 && <span className="text-xs bg-green-100 text-green-800 rounded px-2 py-1 whitespace-nowrap">Low Cost</span>}
+                    {isBestValue && <span className="text-xs bg-blue-100 text-blue-800 rounded px-2 py-1 whitespace-nowrap">BEST VALUE</span>}
+                    {isPar && !isBestValue && <span className="text-xs text-white rounded px-2 py-1 whitespace-nowrap bg-brand">PAR</span>}
+                    {isNoCost && !isPar && !isBestValue && <span className="text-xs bg-green-100 text-green-800 rounded px-2 py-1 whitespace-nowrap">NO COST</span>}
                   </td>
                   <td className="px-2 py-3 print:hidden">
                     {(() => {

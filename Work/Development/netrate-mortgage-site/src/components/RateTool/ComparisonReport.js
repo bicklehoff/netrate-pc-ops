@@ -34,17 +34,6 @@ export default function ComparisonReport({ compareRates, scenario, rateData, onC
 
   // --- Data setup ---
   const rates = priceRates(scenario, rateData);
-  let parIdx = 0;
-  let minAbsAdj = Infinity;
-  rates.forEach((r, i) => {
-    if (Math.abs(r.adjPrice) < minAbsAdj) { minAbsAdj = Math.abs(r.adjPrice); parIdx = i; }
-  });
-  const showStart = Math.max(0, parIdx - 5);
-  const showEnd = Math.min(rates.length, parIdx + 6);
-  const visibleRates = rates.slice(showStart, showEnd);
-
-  const ratesToShow = compareRates.length > 0 ? compareRates : getAutoPickRates(visibleRates);
-  if (ratesToShow.length === 0 || !scenario.loanAmount || scenario.loanAmount <= 0) return null;
 
   const llpa = calculateLLPA(scenario, rateData);
   const currentPI = scenario.currentRate ? calculatePI(scenario.currentRate, scenario.loanAmount) : null;
@@ -52,6 +41,11 @@ export default function ComparisonReport({ compareRates, scenario, rateData, onC
   const stateLabel = STATE_DEFAULTS[scenario.state]?.label || scenario.state || '';
   const lenderFees = rateData.lender.lenderFees;
   const thirdPartyCosts = scenario.thirdPartyCosts || 0;
+
+  // Sort rates low→high for display
+  const ratesToShow = (compareRates.length > 0 ? compareRates : getAutoPickRates(rates, lenderFees, thirdPartyCosts))
+    .slice().sort((a, b) => a.rate - b.rate);
+  if (ratesToShow.length === 0 || !scenario.loanAmount || scenario.loanAmount <= 0) return null;
   const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
   // --- Lead capture ---
