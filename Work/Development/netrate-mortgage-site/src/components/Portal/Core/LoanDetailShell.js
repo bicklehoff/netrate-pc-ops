@@ -72,6 +72,7 @@ export default function LoanDetailShell({ loan, onRefresh }) {
         return (
           <OverviewSection
             loan={loan}
+            onRefresh={onRefresh}
           />
         );
       case 'loan-info':

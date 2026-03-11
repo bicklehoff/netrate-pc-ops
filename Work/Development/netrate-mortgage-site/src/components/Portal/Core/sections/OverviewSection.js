@@ -4,6 +4,7 @@
 'use client';
 
 import SectionCard from '../SectionCard';
+import PayrollSection from '../../PayrollSection';
 
 // Status labels used by milestone pipeline
 // (kept local to avoid cross-import dependency)
@@ -42,7 +43,7 @@ function getMilestoneIndex(status) {
   return idx >= 0 ? idx : -1;
 }
 
-export default function OverviewSection({ loan }) {
+export default function OverviewSection({ loan, onRefresh }) {
   const dates = loan.dates || {};
   const conditions = loan.conditions || [];
   const milestoneIndex = getMilestoneIndex(loan.status);
@@ -54,6 +55,11 @@ export default function OverviewSection({ loan }) {
 
   return (
     <div className="space-y-6">
+      {/* ─── CD Upload + Payroll (funded loans) ─── */}
+      {loan.status === 'funded' && (
+        <PayrollSection loan={loan} onRefresh={onRefresh} />
+      )}
+
       {/* ─── Milestone Pipeline ─── */}
       <SectionCard title="Loan Progress" icon="📈" defaultOpen={true}>
         <div className="flex items-center justify-between mb-4">
