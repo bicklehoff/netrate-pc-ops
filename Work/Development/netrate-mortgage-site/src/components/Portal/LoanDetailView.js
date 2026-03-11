@@ -8,7 +8,7 @@ import WorkDrivePanel from './WorkDrivePanel';
 import PayrollSection from './PayrollSection';
 
 const STATUS_LABELS = {
-  draft: 'Draft',
+  draft: 'Prospect',
   applied: 'Applied',
   processing: 'Processing',
   submitted_uw: 'Submitted to UW',

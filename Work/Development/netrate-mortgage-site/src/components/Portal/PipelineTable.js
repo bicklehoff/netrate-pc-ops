@@ -15,7 +15,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 
 const STATUS_LABELS = {
-  draft: 'Draft',
+  draft: 'Prospect',
   applied: 'Applied',
   processing: 'Processing',
   submitted_uw: 'In UW',

@@ -6,7 +6,7 @@
 import { useState } from 'react';
 
 const STATUS_LABELS = {
-  draft: 'Draft',
+  draft: 'Prospect',
   applied: 'Applied',
   processing: 'Processing',
   submitted_uw: 'In UW',

@@ -15,7 +15,7 @@ import XmlImportModal from '@/components/Portal/XmlImportModal';
 const STATUS_FILTERS = [
   { value: 'all', label: 'All' },
   { value: 'active', label: 'Active' },
-  { value: 'draft', label: 'Draft' },
+  { value: 'draft', label: 'Prospect' },
   { value: 'applied', label: 'Applied' },
   { value: 'processing', label: 'Processing' },
   { value: 'submitted_uw', label: 'In UW' },
@@ -29,7 +29,7 @@ const STATUS_FILTERS = [
 const TERMINAL_STATUSES = ['funded', 'denied', 'archived'];
 
 const STATUS_LABELS = {
-  draft: 'Draft',
+  draft: 'Prospect',
   applied: 'Applied',
   processing: 'Processing',
   submitted_uw: 'In UW',

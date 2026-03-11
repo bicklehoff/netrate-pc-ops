@@ -9,7 +9,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 const STATUS_OPTIONS = [
-  { value: 'draft', label: 'Draft' },
+  { value: 'draft', label: 'Prospect' },
   { value: 'applied', label: 'Applied' },
   { value: 'processing', label: 'Processing' },
   { value: 'submitted_uw', label: 'Submitted to UW' },

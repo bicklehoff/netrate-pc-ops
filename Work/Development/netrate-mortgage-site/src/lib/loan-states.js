@@ -5,7 +5,7 @@
 // ─── Status Labels (for UI display) ─────────────────────────
 
 export const STATUS_LABELS = {
-  draft: 'Draft',
+  draft: 'Prospect',
   applied: 'Applied',
   processing: 'Processing',
   submitted_uw: 'Submitted to UW',

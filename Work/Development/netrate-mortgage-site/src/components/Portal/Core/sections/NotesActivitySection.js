@@ -7,7 +7,7 @@ import { useState } from 'react';
 import SectionCard from '../SectionCard';
 
 const STATUS_LABELS = {
-  draft: 'Draft',
+  draft: 'Prospect',
   applied: 'Applied',
   processing: 'Processing',
   submitted_uw: 'In UW',
