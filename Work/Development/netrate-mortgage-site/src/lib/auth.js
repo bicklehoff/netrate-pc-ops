@@ -23,19 +23,30 @@ export const authOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
+          console.log('[MLO Auth] Missing credentials');
           return null;
         }
 
+        const email = credentials.email.toLowerCase();
+        console.log('[MLO Auth] Attempting login for:', email);
+
         const mlo = await prisma.mlo.findUnique({
-          where: { email: credentials.email.toLowerCase() },
+          where: { email },
         });
 
-        if (!mlo) return null;
+        if (!mlo) {
+          console.log('[MLO Auth] No MLO found for email:', email);
+          return null;
+        }
+
+        console.log('[MLO Auth] Found MLO:', mlo.email, '| hash prefix:', mlo.passwordHash.substring(0, 10));
 
         const passwordValid = await bcrypt.compare(
           credentials.password,
           mlo.passwordHash
         );
+
+        console.log('[MLO Auth] Password valid:', passwordValid);
 
         if (!passwordValid) return null;
 
