@@ -1159,5 +1159,57 @@ This brief contains:
 ### Open items
 - [ ] **Dev** — Test new Core UI loan detail page end-to-end in production
 - [ ] **Dev** — Verify all 6 Core sections render correctly with real loan data
-- [ ] **Integrations** — Build Corebot ingest endpoint per brief (Work/Integrations/COREBOT-INGEST-BRIEF.md)
+- [x] ~~**Integrations** — Build Corebot ingest endpoint per brief~~ (done Mar 11)
 - [ ] **Mac** — Build payroll ingestion + tracker push endpoints
+
+---
+
+## Session: March 11, 2026 — Corebot Integration Live + Zoho Flow Config (Integrations/pc-dev)
+
+**Chat focus:** Built and deployed the Corebot ingest endpoint, configured Zoho Flow as a proxy to forward LDox webhook data to Core, fixed runtime errors, renamed "Draft" status to "Prospect".
+
+### What was done
+- Built `POST /api/corebot/ingest` endpoint — receives loan data from Zoho Flow, upserts into Core DB
+- Created migration `20260310000002_add_ldox_integration_fields` — added ldoxLoanId, creditScore to Loan; ldoxOfficerId, nmls to Mlo
+- Set MLO ldoxOfficerIds in production: David=641790, Jamie=180707
+- Generated and deployed COREBOT_API_KEY to Vercel env vars
+- Configured Zoho Flow: added Send Webhook step to existing LDox flow (original flow, not clone — LDox webhook URL is bound to original)
+- Fixed runtime errors: ldoxOfficerId string→int parse, all numeric fields string→number parse (loanAmount, interestRate, loanTerm, purchasePrice, estimatedValue, numUnits, creditScore)
+- Successfully ingested first loan (Pritchett, loan #0170485932) from LDox → Zoho Flow → Core
+- Renamed "Draft" display label to "Prospect" across all UI components (8 files) to match LDox terminology
+- Updated Jamie Cunningham's last name in production DB (was "NetRate")
+
+### Key decisions
+- Zoho Flow as proxy — LDox untouched, existing Flow forwards to Core as additional step
+- Clone approach abandoned — LDox webhook URL is bound to original Flow, can't reuse across flows
+- Display label "Prospect" instead of "Draft" — internal key stays `draft`, just UI rename
+- LDox sends all values as strings — endpoint parses to correct types (parseInt/parseFloat)
+- Architecture: LDox → Zoho Flow webhook → Send Webhook step → POST /api/corebot/ingest → Core DB
+
+### Commits pushed
+- `071c893` — Add Corebot ingest endpoint for Zoho Flow → Core pipeline
+- `7e1e21b` — Redeploy: pick up COREBOT_API_KEY env var
+- `da21e97` — Fix: parse ldoxOfficerId as int for Prisma query
+- `c5b9ea0` — Fix: parse all numeric fields from LDox string values
+- `fec87a5` — Rename 'Draft' status label to 'Prospect' across UI
+- `2890ddb` — Fix launch.json: npm.cmd → npm for preview compatibility
+
+### Files created/modified
+- `src/app/api/corebot/ingest/route.js` — NEW: Corebot ingest endpoint (~280 lines)
+- `prisma/schema.prisma` — Added ldoxLoanId, creditScore to Loan; ldoxOfficerId, nmls to Mlo
+- `prisma/migrations/20260310000002_add_ldox_integration_fields/migration.sql` — New migration
+- `src/lib/loan-states.js` — Draft → Prospect label
+- `src/app/portal/mlo/page.js` — Draft → Prospect label
+- `src/components/Portal/Core/StatusHeader.js` — Draft → Prospect label
+- `src/components/Portal/LoanDetailView.js` — Draft → Prospect label
+- `src/components/Portal/LoanDetailViewLegacy.js` — Draft → Prospect label
+- `src/components/Portal/Core/sections/NotesActivitySection.js` — Draft → Prospect label
+- `src/components/Portal/PipelineTable.js` — Draft → Prospect label
+- `src/components/Portal/XmlImportModal.js` — Draft → Prospect label
+- `.claude/launch.json` — Fixed npm.cmd → npm
+
+### Open items
+- [ ] **Integrations** — Monitor next few LDox webhook fires to confirm stability
+- [ ] **Integrations** — Handle edge cases: missing borrower email, duplicate loan numbers
+- [ ] **Mac** — Build payroll ingestion + tracker push endpoints
+- [ ] **Dev** — Test Core UI loan detail page with real LDox-ingested loan data
