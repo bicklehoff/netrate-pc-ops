@@ -1,5 +1,5 @@
 // Comparison Report — Full-page modal overlay modeled on David's Wagner spreadsheet.
-// Sections: Savings & Pay-Back, Rate Comparison, Fee Detail, Charts, Lead CTA.
+// Sections: Savings & Pay-Back, Rate Comparison, Fee Detail, LLPA Breakdown, Lead CTA.
 // Renders both on-screen (modal) and in print (@media print flattens the overlay).
 
 'use client';
@@ -10,8 +10,6 @@ import { LO_CONFIG } from '@/lib/rates/config';
 import { STATE_DEFAULTS } from '@/lib/rates/closing-costs';
 import { getUtmParams, formatUtmString } from '@/lib/utm';
 import { PURPOSE_LABELS, PROP_LABELS, fmtDollar, fmtPI, getAutoPickRates } from './reportUtils';
-import RateCostChart from './RateCostChart';
-import BreakEvenChart from './BreakEvenChart';
 
 export default function ComparisonReport({ compareRates, scenario, rateData, onClose }) {
   const [showFeeDetail, setShowFeeDetail] = useState(false);
@@ -55,15 +53,6 @@ export default function ComparisonReport({ compareRates, scenario, rateData, onC
   const lenderFees = rateData.lender.lenderFees;
   const thirdPartyCosts = scenario.thirdPartyCosts || 0;
   const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-
-  // Refi candidates for break-even chart
-  const refiCandidates = isRefi && currentPI
-    ? ratesToShow.filter(r => {
-        const netCost = r.creditDollars + lenderFees + thirdPartyCosts;
-        const sav = currentPI - r.monthlyPI;
-        return netCost > 100 && sav > 0;
-      })
-    : [];
 
   // --- Lead capture ---
   const handleSubmit = async (e) => {
@@ -463,27 +452,6 @@ export default function ComparisonReport({ compareRates, scenario, rateData, onC
                 </tr>
               </tbody>
             </table>
-          </div>
-
-          {/* ===== CHARTS (screen only — SVG prints but sizing can be off) ===== */}
-          <div className="mb-6 print:hidden">
-            {/* Rate vs. Cost Chart */}
-            <RateCostChart
-              visibleRates={visibleRates}
-              lenderFees={lenderFees}
-              thirdPartyCosts={thirdPartyCosts}
-            />
-
-            {/* Break-Even Chart (refi only) */}
-            {refiCandidates.length > 0 && (
-              <BreakEvenChart
-                candidateRates={refiCandidates}
-                currentRate={scenario.currentRate}
-                loanAmount={scenario.loanAmount}
-                lenderFees={lenderFees}
-                thirdPartyCosts={thirdPartyCosts}
-              />
-            )}
           </div>
 
           {/* ===== CTA SECTION (screen only) ===== */}

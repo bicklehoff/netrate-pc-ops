@@ -49,6 +49,27 @@ export default function RateResults({ scenario, rateData, compareRates = [], onT
         </div>
       </div>
 
+      {/* Sticky Compare Bar — always visible when rates selected */}
+      {compareRates.length > 0 && (
+        <div className="sticky top-0 z-10 px-5 py-3 bg-brand/5 border-b border-brand/20 flex items-center justify-between print:hidden">
+          <div className="flex items-center gap-2 text-sm text-gray-700">
+            <span className="font-semibold text-brand">{compareRates.length}</span>
+            <span>rate{compareRates.length > 1 ? 's' : ''} selected:</span>
+            {compareRates.map(r => (
+              <span key={r.rate} className="bg-white border border-brand/30 text-brand-dark font-mono font-semibold rounded px-2 py-0.5 text-xs">
+                {r.rate.toFixed(3)}%
+              </span>
+            ))}
+          </div>
+          <button
+            onClick={() => onViewReport?.()}
+            className="bg-brand text-white px-5 py-2 rounded-lg font-semibold text-sm hover:bg-brand-dark transition-colors whitespace-nowrap"
+          >
+            View Comparison Report
+          </button>
+        </div>
+      )}
+
       {/* Rate Table */}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
@@ -122,21 +143,6 @@ export default function RateResults({ scenario, rateData, compareRates = [], onT
       {scenario.purpose !== 'purchase' && !currentPI && (
         <div className="px-5 py-3 bg-amber-50 border-t border-amber-200 text-sm text-amber-800">
           <strong>Tip:</strong> Enter your current rate above to see monthly savings and break-even analysis for each option.
-        </div>
-      )}
-
-      {/* View Comparison Report CTA */}
-      {compareRates.length > 0 && (
-        <div className="px-5 py-4 bg-brand/5 border-t border-brand/20 flex items-center justify-between">
-          <p className="text-sm text-gray-700">
-            <strong>{compareRates.length}</strong> rate{compareRates.length > 1 ? 's' : ''} selected for comparison
-          </p>
-          <button
-            onClick={() => onViewReport?.()}
-            className="bg-brand text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-brand-dark transition-colors"
-          >
-            View Comparison Report
-          </button>
         </div>
       )}
 
