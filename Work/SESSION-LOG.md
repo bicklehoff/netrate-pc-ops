@@ -1244,3 +1244,42 @@ This brief contains:
 - [ ] **David** — Answer 4 open questions in brief (origination fee, target comp, third-party costs default, state list)
 - [ ] **Marketing** — Draft 5 reverse mortgage blog posts once blog infrastructure exists (Phase 3)
 - [ ] **Marketing** — Brief Dev on Phase 2 (forward mortgage visualization) and Phase 3 (blog infrastructure)
+
+---
+
+## Session: March 11, 2026 — Rate Tool Engagement Layer Build (Dev)
+
+**Chat focus:** Built the full Rate Tool engagement layer — charts, compare, print quote — per the approved dev brief and 3-wave build plan.
+
+### What was done
+- **Wave 1 (Foundation):** Created `closing-costs.js` with state-level third-party fee defaults (CO, TX, OR, CA). Added State dropdown and editable Third-Party Costs input to ScenarioForm. Updated RateResults recoup cost calc to include third-party costs.
+- **Wave 2 (Charts):** Installed recharts 3.8.0. Created `chartHelpers.js` (shared colors, fonts, formatters). Built `RateCostChart.js` — AreaChart with dynamic green/red gradient for credit/cost zones, par reference line. Built `BreakEvenChart.js` — ComposedChart with cumulative savings line vs cost horizontal line, rate pill selector, hero stats, dynamic horizon.
+- **Wave 3 (Print + Compare):** Added Compare toggle (max 3 rates) to RateResults. Built `RateQuotePrintView.js` — branded print layout with scenario summary, rate comparison table, LLPA breakdown, cost breakdown, break-even stats, disclaimer. Added "Print My Quote" button. Added print CSS max-width override to globals.css.
+- **Build verification:** Lint clean, `npm run build` passes, all 58 pages generated.
+
+### Key decisions
+- Third-party fees use state-level defaults with user override (not per-county granularity)
+- Break-even chart uses dynamic horizon (break-even × 1.5, min 12mo, max 120mo)
+- Compare button max 3 rates; fallback to auto-pick (low rate / par / high credit)
+- Print view pattern matches HECM PrintView.js (`hidden print:block`)
+- creditDollars convention: negative = lender credit, positive = discount points
+
+### Files created
+- `src/lib/rates/closing-costs.js` — State defaults + getThirdPartyCosts helper
+- `src/components/RateTool/chartHelpers.js` — Shared chart colors, fonts, formatters
+- `src/components/RateTool/RateCostChart.js` — Rate vs. net cost AreaChart
+- `src/components/RateTool/BreakEvenChart.js` — Break-even ComposedChart
+- `src/components/RateTool/RateQuotePrintView.js` — Branded print quote view
+
+### Files modified
+- `src/components/RateTool/index.js` — State/thirdPartyCosts state, compareRates, Print button, RateQuotePrintView
+- `src/components/RateTool/ScenarioForm.js` — State dropdown + third-party costs input
+- `src/components/RateTool/RateResults.js` — Charts, compare toggle, updated recoup calc
+- `src/app/globals.css` — Print max-width override
+- `package.json` / `package-lock.json` — recharts 3.8.0
+
+### Open items
+- [ ] **Dev** — Test at /rates on production after Vercel deploy
+- [ ] **Dev** — Verify print preview renders correctly on Chrome + Safari
+- [ ] **Dev** — Test mobile responsiveness (charts at 375px)
+- [ ] **Dev** — Execute HECM Explorer build per dev brief
