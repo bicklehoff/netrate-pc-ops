@@ -1,10 +1,16 @@
 # NetRate Mortgage — PC Operations
 # Device: PC (Public Facing)
-# Governance: See netrate-governance repo (GOVERNANCE.md) for shared rules
 
-This device handles all public-facing work: website, borrower products, calculators, integrations, and client-facing tools.
+## MANDATORY: Read GOVERNANCE.md Before ANY Work
 
-**Governance version:** v2.0 — Mac is the authority for the base layer. Pull `netrate-governance` repo for shared rules.
+Pull `netrate-governance` repo. Read `GOVERNANCE.md`. It contains ALL shared protocols:
+- **Session Handoff Protocol (SHP)** — session start, session close, triggers, automatic context recovery
+- **EOD Protocol** — end of day (8 steps, includes SHP)
+- **Spotter Protocol** — friction scanner
+- **Auditor Role** — independent review
+- **Department Model, Tracker Architecture, Cross-Device Rules, Document Generation, Process Documentation**
+
+**Nothing in this file replaces governance.** This file contains PC-specific context only. Governance is the single source of truth for all shared protocols. Mac is the authority for the base layer.
 
 ---
 
@@ -14,7 +20,7 @@ This device handles all public-facing work: website, borrower products, calculat
 |--------|------|-------|
 | **Mac** | Back office — processing, compliance, trackers, internal tools. Governance authority. | `netrate-ops` |
 | **PC** | Public facing — website, rate tool, calculators, borrower products, integrations | `netrate-pc-ops` |
-| **Dave** (Ubuntu) | Third device — role TBD | TBD |
+| **Claw** (Lenovo Legion / Ubuntu) | Advisory/directive — legal, compliance, strategy | `claw-ops` |
 
 All devices share context via the **MCP knowledge layer** (Neon Postgres).
 
@@ -34,43 +40,22 @@ Use these identifiers in MCP tool calls (`source` fields), RELAY entries, and co
 
 ---
 
-## Session Protocol (MCP-Connected)
+## MANDATORY — Run These Steps BEFORE Responding to ANY Request
 
-**At the START of every new chat:**
-1. Call `get_briefing(device="pc", department=<yours>)` via MCP to get full context: recent sessions (own + cross-device), active decisions, open items, capture stats
-2. Read `Work/SESSION-LOG.md` (last 3–5 entries) to check for in-progress work, recent file changes, or handoff notes from other departments
-3. Review both sources — summarize anything important for David before starting work
-4. If MCP is unavailable, fall back to: pull `netrate-governance`, check `RELAY.md`, read `Work/SESSION-LOG.md`
+Do NOT skip these. Do NOT respond to David's first message until these are complete.
 
-**DURING a session — update Work/SESSION-LOG.md immediately if:**
-- Another department would need to know this to do their job
-- Paths, folders, or file structures changed
-- A major or permanent decision was made
-- Something was created that other chats will reference
+1. `get_briefing(device="pc", department=<yours>)` — full context from MCP
+2. `check_relay(device="pc")` — check for cross-device messages
+3. Read `Work/SESSION-LOG.md` (last 3-5 entries) — recent work, handoffs, open items
+4. Read `REGISTRY.md` in your codebase (if it exists) — know what's been built
+5. `git log --oneline -5` — see recent commits
+6. Check for uncommitted/untracked files — previous session may have crashed
+7. `get_recent_sessions(device="pc", since=today)` — what other sessions did today
+8. Announce your department to David, summarize anything important from the above
 
-*Rule of thumb: If you'd tell a coworker "hey, heads up..." — log it now.*
+Full protocol details in GOVERNANCE.md (Session Handoff Protocol). MCP fallback: pull `netrate-governance`, check `RELAY.md`, read `Work/SESSION-LOG.md`.
 
-**At the END of every session:**
-1. Update `Work/SESSION-LOG.md` with what was done
-2. Call `log_session(device="pc", department=<yours>, summary=..., keyDecisions=[...], filesModified=[...], openItems=[...])` via MCP
-3. Use MCP tools to capture any reusable knowledge: `capture_thought` for facts/insights, `log_decision` for decisions made
-
----
-
-## Shared Rules (from Governance)
-
-The following are defined in `netrate-governance/GOVERNANCE.md` and apply to ALL devices:
-- Session Protocol (MCP briefing → work → MCP log)
-- Department Model (concept)
-- EOD Protocol (end of day wrap-up)
-- Tracker Architecture (Neon Postgres — shared database)
-- Spotter Protocol (friction scanner)
-- Auditor Role (independent review)
-- Document Generation rules
-- Process Documentation rules
-- Cross-Device Rules (device roles, tracker authority, governance changes)
-
-**Read GOVERNANCE.md before your first session.** These rules are not repeated here.
+**SESSION-LOG:** `Work/SESSION-LOG.md` — ONE log for ALL PC sessions.
 
 ---
 
@@ -169,7 +154,7 @@ All devices share context → MCP knowledge layer (Neon Postgres) → get_briefi
 Cross-device proposals/questions → post to RELAY.md in netrate-governance → other device pulls and reads
 ```
 
-**RELAY.md:** For cross-device communication (proposals, questions, handoffs, completion reports), post to `netrate-governance/RELAY.md`. David says "check RELAY.md" to signal new messages. Pull before reading, push after writing.
+**Relay:** Cross-device communication uses MCP tools (`send_relay`, `check_relay`, `ack_relay`). Legacy file-based relay (`netrate-governance/RELAY.md`) is a fallback if MCP is unavailable.
 
 ## Key Resources on Mac (Read via GitHub)
 

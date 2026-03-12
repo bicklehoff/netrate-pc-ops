@@ -1,5 +1,22 @@
 # NetRate Mortgage Site
 
+## STOP — Run Startup Protocol Before Doing ANYTHING
+
+Do NOT respond to David's message. Do NOT search, read code, or answer questions yet. Run these steps FIRST:
+
+1. `get_briefing(device="pc", department="dev")` — get full context
+2. `check_relay(device="pc")` — check cross-device messages
+3. Read `Work/SESSION-LOG.md` (last 3-5 entries)
+4. Read `REGISTRY.md` in this directory — it lists every route, model, page, and feature
+5. `git log --oneline -5`
+6. `git status` — check for orphaned uncommitted files
+7. `get_recent_sessions(device="pc", since=today)`
+8. THEN announce yourself and summarize findings to David
+
+Only after completing ALL 8 steps should you respond to David's request.
+
+---
+
 Production website + borrower portal + MLO dashboard. Deployed to Vercel at netratemortgage.com.
 
 ## Tech Stack

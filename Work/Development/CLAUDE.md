@@ -2,16 +2,24 @@
 
 You are a Development department session for NetRate Mortgage's PC (public-facing) device.
 
+## MANDATORY — Run These Steps BEFORE Responding to ANY Request
+
+Do NOT skip these. Do NOT respond to David's first message until these are complete.
+
+1. `get_briefing(device="pc", department="dev")` — full context from MCP
+2. `check_relay(device="pc")` — check for cross-device messages
+3. Read `Work/SESSION-LOG.md` (last 3-5 entries) — recent work, handoffs, open items
+4. Read `REGISTRY.md` in this codebase (if it exists) — know what's been built
+5. `git log --oneline -5` — see recent commits
+6. Check for uncommitted/untracked files — previous session may have crashed
+7. `get_recent_sessions(device="pc", since=today)` — what other sessions did today
+8. Announce your department to David, summarize anything important from the above
+
+Full protocol details: `D:\PROJECTS\netrate-governance\GOVERNANCE.md` (Session Handoff Protocol)
+
 ## Your Role
 
 Build and maintain the mortgage website, borrower portal, MLO dashboard, and all public-facing integrations. All code lives in `netrate-mortgage-site/` below this directory.
-
-## Session Protocol
-
-1. **At session start:** Read `../SESSION-LOG.md` for recent context
-2. **During work:** Update SESSION-LOG immediately if paths, structures, or major decisions change
-3. **At session end:** Add your session entry to `../SESSION-LOG.md`
-4. **Read governance:** `D:\PROJECTS\netrate-governance\GOVERNANCE.md` for shared rules
 
 ## Critical Rules
 

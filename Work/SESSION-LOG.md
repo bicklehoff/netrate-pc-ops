@@ -1335,3 +1335,213 @@ This brief contains:
 - [ ] **Mac** — Check relay: CD Upload + Send to Payroll spec (relay cmmmpi4ya0001krrc7xpy02mb)
 - [ ] **Mac** — Build Tracker ingest endpoint to poll/receive payroll_sent events
 - [ ] **Dev** — Continue Rate Tool Wave 1-3 plan (comparison report)
+
+---
+
+## 2026-03-11 — Setup — EOD: Relay, Tracker Spec, Actor Vocab, Process Cleanup
+
+**Department:** Setup
+**Actor:** pc-setup
+
+**What was done:**
+1. Checked relay — resolved test message, resolved governance pull action (verified PC CLAUDE.md compliant)
+2. Fixed excessive file permission prompts: updated department table in root CLAUDE.md (split Docs/Code columns, explicit shared code access) and Work/Development/CLAUDE.md (refuse-by-default exemption for codebase)
+3. Added SESSION-LOG.md reading as mandatory session start step 2. Relayed governance proposal to Mac.
+4. Claw setup assist — SSH key instructions for GitHub, governance cloning. Dave retired.
+5. Core architecture decision with David — Core is system of record, LDox stays for Jamie/compliance, one-way push to Tracker on fund. Decision logged in MCP (cmmjbv8w50001krp481fg99n3).
+6. Analyzed real LDox JSON payload — mapped all fields to Core schema.
+7. Received Mac's revised Tracker ingest spec (MCR FV7, 39 fields). Mapped sources: ~18 LDox auto, ~4 derivable, ~14 manual, ~3 system. Acknowledged with full breakdown.
+8. Updated `Work/Integrations/COREBOT-INGEST-BRIEF.md` — now full 5-part spec (ingest + push + migration + security + build order).
+9. Updated actor vocabulary: added pc-setup, replaced dave with claw. Relayed to Mac.
+10. Killed 25 orphaned node processes from hung dev session.
+
+**Files modified:**
+- `CLAUDE.md` (root) — department table, ownership rules, session start protocol, actor vocabulary
+- `Work/Development/CLAUDE.md` — shared code access note
+- `Work/Integrations/COREBOT-INGEST-BRIEF.md` — full 5-part integration spec (created + revised)
+- `Work/SESSION-LOG.md` — multiple entries
+
+**Key decisions:**
+- Core is system of record (MCP decision cmmjbv8w50001krp481fg99n3)
+- All code departments share write access to netrate-mortgage-site — ownership rules only gate docs folders
+- Mac's MCR FV7 spec accepted — Core will supply all 39 fields
+- Actor vocab: pc-setup added, dave → claw
+- SESSION-LOG.md reading added as mandatory session start step
+
+**Open items:**
+- [ ] **Integrations (Dev)** — Build Tracker push per `Work/Integrations/COREBOT-INGEST-BRIEF.md` Part 2
+- [ ] **David** — Answer 8 open questions in brief
+- [ ] **Mac** — Build `POST /api/loans/ingest` on Tracker side
+- [ ] **Mac** — Review governance proposal: SESSION-LOG.md at startup
+- [ ] **Mac** — Update actor vocabulary per relay
+- [ ] **Claw (Legal)** — PII security review of Core encryption model
+
+---
+
+## Session: 2026-03-11 - Core UI Redesign Phase 1 Build (Dev / WebDev)
+
+**Chat focus:** Implement the approved Core UI Redesign — new sidebar-based loan detail page replacing the old single-column LoanDetailView.
+
+**What was done:**
+1. Applied 7 MCR/CRM schema fields to Neon Postgres via raw SQL (`prisma db execute --stdin`) — `prisma migrate dev` and `prisma db push` both fail on the shared DB due to Mac's tables
+2. Created `src/lib/constants/mcr-fields.js` — MCR/HMDA constants (action taken, application method, lien status, lead sources, channels)
+3. Built Core component scaffolding in `src/components/Portal/Core/`:
+   - `SectionCard.js` — collapsible card wrapper with badge/actions support
+   - `EditableField.js` — generic click-to-edit (text, select, currency, date, textarea) with source badges
+   - `StatusHeader.js` — compact top bar with status dropdown, BIC indicator, WorkDrive/XML links
+   - `LoanSidebar.js` — desktop vertical sidebar (w-56) + mobile horizontal tab strip, query-param routing
+   - `LoanDetailShell.js` — orchestrator: sidebar + header + section switching via `?section=` param
+4. Built 6 section components in `src/components/Portal/Core/sections/`:
+   - `OverviewSection.js` — milestone pipeline, quick stats grid, key dates, conditions summary
+   - `LoanInfoSection.js` — editable fields: loan terms, property, purpose, lender, MCR/HMDA, CRM/source
+   - `BorrowerSection.js` — identity (read-only), SSN reveal, co-borrower tabs, employment/income (editable)
+   - `ProcessingSection.js` — task cards (credit, appraisal, title, flood, HOI) with click-to-edit dates + conditions by stage
+   - `DocumentsSection.js` — migrated doc list/request form + WorkDrive + Payroll from old LoanDetailView
+   - `NotesActivitySection.js` — migrated notes input + activity timeline
+5. Expanded `src/app/api/portal/mlo/loans/[id]/route.js`:
+   - GET now includes: dates, conditions, loanBorrowers, tasks
+   - PATCH now accepts all editable fields (loan terms, property, MCR, CRM) with type coercion
+   - Status changes auto-capture dates on LoanDates model (MCR-aware)
+6. Created `src/app/api/portal/mlo/loans/[id]/dates/route.js` — GET/PATCH for processing checklist dates
+7. Rewired `src/app/portal/mlo/loans/[id]/page.js` to render LoanDetailShell (wrapped in Suspense for useSearchParams)
+8. Lint passes clean — no ESLint errors
+9. Created migration record: `prisma/migrations/20260310000000_add_mcr_crm_fields/migration.sql`
+10. Backed up old component: `LoanDetailViewLegacy.js`
+
+**Key decisions:**
+- Raw SQL via `prisma db execute --stdin` is the safe migration path for shared Neon DB
+- Query-param routing (`?section=overview`) instead of nested file routes
+- LoanDetailView replaced entirely — legacy backup kept at LoanDetailViewLegacy.js
+- Status→date auto-capture: only sets date if LoanDates field is null (won't overwrite manual entries)
+- MCR/HMDA section defaults to collapsed (not all users need it)
+
+**Files created:**
+- `src/lib/constants/mcr-fields.js`
+- `src/components/Portal/Core/SectionCard.js`
+- `src/components/Portal/Core/EditableField.js`
+- `src/components/Portal/Core/StatusHeader.js`
+- `src/components/Portal/Core/LoanSidebar.js`
+- `src/components/Portal/Core/LoanDetailShell.js`
+- `src/components/Portal/Core/sections/OverviewSection.js`
+- `src/components/Portal/Core/sections/LoanInfoSection.js`
+- `src/components/Portal/Core/sections/BorrowerSection.js`
+- `src/components/Portal/Core/sections/ProcessingSection.js`
+- `src/components/Portal/Core/sections/DocumentsSection.js`
+- `src/components/Portal/Core/sections/NotesActivitySection.js`
+- `src/app/api/portal/mlo/loans/[id]/dates/route.js`
+- `prisma/migrations/20260310000000_add_mcr_crm_fields/migration.sql`
+- `src/components/Portal/LoanDetailViewLegacy.js` (backup)
+
+**Files modified:**
+- `prisma/schema.prisma` — 7 MCR/CRM fields on Loan model
+- `src/app/api/portal/mlo/loans/[id]/route.js` — expanded GET/PATCH
+- `src/app/portal/mlo/loans/[id]/page.js` — rewired to LoanDetailShell
+
+**Open items:**
+- [ ] **Dev** — Run `next build` to verify production build passes (build was hanging — may need to kill stale node processes first)
+- [ ] **Dev** — Test new loan detail UI in browser against real loan data
+- [ ] **Dev** — David changed 'Draft' to 'Prospect' in NotesActivitySection STATUS_LABELS — propagate to other components if intentional
+- [ ] **Dev** — Audit old LoanDetailView.js imports — anything still referencing it? (PipelineTable links should be fine since URL didn't change)
+- [ ] **Dev** — Next phase: add condition CRUD, task CRUD, audit reconciliation layer
+
+---
+
+## Session: March 12, 2026 - Dev Backlog Fix + Commit (Dev)
+
+**Chat focus:** Fixed Marketing's stuck backlog/tickets feature, committed and pushed to production.
+
+**What was done:**
+- Picked up Marketing's uncommitted Dev Backlog ticketing system (table view, filters, create form, comment threads)
+- Fixed auth imports in all 3 ticket API routes (`@/app/api/auth/[...nextauth]/route` → `@/lib/auth`)
+- Fixed ESLint errors: unused `PRIORITIES` const, unused `session` destructuring in both backlog pages
+- Verified Ticket/TicketEntry models exist in schema, migration already applied to DB
+- Regenerated Prisma client
+- Lint passes clean, dev server starts without errors
+- Committed as `6a358e8` and pushed to main — Vercel deploying
+
+**Key decisions:**
+- Backlog is shared across Website, Portal, and CoreBot products
+- MLO portal login uses same Neon Postgres DB as production (same password)
+
+**Files committed (new):**
+- `prisma/migrations/20260311000001_add_tickets_backlog/migration.sql`
+- `src/app/api/portal/mlo/tickets/route.js` — List + Create
+- `src/app/api/portal/mlo/tickets/[id]/route.js` — GET, PATCH, DELETE
+- `src/app/api/portal/mlo/tickets/[id]/entries/route.js` — POST comment
+- `src/app/portal/mlo/backlog/page.js` — Backlog list view
+- `src/app/portal/mlo/backlog/[id]/page.js` — Ticket detail view
+
+**Files modified:**
+- `prisma/schema.prisma` — Ticket + TicketEntry models added
+- `src/app/portal/mlo/page.js` — "Dev Backlog →" link added to MLO dashboard
+
+**Open items:**
+- [ ] **Dev** — David needs to recover/reset MLO portal password to test backlog on live site
+- [ ] **Dev** — Run `next build` to verify production build (was hanging in previous session)
+- [ ] **Dev** — Test backlog CRUD against live data once logged in
+- [ ] **Dev** — Core UI Redesign open items still pending (see March 11-12 session above)
+
+---
+
+## Session: March 12, 2026 - SHP Consensus + Startup Hooks (Setup)
+
+**Chat focus:** Reached SHP consensus across 3 devices, solved startup protocol enforcement via SessionStart hooks, built REGISTRY.md.
+
+**What was done:**
+
+*SHP (Session Handoff Protocol) Finalization:*
+- Reached consensus across Mac, PC, Claw on SHP via relay rounds
+- Key resolved issues: SESSION-LOG stays EOD-only (Mac's position won), self-device relay dropped (PC conceded), git log -5 default, REGISTRY.md recent additions included
+- Mac committed SHP to GOVERNANCE.md (commit b16366f)
+- Addressed David's dormant session question — added date-awareness rule (automatic mini-briefing), "catch up" keyword (manual trigger), orphan detection for crash recovery
+
+*Startup Protocol Enforcement (4 failures → hooks solution):*
+- Attempt 1: Added governance pointer to CLAUDE.md — agent ignored
+- Attempt 2: Added mandatory checklist to Development/CLAUDE.md + Root CLAUDE.md — agent ignored
+- Attempt 3: Added STOP checklist to mortgage-site/CLAUDE.md (three-level coverage) — agent ignored
+- Attempt 4: Just "You are Dev" with no task — agent said "Ready to work" without running checklist
+- Root cause discovered: David was launching from `D:\PROJECTS\netrate-mortgage-site` (old standalone repo) instead of `D:\PROJECTS\netrate-pc-ops\Work\Development\netrate-mortgage-site`
+- Solution: Claude Code **SessionStart hooks** — shell scripts that inject context into agent memory BEFORE the first user message. Cannot be skipped.
+- Built hooks at both launch points (mortgage-site for Dev, repo root for Setup/Auditor)
+- Tested successfully — agent found backlog feature, ran all startup steps
+
+*REGISTRY.md:*
+- Created full feature inventory for mortgage-site: 48 API routes, 25 UI pages, 22 database models, key integrations, scripts, recent additions
+- Required by SHP spec — dev agents read it at startup to know what's been built
+
+*CLAUDE.md Updates:*
+- Root CLAUDE.md: Added governance pointer at top, stripped duplicated protocols, updated Dave → Claw, updated RELAY.md → MCP relay tools
+- Development/CLAUDE.md: Added 8-step mandatory startup checklist
+- mortgage-site/CLAUDE.md: Added STOP protocol at top
+
+*Relay:*
+- Relayed hooks breakthrough to all devices with full implementation details
+- Received 2 requests from Mac re: TrackerPortal Vercel migration (unanswered — see open items)
+
+**Files created:**
+- `.gitignore` — repo root gitignore (protects local settings from commit)
+- `.claude/hooks/startup-protocol.sh` — root SessionStart hook (Setup/Auditor)
+- `.claude/settings.json` — root hook config
+- `Work/Development/netrate-mortgage-site/.claude/hooks/startup-protocol.sh` — dev SessionStart hook
+- `Work/Development/netrate-mortgage-site/.claude/settings.json` — dev hook config
+- `Work/Development/netrate-mortgage-site/REGISTRY.md` — feature inventory (48 routes, 25 pages, 22 models)
+
+**Files modified:**
+- `CLAUDE.md` — governance pointer, stripped duplicates, Claw update
+- `Work/Development/CLAUDE.md` — mandatory 8-step startup checklist
+- `Work/Development/netrate-mortgage-site/CLAUDE.md` — STOP startup protocol at top
+
+**Key decisions:**
+- SessionStart hooks are the enforcement layer; CLAUDE.md is the instruction layer (MCP decision cmmnsg8mf000bkrjog6w9uhwz)
+- CLAUDE.md alone cannot override agent's priority to respond to user's question
+- Each launch directory needs its own hook (no cascade for hooks)
+- Old `D:\PROJECTS\netrate-mortgage-site` directory should be removed/renamed
+
+**Open items:**
+- [ ] **Setup** — Commit and push all changes (CLAUDE.md files, REGISTRY.md, hooks, settings.json, .gitignore)
+- [ ] **Setup** — Respond to Mac's 2 relay requests (Vercel setup context + file upload stack for TrackerPortal migration)
+- [ ] **David** — Remove or rename old `D:\PROJECTS\netrate-mortgage-site` directory to prevent future wrong-directory launches
+- [ ] **David** — Update launch cheat sheet with correct paths per department
+- [ ] **Mac** — Build their own REGISTRY.md for TrackerPortal
+- [ ] **Mac + Claw** — Add SessionStart hooks to their repos
+- [ ] **Claw** — System visual (4-page PPTX) still in progress — waiting for compiled draft

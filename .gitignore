@@ -1,0 +1,10 @@
+# Claude Code local settings (auto-generated, user-specific)
+.claude/.claude/
+**/settings.local.json
+
+# Node
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
