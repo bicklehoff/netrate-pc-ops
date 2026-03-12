@@ -206,10 +206,13 @@ export async function POST(request, { params }) {
       loanTerm: loan.loanTerm,
       purpose: loan.purpose,
       propertyAddress: loan.propertyAddress,
-      // CD file reference — Mac uses this to fetch from WorkDrive
+      // CD file reference — Mac/Tracker uses this to fetch from WorkDrive
       cdWorkDriveFileId: loan.cdWorkDriveFileId,
       cdFileName: loan.cdFileName,
+      // WorkDrive folder locations
       workDriveFolderId: loan.workDriveFolderId,
+      closingFolderId: loan.workDriveSubfolders?.CLOSING || null,
+      workDriveSubfolders: loan.workDriveSubfolders || null,
       sentAt: now.toISOString(),
       sentBy: session.user.id,
     };
