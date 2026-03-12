@@ -38,6 +38,8 @@ export default function DocumentsSection({ loan, onRefresh }) {
   const [docLoading, setDocLoading] = useState(false);
   const [reviewLoading, setReviewLoading] = useState(null);
   const [actionError, setActionError] = useState('');
+  const [processing, setProcessing] = useState(false);
+  const [processReport, setProcessReport] = useState(null);
 
   // Request document
   const handleDocRequest = async () => {
@@ -86,6 +88,31 @@ export default function DocumentsSection({ loan, onRefresh }) {
       setActionError('Failed to update document');
     } finally {
       setReviewLoading(null);
+    }
+  };
+
+  // Process Docs via CoreBot
+  const handleProcessDocs = async () => {
+    setProcessing(true);
+    setProcessReport(null);
+    setActionError('');
+    try {
+      const res = await fetch('/api/corebot/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ loanId: loan.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setActionError(data.error || 'Processing failed');
+        return;
+      }
+      setProcessReport(data.report);
+      onRefresh();
+    } catch {
+      setActionError('CoreBot processing failed');
+    } finally {
+      setProcessing(false);
     }
   };
 
@@ -239,6 +266,101 @@ export default function DocumentsSection({ loan, onRefresh }) {
           </div>
         )}
       </SectionCard>
+
+      {/* ─── CoreBot Process Docs ─── */}
+      <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900">CoreBot</h3>
+            <p className="text-xs text-gray-500">AI document processing — identify, rename, and organize</p>
+          </div>
+          <button
+            onClick={handleProcessDocs}
+            disabled={processing}
+            className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+              processing
+                ? 'bg-gray-100 text-gray-400 cursor-wait'
+                : 'bg-brand text-white hover:bg-brand-dark'
+            }`}
+          >
+            {processing ? 'Processing...' : 'Process Docs'}
+          </button>
+        </div>
+
+        {/* Processing report */}
+        {processReport && (
+          <div className="mt-4 border-t border-gray-100 pt-4">
+            <div className="flex items-center gap-4 mb-3">
+              <div className="text-center">
+                <div className="text-lg font-bold text-gray-900">{processReport.processed}</div>
+                <div className="text-xs text-gray-500">Processed</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold text-green-600">{processReport.renamed}</div>
+                <div className="text-xs text-gray-500">Renamed</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold text-blue-600">{processReport.conditionsUpdated}</div>
+                <div className="text-xs text-gray-500">Conditions</div>
+              </div>
+              {processReport.errors?.length > 0 && (
+                <div className="text-center">
+                  <div className="text-lg font-bold text-amber-600">{processReport.errors.length}</div>
+                  <div className="text-xs text-gray-500">Errors</div>
+                </div>
+              )}
+            </div>
+
+            {/* Document results */}
+            {processReport.documents?.length > 0 && (
+              <div className="space-y-1.5">
+                {processReport.documents.map((doc, i) => (
+                  <div key={i} className="flex items-center gap-2 text-xs">
+                    <span className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${
+                      doc.action === 'renamed' ? 'bg-green-500' :
+                      doc.action === 'suggest' ? 'bg-blue-500' :
+                      doc.action === 'flagged' ? 'bg-amber-500' : 'bg-red-500'
+                    }`} />
+                    <span className="text-gray-500 truncate flex-1">{doc.originalName}</span>
+                    {doc.newFileName && (
+                      <>
+                        <span className="text-gray-400">→</span>
+                        <span className="font-medium text-gray-800 truncate">{doc.newFileName}</span>
+                      </>
+                    )}
+                    <span className="text-gray-400 flex-shrink-0">
+                      {Math.round((doc.confidence || 0) * 100)}%
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Checklist status */}
+            {processReport.checklistStatus && (
+              <div className="mt-3 pt-3 border-t border-gray-100">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs font-medium text-gray-700">
+                    Submission Checklist: {processReport.checklistStatus.received}/{processReport.checklistStatus.total} required items
+                  </span>
+                </div>
+                {processReport.checklistStatus.missing?.length > 0 && (
+                  <div className="text-xs text-amber-700">
+                    Missing: {processReport.checklistStatus.missing.join(', ')}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <button
+              onClick={() => setProcessReport(null)}
+              className="mt-3 text-xs text-gray-400 hover:text-gray-600"
+            >
+              Dismiss report
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* ─── WorkDrive ─── */}
       <WorkDrivePanel loanId={loan.id} />

@@ -41,6 +41,9 @@ export default function WorkDrivePanel({ loanId }) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [hasWorkDrive, setHasWorkDrive] = useState(false);
+  const [identifying, setIdentifying] = useState(null);
+  const [suggestion, setSuggestion] = useState(null);
+  const [renaming, setRenaming] = useState(null);
 
   const fetchFiles = useCallback(async () => {
     try {
@@ -102,6 +105,52 @@ export default function WorkDrivePanel({ loanId }) {
   const handleDownload = (fileId) => {
     // Open the proxy download URL directly — API streams the file with proper auth
     window.open(`/api/portal/mlo/loans/${loanId}/files?download=${fileId}`, '_blank');
+  };
+
+  const handleIdentify = async (fileId, fileName) => {
+    setIdentifying(fileId);
+    setSuggestion(null);
+    setError('');
+    try {
+      const res = await fetch('/api/corebot/identify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ loanId, fileId, fileName }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'Identification failed');
+        return;
+      }
+      setSuggestion({ fileId, ...data.result });
+    } catch {
+      setError('Identification failed');
+    } finally {
+      setIdentifying(null);
+    }
+  };
+
+  const handleRename = async (fileId, newFileName) => {
+    setRenaming(fileId);
+    setError('');
+    try {
+      const res = await fetch('/api/corebot/rename', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ loanId, fileId, newFileName }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || 'Rename failed');
+        return;
+      }
+      setSuggestion(null);
+      await fetchFiles();
+    } catch {
+      setError('Rename failed');
+    } finally {
+      setRenaming(null);
+    }
   };
 
   const handleDelete = async (fileId, fileName) => {
@@ -200,6 +249,40 @@ export default function WorkDrivePanel({ loanId }) {
         </div>
       )}
 
+      {/* Suggestion banner */}
+      {suggestion && (
+        <div className="mx-6 mt-3 bg-purple-50 border border-purple-200 rounded-lg p-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-purple-900">
+                CoreBot suggests: <span className="font-mono">{suggestion.newFileName || 'Unknown'}</span>
+              </p>
+              <p className="text-xs text-purple-600 mt-0.5">
+                {suggestion.prefix}-{suggestion.subtype} — {Math.round((suggestion.confidence || 0) * 100)}% confidence
+                {suggestion.extractedData?.notes && ` — ${suggestion.extractedData.notes}`}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {suggestion.newFileName && (
+                <button
+                  onClick={() => handleRename(suggestion.fileId, suggestion.newFileName)}
+                  disabled={renaming === suggestion.fileId}
+                  className="px-3 py-1.5 text-xs font-medium bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
+                >
+                  {renaming === suggestion.fileId ? 'Renaming...' : 'Apply'}
+                </button>
+              )}
+              <button
+                onClick={() => setSuggestion(null)}
+                className="px-3 py-1.5 text-xs text-purple-600 hover:text-purple-800"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* File list */}
       <div className="px-6 py-3 min-h-[120px]">
         {currentFiles.length === 0 ? (
@@ -226,6 +309,16 @@ export default function WorkDrivePanel({ loanId }) {
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 opacity-60 group-hover:opacity-100 transition-opacity">
+                  {activeTab === 'FLOOR' && (
+                    <button
+                      onClick={() => handleIdentify(file.id, file.name)}
+                      disabled={identifying === file.id}
+                      className="px-2.5 py-1.5 text-xs font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-lg transition-colors disabled:opacity-50"
+                      title="Identify with CoreBot AI"
+                    >
+                      {identifying === file.id ? '...' : 'Identify'}
+                    </button>
+                  )}
                   <button
                     onClick={() => handleDownload(file.id)}
                     className="px-3 py-2 text-sm text-brand hover:bg-brand/10 rounded-lg transition-colors"
