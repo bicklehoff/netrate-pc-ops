@@ -53,6 +53,9 @@ export default function DocWorkspace({ loanId, onRefresh }) {
   // File move state
   const [moving, setMoving] = useState(null);
 
+  // Create folder state
+  const [creatingFolder, setCreatingFolder] = useState(false);
+
   const fetchFiles = useCallback(async () => {
     try {
       const res = await fetch(`/api/portal/mlo/loans/${loanId}/files`);
@@ -243,13 +246,44 @@ export default function DocWorkspace({ loanId, onRefresh }) {
     );
   }
 
+  const handleCreateFolder = async () => {
+    setCreatingFolder(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/portal/mlo/loans/${loanId}/files/create-folder`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'Failed to create folder');
+        setCreatingFolder(false);
+        return;
+      }
+      setCreatingFolder(false);
+      await fetchFiles();
+    } catch {
+      setError('Failed to create folder');
+      setCreatingFolder(false);
+    }
+  };
+
   if (!hasWorkDrive) {
     return (
       <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-gray-900 mb-2">Document Workspace</h2>
-        <p className="text-sm text-gray-400">
-          No WorkDrive folder for this loan. Folders are created automatically when a new application is submitted.
+        <p className="text-sm text-gray-400 mb-4">
+          No WorkDrive folder for this loan.
         </p>
+        {error && (
+          <p className="text-sm text-red-600 mb-3">{error}</p>
+        )}
+        <button
+          onClick={handleCreateFolder}
+          disabled={creatingFolder}
+          className="px-4 py-2 text-sm font-medium bg-brand text-white rounded-lg hover:bg-brand-dark transition-colors disabled:opacity-50"
+        >
+          {creatingFolder ? 'Creating folder...' : 'Create WorkDrive Folder'}
+        </button>
       </div>
     );
   }

@@ -135,24 +135,20 @@ async function createFolder(name, parentId) {
 }
 
 /**
- * Find or create a folder inside a parent. Handles 409 "already exists" gracefully.
+ * Find or create a folder inside a parent. Lists first to avoid duplicates.
+ * Zoho WorkDrive silently auto-renames duplicate folders (appends timestamp)
+ * instead of returning 409, so we must check-before-create.
  * @param {string} name — Folder name
  * @param {string} parentId — Parent folder resource ID
  * @returns {Promise<{id: string, name: string, url: string}>}
  */
 async function ensureFolder(name, parentId) {
-  try {
-    return await createFolder(name, parentId);
-  } catch (err) {
-    // If folder already exists, find it by listing the parent
-    if (err.message.includes('409') || err.message.includes('already exists')) {
-      const contents = await listFolder(parentId);
-      const existing = contents.find((f) => f.name === name);
-      if (!existing) throw new Error(`Folder "${name}" not found after 409`);
-      return existing;
-    }
-    throw err;
-  }
+  // Check first — Zoho auto-renames duplicates instead of returning 409
+  const contents = await listFolder(parentId);
+  const existing = contents.find((f) => f.name === name && f.isFolder);
+  if (existing) return existing;
+
+  return await createFolder(name, parentId);
 }
 
 /**
@@ -179,13 +175,13 @@ export async function createLoanFolder({ borrowerFirstName, borrowerLastName, pu
   // Ensure year folder exists inside LO folder
   const yearFolder = await ensureFolder(year, loFolder.id);
 
-  // Create loan folder inside year folder
-  const loanFolder = await createFolder(folderName, yearFolder.id);
+  // Create loan folder inside year folder (ensureFolder to avoid duplicates)
+  const loanFolder = await ensureFolder(folderName, yearFolder.id);
 
-  // Create standard subfolders
+  // Create standard subfolders (ensureFolder to avoid duplicates on retry)
   const subfolders = {};
   for (const sub of LOAN_SUBFOLDERS) {
-    const sf = await createFolder(sub, loanFolder.id);
+    const sf = await ensureFolder(sub, loanFolder.id);
     subfolders[sub] = sf.id;
   }
 
