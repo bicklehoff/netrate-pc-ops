@@ -12,6 +12,7 @@ import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { listFolder, uploadFile, downloadFile, deleteResource } from '@/lib/zoho-workdrive';
 import { put } from '@vercel/blob';
+import { PDFDocument } from 'pdf-lib';
 
 async function verifyMloAccess(loanId, session) {
   if (!session || session.user.userType !== 'mlo') return null;
@@ -130,6 +131,29 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ error: 'File size exceeds 25 MB limit.' }, { status: 400 });
     }
 
+    // Convert images to PDF for lender-ready storage
+    let uploadBlob = file;
+    let uploadFileName = file.name;
+    const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg'];
+    if (IMAGE_EXTENSIONS.includes(fileExt)) {
+      try {
+        const imageBytes = new Uint8Array(await file.arrayBuffer());
+        const pdfDoc = await PDFDocument.create();
+        const image = fileExt === '.png'
+          ? await pdfDoc.embedPng(imageBytes)
+          : await pdfDoc.embedJpg(imageBytes);
+        const { width, height } = image.scale(1);
+        const page = pdfDoc.addPage([width, height]);
+        page.drawImage(image, { x: 0, y: 0, width, height });
+        const pdfBytes = await pdfDoc.save();
+        uploadFileName = file.name.replace(/\.(png|jpg|jpeg)$/i, '.pdf');
+        uploadBlob = new Blob([pdfBytes], { type: 'application/pdf' });
+        uploadBlob.name = uploadFileName;
+      } catch (convErr) {
+        console.error('Image-to-PDF conversion failed, uploading as-is:', convErr?.message);
+      }
+    }
+
     const subfolders = loan.workDriveSubfolders;
     let fileUrl;
     let storageType = 'blob';
@@ -144,16 +168,16 @@ export async function PUT(request, { params }) {
 
     if (targetFolderId) {
       try {
-        const uploaded = await uploadFile(file, file.name, targetFolderId, true);
+        const uploaded = await uploadFile(uploadBlob, uploadFileName, targetFolderId, true);
         fileUrl = uploaded.url || `workdrive://${uploaded.id}`;
         storageType = 'workdrive';
       } catch (wdError) {
         console.error('WorkDrive upload failed:', wdError?.message);
-        const blob = await put(`loans/${id}/${file.name}`, file, { access: 'public', addRandomSuffix: true });
+        const blob = await put(`loans/${id}/${uploadFileName}`, uploadBlob, { access: 'public', addRandomSuffix: true });
         fileUrl = blob.url;
       }
     } else {
-      const blob = await put(`loans/${id}/${file.name}`, file, { access: 'public', addRandomSuffix: true });
+      const blob = await put(`loans/${id}/${uploadFileName}`, uploadBlob, { access: 'public', addRandomSuffix: true });
       fileUrl = blob.url;
     }
 
@@ -162,11 +186,11 @@ export async function PUT(request, { params }) {
       data: {
         loanId: id,
         docType,
-        label: file.name,
+        label: uploadFileName,
         status: 'uploaded',
         requestedById: session.user.id,
         fileUrl,
-        fileName: file.name,
+        fileName: uploadFileName,
         fileSize: file.size,
         uploadedAt: new Date(),
       },
@@ -179,8 +203,8 @@ export async function PUT(request, { params }) {
         eventType: 'doc_uploaded',
         actorType: 'mlo',
         actorId: session.user.id,
-        newValue: file.name,
-        details: { documentId: doc.id, fileName: file.name, folder: targetFolder, storageType },
+        newValue: uploadFileName,
+        details: { documentId: doc.id, fileName: uploadFileName, originalName: file.name, folder: targetFolder, storageType },
       },
     });
 

@@ -89,22 +89,27 @@ export default function DocWorkspace({ loanId, onRefresh }) {
   // ─── Handlers ────────────────────────────────────────────
 
   const handleUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
     setUploading(true);
     setError('');
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('folder', activeTab);
-      const res = await fetch(`/api/portal/mlo/loans/${loanId}/files`, {
-        method: 'PUT',
-        body: formData,
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        setError(data.error || 'Upload failed');
-        return;
+      const errors = [];
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('folder', activeTab);
+        const res = await fetch(`/api/portal/mlo/loans/${loanId}/files`, {
+          method: 'PUT',
+          body: formData,
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          errors.push(`${file.name}: ${data.error || 'failed'}`);
+        }
+      }
+      if (errors.length > 0) {
+        setError(errors.join('; '));
       }
       await fetchFiles();
     } catch {
@@ -435,6 +440,7 @@ export default function DocWorkspace({ loanId, onRefresh }) {
               <input
                 type="file"
                 accept=".pdf,.png,.jpg,.jpeg"
+                multiple
                 onChange={handleUpload}
                 className="hidden"
                 disabled={uploading}
