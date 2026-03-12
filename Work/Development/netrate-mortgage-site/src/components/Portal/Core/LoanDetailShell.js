@@ -8,7 +8,7 @@
 
 'use client';
 
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useState, useCallback } from 'react';
 import LoanSidebar from './LoanSidebar';
 import StatusHeader from './StatusHeader';
@@ -20,6 +20,7 @@ import DocumentsSection from './sections/DocumentsSection';
 import NotesActivitySection from './sections/NotesActivitySection';
 
 export default function LoanDetailShell({ loan, onRefresh }) {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const activeSection = searchParams.get('section') || 'overview';
   const [actionError, setActionError] = useState('');
@@ -126,6 +127,28 @@ export default function LoanDetailShell({ loan, onRefresh }) {
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* Breadcrumb nav — always visible */}
+        <div className="bg-gray-50 border-b border-gray-200 px-6 py-2 flex items-center gap-2 text-sm flex-shrink-0">
+          <button
+            onClick={() => router.push('/portal/mlo')}
+            className="flex items-center gap-1.5 text-brand hover:text-brand-dark font-medium transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Pipeline
+          </button>
+          <svg className="w-3.5 h-3.5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+          <span className="text-gray-700 font-medium">
+            {loan.borrower ? `${loan.borrower.lastName}, ${loan.borrower.firstName}` : 'Loan'}
+          </span>
+          {loan.loanNumber && (
+            <span className="text-gray-400 text-xs">#{loan.loanNumber}</span>
+          )}
+        </div>
+
         {/* Status header */}
         <StatusHeader
           loan={loan}
