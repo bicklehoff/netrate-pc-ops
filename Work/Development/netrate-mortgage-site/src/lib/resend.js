@@ -6,7 +6,14 @@
 
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let resend = null;
+
+function getResend() {
+  if (!resend) {
+    resend = new Resend(process.env.RESEND_API_KEY);
+  }
+  return resend;
+}
 
 const FROM_ADDRESS = 'NetRate Mortgage <notifications@netratemortgage.com>';
 const REPLY_TO = 'david@netratemortgage.com';
@@ -42,7 +49,7 @@ export async function sendEmail({ to, subject, html, text, replyTo = REPLY_TO, f
   if (text) payload.text = text;
   if (cc) payload.cc = Array.isArray(cc) ? cc : [cc];
 
-  const { data, error } = await resend.emails.send(payload);
+  const { data, error } = await getResend().emails.send(payload);
 
   if (error) {
     console.error('[RESEND ERROR]', error);
@@ -52,4 +59,4 @@ export async function sendEmail({ to, subject, html, text, replyTo = REPLY_TO, f
   return data;
 }
 
-export default resend;
+export { getResend };

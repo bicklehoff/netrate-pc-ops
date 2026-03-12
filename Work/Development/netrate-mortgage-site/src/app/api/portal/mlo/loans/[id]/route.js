@@ -9,7 +9,9 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
-import { getBallInCourt } from '@/lib/loan-states';
+import { getBallInCourt, EMAIL_TRIGGERS } from '@/lib/loan-states';
+import { sendEmail } from '@/lib/resend';
+import { statusChangeTemplate } from '@/lib/email-templates/borrower';
 
 // Status → LoanDates field mapping for MCR-aware auto-date capture
 const STATUS_DATE_MAP = {
@@ -204,6 +206,25 @@ export async function PATCH(request, { params }) {
             })()),
           },
         });
+      }
+
+      // Send borrower notification email (non-blocking)
+      const trigger = EMAIL_TRIGGERS[body.status];
+      if (trigger?.sendToBorrower) {
+        const borrower = await prisma.borrower.findUnique({ where: { id: loan.borrowerId } });
+        if (borrower?.email) {
+          const template = statusChangeTemplate({
+            firstName: borrower.firstName,
+            status: body.status,
+            loanId: id,
+            propertyAddress: loan.propertyStreet,
+          });
+          if (template) {
+            sendEmail({ to: borrower.email, ...template }).catch((err) => {
+              console.error(`Status email failed (${body.status}):`, err.message);
+            });
+          }
+        }
       }
 
       return NextResponse.json({ loan: updated });

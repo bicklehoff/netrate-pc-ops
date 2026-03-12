@@ -10,6 +10,8 @@ import prisma from '@/lib/prisma';
 import { put } from '@vercel/blob';
 import { getBallInCourt } from '@/lib/loan-states';
 import { uploadFile, getSubfolderForDocType } from '@/lib/zoho-workdrive';
+import { sendEmail } from '@/lib/resend';
+import { docRequestTemplate } from '@/lib/email-templates/borrower';
 
 export async function POST(request, { params }) {
   try {
@@ -69,6 +71,19 @@ export async function POST(request, { params }) {
         details: { docType, documentId: document.id },
       },
     });
+
+    // Send doc request email to borrower (non-blocking)
+    const borrower = await prisma.borrower.findUnique({ where: { id: loan.borrowerId } });
+    if (borrower?.email) {
+      const template = docRequestTemplate({
+        firstName: borrower.firstName,
+        documents: [{ label, notes: notes || null }],
+        loanId: id,
+      });
+      sendEmail({ to: borrower.email, ...template }).catch((err) => {
+        console.error('Doc request email failed:', err.message);
+      });
+    }
 
     return NextResponse.json({ document }, { status: 201 });
   } catch (error) {

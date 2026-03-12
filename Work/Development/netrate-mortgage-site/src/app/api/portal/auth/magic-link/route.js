@@ -2,13 +2,14 @@
 // POST /api/portal/auth/magic-link
 // Body: { email }
 //
-// Finds borrower by email, generates magic token, returns success.
-// In production, this would send an email with the link.
-// For now, logs the link to console (email integration in Phase 2c later).
+// Finds borrower by email, generates magic token, sends login email via Resend.
+// Always returns success even if no borrower found (prevent email enumeration).
 
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { generateMagicToken } from '@/lib/auth';
+import { sendEmail } from '@/lib/resend';
+import { magicLinkTemplate } from '@/lib/email-templates/borrower';
 
 export async function POST(request) {
   try {
@@ -33,9 +34,18 @@ export async function POST(request) {
     const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
     const magicLink = `${baseUrl}/portal/auth/verify?token=${token}`;
 
-    // TODO: Send via Zoho Mail API (Phase 2c email integration)
-    // For now, log to console for testing
-    console.log(`\n🔗 Magic link for ${email}:\n${magicLink}\n`);
+    // Send magic link email via Resend
+    const { subject, html, text } = magicLinkTemplate({
+      firstName: borrower.firstName,
+      magicLink,
+    });
+
+    try {
+      await sendEmail({ to: borrower.email, subject, html, text });
+    } catch (emailErr) {
+      // Log but don't fail — borrower shouldn't know email failed
+      console.error('Magic link email failed:', emailErr.message);
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
