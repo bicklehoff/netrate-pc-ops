@@ -319,6 +319,65 @@ export async function deleteResource(resourceId) {
   await wdFetch(`/files/${resourceId}`, { method: 'DELETE' });
 }
 
+// ─── Rename ──────────────────────────────────────────────────
+
+/**
+ * Rename a file in WorkDrive.
+ * Uses PATCH on the file resource to update the name attribute.
+ * Fallback: if PATCH fails, downloads + re-uploads with new name + deletes original.
+ *
+ * @param {string} fileId — File resource ID
+ * @param {string} newName — New file name (with extension)
+ * @returns {Promise<{id: string, name: string}>}
+ */
+export async function renameFile(fileId, newName) {
+  try {
+    const data = await wdFetch(`/files/${fileId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        data: {
+          attributes: { name: newName },
+          type: 'files',
+        },
+      }),
+    });
+
+    return {
+      id: data?.data?.id || fileId,
+      name: data?.data?.attributes?.name || newName,
+    };
+  } catch (err) {
+    // Fallback: download, re-upload with new name, delete original
+    console.warn(`[WorkDrive] PATCH rename failed, using fallback: ${err.message}`);
+
+    const info = await getFileInfo(fileId);
+    const parentId = info?.parentId;
+
+    // If we can't determine parent, try getting it from the file's folder
+    if (!parentId) {
+      throw new Error(`Cannot rename file ${fileId}: unable to determine parent folder. ${err.message}`);
+    }
+
+    const { stream, contentType } = await downloadFile(fileId);
+    const chunks = [];
+    const reader = stream.getReader();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+    }
+    const blob = new Blob(chunks, { type: contentType });
+
+    const uploaded = await uploadFile(blob, newName, parentId, false);
+    await deleteResource(fileId);
+
+    return {
+      id: uploaded.id,
+      name: uploaded.name,
+    };
+  }
+}
+
 // ─── URL Helpers ──────────────────────────────────────────────
 
 /**

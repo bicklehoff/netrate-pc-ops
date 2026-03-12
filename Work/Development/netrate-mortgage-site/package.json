@@ -16,6 +16,7 @@
     "rates:update": "node scripts/parse-amwest-xlsx.js && node scripts/upload-to-gcs.js src/data/rates/amwest.json live/amwest.json"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.78.0",
     "@hookform/resolvers": "^5.2.2",
     "@neondatabase/serverless": "^1.0.2",
     "@prisma/adapter-neon": "^7.4.1",
@@ -34,6 +35,7 @@
     "react-markdown": "^10.1.0",
     "recharts": "^3.8.0",
     "remark-gfm": "^4.0.1",
+    "resend": "^6.9.3",
     "zod": "^4.3.6"
   },
   "devDependencies": {
