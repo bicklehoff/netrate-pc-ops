@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation';
 import prisma from '@/lib/prisma';
 import { requireBorrowerAuth } from '@/lib/borrower-session';
 import LoanStatusCard from '@/components/Portal/LoanStatusCard';
-import DocumentList from '@/components/Portal/DocumentList';
+import BorrowerChecklist from '@/components/Portal/BorrowerChecklist';
 import LoanTimeline from '@/components/Portal/LoanTimeline';
 
 export default async function BorrowerDashboardPage() {
@@ -67,8 +67,8 @@ export default async function BorrowerDashboardPage() {
           {/* Status Card */}
           <LoanStatusCard loan={loan} />
 
-          {/* Documents */}
-          <DocumentList loan={loan} />
+          {/* Checklist */}
+          <BorrowerChecklist loan={loan} />
 
           {/* Timeline */}
           <LoanTimeline events={loan.events} />

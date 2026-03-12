@@ -29,6 +29,7 @@ function isExpired(dateStr) {
 }
 
 // Processing task definitions — each maps to LoanDates fields
+// orderType matches /api/corebot/order-out orderType param
 const PROCESSING_TASKS = [
   {
     key: 'credit',
@@ -43,6 +44,7 @@ const PROCESSING_TASKS = [
     key: 'appraisal',
     label: 'Appraisal',
     icon: '🏠',
+    orderType: 'appraisal',
     dateFields: [
       { key: 'appraisalOrdered', label: 'Ordered' },
       { key: 'appraisalScheduled', label: 'Scheduled' },
@@ -57,6 +59,7 @@ const PROCESSING_TASKS = [
     key: 'title',
     label: 'Title',
     icon: '📜',
+    orderType: 'title',
     dateFields: [
       { key: 'titleOrdered', label: 'Ordered' },
       { key: 'titleReceived', label: 'Received' },
@@ -67,6 +70,7 @@ const PROCESSING_TASKS = [
     key: 'flood',
     label: 'Flood Cert',
     icon: '🌊',
+    orderType: 'flood',
     dateFields: [
       { key: 'floodCertOrdered', label: 'Ordered' },
       { key: 'floodCertReceived', label: 'Received' },
@@ -76,6 +80,7 @@ const PROCESSING_TASKS = [
     key: 'hoi',
     label: 'Homeowners Insurance',
     icon: '🛡️',
+    orderType: 'hoi',
     dateFields: [
       { key: 'hoiOrdered', label: 'Ordered' },
       { key: 'hoiReceived', label: 'Received' },
@@ -111,6 +116,7 @@ export default function ProcessingSection({ loan, updateDates }) {
               key={task.key}
               task={task}
               dates={dates}
+              loanId={loan.id}
               onUpdateDate={updateDates}
             />
           ))}
@@ -181,10 +187,13 @@ export default function ProcessingSection({ loan, updateDates }) {
 
 // ─── Processing Task Card ───
 
-function ProcessingTaskCard({ task, dates, onUpdateDate }) {
+function ProcessingTaskCard({ task, dates, loanId, onUpdateDate }) {
   const [editingField, setEditingField] = useState(null);
   const [editValue, setEditValue] = useState('');
   const [saving, setSaving] = useState(false);
+  const [orderForm, setOrderForm] = useState(null); // { email, name, notes }
+  const [ordering, setOrdering] = useState(false);
+  const [orderError, setOrderError] = useState('');
 
   // Check completion: task is "done" if at least one date is filled
   const hasAnyDate = task.dateFields.some((df) => dates[df.key]);
@@ -210,6 +219,39 @@ function ProcessingTaskCard({ task, dates, onUpdateDate }) {
     }
   };
 
+  const handleOrder = async () => {
+    if (!orderForm?.email?.trim()) return;
+    setOrdering(true);
+    setOrderError('');
+    try {
+      const res = await fetch('/api/corebot/order-out', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          loanId,
+          orderType: task.orderType,
+          recipientEmail: orderForm.email.trim(),
+          recipientName: orderForm.name?.trim() || undefined,
+          notes: orderForm.notes?.trim() || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setOrderError(data.error || 'Order failed');
+        return;
+      }
+      // Auto-fill the ordered date in the UI
+      if (data.orderedAt) {
+        await onUpdateDate({}); // trigger refresh from parent
+      }
+      setOrderForm(null);
+    } catch {
+      setOrderError('Order failed');
+    } finally {
+      setOrdering(false);
+    }
+  };
+
   return (
     <div className={`border rounded-lg p-4 transition-colors ${
       hasExpired ? 'border-red-200 bg-red-50/30' :
@@ -231,9 +273,19 @@ function ProcessingTaskCard({ task, dates, onUpdateDate }) {
           <span className="text-red-500 text-xs font-medium">🚫 Expired</span>
         )}
 
+        {/* Order button */}
+        {task.orderType && !orderForm && (
+          <button
+            onClick={() => setOrderForm({ email: '', name: '', notes: '' })}
+            className="ml-auto px-2.5 py-1 text-xs font-medium text-brand bg-brand/5 hover:bg-brand/10 border border-brand/20 rounded-lg transition-colors"
+          >
+            📧 Order
+          </button>
+        )}
+
         {/* Toggle (e.g., appraisal waiver) */}
         {task.toggleField && (
-          <label className="ml-auto flex items-center gap-1.5 cursor-pointer">
+          <label className={`${task.orderType ? '' : 'ml-auto '}flex items-center gap-1.5 cursor-pointer`}>
             <input
               type="checkbox"
               checked={dates[task.toggleField] || false}
@@ -295,6 +347,54 @@ function ProcessingTaskCard({ task, dates, onUpdateDate }) {
           );
         })}
       </div>
+
+      {/* Inline order form */}
+      {orderForm && (
+        <div className="mt-3 pt-3 border-t border-gray-200">
+          <p className="text-xs font-semibold text-gray-600 mb-2">Order {task.label}</p>
+          {orderError && (
+            <p className="text-xs text-red-600 mb-2">{orderError}</p>
+          )}
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <input
+              type="email"
+              placeholder="Recipient email *"
+              value={orderForm.email}
+              onChange={(e) => setOrderForm({ ...orderForm, email: e.target.value })}
+              className="px-2.5 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none"
+            />
+            <input
+              type="text"
+              placeholder="Recipient name"
+              value={orderForm.name}
+              onChange={(e) => setOrderForm({ ...orderForm, name: e.target.value })}
+              className="px-2.5 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none"
+            />
+          </div>
+          <input
+            type="text"
+            placeholder="Notes (optional)"
+            value={orderForm.notes}
+            onChange={(e) => setOrderForm({ ...orderForm, notes: e.target.value })}
+            className="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none mb-2"
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={handleOrder}
+              disabled={ordering || !orderForm.email.trim()}
+              className="px-3 py-1.5 text-xs font-medium bg-brand text-white rounded-lg hover:bg-brand-dark transition-colors disabled:opacity-50"
+            >
+              {ordering ? 'Sending...' : 'Send Order'}
+            </button>
+            <button
+              onClick={() => { setOrderForm(null); setOrderError(''); }}
+              className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
