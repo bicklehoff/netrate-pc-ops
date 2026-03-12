@@ -519,6 +519,48 @@ model HecmScenario {
   @@map("hecm_scenarios")
 }
 
+// ─── Dev Tickets (Product Backlog) ────────────────────────────────
+// Shared ticketing for Website, Portal, and CoreBot.
+// David files tickets from the portal, PC Dev picks them up.
+
+model Ticket {
+  id              String    @id @default(uuid()) @db.Uuid
+  title           String
+  description     String?
+  product         String    // 'website' | 'portal' | 'corebot'
+  ticketType      String    @map("ticket_type")   // 'bug' | 'feature' | 'improvement'
+  priority        String    @default("medium")     // 'critical' | 'high' | 'medium' | 'low'
+  status          String    @default("open")       // 'open' | 'in_progress' | 'resolved' | 'closed'
+  createdBy       String    @map("created_by")     // Actor: 'david' | mloId
+  assignedTo      String?   @map("assigned_to")    // Actor: 'pc-dev' | 'pc-marketing' | 'pc-integrations' | specific mloId
+  resolvedAt      DateTime? @map("resolved_at")
+  closedAt        DateTime? @map("closed_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  entries         TicketEntry[]
+
+  @@index([product, status])
+  @@index([status])
+  @@index([priority, status])
+  @@map("tickets")
+}
+
+model TicketEntry {
+  id              String    @id @default(uuid()) @db.Uuid
+  ticketId        String    @map("ticket_id") @db.Uuid
+  content         String
+  authorId        String    @map("author_id")      // Actor: 'david' | 'pc-dev' | 'system' | mloId
+  authorLabel     String?   @map("author_label")    // Display name: "David", "PC Dev", etc.
+  entryType       String    @default("comment") @map("entry_type")  // 'comment' | 'status_change' | 'assignment'
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  ticket          Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@map("ticket_entries")
+}
+
 // ─── Leads (Website Lead Capture) ────────────────────────────────
 // Captures leads from homepage rate table, rate tool, contact form, etc.
 // Primary storage — Zoho CRM sync is optional and fire-and-forget.

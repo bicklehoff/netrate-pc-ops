@@ -305,6 +305,12 @@ export default function MloDashboardPage() {
         </div>
         <div className="flex items-center gap-3">
           <Link
+            href="/portal/mlo/backlog"
+            className="text-xs text-amber-600 hover:text-amber-700 font-medium transition-colors"
+          >
+            Dev Backlog &rarr;
+          </Link>
+          <Link
             href="/portal/mlo/tools/hecm-optimizer"
             className="text-xs text-cyan-600 hover:text-cyan-700 font-medium transition-colors"
           >
