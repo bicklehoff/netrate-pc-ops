@@ -33,11 +33,41 @@
 - [ ] Start Reddit participation (r/personalfinance, r/RealEstate, r/FirstTimeHomeBuyer)
 - [ ] Weekly rate update posts to GBP + LinkedIn
 
+### Marketing Next Moves — March 2026
+
+**Phase 2: Forward Mortgage Visualization Brief**
+- [ ] Brief Dev on borrower-facing forward mortgage visualization tool
+  - Similar treatment to HECM Explorer: interactive, transparent, educational
+  - Leverage existing Rate Tool engine + Recharts (already installed)
+  - Scope: amortization breakdown, total cost comparison, rent-vs-buy, refi break-even viz
+  - Deliver as `Work/Marketing/FORWARD-VIZ-DEV-BRIEF.md`
+
+**Phase 3: Blog Infrastructure Brief**
+- [ ] Brief Dev on blog system build (routes, templates, SEO structure)
+  - Route structure: `/blog/`, `/blog/[slug]`
+  - MDX or CMS-lite approach (agent-writable, no external CMS)
+  - SEO: auto-generate sitemap entries, schema markup (Article), OG tags
+  - Category/tag system for reverse mortgage, forward mortgage, market updates
+  - Internal linking to tools (/rates, /tools/reverse-mortgage-calculator)
+  - Deliver as `Work/Marketing/BLOG-INFRA-DEV-BRIEF.md`
+
+**Phase 3: Reverse Mortgage Blog Content (5 posts)**
+- [ ] Draft post 1: "How Much Does a Reverse Mortgage Actually Cost?" (cost transparency angle — links to HECM Explorer)
+- [ ] Draft post 2: "Reverse Mortgage vs. HELOC: Which Makes More Sense?" (comparison, links to calculator)
+- [ ] Draft post 3: "Colorado Reverse Mortgage Guide: What Homeowners Need to Know" (state-specific SEO play)
+- [ ] Draft post 4: "The Real Math Behind Reverse Mortgages" (show-don't-tell, embedded examples)
+- [ ] Draft post 5: "Can You Lose Your Home with a Reverse Mortgage?" (fear-based search query, myth-busting)
+- *Note: Blog posts depend on blog infrastructure (Phase 3 brief above). Draft content now, publish when infra ships.*
+
+**Waiting on David:**
+- [ ] Answer 4 open questions in HECM Explorer brief (origination fee, target comp, third-party costs, state list)
+
 ### David Action Items
 - [ ] Contact BBB Denver/Boulder to rename Locus → NetRate (when convenient)
 - [ ] Verify MBS Live TOS allows summarized market commentary on website
 - [ ] Launch Google Ads + Bing Ads after lead capture ships (~$800-1K/mo)
 - [ ] Jamie: Add BBB static seal to email signatures after rename
+- [ ] Answer 4 HECM Explorer questions (see `Work/Marketing/HECM-EXPLORER-DEV-BRIEF.md`)
 
 ---
 
@@ -601,4 +631,4 @@ Keep it short. 2-3 sentences max. Consumer-friendly, not trader jargon.
 
 ---
 
-*Last updated: February 27, 2026*
+*Last updated: March 12, 2026*
