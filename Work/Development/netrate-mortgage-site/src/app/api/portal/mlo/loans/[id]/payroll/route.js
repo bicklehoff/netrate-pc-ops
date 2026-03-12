@@ -11,7 +11,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
-import { uploadFile } from '@/lib/zoho-workdrive';
+import { uploadFile, createLoanFolder } from '@/lib/zoho-workdrive';
 
 async function verifyMloAccess(loanId, session) {
   if (!session || session.user.userType !== 'mlo') return null;
@@ -91,15 +91,32 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ error: 'File size exceeds 25 MB limit' }, { status: 400 });
     }
 
-    // Upload to WorkDrive CLOSING subfolder
-    const subfolders = loan.workDriveSubfolders;
-    const closingFolderId = subfolders?.CLOSING;
+    // Upload to WorkDrive CLOSING subfolder — auto-create if missing
+    let closingFolderId = loan.workDriveSubfolders?.CLOSING;
 
     if (!closingFolderId) {
-      return NextResponse.json(
-        { error: 'No CLOSING folder found. WorkDrive may not be set up for this loan.' },
-        { status: 400 }
-      );
+      // Auto-create WorkDrive folder structure for this loan
+      const loName = loan.mlo
+        ? `${loan.mlo.firstName} ${loan.mlo.lastName}`
+        : 'David Burson';
+
+      const wdResult = await createLoanFolder({
+        borrowerFirstName: loan.borrower?.firstName || 'Unknown',
+        borrowerLastName: loan.borrower?.lastName || 'Unknown',
+        purpose: loan.purpose || 'purchase',
+        loName,
+      });
+
+      // Save the folder IDs on the loan for future use
+      await prisma.loan.update({
+        where: { id },
+        data: {
+          workDriveFolderId: wdResult.rootFolderId,
+          workDriveSubfolders: wdResult.subfolders,
+        },
+      });
+
+      closingFolderId = wdResult.subfolders.CLOSING;
     }
 
     const uploaded = await uploadFile(file, file.name, closingFolderId, true);
