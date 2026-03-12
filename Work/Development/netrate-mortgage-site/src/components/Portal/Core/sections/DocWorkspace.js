@@ -88,28 +88,42 @@ export default function DocWorkspace({ loanId, onRefresh }) {
 
   // ─── Handlers ────────────────────────────────────────────
 
+  const MAX_FILE_SIZE = 4.5 * 1024 * 1024; // Vercel serverless body limit
+
   const handleUpload = async (e) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
     setUploading(true);
     setError('');
+    const errors = [];
+    let uploaded = 0;
     try {
-      const errors = [];
       for (const file of files) {
+        if (file.size > MAX_FILE_SIZE) {
+          errors.push(`${file.name}: too large (${(file.size / 1024 / 1024).toFixed(1)}MB, max 4.5MB)`);
+          continue;
+        }
         const formData = new FormData();
         formData.append('file', file);
         formData.append('folder', activeTab);
-        const res = await fetch(`/api/portal/mlo/loans/${loanId}/files`, {
-          method: 'PUT',
-          body: formData,
-        });
-        if (!res.ok) {
-          const data = await res.json();
-          errors.push(`${file.name}: ${data.error || 'failed'}`);
+        try {
+          const res = await fetch(`/api/portal/mlo/loans/${loanId}/files`, {
+            method: 'PUT',
+            body: formData,
+          });
+          if (!res.ok) {
+            let msg = `HTTP ${res.status}`;
+            try { const data = await res.json(); msg = data.error || msg; } catch {}
+            errors.push(`${file.name}: ${msg}`);
+          } else {
+            uploaded++;
+          }
+        } catch (fetchErr) {
+          errors.push(`${file.name}: network error`);
         }
       }
       if (errors.length > 0) {
-        setError(errors.join('; '));
+        setError(`${uploaded} uploaded, ${errors.length} failed: ${errors.join('; ')}`);
       }
       await fetchFiles();
     } catch {

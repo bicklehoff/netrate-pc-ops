@@ -6,6 +6,9 @@
 //
 // Proxies WorkDrive API through MLO auth. All operations are audited.
 
+// Allow larger file uploads (default 4.5MB is too small for docs)
+export const maxDuration = 30;
+
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
