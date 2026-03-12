@@ -1283,3 +1283,55 @@ This brief contains:
 - [ ] **Dev** — Verify print preview renders correctly on Chrome + Safari
 - [ ] **Dev** — Test mobile responsiveness (charts at 375px)
 - [ ] **Dev** — Execute HECM Explorer build per dev brief
+
+---
+
+## 2026-03-11 — WebDev — MLO Login Fix, Portal Payroll, Rate Tool Polish
+
+**Department:** WebDev (pc-dev)
+**Continued from:** Previous session (rate tool Wave 3 + MLO login debug)
+
+### What was done
+
+**1. MLO Login Fix (Critical)**
+- Root cause: Prisma migration `20260310000002_add_ldox_integration_fields` was never applied to production Neon DB
+- `ldox_officer_id` and `nmls` columns existed in Prisma schema but not in database — Prisma's `findUnique` tried to SELECT non-existent columns → "column not available" error
+- Applied migration directly to Neon (ALTER TABLE ADD COLUMN IF NOT EXISTS)
+- Removed all temporary debug logging from `src/lib/auth.js` and login page
+- Login error message now shows clean "Invalid email or password" instead of raw Prisma errors
+- Deleted temp diagnostic scripts (check-mlo.cjs, check-mlo.mjs, check-columns.cjs, etc.)
+
+**2. CD Upload + Payroll on Overview**
+- PayrollSection was hidden behind Documents sidebar tab after Core UI redesign
+- Added PayrollSection to OverviewSection for funded loans (renders at top)
+- Passed `onRefresh` prop through LoanDetailShell → OverviewSection
+
+**3. WorkDrive Auto-Create for Legacy Loans**
+- Loans created before WorkDrive integration had no folder structure
+- Payroll PUT handler now auto-creates full WorkDrive folder tree (LO/Year/Borrower_Purpose/SUBMITTED,EXTRA,CLOSING) on first CD upload
+- Saves folder IDs to loan record for future use
+
+**4. Payroll Snapshot Enhancement**
+- Added `closingFolderId` and `workDriveSubfolders` to the `payroll_sent` audit event
+- Mac/Tracker now gets exact folder location of the CD without navigating the tree
+
+**5. Mac Relay**
+- Sent relay to Mac with full CD pickup spec: query, audit event payload structure, WorkDrive fetch method
+- Relay still open (unacknowledged) — David needs to tell Mac to check relay
+
+### Key decisions
+- Prisma migrations must be verified on production after schema changes (lesson learned)
+- PayrollSection shows on Overview AND Documents for funded loans (primary action visibility)
+- Legacy loans auto-create WorkDrive folders on first CD upload (no manual setup needed)
+
+### Files modified
+- `src/lib/auth.js` — Removed debug logging
+- `src/app/portal/mlo/login/page.js` — Clean error message, removed debug console.log
+- `src/components/Portal/Core/sections/OverviewSection.js` — Added PayrollSection for funded loans
+- `src/components/Portal/Core/LoanDetailShell.js` — Pass onRefresh to OverviewSection
+- `src/app/api/portal/mlo/loans/[id]/payroll/route.js` — Auto-create WorkDrive, closingFolderId in snapshot
+
+### Open items
+- [ ] **Mac** — Check relay: CD Upload + Send to Payroll spec (relay cmmmpi4ya0001krrc7xpy02mb)
+- [ ] **Mac** — Build Tracker ingest endpoint to poll/receive payroll_sent events
+- [ ] **Dev** — Continue Rate Tool Wave 1-3 plan (comparison report)
