@@ -550,6 +550,7 @@ model TicketEntry {
   id              String    @id @default(uuid()) @db.Uuid
   ticketId        String    @map("ticket_id") @db.Uuid
   content         String
+  imageUrl        String?   @map("image_url")       // Vercel Blob URL for attached screenshot
   authorId        String    @map("author_id")      // Actor: 'david' | 'pc-dev' | 'system' | mloId
   authorLabel     String?   @map("author_label")    // Display name: "David", "PC Dev", etc.
   entryType       String    @default("comment") @map("entry_type")  // 'comment' | 'status_change' | 'assignment'

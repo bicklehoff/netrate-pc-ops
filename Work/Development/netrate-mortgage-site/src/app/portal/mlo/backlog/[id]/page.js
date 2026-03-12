@@ -3,7 +3,7 @@
 
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 
@@ -45,8 +45,12 @@ export default function TicketDetailPage() {
   const [ticket, setTicket] = useState(null);
   const [loading, setLoading] = useState(true);
   const [comment, setComment] = useState('');
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [dragging, setDragging] = useState(false);
   const [posting, setPosting] = useState(false);
   const [editing, setEditing] = useState(false);
+  const fileInputRef = useRef(null);
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
 
@@ -71,20 +75,55 @@ export default function TicketDetailPage() {
 
   const handlePostComment = async (e) => {
     e.preventDefault();
-    if (!comment.trim()) return;
+    if (!comment.trim() && !imageFile) return;
     setPosting(true);
+
+    const formData = new FormData();
+    formData.append('content', comment.trim());
+    if (imageFile) formData.append('image', imageFile);
 
     const res = await fetch(`/api/portal/mlo/tickets/${ticketId}/entries`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: comment.trim() }),
+      body: formData,
     });
 
     if (res.ok) {
       setComment('');
+      setImageFile(null);
+      setImagePreview(null);
       fetchTicket();
     }
     setPosting(false);
+  };
+
+  const handleImageSelect = (file) => {
+    if (!file) return;
+    const allowed = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
+    if (!allowed.includes(file.type)) return;
+    if (file.size > 10 * 1024 * 1024) return;
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onload = (e) => setImagePreview(e.target.result);
+    reader.readAsDataURL(file);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleImageSelect(file);
+  };
+
+  const handlePaste = (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        handleImageSelect(item.getAsFile());
+        return;
+      }
+    }
   };
 
   const handleStatusChange = async (newStatus) => {
@@ -275,26 +314,86 @@ export default function TicketDetailPage() {
                   {new Date(entry.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
                 </span>
               </div>
-              <p className={`text-sm whitespace-pre-wrap ${ENTRY_TYPE_STYLES[entry.entryType] || ''}`}>
-                {entry.content}
-              </p>
+              {entry.content && entry.content !== '(screenshot)' && (
+                <p className={`text-sm whitespace-pre-wrap ${ENTRY_TYPE_STYLES[entry.entryType] || ''}`}>
+                  {entry.content}
+                </p>
+              )}
+              {entry.imageUrl && (
+                <a href={entry.imageUrl} target="_blank" rel="noopener noreferrer" className="block mt-2">
+                  <img
+                    src={entry.imageUrl}
+                    alt="Attached screenshot"
+                    className="max-w-full max-h-96 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
+                  />
+                </a>
+              )}
             </div>
           ))}
         </div>
 
-        {/* Comment input */}
-        <form onSubmit={handlePostComment} className="border-t border-gray-200 p-4">
-          <textarea
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            placeholder="Add a comment..."
-            rows={2}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none resize-none mb-2"
-          />
-          <div className="flex justify-end">
+        {/* Comment input with drag-and-drop */}
+        <form
+          onSubmit={handlePostComment}
+          className="border-t border-gray-200 p-4"
+          onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={handleDrop}
+        >
+          <div className={`relative rounded-lg border-2 transition-colors ${dragging ? 'border-brand border-dashed bg-brand/5' : 'border-transparent'}`}>
+            <textarea
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              onPaste={handlePaste}
+              placeholder="Add a comment... (drop or paste an image)"
+              rows={2}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none resize-none"
+            />
+            {dragging && (
+              <div className="absolute inset-0 flex items-center justify-center rounded-lg pointer-events-none">
+                <span className="text-brand font-medium text-sm">Drop image here</span>
+              </div>
+            )}
+          </div>
+
+          {/* Image preview */}
+          {imagePreview && (
+            <div className="mt-2 relative inline-block">
+              <img src={imagePreview} alt="Preview" className="max-h-32 rounded-lg border border-gray-200" />
+              <button
+                type="button"
+                onClick={() => { setImageFile(null); setImagePreview(null); }}
+                className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600"
+              >
+                &times;
+              </button>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between mt-2">
+            <div className="flex items-center gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/gif,image/webp"
+                className="hidden"
+                onChange={(e) => handleImageSelect(e.target.files?.[0])}
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1 transition-colors"
+                title="Attach image"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Attach image
+              </button>
+            </div>
             <button
               type="submit"
-              disabled={posting || !comment.trim()}
+              disabled={posting || (!comment.trim() && !imageFile)}
               className="px-4 py-1.5 bg-brand text-white text-sm font-medium rounded-lg hover:bg-brand-dark transition-colors disabled:opacity-50"
             >
               {posting ? 'Posting...' : 'Comment'}

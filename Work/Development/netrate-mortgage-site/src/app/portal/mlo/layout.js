@@ -8,6 +8,7 @@ import SessionProvider from '@/components/Portal/SessionProvider';
 import DialerProvider, { useDialer } from '@/components/Portal/Dialer/DialerProvider';
 import { DialerPanel } from '@/components/Portal/Dialer';
 import { IncomingCallPopup } from '@/components/Portal/Dialer';
+import MloNav from '@/components/Portal/MloNav';
 
 function DialerSidebar() {
   const [expanded, setExpanded] = useState(false);
@@ -56,6 +57,9 @@ export default function MloLayout({ children }) {
       <DialerProvider>
         {/* Incoming call popup (floating, always available) */}
         <IncomingCallPopup />
+
+        {/* Floating nav (bottom-left) */}
+        <MloNav />
 
         {/* MLO content with collapsible dialer sidebar */}
         <div className="flex h-[calc(100vh-73px)]">

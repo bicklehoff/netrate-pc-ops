@@ -150,6 +150,15 @@ export default function BacklogPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
+          <button
+            onClick={() => router.push('/portal/mlo')}
+            className="text-xs text-gray-400 hover:text-brand transition-colors mb-1 flex items-center gap-1"
+          >
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Pipeline
+          </button>
           <h1 className="text-2xl font-bold text-gray-900">Dev Backlog</h1>
           <p className="text-sm text-gray-500 mt-1">
             {tickets.length} ticket{tickets.length !== 1 ? 's' : ''}
@@ -320,7 +329,7 @@ export default function BacklogPage() {
                 <td className="px-4 py-3">
                   <div className="font-medium text-gray-900 leading-tight">{ticket.title}</div>
                   {ticket.description && (
-                    <div className="text-xs text-gray-400 mt-0.5 truncate max-w-md">{ticket.description}</div>
+                    <div className="text-xs text-gray-400 mt-0.5">{ticket.description}</div>
                   )}
                 </td>
 
