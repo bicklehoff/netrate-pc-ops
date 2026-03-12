@@ -1545,3 +1545,80 @@ This brief contains:
 - [ ] **Mac** — Build their own REGISTRY.md for TrackerPortal
 - [ ] **Mac + Claw** — Add SessionStart hooks to their repos
 - [ ] **Claw** — System visual (4-page PPTX) still in progress — waiting for compiled draft
+
+---
+
+## Session: March 12, 2026 — CoreBot Phases 4-6, WorkDrive Fixes, Doc Workspace (Dev)
+
+**Chat focus:** Completed CoreBot Engine Phases 4-6, fixed WorkDrive duplicate folder bug, added manual folder creation, bulk upload, image-to-PDF conversion. Tested end-to-end on Devoe loan.
+
+**Commits this session:**
+- `d139c6d` — Add order-outs, doc workspace, and borrower checklist (Phases 4-6)
+- `c149658` — Fix WorkDrive duplicate folders and add manual folder creation
+- `49b8e73` — Add bulk file upload and auto image-to-PDF conversion
+- `2d9bab9` — Fix upload error handling and add 4.5MB file size check
+
+**What was done:**
+
+*CoreBot Phase 4 — Order-Outs:*
+- Email templates for title, appraisal, HOI, flood cert vendor orders
+- API endpoint `/api/corebot/order-out` — sends via Resend, auto-updates LoanDates
+- Inline order forms in ProcessingSection task cards
+
+*CoreBot Phase 5 — Doc Workspace:*
+- New `DocWorkspace.js` component replaces separate WorkDrivePanel + CoreBot card
+- CoreBot section: Process Docs button, unprocessed count, checklist progress bar
+- File browser: FLOOR/SUBMITTED/EXTRA/CLOSING tabs with upload, download, delete
+- File move API `/api/portal/mlo/loans/:id/files/move`
+- Conditions CRUD API `/api/portal/mlo/loans/:id/conditions`
+
+*CoreBot Phase 6 — Borrower Checklist:*
+- `BorrowerChecklist.js` — borrower-facing checklist combining doc requests + conditions
+- API `/api/portal/loans/:id/checklist` — unified checklist for borrower dashboard
+- Replaced DocumentList with BorrowerChecklist on borrower dashboard
+
+*WorkDrive Duplicate Folder Fix:*
+- Root cause: Zoho WorkDrive silently auto-renames duplicate folders (appends timestamp) instead of returning 409
+- Fix: `ensureFolder()` now lists parent first, checks for existing match before creating
+- All folder creation in `createLoanFolder` now uses `ensureFolder` for idempotency
+- David cleaned up ~8 duplicate timestamped folders from WorkDrive
+
+*Manual Folder Creation:*
+- Added "Create WorkDrive Folder" button to DocWorkspace for loans missing folder links
+- API endpoint `/api/portal/mlo/loans/:id/files/create-folder`
+- Tested on Devoe loan — folder created successfully at `David Burson/2026/DEVOE-ALAN_Refi_2026-03/`
+
+*Upload Improvements:*
+- Bulk upload: file input accepts multiple files, uploads sequentially
+- Image-to-PDF: server-side conversion via `pdf-lib` — PNG/JPG auto-converted to PDF
+- File size check: client-side 4.5MB limit (Vercel serverless body limit) with clear error messages
+- Per-file error handling with upload/fail counts
+
+*Other:*
+- MLO password reset for David (david@netratemortgage.com → netrate2026)
+- Captured Facebook insight about automated doc chase reminders to MCP + backlog ticket
+- All 6 CoreBot Engine phases now complete and deployed
+
+**Files created:**
+- `src/lib/email-templates/order-outs.js`
+- `src/app/api/corebot/order-out/route.js`
+- `src/components/Portal/Core/sections/DocWorkspace.js`
+- `src/app/api/portal/mlo/loans/[id]/files/move/route.js`
+- `src/app/api/portal/mlo/loans/[id]/conditions/route.js`
+- `src/components/Portal/BorrowerChecklist.js`
+- `src/app/api/portal/loans/[id]/checklist/route.js`
+- `src/app/api/portal/mlo/loans/[id]/files/create-folder/route.js`
+
+**Files modified:**
+- `src/components/Portal/Core/sections/ProcessingSection.js` — order forms
+- `src/components/Portal/Core/sections/DocumentsSection.js` — uses DocWorkspace
+- `src/app/portal/dashboard/page.js` — uses BorrowerChecklist
+- `src/lib/zoho-workdrive.js` — ensureFolder fix, idempotent createLoanFolder
+- `src/app/api/portal/mlo/loans/[id]/files/route.js` — image-to-PDF, bulk upload, error handling
+- `package.json` — added pdf-lib dependency
+
+**Open items:**
+- [ ] **Dev** — Large file upload (>4.5MB) needs direct-to-storage approach to bypass Vercel body limit
+- [ ] **Dev** — Test CoreBot "Process Docs" end-to-end on Devoe loan (files uploaded, ready to process)
+- [ ] **Dev** — Backlog: Automated doc chase reminders (ticket created in DB)
+- [ ] **Dev** — REGISTRY.md needs updating with new routes/components from Phases 4-6
