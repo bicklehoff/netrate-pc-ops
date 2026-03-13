@@ -1,14 +1,14 @@
 {
-  "version": 1,
-  "generatedAt": "2026-02-26T00:00:00Z",
+  "version": 2,
+  "generatedAt": "2026-03-13T00:00:00Z",
   "lenders": [
     {
-      "id": "amwest",
-      "name": "AmWest Wholesale",
-      "file": "amwest.json",
-      "effectiveDate": "2/25/2026",
-      "effectiveTime": "8:00 AM PST",
-      "uploadedAt": "2026-02-26T16:25:53Z"
+      "id": "sunwest",
+      "name": "Sunwest Mortgage",
+      "file": "sunwest.json",
+      "effectiveDate": "3/13/2026",
+      "effectiveTime": "6:00 AM PST",
+      "uploadedAt": "2026-03-13T00:00:00Z"
     }
   ]
 }

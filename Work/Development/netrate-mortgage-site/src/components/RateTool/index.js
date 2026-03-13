@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import staticAmwestData from '@/data/rates/amwest.json';
+import staticSunwestData from '@/data/rates/sunwest.json';
 import ScenarioForm from './ScenarioForm';
 import RateResults from './RateResults';
 import RateEducation from './RateEducation';
@@ -12,7 +12,7 @@ import { trackRateToolInteraction, startEngagementTimer } from '@/lib/analytics'
 
 export default function RateTool({ initialRateData }) {
   // Use GCS data if available, fall back to static bundled data
-  const rateData = initialRateData?.lenders?.[0] || staticAmwestData;
+  const rateData = initialRateData?.lenders?.[0] || staticSunwestData;
 
   // 30-second engagement timer
   useEffect(() => {
