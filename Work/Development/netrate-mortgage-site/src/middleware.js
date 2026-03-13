@@ -24,12 +24,16 @@ function checkSitePassword(request) {
   // - The password entry page itself
   // - The password verify endpoint
   // - Static assets (_next, favicon, etc.)
+  // - Public compliance pages (needed for Twilio A2P campaign verification)
   if (
     pathname.startsWith('/api/') ||
     pathname === '/site-access' ||
     pathname.startsWith('/_next/') ||
     pathname === '/favicon.ico' ||
-    pathname.startsWith('/images/')
+    pathname.startsWith('/images/') ||
+    pathname === '/contact' ||
+    pathname === '/privacy' ||
+    pathname === '/terms'
   ) {
     return null;
   }
