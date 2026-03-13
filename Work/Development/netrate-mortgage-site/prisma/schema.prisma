@@ -592,6 +592,35 @@ model Lead {
   @@map("leads")
 }
 
+// ─── Rate History (Market Watch — Phase A) ─────────────────────
+// Daily snapshot of best wholesale rates by loan type + credit tier.
+// Feeds the rate history chart and provides a proprietary dataset
+// that deepens over time. Every day not stored is gone forever.
+
+model RateHistory {
+  id              Int       @id @default(autoincrement())
+  date            DateTime  @db.Date
+  loanType        String    @map("loan_type") @db.VarChar(20)
+  // '30yr_fixed', '15yr_fixed', 'arm_5_1', etc.
+  term            Int       // 360, 180, etc.
+  creditScoreTier String    @map("credit_score_tier") @db.VarChar(10)
+  // '760+', '740-759', '720-739', '700-719', '680-699'
+  rate            Decimal   @db.Decimal(5, 3) // e.g. 5.625
+  apr             Decimal?  @db.Decimal(5, 3) // e.g. 5.712
+  points          Decimal?  @db.Decimal(4, 3) // -0.125 (credit) or 0.500 (points)
+  loanAmount      Int?      @map("loan_amount") // 400000
+  ltv             Int?      // 75
+  lender          String?   @db.VarChar(100) // wholesale lender name
+  loanPurpose     String?   @map("loan_purpose") @db.VarChar(20)
+  // 'purchase', 'refi_rate_term', 'refi_cash_out'
+  propertyType    String?   @map("property_type") @db.VarChar(20)
+  // 'single_family', 'condo', etc.
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  @@index([date, loanType, creditScoreTier], map: "idx_rate_history_lookup")
+  @@map("rate_history")
+}
+
 // ─── Lenders (Rate Pipeline) ──────────────────────────────────
 // Master list of wholesale lenders whose rate sheets we track.
 
