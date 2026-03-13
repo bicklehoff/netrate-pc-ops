@@ -5,7 +5,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { isNamedDoc } from '@/lib/constants/doc-types';
+import { isNamedDoc, isLockedDoc } from '@/lib/constants/doc-types';
 
 const FOLDER_TABS = [
   { key: 'FLOOR', label: 'Floor', icon: '📥', desc: 'Unsorted / incoming docs' },
@@ -118,7 +118,7 @@ export default function DocWorkspace({ loanId, onRefresh }) {
           } else {
             uploaded++;
           }
-        } catch (fetchErr) {
+        } catch {
           errors.push(`${file.name}: network error`);
         }
       }
@@ -394,6 +394,7 @@ export default function DocWorkspace({ loanId, onRefresh }) {
                 {processReport.documents.map((doc, i) => (
                   <div key={i} className="flex items-center gap-2 text-xs">
                     <span className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${
+                      doc.prefix === 'LOCKED' ? 'bg-amber-500' :
                       doc.action === 'renamed' ? 'bg-green-500' :
                       doc.action === 'suggest' ? 'bg-blue-500' :
                       doc.action === 'flagged' ? 'bg-amber-500' : 'bg-red-500'
@@ -545,17 +546,22 @@ export default function DocWorkspace({ loanId, onRefresh }) {
             <div className="divide-y divide-gray-100">
               {currentFiles.map((file) => {
                 const named = isNamedDoc(file.name);
+                const locked = isLockedDoc(file.name);
                 return (
                   <div
                     key={file.id}
                     className="flex items-center justify-between py-2.5 group"
                   >
                     <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <span className="text-lg flex-shrink-0">{fileIcon(file.name)}</span>
+                      <span className="text-lg flex-shrink-0">{locked ? '🔒' : fileIcon(file.name)}</span>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-medium text-gray-800 truncate">{file.name}</p>
-                          {named && (
+                          {locked ? (
+                            <span className="flex-shrink-0 px-1.5 py-0.5 text-[10px] font-medium bg-amber-50 text-amber-700 rounded border border-amber-200">
+                              Locked
+                            </span>
+                          ) : named && (
                             <span className="flex-shrink-0 px-1.5 py-0.5 text-[10px] font-medium bg-green-50 text-green-600 rounded border border-green-200">
                               Named
                             </span>

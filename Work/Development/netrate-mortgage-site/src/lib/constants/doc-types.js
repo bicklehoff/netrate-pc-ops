@@ -109,12 +109,22 @@ export function parseDocName(filename) {
 }
 
 /**
- * Check if a filename follows the naming protocol.
+ * Check if a filename has been marked as password-protected by CoreBot.
+ * LOCKED- prefix is intentionally longer than 3 chars to distinguish from standard prefixes.
+ * @param {string} filename
+ * @returns {boolean}
+ */
+export function isLockedDoc(filename) {
+  return filename?.startsWith('LOCKED-') || false;
+}
+
+/**
+ * Check if a filename follows the naming protocol (or is LOCKED).
  * @param {string} filename
  * @returns {boolean}
  */
 export function isNamedDoc(filename) {
-  return parseDocName(filename) !== null;
+  return isLockedDoc(filename) || parseDocName(filename) !== null;
 }
 
 // All valid prefixes as an array

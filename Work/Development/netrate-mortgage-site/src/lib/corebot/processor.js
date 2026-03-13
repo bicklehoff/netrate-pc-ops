@@ -5,7 +5,7 @@
 
 import { askClaudeWithDocs } from '@/lib/anthropic';
 import { listFolder, downloadFile, renameFile } from '@/lib/zoho-workdrive';
-import { isNamedDoc } from '@/lib/constants/doc-types';
+import { isNamedDoc, buildDocName } from '@/lib/constants/doc-types';
 import { getSubmissionChecklist, getProcessingPhase } from '@/lib/constants/submission-checklists';
 import { SYSTEM_PROMPT, buildIdentifyPrompt } from './prompts';
 import prisma from '@/lib/prisma';
@@ -117,12 +117,47 @@ export async function identifyFile(fileId, fileName, loanContext) {
     text: buildIdentifyPrompt({ fileName, loanContext }),
   });
 
-  // Call Claude
-  const response = await askClaudeWithDocs({
-    system: SYSTEM_PROMPT,
-    content,
-    maxTokens: 1024,
-  });
+  // Call Claude — catch encrypted PDF errors
+  let response;
+  try {
+    response = await askClaudeWithDocs({
+      system: SYSTEM_PROMPT,
+      content,
+      maxTokens: 1024,
+    });
+  } catch (apiErr) {
+    const msg = apiErr?.message || apiErr?.error?.message || String(apiErr);
+    const isEncrypted = /encrypt|password.protect|could not process|cannot read/i.test(msg);
+    if (isEncrypted) {
+      return {
+        originalName: fileName,
+        fileId,
+        prefix: 'LOCKED',
+        newFileName: `LOCKED-${fileName}`,
+        confidence: 1.0,
+        error: 'Password-protected document',
+        action: 'rename',
+      };
+    }
+    throw apiErr;
+  }
+
+  // Check if Claude says the document is encrypted/unreadable
+  if (/password.protect|encrypted|cannot (be )?read|unable to (read|open|access)/i.test(response)) {
+    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
+    if (!parsed.prefix || parsed.prefix === 'UNK' || parsed.confidence < 0.3) {
+      return {
+        originalName: fileName,
+        fileId,
+        prefix: 'LOCKED',
+        newFileName: `LOCKED-${fileName}`,
+        confidence: 1.0,
+        error: 'Password-protected document',
+        action: 'rename',
+      };
+    }
+  }
 
   // Parse JSON response
   try {
@@ -131,17 +166,32 @@ export async function identifyFile(fileId, fileName, loanContext) {
     if (!jsonMatch) throw new Error('No JSON in response');
 
     const result = JSON.parse(jsonMatch[0]);
+    const prefix = result.prefix || 'UNK';
+    const subtype = result.subtype || null;
+    const identifier = result.identifier || null;
+    const date = result.date || null;
+    const confidence = result.confidence || 0;
+
+    // Get file extension from original filename
+    const ext = fileName.includes('.') ? fileName.split('.').pop().toLowerCase() : 'pdf';
+
+    // Build newFileName from parts if Claude didn't return one
+    let newFileName = result.newFileName || null;
+    if (!newFileName && prefix !== 'UNK' && subtype) {
+      newFileName = buildDocName(prefix, subtype, identifier, date, ext);
+    }
+
     return {
       originalName: fileName,
       fileId,
-      prefix: result.prefix || 'UNK',
-      subtype: result.subtype || null,
-      identifier: result.identifier || null,
-      date: result.date || null,
-      newFileName: result.newFileName || null,
-      confidence: result.confidence || 0,
+      prefix,
+      subtype,
+      identifier,
+      date,
+      newFileName,
+      confidence,
       extractedData: result.extractedData || {},
-      action: result.confidence >= 0.7 ? 'rename' : result.confidence >= 0.5 ? 'suggest' : 'flagged',
+      action: confidence >= 0.7 ? 'rename' : confidence >= 0.5 ? 'suggest' : 'flagged',
     };
   } catch (parseErr) {
     console.error('[CoreBot] Failed to parse Claude response:', parseErr.message, response);
@@ -272,7 +322,11 @@ export async function processLoanDocuments(loanId, mloId) {
   // Add checklist status
   report.checklistStatus = await getChecklistStatus(loan);
 
-  // Create audit event
+  // Create audit event with per-file rename mappings
+  const renames = report.documents
+    .filter((d) => d.action === 'renamed' && d.newFileName)
+    .map((d) => ({ from: d.originalName, to: d.newFileName, prefix: d.prefix }));
+
   await prisma.loanEvent.create({
     data: {
       loanId,
@@ -285,6 +339,7 @@ export async function processLoanDocuments(loanId, mloId) {
         conditionsUpdated: report.conditionsUpdated,
         errors: report.errors.length,
         durationMs: Date.now() - startTime,
+        renames,
       },
     },
   });
