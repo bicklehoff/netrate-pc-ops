@@ -2,13 +2,41 @@ import Link from 'next/link';
 import TrustBar from '@/components/TrustBar';
 import HomepageRatesTable from '@/components/HomepageRatesTable';
 import { fetchGCSFile, isGCSConfigured } from '@/lib/gcs';
-import staticAmwest from '@/data/rates/amwest.json';
+import staticSunwest from '@/data/rates/sunwest.json';
 import { computeHomepageRates } from '@/lib/rates/homepage';
 
 // Revalidate every 5 minutes (ISR) — matches /api/rates and /rates page
 export const revalidate = 300;
 
 const GCS_BUCKET = process.env.GCS_BUCKET_NAME || 'netrate-rates';
+
+// ── Static fallback for market data (used when GCS market.json isn't available) ──
+const MARKET_FALLBACK = {
+  ticker: {
+    treasury10yr: { value: 4.136, change: 0.04, direction: 'up' },
+    umbs50: { value: 99.81, change: -0.16, direction: 'down' },
+    freddieMac30yr: { value: 6.37, source: 'Freddie Mac PMMS' },
+    sp500: { value: 5842, changePct: 0.3, direction: 'up' },
+  },
+  rateTrend: {
+    dataPoints: [70, 75, 72, 68, 65, 60, 55, 50], // sparkline bar heights (%)
+    commentary: 'The 30-year fixed has dropped 0.375% over the last 8 weeks. If the Fed holds in March, wholesale pricing should stay favorable through Q2.',
+  },
+  marketUpdates: [
+    { sentiment: 'positive', text: 'Fed holds rates steady — mortgage rates ease', date: 'Mar 1' },
+    { sentiment: 'cautious', text: 'Jobs report stronger than expected — watch for bond sell-off', date: 'Feb 28' },
+    { sentiment: 'neutral', text: 'Wholesale lenders reprice lower after 10-year drops to 4.15%', date: 'Feb 26' },
+    { sentiment: 'positive', text: 'Refi applications up 12% week-over-week (MBA data)', date: 'Feb 24' },
+    { sentiment: 'cautious', text: 'CPI comes in at 2.8% — slightly above expectations', date: 'Feb 20' },
+  ],
+};
+
+const SENTIMENT_COLORS = {
+  positive: 'bg-green-600',
+  negative: 'bg-red-500',
+  cautious: 'bg-amber-500',
+  neutral: 'bg-brand',
+};
 
 /**
  * Fetch rate data for homepage display.
@@ -24,12 +52,27 @@ async function getHomepageRateData() {
       console.error('Homepage GCS fetch failed, using static fallback:', err.message);
     }
   }
-  return staticAmwest;
+  return staticSunwest;
+}
+
+/**
+ * Fetch market data from GCS. Falls back to hardcoded values.
+ */
+async function getMarketData() {
+  if (isGCSConfigured()) {
+    try {
+      return await fetchGCSFile(GCS_BUCKET, 'live/market.json');
+    } catch {
+      // market.json doesn't exist yet — use fallback
+    }
+  }
+  return MARKET_FALLBACK;
 }
 
 export default async function HomePage() {
   // ─── Live Rate Data ─────────────────────────────────────────
   const lenderData = await getHomepageRateData();
+  const market = await getMarketData();
   let liveRates = null;
   try {
     liveRates = computeHomepageRates(lenderData);
@@ -43,11 +86,16 @@ export default async function HomePage() {
   const conv30Apr = d ? `${d.conv30.apr.toFixed(2)}%` : '5.94%';
   const conv30Payment = d ? `$${d.conv30.payment.toLocaleString()}` : '$2,366';
   const conv30RateNum = d ? d.conv30.rate : 5.875;
-  const effectiveDateFull = d?.effectiveDateFormatted || 'March 5, 2026';
-  const effectiveDateShort = d?.effectiveDateShort || 'Mar 5, 2026';
-  const effectiveTime = d?.effectiveTime || '3:30 PM ET';
-  const nationalAvg30 = 6.37; // Hardcoded until market.json pipeline
+  const effectiveDateFull = d?.effectiveDateFormatted || 'March 13, 2026';
+  const effectiveDateShort = d?.effectiveDateShort || 'Mar 13, 2026';
+  const effectiveTime = d?.effectiveTime || '6:00 AM PST';
+
+  // ─── Market Data (from GCS market.json → fallback) ─────────
+  const t = market?.ticker || MARKET_FALLBACK.ticker;
+  const nationalAvg30 = t.freddieMac30yr?.value || 6.37;
   const savingsGap = (nationalAvg30 - conv30RateNum).toFixed(2);
+  const mktUpdates = market?.marketUpdates || MARKET_FALLBACK.marketUpdates;
+  const trendData = market?.rateTrend || MARKET_FALLBACK.rateTrend;
 
   // Hero card products (30-yr from live data, rest placeholder)
   const heroProducts = [
@@ -76,19 +124,23 @@ export default async function HomePage() {
               <span className="text-gray-500 font-medium uppercase tracking-wider text-[10px]">Market</span>
               <div className="flex items-center gap-1.5">
                 <span className="text-gray-400">10-Yr Treasury</span>
-                <span className="text-white font-bold">4.136%</span>
-                <span className="text-red-400 font-semibold">&#9650; 0.04</span>
+                <span className="text-white font-bold">{t.treasury10yr.value}%</span>
+                <span className={`${t.treasury10yr.direction === 'up' ? 'text-red-400' : 'text-green-400'} font-semibold`}>
+                  {t.treasury10yr.direction === 'up' ? '\u25B2' : '\u25BC'} {Math.abs(t.treasury10yr.change)}
+                </span>
               </div>
               <div className="w-px h-3.5 bg-gray-800" />
               <div className="flex items-center gap-1.5">
                 <span className="text-gray-400">UMBS 5.0</span>
-                <span className="text-white font-bold">99.81</span>
-                <span className="text-red-400 font-semibold">&#9660; 0.16</span>
+                <span className="text-white font-bold">{t.umbs50.value}</span>
+                <span className={`${t.umbs50.direction === 'down' ? 'text-red-400' : 'text-green-400'} font-semibold`}>
+                  {t.umbs50.direction === 'up' ? '\u25B2' : '\u25BC'} {Math.abs(t.umbs50.change)}
+                </span>
               </div>
               <div className="w-px h-3.5 bg-gray-800" />
               <div className="flex items-center gap-1.5">
                 <span className="text-gray-400">Nat&apos;l Avg 30-Yr</span>
-                <span className="text-white font-bold">6.37%</span>
+                <span className="text-white font-bold">{nationalAvg30}%</span>
                 <span className="text-gray-500 text-[11px]">Freddie Mac</span>
               </div>
               <div className="w-px h-3.5 bg-gray-800" />
@@ -100,8 +152,10 @@ export default async function HomePage() {
               <div className="w-px h-3.5 bg-gray-800" />
               <div className="flex items-center gap-1.5">
                 <span className="text-gray-400">S&amp;P 500</span>
-                <span className="text-white font-bold">5,842</span>
-                <span className="text-green-400 font-semibold">&#9650; 0.3%</span>
+                <span className="text-white font-bold">{t.sp500.value.toLocaleString()}</span>
+                <span className={`${t.sp500.direction === 'up' ? 'text-green-400' : 'text-red-400'} font-semibold`}>
+                  {t.sp500.direction === 'up' ? '\u25B2' : '\u25BC'} {t.sp500.changePct}%
+                </span>
               </div>
               <div className="w-px h-3.5 bg-gray-800" />
               <span className="text-gray-600 text-[11px]">{effectiveDateShort} &middot; {effectiveTime}</span>
@@ -311,7 +365,7 @@ export default async function HomePage() {
               <circle cx="650" cy="72" r="4" fill="#1f2937" stroke="#9ca3af" strokeWidth="2" />
               <circle cx="650" cy="110" r="5" fill="#0891b2" stroke="#22d3ee" strokeWidth="2" />
               {/* End labels */}
-              <text x="662" y="68" className="text-[12px] font-bold" fill="#9ca3af">6.37%</text>
+              <text x="662" y="68" className="text-[12px] font-bold" fill="#9ca3af">{nationalAvg30}%</text>
               <text x="662" y="115" className="text-[12px] font-bold" fill="#22d3ee">{conv30Rate}</text>
             </svg>
             {/* Savings callout */}
@@ -353,18 +407,18 @@ export default async function HomePage() {
             </h3>
             {/* Sparkline bars */}
             <div className="relative h-28 bg-gradient-to-b from-cyan-50 to-white rounded-lg border border-gray-100 flex items-end px-3 mb-4 overflow-hidden">
-              <span className="absolute top-2.5 left-3.5 text-[11px] text-gray-400">8 weeks</span>
+              <span className="absolute top-2.5 left-3.5 text-[11px] text-gray-400">{trendData.dataPoints?.length || 8} weeks</span>
               <span className="absolute top-2.5 right-3.5 text-base font-extrabold text-brand">{conv30Rate}</span>
-              {[70, 75, 72, 68, 65, 60, 55, 50].map((h, i) => (
+              {(trendData.dataPoints || [70, 75, 72, 68, 65, 60, 55, 50]).map((h, i, arr) => (
                 <div
                   key={i}
-                  className={`flex-1 mx-0.5 rounded-t bg-brand min-h-[8px] ${i === 7 ? 'opacity-100' : 'opacity-60'}`}
+                  className={`flex-1 mx-0.5 rounded-t bg-brand min-h-[8px] ${i === arr.length - 1 ? 'opacity-100' : 'opacity-60'}`}
                   style={{ height: `${h}%` }}
                 />
               ))}
             </div>
             <p className="text-sm text-gray-500 leading-relaxed">
-              <strong className="text-gray-900">Trending down.</strong> The 30-year fixed has dropped 0.375% over the last 8 weeks. If the Fed holds in March, wholesale pricing should stay favorable through Q2.
+              {trendData.commentary || 'The 30-year fixed has dropped 0.375% over the last 8 weeks. If the Fed holds in March, wholesale pricing should stay favorable through Q2.'}
             </p>
           </div>
 
@@ -375,16 +429,10 @@ export default async function HomePage() {
               Market Updates
             </h3>
             <ul className="divide-y divide-gray-100">
-              {[
-                { color: 'bg-green-600', text: 'Fed holds rates steady — mortgage rates ease', date: 'Mar 1' },
-                { color: 'bg-amber-500', text: 'Jobs report stronger than expected — watch for bond sell-off', date: 'Feb 28' },
-                { color: 'bg-brand', text: 'Wholesale lenders reprice lower after 10-year drops to 4.15%', date: 'Feb 26' },
-                { color: 'bg-green-600', text: 'Refi applications up 12% week-over-week (MBA data)', date: 'Feb 24' },
-                { color: 'bg-amber-500', text: 'CPI comes in at 2.8% — slightly above expectations', date: 'Feb 20' },
-              ].map((item, i) => (
+              {mktUpdates.slice(0, 5).map((item, i) => (
                 <li key={i} className="flex items-center gap-3 py-2.5">
-                  <span className={`w-2 h-2 rounded-full ${item.color} flex-shrink-0`} />
-                  <span className="text-sm text-gray-700 flex-1">{item.text}</span>
+                  <span className={`w-2 h-2 rounded-full ${SENTIMENT_COLORS[item.sentiment] || item.color || 'bg-brand'} flex-shrink-0`} />
+                  <span className="text-sm text-gray-700 flex-1">{item.text || item.headline}</span>
                   <span className="text-xs text-gray-400 whitespace-nowrap ml-2">{item.date}</span>
                 </li>
               ))}
