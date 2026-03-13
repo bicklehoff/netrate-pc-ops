@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import staticAmwestData from '@/data/rates/amwest.json';
 import ScenarioForm from './ScenarioForm';
 import RateResults from './RateResults';
@@ -8,10 +8,27 @@ import RateEducation from './RateEducation';
 import LeadCapture from './LeadCapture';
 import ComparisonReport from './ComparisonReport';
 import { LO_CONFIG } from '@/lib/rates/config';
+import { trackRateToolInteraction, startEngagementTimer } from '@/lib/analytics';
 
 export default function RateTool({ initialRateData }) {
   // Use GCS data if available, fall back to static bundled data
   const rateData = initialRateData?.lenders?.[0] || staticAmwestData;
+
+  // 30-second engagement timer
+  useEffect(() => {
+    const cleanup = startEngagementTimer();
+    return cleanup;
+  }, []);
+
+  // Debounced rate_tool_interaction event
+  const interactionTimer = useRef(null);
+  const handleScenarioChange = useCallback((newScenario) => {
+    setScenario(newScenario);
+    if (interactionTimer.current) clearTimeout(interactionTimer.current);
+    interactionTimer.current = setTimeout(() => {
+      trackRateToolInteraction(newScenario);
+    }, 1500);
+  }, []);
 
   const [scenario, setScenario] = useState({
     purpose: "refi",
@@ -59,7 +76,7 @@ export default function RateTool({ initialRateData }) {
 
       {/* Rate Tool Body */}
       <div className="px-1">
-        <ScenarioForm scenario={scenario} onChange={setScenario} />
+        <ScenarioForm scenario={scenario} onChange={handleScenarioChange} />
         <RateResults
           scenario={scenario}
           rateData={rateData}

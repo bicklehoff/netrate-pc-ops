@@ -110,6 +110,16 @@ export default function RootLayout({ children }) {
             gtag('config', 'G-QPEE5ZSZ79');
           `}
         </Script>
+        {/* Microsoft Clarity — heatmaps & session recordings */}
+        <Script id="clarity-init" strategy="afterInteractive">
+          {`
+            (function(c,l,a,r,i,t,y){
+              c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+              t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i+"?ref=bwt";
+              y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+            })(window, document, "clarity", "script", "vv85vtrn77");
+          `}
+        </Script>
         {process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (
           <Script
             src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`}

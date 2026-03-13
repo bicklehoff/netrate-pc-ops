@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { getUtmParams, formatUtmString } from '@/lib/utm';
+import { trackLeadFormSubmit } from '@/lib/analytics';
 
 export default function ContactPage() {
   const [form, setForm] = useState({
@@ -40,6 +41,7 @@ export default function ContactPage() {
         throw new Error('Something went wrong. Please try again or contact us directly.');
       }
 
+      trackLeadFormSubmit('contact', 'Contact Form');
       setSubmitted(true);
     } catch (err) {
       setError(err.message);

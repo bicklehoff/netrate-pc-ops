@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { LO_CONFIG } from '@/lib/rates/config';
 import { getUtmParams, formatUtmString } from '@/lib/utm';
+import { trackLeadFormSubmit } from '@/lib/analytics';
 
 function formatScenarioSummary(scenario) {
   if (!scenario) return '';
@@ -48,6 +49,7 @@ export default function LeadCapture({ scenario }) {
         throw new Error('Something went wrong. Please try again or call us directly.');
       }
 
+      trackLeadFormSubmit('quote_request', 'Rate Tool - Selected Rate');
       setSubmitted(true);
     } catch (err) {
       setError(err.message);
