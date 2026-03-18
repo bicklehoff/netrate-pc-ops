@@ -1,6 +1,7 @@
 // NetRate Mortgage — Prisma Schema
 // Database: Neon Postgres (via Vercel Marketplace)
-// Schema evolution: init → add_dialer_tables → add_loan_processing_foundation → add_co_borrower_support
+// Synced from: netrate-governance/prisma/schema.prisma
+// Run: npm run prisma:sync to update from governance master
 
 generator client {
   provider   = "prisma-client"
@@ -14,7 +15,10 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// ─── Borrowers ───────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+// LOANS DOMAIN — PC (Borrower Portal + Dialer)
+// Authority: PC. Do NOT modify without PC approval via RELAY.
+// ═══════════════════════════════════════════════════════════════
 
 model Borrower {
   id              String    @id @default(uuid()) @db.Uuid
@@ -50,8 +54,6 @@ model Borrower {
   @@map("borrowers")
 }
 
-// ─── MLOs (Mortgage Loan Officers) ───────────────────────────
-
 model Mlo {
   id              String    @id @default(uuid()) @db.Uuid
   email           String    @unique
@@ -72,8 +74,6 @@ model Mlo {
 
   @@map("mlos")
 }
-
-// ─── Loans ───────────────────────────────────────────────────
 
 model Loan {
   id              String    @id @default(uuid()) @db.Uuid
@@ -174,11 +174,6 @@ model Loan {
   @@map("loans")
 }
 
-// ─── Loan Borrowers (Co-Borrower Junction) ──────────────────
-// Links multiple borrowers to a single loan. Each borrower gets their own
-// Borrower record (with encrypted PII). Per-borrower-per-loan data
-// (address, employment, declarations) lives here.
-
 model LoanBorrower {
   id              String    @id @default(uuid()) @db.Uuid
   loanId          String    @map("loan_id") @db.Uuid
@@ -217,8 +212,6 @@ model LoanBorrower {
   @@map("loan_borrowers")
 }
 
-// ─── Loan Events (Audit Trail) ──────────────────────────────
-
 model LoanEvent {
   id              String    @id @default(uuid()) @db.Uuid
   loanId          String    @map("loan_id") @db.Uuid
@@ -234,8 +227,6 @@ model LoanEvent {
 
   @@map("loan_events")
 }
-
-// ─── Documents ──────────────────────────────────────────────
 
 model Document {
   id              String    @id @default(uuid()) @db.Uuid
@@ -258,8 +249,6 @@ model Document {
 
   @@map("documents")
 }
-
-// ─── Contacts (Dialer CRM) ──────────────────────────────
 
 model Contact {
   id              String    @id @default(uuid()) @db.Uuid
@@ -288,8 +277,6 @@ model Contact {
   @@map("contacts")
 }
 
-// ─── Call Logs (Dialer) ──────────────────────────────────
-
 model CallLog {
   id              String    @id @default(uuid()) @db.Uuid
   contactId       String?   @map("contact_id") @db.Uuid
@@ -314,8 +301,6 @@ model CallLog {
   @@map("call_logs")
 }
 
-// ─── Call Notes ──────────────────────────────────────────
-
 model CallNote {
   id              String    @id @default(uuid()) @db.Uuid
   callLogId       String    @map("call_log_id") @db.Uuid
@@ -329,8 +314,6 @@ model CallNote {
 
   @@map("call_notes")
 }
-
-// ─── SMS Messages ────────────────────────────────────────
 
 model SmsMessage {
   id              String    @id @default(uuid()) @db.Uuid
@@ -351,8 +334,6 @@ model SmsMessage {
   @@index([twilioMessageSid])
   @@map("sms_messages")
 }
-
-// ─── Loan Dates (Phase 1 — CORE Foundation) ─────────────────
 
 model LoanDates {
   id                  String    @id @default(uuid()) @db.Uuid
@@ -410,8 +391,6 @@ model LoanDates {
   @@map("loan_dates")
 }
 
-// ─── Conditions (Phase 1 — CORE Foundation) ─────────────────
-
 model Condition {
   id                  String    @id @default(uuid()) @db.Uuid
   loanId              String    @map("loan_id") @db.Uuid
@@ -459,8 +438,6 @@ model Condition {
   @@map("conditions")
 }
 
-// ─── Loan Notes (Phase 1 — CORE Foundation) ─────────────────
-
 model LoanNote {
   id              String    @id @default(uuid()) @db.Uuid
   loanId          String    @map("loan_id") @db.Uuid
@@ -476,8 +453,6 @@ model LoanNote {
   @@index([loanId])
   @@map("loan_notes")
 }
-
-// ─── Loan Tasks (Phase 1 — CORE Foundation) ─────────────────
 
 model LoanTask {
   id              String    @id @default(uuid()) @db.Uuid
@@ -500,7 +475,88 @@ model LoanTask {
   @@map("loan_tasks")
 }
 
-// ─── HECM Scenarios (Reverse Mortgage Optimizer) ──────────────
+// ═══════════════════════════════════════════════════════════════
+// RATES DOMAIN — PC (Rate Pipeline + Market Watch)
+// Authority: PC. Rate sheets, rate history, lender configs.
+// ═══════════════════════════════════════════════════════════════
+
+model RateHistory {
+  id              Int       @id @default(autoincrement())
+  date            DateTime  @db.Date
+  loanType        String    @map("loan_type") @db.VarChar(20)
+  // '30yr_fixed', '15yr_fixed', 'arm_5_1', etc.
+  term            Int       // 360, 180, etc.
+  creditScoreTier String    @map("credit_score_tier") @db.VarChar(10)
+  // '760+', '740-759', '720-739', '700-719', '680-699'
+  rate            Decimal   @db.Decimal(5, 3) // e.g. 5.625
+  apr             Decimal?  @db.Decimal(5, 3) // e.g. 5.712
+  points          Decimal?  @db.Decimal(4, 3) // -0.125 (credit) or 0.500 (points)
+  loanAmount      Int?      @map("loan_amount") // 400000
+  ltv             Int?      // 75
+  lender          String?   @db.VarChar(100) // wholesale lender name
+  loanPurpose     String?   @map("loan_purpose") @db.VarChar(20)
+  // 'purchase', 'refi_rate_term', 'refi_cash_out'
+  propertyType    String?   @map("property_type") @db.VarChar(20)
+  // 'single_family', 'condo', etc.
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  @@index([date, loanType, creditScoreTier], map: "idx_rate_history_lookup")
+  @@map("rate_history")
+}
+
+model Lender {
+  id              String    @id @default(uuid()) @db.Uuid
+  name            String    // Display name: "AmWest Wholesale"
+  code            String    @unique // Slug for lookups: "amwest", "sunwest"
+  lenderFees      Int       @default(0) @map("lender_fees") // Flat fee in dollars
+  lockExtension   String?   @map("lock_extension") // e.g. "2 bps/day (max 30 days)"
+  isActive        Boolean   @default(true) @map("is_active")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  rateSheets      RateSheet[]
+
+  @@map("lenders")
+}
+
+model RateSheet {
+  id              String    @id @default(uuid()) @db.Uuid
+  lenderId        String    @map("lender_id") @db.Uuid
+  loanType        String    @map("loan_type") // 'conventional' | 'fha' | 'va' | 'usda' | 'nonqm'
+  term            Int       @default(360) // Months: 360=30yr, 180=15yr, 240=20yr
+  effectiveDate   DateTime  @map("effective_date") @db.Date
+  status          String    @default("active") // 'active' | 'superseded'
+
+  // LLPA matrices + adjustments — full pricing context as JSONB
+  // Shape: { ltvBands, purchaseLlpa, refiLlpa, cashoutLlpa, additionalLlpa, loanAmtAdj }
+  llpaData        Json      @map("llpa_data") @db.JsonB
+
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  lender          Lender    @relation(fields: [lenderId], references: [id])
+  rows            RateRow[]
+
+  @@index([loanType, status])
+  @@index([lenderId, loanType, status])
+  @@map("rate_sheets")
+}
+
+model RateRow {
+  id              String    @id @default(uuid()) @db.Uuid
+  rateSheetId     String    @map("rate_sheet_id") @db.Uuid
+  rate            Decimal   @db.Decimal(5, 3) // e.g. 6.875
+  price30         Decimal   @map("price_30") @db.Decimal(7, 4) // 30-day lock price
+  price45         Decimal   @map("price_45") @db.Decimal(7, 4) // 45-day lock price
+
+  rateSheet       RateSheet @relation(fields: [rateSheetId], references: [id], onDelete: Cascade)
+
+  @@index([rateSheetId])
+  @@map("rate_rows")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// WEBSITE DOMAIN — PC (Leads, Tickets, HECM, Dev Backlog)
+// Authority: PC. Public website features and internal tools.
+// ═══════════════════════════════════════════════════════════════
 
 model HecmScenario {
   id              String    @id @default(uuid()) @db.Uuid
@@ -518,10 +574,6 @@ model HecmScenario {
   @@index([mloId])
   @@map("hecm_scenarios")
 }
-
-// ─── Dev Tickets (Product Backlog) ────────────────────────────────
-// Shared ticketing for Website, Portal, and CoreBot.
-// David files tickets from the portal, PC Dev picks them up.
 
 model Ticket {
   id              String    @id @default(uuid()) @db.Uuid
@@ -562,10 +614,6 @@ model TicketEntry {
   @@map("ticket_entries")
 }
 
-// ─── Leads (Website Lead Capture) ────────────────────────────────
-// Captures leads from homepage rate table, rate tool, contact form, etc.
-// Primary storage — Zoho CRM sync is optional and fire-and-forget.
-
 model Lead {
   id              String    @id @default(uuid()) @db.Uuid
   name            String
@@ -592,91 +640,707 @@ model Lead {
   @@map("leads")
 }
 
-// ─── Rate History (Market Watch — Phase A) ─────────────────────
-// Daily snapshot of best wholesale rates by loan type + credit tier.
-// Feeds the rate history chart and provides a proprietary dataset
-// that deepens over time. Every day not stored is gone forever.
+// ═══════════════════════════════════════════════════════════════
+// KNOWLEDGE DOMAIN — Context Layer (Open Brain)
+// Isolated from all other domains. No foreign keys to LOANS.
+// Accessed only via the netrate-context MCP server.
+// ═══════════════════════════════════════════════════════════════
 
-model RateHistory {
+model Thought {
+  id          String   @id @default(cuid())
+  content     String   // The knowledge as a standalone statement
+  embedding   Unsupported("vector(1536)")? // pgvector for semantic search (Phase 4)
+
+  // Metadata
+  source      String   // Who captured this: "david", "mac-dev", "mac-admin", "mac-setup", "pc-dev", "pc-setup", "dave", "claw"
+  category    String   // "fact", "preference", "relationship", "insight", "rule", "pattern"
+  domain      String   @default("work") // "work" | "personal"
+
+  // Discoverability
+  people      String[] // Names mentioned: ["david", "jamie", "pc"]
+  topics      String[] // Tags: ["prisma", "neon", "portal", "finance"]
+
+  // Lifecycle
+  confidence  String   @default("confirmed") // "confirmed" | "provisional" | "superseded"
+  supersededBy String? @map("superseded_by")  // ID of the thought that replaced this one
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([source])
+  @@index([category])
+  @@index([domain])
+  @@map("thoughts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+
+  // Identity
+  device       String   // "mac" | "pc" | "ubuntu"
+  department   String   // "dev", "admin", "marketing", "setup", "auditor"
+
+  // Content
+  summary      String   // 2-3 sentence summary of what was accomplished
+  keyDecisions String[] @map("key_decisions")  // Bullet points of decisions made
+  filesModified String[] @map("files_modified") // Paths of files created/modified
+  openItems    String[] @map("open_items")     // What's still pending
+
+  // Cross-references
+  projects     String[] // Project IDs touched: ["CA-CFL-2026", "TX-LLC"]
+  relayEntries String[] @map("relay_entries")  // RELAY entries posted/acknowledged
+
+  // Timing
+  startedAt    DateTime @default(now()) @map("started_at")
+  endedAt      DateTime? @map("ended_at")
+
+  @@index([device])
+  @@index([department])
+  @@index([startedAt])
+  @@map("sessions")
+}
+
+model Decision {
+  id           String   @id @default(cuid())
+
+  // The decision
+  title        String   // Short: "SQLite for tracker backend"
+  question     String   // What was being decided: "Where should tracker data live?"
+  answer       String   // The decision: "SQLite via TrackerPortal API, not JSON files"
+  rationale    String   // Why: "Single source of truth, queryable, enforced schema..."
+  alternatives String[] // What was considered: ["JSON files", "Postgres directly", "Zoho Creator"]
+
+  // Context
+  category     String   // "architecture", "business", "governance", "process", "tool"
+  scope        String   // "mac", "pc", "both", "all"
+  decidedBy    String   @map("decided_by") // "david", "david+mac", "david+pc", "governance"
+
+  // Status
+  status       String   @default("active") // "active" | "superseded" | "under_review"
+  supersededBy String?  @map("superseded_by") // ID of the decision that replaced this
+
+  // Discoverability
+  topics       String[] // ["sqlite", "tracker", "data-storage"]
+
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([category])
+  @@index([scope])
+  @@index([status])
+  @@map("decisions")
+}
+
+model Relay {
+  id            String   @id @default(cuid())
+
+  // Routing
+  fromDevice    String   @map("from_device")  // "mac", "pc", "dave"
+  toDevice      String   @map("to_device")    // "mac", "pc", "dave", "all"
+  type          String   @default("info")     // "info" | "action" | "request"
+
+  // Content
+  content       String   // The message / command / task description
+  context       String?  // Optional extra context, specs, links
+
+  // Lifecycle
+  status        String   @default("open")     // "open" | "acknowledged" | "resolved"
+  acknowledgedAt DateTime? @map("acknowledged_at")
+  resolvedAt    DateTime? @map("resolved_at")
+  response      String?  // What the receiver reported back
+
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@index([toDevice, status])
+  @@index([fromDevice])
+  @@index([status])
+  @@index([createdAt])
+  @@map("relay")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// OPS DOMAIN — Mac (TrackerPortal)
+// Authority: Mac. Do NOT modify without Mac approval via RELAY.
+// ═══════════════════════════════════════════════════════════════
+
+model OpsProject {
+  id               Int       @id @default(autoincrement())
+  projectId        String    @unique @map("project_id")
+  projectName      String    @map("project_name")
+  client           String?   @default("NetRate Mortgage")
+  type             String?
+  category         String?
+  state            String?
+  priority         String?   @default("normal")
+  started          String?
+  targetCompletion String?   @map("target_completion")
+  actualCompletion String?   @map("actual_completion")
+  totalCost        Float?    @default(0) @map("total_cost")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  goal             OpsGoal?
+  milestones       OpsMilestone[]
+  instructions     OpsInstruction[]
+  ball             OpsBall?
+  ballHistory      OpsBallHistory[]
+  anticipations    OpsAnticipation[]
+  blockers         OpsBlocker[]
+  decisions        OpsDecision[]
+  documents        OpsDocument[]
+  timeline         OpsTimeline[]
+  draftEmails      OpsDraftEmail[]
+  projectContacts  OpsProjectContact[]
+  dependsOn        OpsProjectDependency[] @relation("DependsOn")
+  dependedOnBy     OpsProjectDependency[] @relation("DependedOnBy")
+
+  @@map("ops_projects")
+}
+
+model OpsGoal {
+  id           Int       @id @default(autoincrement())
+  projectId    Int       @unique @map("project_id")
+  description  String
+  verification String?
+  status       String?   @default("not_started")
+  achievedDate String?   @map("achieved_date")
+  evidence     String?
+
+  project      OpsProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("ops_goals")
+}
+
+model OpsMilestone {
+  id           Int       @id @default(autoincrement())
+  projectId    Int       @map("project_id")
+  milestoneId  Int       @map("milestone_id")
+  name         String
+  description  String?
+  status       String?   @default("pending")
+  reachedDate  String?   @map("reached_date")
+  evidence     String?
+  creates      String?
+  sortOrder    Int?      @map("sort_order")
+
+  project            OpsProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  afterInstructions  OpsInstruction[] @relation("AfterMilestone")
+  untilInstructions  OpsInstruction[] @relation("UntilMilestone")
+  blockerMilestones  OpsBlockerMilestone[]
+
+  @@unique([projectId, milestoneId])
+  @@map("ops_milestones")
+}
+
+model OpsInstruction {
+  id               Int       @id @default(autoincrement())
+  projectId        Int       @map("project_id")
+  instructionId    String    @map("instruction_id")
+  phase            String?
+  afterMilestoneId Int?      @map("after_milestone_id")
+  untilMilestoneId Int?      @map("until_milestone_id")
+  instruction      String
+  owner            String?   @default("david")
+  url              String?
+  notes            String?
+  cost             Float?
+  dueDate          String?   @map("due_date")
+  status           String?   @default("active")
+  completedDate    String?   @map("completed_date")
+  repeatable       Boolean   @default(false)
+  sortOrder        String?   @map("sort_order")
+  surface          String?
+  doneCriteria     Json?     @map("done_criteria") @db.JsonB
+
+  project          OpsProject    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  afterMilestone   OpsMilestone? @relation("AfterMilestone", fields: [afterMilestoneId], references: [id])
+  untilMilestone   OpsMilestone? @relation("UntilMilestone", fields: [untilMilestoneId], references: [id])
+  iterations       OpsIteration[]
+  steps            OpsInstructionStep[]
+  instructionContacts  OpsInstructionContact[]
+  instructionDocuments OpsInstructionDocument[]
+  draftEmails      OpsDraftEmail[]
+
+  @@unique([projectId, instructionId])
+  @@map("ops_instructions")
+}
+
+model OpsIteration {
+  id             Int       @id @default(autoincrement())
+  instructionId  Int       @map("instruction_id")
+  date           String
+  outcome        String
+  nextAction     String?   @map("next_action")
+  byWhom         String?   @default("david") @map("by_whom")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  instruction    OpsInstruction @relation(fields: [instructionId], references: [id], onDelete: Cascade)
+
+  @@map("ops_iterations")
+}
+
+model OpsInstructionStep {
+  id             Int       @id @default(autoincrement())
+  instructionId  Int       @map("instruction_id")
+  stepText       String    @map("step_text")
+  sortOrder      Int       @default(0) @map("sort_order")
+  done           Boolean   @default(false)
+  doneDate       String?   @map("done_date")
+  doneBy         String?   @map("done_by")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  instruction    OpsInstruction @relation(fields: [instructionId], references: [id], onDelete: Cascade)
+
+  @@map("ops_instruction_steps")
+}
+
+model OpsBall {
+  id           Int       @id @default(autoincrement())
+  projectId    Int       @unique @map("project_id")
+  court        String?   @default("ours")
+  holder       String?
+  since        String?
+  waitingOn    String?   @map("waiting_on")
+  nextDate     String?   @map("next_date")
+  cadenceDays  Int?      @map("cadence_days")
+  method       String?
+  lastFollowUp String?   @map("last_follow_up")
+
+  project      OpsProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("ops_ball")
+}
+
+model OpsBallHistory {
+  id         Int       @id @default(autoincrement())
+  projectId  Int       @map("project_id")
+  court      String
+  holder     String?
+  waitingOn  String?   @map("waiting_on")
+  changedAt  DateTime  @default(now()) @map("changed_at")
+  changedBy  String?   @default("system") @map("changed_by")
+  reason     String?
+
+  project    OpsProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("ops_ball_history")
+}
+
+model OpsAnticipation {
+  id          Int       @id @default(autoincrement())
+  projectId   Int       @map("project_id")
+  description String
+  preWork     String?   @map("pre_work")
+  status      String?   @default("identified")
+
+  project     OpsProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("ops_anticipations")
+}
+
+model OpsBlocker {
+  id           Int       @id @default(autoincrement())
+  projectId    Int       @map("project_id")
+  blockerId    Int       @map("blocker_id")
+  description  String
+  blocking     String?
+  waitingOn    String?   @map("waiting_on")
+  raisedDate   String    @map("raised_date")
+  resolvedDate String?   @map("resolved_date")
+  resolution   String?
+
+  project      OpsProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  blockerMilestones OpsBlockerMilestone[]
+
+  @@unique([projectId, blockerId])
+  @@map("ops_blockers")
+}
+
+model OpsDecision {
+  id                   Int       @id @default(autoincrement())
+  projectId            Int       @map("project_id")
+  decisionId           Int       @map("decision_id")
+  date                 String
+  decision             String
+  decidedBy            String?   @map("decided_by")
+  context              String?
+  alternativesRejected String?   @map("alternatives_rejected")
+  affects              String?
+
+  project              OpsProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, decisionId])
+  @@map("ops_decisions")
+}
+
+model OpsDocument {
+  id            Int       @id @default(autoincrement())
+  projectId     Int?      @map("project_id")
+  docId         Int?      @map("doc_id")
+  name          String
+  type          String?
+  filePath      String?   @map("file_path")
+  url           String?
+  dateAdded     String?   @map("date_added")
+  notes         String?
+  scanStatus    String?   @map("scan_status")
+  extractedData String?   @map("extracted_data")
+
+  project       OpsProject? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  instructionDocuments OpsInstructionDocument[]
+
+  @@map("ops_documents")
+}
+
+model OpsContact {
+  id           Int       @id @default(autoincrement())
+  name         String
+  role         String?
+  email        String?
+  phone        String?
+  organization String?
+  notes        String?
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  projectContacts     OpsProjectContact[]
+  instructionContacts OpsInstructionContact[]
+
+  @@map("ops_contacts")
+}
+
+model OpsTimeline {
+  id         Int       @id @default(autoincrement())
+  projectId  Int       @map("project_id")
+  date       String
+  event      String
+  source     String?   @default("system")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  project    OpsProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("ops_timeline")
+}
+
+model OpsDraftEmail {
+  id             Int       @id @default(autoincrement())
+  projectId      Int?      @map("project_id")
+  instructionId  Int?      @map("instruction_id")
+  toAddr         String?   @map("to_addr")
+  ccAddr         String?   @map("cc_addr")
+  subject        String?
+  body           String?
+  attachments    Json?
+  status         String?   @default("draft")
+  sentDate       String?   @map("sent_date")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  project        OpsProject?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  instruction    OpsInstruction? @relation(fields: [instructionId], references: [id], onDelete: SetNull)
+
+  @@map("ops_draft_emails")
+}
+
+model OpsTicket {
+  id             Int       @id @default(autoincrement())
+  ticketId       String    @unique @map("ticket_id")
+  created        String
+  status         String    @default("open")
+  page           String?
+  projectId      String?   @map("project_id")
+  instructionId  String?   @map("instruction_id")
+  itemText       String?   @map("item_text")
+  contextType    String?   @map("context_type")
+  contextJson    String?   @map("context_json")
+
+  entries        OpsTicketEntry[]
+
+  @@map("ops_tickets")
+}
+
+model OpsTicketEntry {
+  id         Int       @id @default(autoincrement())
+  ticketId   Int       @map("ticket_id")
+  sender     String
+  text       String
+  timestamp  String
+
+  ticket     OpsTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@map("ops_ticket_entries")
+}
+
+model OpsDevBacklogItem {
+  id          Int       @id @default(autoincrement())
+  title       String
+  description String?
+  type        String    @default("feature")   // bug, feature, improvement
+  priority    String    @default("medium")    // low, medium, high, critical
+  status      String    @default("open")      // open, in_progress, done, closed
+  createdBy   String    @default("david") @map("created_by")
+  assignedTo  String?   @map("assigned_to")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  comments    OpsDevBacklogComment[]
+
+  @@index([status])
+  @@index([type])
+  @@index([priority])
+  @@map("ops_dev_backlog_items")
+}
+
+model OpsDevBacklogComment {
+  id        Int       @id @default(autoincrement())
+  itemId    Int       @map("item_id")
+  author    String    @default("david")
+  text      String
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  item      OpsDevBacklogItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@map("ops_dev_backlog_comments")
+}
+
+model OpsProjectContact {
+  id            Int       @id @default(autoincrement())
+  projectId     Int       @map("project_id")
+  contactId     Int       @map("contact_id")
+  roleInProject String?   @map("role_in_project")
+
+  project       OpsProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  contact       OpsContact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, contactId])
+  @@map("ops_project_contacts")
+}
+
+model OpsInstructionContact {
+  id             Int       @id @default(autoincrement())
+  instructionId  Int       @map("instruction_id")
+  contactId      Int       @map("contact_id")
+  relationship   String?
+
+  instruction    OpsInstruction @relation(fields: [instructionId], references: [id], onDelete: Cascade)
+  contact        OpsContact     @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@unique([instructionId, contactId])
+  @@map("ops_instruction_contacts")
+}
+
+model OpsInstructionDocument {
+  id             Int       @id @default(autoincrement())
+  instructionId  Int       @map("instruction_id")
+  documentId     Int       @map("document_id")
+  relationship   String?   @default("produced")
+
+  instruction    OpsInstruction @relation(fields: [instructionId], references: [id], onDelete: Cascade)
+  document       OpsDocument    @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([instructionId, documentId])
+  @@map("ops_instruction_documents")
+}
+
+model OpsBlockerMilestone {
+  id           Int       @id @default(autoincrement())
+  blockerId    Int       @map("blocker_id")
+  milestoneId  Int       @map("milestone_id")
+
+  blocker      OpsBlocker   @relation(fields: [blockerId], references: [id], onDelete: Cascade)
+  milestone    OpsMilestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, milestoneId])
+  @@map("ops_blocker_milestones")
+}
+
+model OpsProjectDependency {
+  id           Int       @id @default(autoincrement())
+  projectId    Int       @map("project_id")
+  dependsOnId  Int       @map("depends_on_id")
+  description  String?
+  status       String?   @default("active")
+
+  project      OpsProject @relation("DependsOn", fields: [projectId], references: [id], onDelete: Cascade)
+  dependsOn    OpsProject @relation("DependedOnBy", fields: [dependsOnId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, dependsOnId])
+  @@map("ops_project_dependencies")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PAYROLL DOMAIN — Mac (Funded Loans + Wire Tracking)
+// Authority: Mac. Do NOT modify without Mac approval via RELAY.
+// ═══════════════════════════════════════════════════════════════
+
+model PayLoanOfficer {
+  id            Int       @id @default(autoincrement())
+  name          String
+  nmls          String?
+  email         String?
+  splitPct      Decimal   @map("split_pct") @db.Decimal(5, 4)
+  status        String    @default("active")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  fundedLoans   PayFundedLoan[]
+
+  @@map("pay_loan_officers")
+}
+
+model PayFundedLoan {
+  id                Int       @id @default(autoincrement())
+  status            String    @default("draft")
+
+  // Loan identifiers
+  borrowerName      String    @map("borrower_name")
+  borrowerLast      String    @map("borrower_last")
+  loanNumber        String?   @map("loan_number")
+  propertyAddress   String?   @map("property_address")
+  propertyState     String?   @map("property_state")
+  lender            String?
+  lienType          String?   @map("lien_type")
+  loanPurpose       String?   @map("loan_purpose")
+  loanType          String?   @map("loan_type")
+
+  // Core financial
+  loanAmount        Decimal   @map("loan_amount") @db.Decimal(12, 2)
+  interestRate      Decimal?  @map("interest_rate") @db.Decimal(5, 4)
+  loanTerm          Int?      @map("loan_term")
+
+  // Compensation breakdown
+  grossComp         Decimal   @map("gross_comp") @db.Decimal(10, 2)
+  brokerFee         Decimal   @map("broker_fee") @db.Decimal(10, 2)
+  houseFee          Decimal   @default(0) @map("house_fee") @db.Decimal(10, 2)
+  feesOffset        Decimal   @default(0) @map("fees_offset") @db.Decimal(10, 2)
+  processingFee     Decimal   @default(0) @map("processing_fee") @db.Decimal(10, 2)
+  costToCure        Decimal   @default(0) @map("cost_to_cure") @db.Decimal(10, 2)
+
+  // Pass-throughs (reimbursements on the wire)
+  appraisalReimb    Decimal   @default(0) @map("appraisal_reimb") @db.Decimal(10, 2)
+  creditReimb       Decimal   @default(0) @map("credit_reimb") @db.Decimal(10, 2)
+  miscReimb         Decimal   @default(0) @map("misc_reimb") @db.Decimal(10, 2)
+
+  // Lender credits
+  lenderCredits     Decimal   @default(0) @map("lender_credits") @db.Decimal(10, 2)
+
+  // Wire total (expected = comp + reimbursements + lender credits)
+  wireTotal         Decimal   @map("wire_total") @db.Decimal(10, 2)
+  // Actual wire received (from bank statement) — compare against wireTotal
+  actualWireTotal   Decimal?  @map("actual_wire_total") @db.Decimal(10, 2)
+
+  // LO compensation (snapshotted at confirm time)
+  loId              Int?      @map("lo_id")
+  loName            String?   @map("lo_name")
+  loNmls            String?   @map("lo_nmls")
+  loSplitPct        Decimal?  @map("lo_split_pct") @db.Decimal(5, 4)
+  loCompAmount      Decimal?  @map("lo_comp_amount") @db.Decimal(10, 2)
+  loNetPayable      Decimal?  @map("lo_net_payable") @db.Decimal(10, 2)
+
+  // Company P&L for this loan
+  netToCompany      Decimal?  @map("net_to_company") @db.Decimal(10, 2)
+
+  // Dates
+  closingDate       DateTime? @map("closing_date")
+  fundingDate       DateTime? @map("funding_date")
+  confirmedAt       DateTime? @map("confirmed_at")
+  paidAt            DateTime? @map("paid_at")
+
+  // CD document reference
+  cdNumber          String?   @map("cd_number")  // Sequential: "2026-001", "2026-002"
+  cdFilePath        String?   @map("cd_file_path")
+  cdExtractedRaw    Json?     @map("cd_extracted_raw") @db.JsonB
+
+  // Cross-references
+  quarter           String?
+  mcrMatchId        String?   @map("mcr_match_id")
+  zohoInvoiceId     String?   @map("zoho_invoice_id")
+
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  loanOfficer       PayLoanOfficer? @relation(fields: [loId], references: [id])
+  wireEmail         PayWireEmail?
+
+  @@index([status])
+  @@index([loId])
+  @@index([fundingDate])
+  @@index([quarter])
+  @@index([borrowerLast])
+  @@map("pay_funded_loans")
+}
+
+model PayWireEmail {
   id              Int       @id @default(autoincrement())
-  date            DateTime  @db.Date
-  loanType        String    @map("loan_type") @db.VarChar(20)
-  // '30yr_fixed', '15yr_fixed', 'arm_5_1', etc.
-  term            Int       // 360, 180, etc.
-  creditScoreTier String    @map("credit_score_tier") @db.VarChar(10)
-  // '760+', '740-759', '720-739', '700-719', '680-699'
-  rate            Decimal   @db.Decimal(5, 3) // e.g. 5.625
-  apr             Decimal?  @db.Decimal(5, 3) // e.g. 5.712
-  points          Decimal?  @db.Decimal(4, 3) // -0.125 (credit) or 0.500 (points)
-  loanAmount      Int?      @map("loan_amount") // 400000
-  ltv             Int?      // 75
-  lender          String?   @db.VarChar(100) // wholesale lender name
-  loanPurpose     String?   @map("loan_purpose") @db.VarChar(20)
-  // 'purchase', 'refi_rate_term', 'refi_cash_out'
-  propertyType    String?   @map("property_type") @db.VarChar(20)
-  // 'single_family', 'condo', etc.
-  createdAt       DateTime  @default(now()) @map("created_at")
 
-  @@index([date, loanType, creditScoreTier], map: "idx_rate_history_lookup")
-  @@map("rate_history")
-}
+  // Zoho email metadata
+  emailMessageId  String    @unique @map("email_message_id")
+  senderEmail     String?   @map("sender_email")
+  subject         String?
+  receivedAt      DateTime? @map("received_at")
+  emailBodyText   String?   @map("email_body_text")
 
-// ─── Lenders (Rate Pipeline) ──────────────────────────────────
-// Master list of wholesale lenders whose rate sheets we track.
+  // Parsed wire data
+  wireAmount      Decimal?  @map("wire_amount") @db.Decimal(12, 2)
+  wireDate        String?   @map("wire_date")
+  wireReference   String?   @map("wire_reference")
 
-model Lender {
-  id              String    @id @default(uuid()) @db.Uuid
-  name            String    // Display name: "AmWest Wholesale"
-  code            String    @unique // Slug for lookups: "amwest", "sunwest"
-  lenderFees      Int       @default(0) @map("lender_fees") // Flat fee in dollars
-  lockExtension   String?   @map("lock_extension") // e.g. "2 bps/day (max 30 days)"
-  isActive        Boolean   @default(true) @map("is_active")
-  createdAt       DateTime  @default(now()) @map("created_at")
+  // Parsed identifying info (from wire notification body)
+  parsedBorrower  String?   @map("parsed_borrower")
+  parsedProperty  String?   @map("parsed_property")
+  parsedOriginator String?  @map("parsed_originator")
 
-  rateSheets      RateSheet[]
+  // CD attachment (downloaded from email)
+  cdFilePath      String?   @map("cd_file_path")
+  cdExtractedRaw  String?   @map("cd_extracted_raw")
 
-  @@map("lenders")
-}
-
-// ─── Rate Sheets (Rate Pipeline) ──────────────────────────────
-// One per lender per loan type per effective date. Contains LLPA
-// matrices as JSONB — the pricing engine applies them in code.
-
-model RateSheet {
-  id              String    @id @default(uuid()) @db.Uuid
-  lenderId        String    @map("lender_id") @db.Uuid
-  loanType        String    @map("loan_type") // 'conventional' | 'fha' | 'va' | 'usda' | 'nonqm'
-  term            Int       @default(360) // Months: 360=30yr, 180=15yr, 240=20yr
-  effectiveDate   DateTime  @map("effective_date") @db.Date
-  status          String    @default("active") // 'active' | 'superseded'
-
-  // LLPA matrices + adjustments — full pricing context as JSONB
-  // Shape: { ltvBands, purchaseLlpa, refiLlpa, cashoutLlpa, additionalLlpa, loanAmtAdj }
-  llpaData        Json      @map("llpa_data") @db.JsonB
+  // Link to funded loan
+  fundedLoanId    Int?      @unique @map("funded_loan_id")
+  status          String    @default("pending")
+  // pending → selected → confirmed
 
   createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
-  lender          Lender    @relation(fields: [lenderId], references: [id])
-  rows            RateRow[]
+  // Relations
+  fundedLoan      PayFundedLoan? @relation(fields: [fundedLoanId], references: [id])
 
-  @@index([loanType, status])
-  @@index([lenderId, loanType, status])
-  @@map("rate_sheets")
+  @@index([status])
+  @@index([wireAmount])
+  @@map("pay_wire_emails")
 }
 
-// ─── Rate Rows (Rate Pipeline) ────────────────────────────────
-// Individual rate/price options within a rate sheet.
-// e.g. rate=6.875, price30=-3.8119, price45=-3.6869
+// ═══════════════════════════════════════════════════════════════
+// COMPLIANCE DOMAIN — Claw (Regulatory Rules)
+// Authority: Claw. Do NOT modify without Claw approval via RELAY.
+// ═══════════════════════════════════════════════════════════════
 
-model RateRow {
-  id              String    @id @default(uuid()) @db.Uuid
-  rateSheetId     String    @map("rate_sheet_id") @db.Uuid
-  rate            Decimal   @db.Decimal(5, 3) // e.g. 6.875
-  price30         Decimal   @map("price_30") @db.Decimal(7, 4) // 30-day lock price
-  price45         Decimal   @map("price_45") @db.Decimal(7, 4) // 45-day lock price
+model OpsComplianceRule {
+  id              String    @id                          // e.g. "respa-001", "advertising-042"
+  section         String?                                // Section heading from source doc
+  ruleText        String    @map("rule_text")            // The actual rule
+  category        String                                 // respa, tila, advertising, bsa_aml, etc.
+  subcategory     String?                                // Finer grain within category
+  citation        String?                                // Legal reference (e.g. "12 CFR 1026.24(b)")
+  scope           String                                 // federal, state_CO, state_TX, company_policy
+  severity        String                                 // law, regulation, best_practice
+  brokerRelevant  Boolean   @default(true) @map("broker_relevant")
+  thresholds      Json      @default("{}") @db.JsonB     // Numeric triggers, limits, amounts
+  formsReferenced String[]  @map("forms_referenced")     // Related forms
+  sourceDocument  String?   @map("source_document")      // Which doc this came from
+  netrateNotes    String?   @map("netrate_notes")        // NetRate-specific annotations
+  netrateStatus   String    @default("active") @map("netrate_status")  // active, right_size, not_applicable
+  triageNote      String?   @map("triage_note")          // Why it was triaged this way
+  status          String    @default("active")           // active, superseded, retired
+  createdBy       String    @default("claw") @map("created_by")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
-  rateSheet       RateSheet @relation(fields: [rateSheetId], references: [id], onDelete: Cascade)
-
-  @@index([rateSheetId])
-  @@map("rate_rows")
+  @@index([category])
+  @@index([scope])
+  @@index([status])
+  @@index([severity])
+  @@index([netrateStatus])
+  @@map("ops_compliance_rules")
 }
