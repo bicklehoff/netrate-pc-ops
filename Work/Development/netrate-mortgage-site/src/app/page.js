@@ -97,22 +97,22 @@ export default async function HomePage() {
   const mktUpdates = market?.marketUpdates || MARKET_FALLBACK.marketUpdates;
   const trendData = market?.rateTrend || MARKET_FALLBACK.rateTrend;
 
-  // Hero card products (30-yr from live data, rest placeholder)
+  // Hero card products (30-yr from live data, rest are estimates)
   const heroProducts = [
     { product: '30-Yr Fixed', rate: conv30Rate, apr: conv30Apr },
-    { product: '15-Yr Fixed', rate: '5.250%', apr: '5.38%' },
-    { product: 'FHA 30-Yr', rate: '5.500%', apr: '6.12%' },
-    { product: 'VA 30-Yr', rate: '5.375%', apr: '5.52%' },
+    { product: '15-Yr Fixed', rate: '5.250%*', apr: '5.38%' },
+    { product: 'FHA 30-Yr', rate: '5.500%*', apr: '6.12%' },
+    { product: 'VA 30-Yr', rate: '5.375%*', apr: '5.52%' },
   ];
 
-  // Full rates table (30-yr from live data, rest placeholder)
+  // Full rates table (30-yr from live data, rest are estimates)
   const tableProducts = [
     { product: '30-Year Fixed', rate: conv30Rate, apr: conv30Apr, change: null, payment: conv30Payment, note: null },
-    { product: '15-Year Fixed', rate: '5.250%', apr: '5.38%', change: null, payment: '$3,213', note: null },
-    { product: 'FHA 30-Year', rate: '5.500%', apr: '6.12%', change: null, payment: '$2,271', note: null },
-    { product: 'VA 30-Year', rate: '5.375%', apr: '5.52%', change: null, payment: '$2,240', note: null },
-    { product: 'Jumbo 30-Year', rate: '6.250%', apr: '6.31%', change: null, payment: '$4,928', note: '($800K)' },
-    { product: 'DSCR (Investor)', rate: '7.125%', apr: '7.28%', change: null, payment: '$2,694', note: null },
+    { product: '15-Year Fixed', rate: '5.250%*', apr: '5.38%', change: null, payment: '$3,213', note: null },
+    { product: 'FHA 30-Year', rate: '5.500%*', apr: '6.12%', change: null, payment: '$2,271', note: null },
+    { product: 'VA 30-Year', rate: '5.375%*', apr: '5.52%', change: null, payment: '$2,240', note: null },
+    { product: 'Jumbo 30-Year', rate: '6.250%*', apr: '6.31%', change: null, payment: '$4,928', note: '($800K)' },
+    { product: 'DSCR (Investor)', rate: '7.125%*', apr: '7.28%', change: null, payment: '$2,694', note: null },
   ];
   return (
     <div>
@@ -392,7 +392,7 @@ export default async function HomePage() {
         <HomepageRatesTable
           products={tableProducts}
           effectiveDate={effectiveDateFull}
-          disclaimer="Rates assume 760+ FICO, rate/term refinance, $400K loan, 75% LTV. Jumbo based on $800K. DSCR based on investment property, 1.25x coverage. Actual rates depend on your specific scenario. Updated daily from wholesale pricing."
+          disclaimer="30-Year Fixed rate updated daily from wholesale pricing. *Other rates are estimates and may vary. All rates assume 760+ FICO, rate/term refinance, $400K loan, 75% LTV. Jumbo based on $800K. DSCR based on investment property, 1.25x coverage. Use our Rate Tool for your specific scenario."
         />
       </section>
 
