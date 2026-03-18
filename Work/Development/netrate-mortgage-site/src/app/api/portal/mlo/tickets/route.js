@@ -22,23 +22,28 @@ export async function GET(request) {
   if (ticketType && ticketType !== 'all') where.ticketType = ticketType;
   if (priority && priority !== 'all') where.priority = priority;
 
-  const tickets = await prisma.ticket.findMany({
-    where,
-    include: {
-      entries: {
-        orderBy: { createdAt: 'desc' },
-        take: 1, // Latest entry for preview
+  try {
+    const tickets = await prisma.ticket.findMany({
+      where,
+      include: {
+        entries: {
+          orderBy: { createdAt: 'desc' },
+          take: 1, // Latest entry for preview
+        },
+        _count: { select: { entries: true } },
       },
-      _count: { select: { entries: true } },
-    },
-    orderBy: [
-      { status: 'asc' },
-      { priority: 'asc' },
-      { createdAt: 'desc' },
-    ],
-  });
+      orderBy: [
+        { status: 'asc' },
+        { priority: 'asc' },
+        { createdAt: 'desc' },
+      ],
+    });
 
-  return Response.json({ tickets });
+    return Response.json({ tickets });
+  } catch (error) {
+    console.error('Tickets API error:', error);
+    return Response.json({ error: error.message, tickets: [] }, { status: 500 });
+  }
 }
 
 export async function POST(request) {

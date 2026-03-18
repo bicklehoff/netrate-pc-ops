@@ -95,9 +95,12 @@ export default function BacklogPage() {
     if (filters.priority !== 'all') params.set('priority', filters.priority);
 
     const res = await fetch(`/api/portal/mlo/tickets?${params}`);
+    const data = await res.json();
     if (res.ok) {
-      const data = await res.json();
-      setTickets(data.tickets);
+      setTickets(data.tickets || []);
+    } else {
+      console.error('Tickets fetch error:', res.status, data);
+      setTickets([]);
     }
     setLoading(false);
   }, [filters]);
