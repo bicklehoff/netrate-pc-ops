@@ -18,7 +18,6 @@ const PRODUCTS = [
 const STATUSES = [
   { value: 'all', label: 'All' },
   { value: 'open', label: 'Open' },
-  { value: 'resolved', label: 'Resolved' },
   { value: 'closed', label: 'Closed' },
 ];
 
@@ -44,8 +43,6 @@ const PRIORITY_COLORS = {
 
 const STATUS_COLORS = {
   open: 'bg-amber-100 text-amber-800',
-  in_progress: 'bg-blue-100 text-blue-800',
-  resolved: 'bg-green-100 text-green-800',
   closed: 'bg-gray-200 text-gray-500',
 };
 
