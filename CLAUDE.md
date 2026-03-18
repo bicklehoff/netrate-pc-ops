@@ -156,6 +156,22 @@ Cross-device proposals/questions → post to RELAY.md in netrate-governance → 
 
 **Relay:** Cross-device communication uses MCP tools (`send_relay`, `check_relay`, `ack_relay`). Legacy file-based relay (`netrate-governance/RELAY.md`) is a fallback if MCP is unavailable.
 
+### Ironclad Relay Protocol
+
+1. **ALWAYS pass `device` on `check_relay`:**
+   `check_relay(device="pc")` — without this, Prisma silently returns 0 results.
+
+2. **ALWAYS pass `from` on `send_relay`:**
+   `send_relay(from="pc", to=..., ...)` — never omit the sender.
+
+3. **To REPLY to a relay, use `send_relay` — NOT `ack_relay` with a response:**
+   `send_relay(from="pc", to="<originalSender>", type="response", content="your reply")`
+   Then ack the original: `ack_relay(id="...", status="resolved")`
+
+4. **`ack_relay` is for STATUS changes only** (acknowledged/resolved). The `response` field auto-creates a reply relay as a safety net, but don't rely on it — always use `send_relay` for replies.
+
+5. **At session start:** `check_relay(device="pc")` — MANDATORY, every session, no exceptions.
+
 ## Key Resources on Mac (Read via GitHub)
 
 | What | Where (in netrate-ops) | Use |
