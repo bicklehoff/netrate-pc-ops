@@ -3,6 +3,54 @@
 **Location:** `Work/SESSION-LOG.md`
 **Device:** PC (Public Facing)
 
+---
+
+## 2026-03-18 — Dev — Major Infrastructure + Launch Prep + Rate Watch Start
+
+**Focus:** Market Watch Phase A, scheduled tasks, Devoe HECM analysis, launch readiness, FRED API integration
+
+**Key accomplishments:**
+- Built Market Watch Phase A: rate_history table, daily snapshot job, /api/rates/history endpoint
+- Set up 3 Claude Code scheduled tasks (relay-check, build-deploy-monitor, rate-snapshot)
+- Deep Devoe HECM analysis: identified credit duplicate ($819/mo), HomeSafe Intro product comparison ($49K available, $347/mo shortfall), created fact sheet saved to loan folder
+- Added 4 CoreBot backlog tickets (MISMO XML import, guideline storage, FA calculator, call prep sheets)
+- Fixed critical backlog bug: missing image_url column in ticket_entries (shared DB drift)
+- Added sign-out button to floating MLO nav
+- Extended MLO session from 60 min to 30 days
+- Simplified backlog statuses to Open/Closed
+- Completed full pre-launch audit — site declared launch-ready
+- Tested all pages via Chrome browser automation (all passing, found Market 404)
+- Installed Poppler for PDF rendering
+- Built FRED API route (/api/rates/fred), got API key, tested live (30yr nat'l avg 6.11%)
+- Installed Chart.js + plugins for Rate Watch chart
+- Updated Locus Mortgage → NetRate Mortgage in all loans
+- Updated sitemap (added 6 missing pages)
+- Labeled placeholder rates with asterisks on homepage
+
+**Compliance review received from Claw — 7 must-fix items:**
+1. Rate Tool missing APR column (Reg Z)
+2. "Federally Registered Broker" → "State-Licensed Mortgage Broker"
+3. Homepage comparison chart uses fabricated data
+4. Rate Tool lead forms need SMS consent checkbox
+5. Contact form smsConsent not sent to API
+6. Privacy policy needs Clarity disclosure
+7. Privacy policy claims cookie banner that doesn't exist
+
+**Decisions:**
+- Processing engine: build data layer now (path A), standalone service later (path B)
+- Chart.js chosen over recharts for Rate Watch (annotations/plugins require it)
+- FRED terms require disclaimer on Rate Watch page
+- Credit company FNMA XML is primary import source for CoreBot (not LDox)
+
+**Open items:**
+- [ ] Rate Watch page build (Steps 3-7 of plan — page shell, 6 components, nav link)
+- [ ] 7 compliance fixes before password wall removal
+- [ ] Devoe: Call borrowers about SS income ($347/mo needed)
+- [ ] Mobile QA before launch
+- [ ] Borrower portal notifications
+- [ ] Rocket XLSX parser (need sample from David)
+- [ ] Rate history backfill Jan-Mar 2026
+
 Use this file to coordinate across PC work chats. Each session should read this first and add notes at the end.
 
 ---
