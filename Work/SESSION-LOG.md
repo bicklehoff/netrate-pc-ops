@@ -1688,3 +1688,48 @@ This brief contains:
 - [ ] **Dev** — Architecture decision: processing engine as standalone service (tech stack TBD)
 - [ ] **Dev** — Upgrade Claude Code to v2.1.78+ (Claw adoption plan Phase 1)
 - [ ] **Dev** — A2P/10DLC: Resubmit campaign with updated opt-in language (open from prior session)
+
+---
+
+## Session: 2026-03-18 - Market Watch Phase A (WebDev/Dev)
+
+**Chat focus:** Acknowledge Claw Market Watch relay, build Phase A: rate_history database + daily snapshot job + API endpoint
+
+**What was done:**
+- Acknowledged Claw relay (cmmp8b70g0007y477ceekt15s) re: Market Watch dev brief
+- Added `RateHistory` model to Prisma schema (autoincrement ID, matches Claw's SQL spec)
+- Created `rate_history` table in Neon Postgres via raw SQL (can't use prisma push — shared DB drift)
+- Built `scripts/create-rate-history-table.js` — one-time table creation script
+- Built `scripts/rate-history-snapshot.js` — daily snapshot job:
+  - Computes par rate per credit tier (760+, 740-759, 720-739, 700-719, 680-699)
+  - Default scenario: $400K, 75% LTV, purchase, single family
+  - Supports --dry-run, --date, --file flags
+  - Duplicate protection (won't re-insert same date)
+- Built `GET /api/rates/history` endpoint — query by loan_type, credit_score, days/period
+- Stored today's data (2026-03-13 Sunwest rates): 5 rows across 5 credit tiers
+- Build passed, committed, pushed
+
+**Key decisions:**
+- Use raw SQL via @neondatabase/serverless for table creation (Prisma push would destroy Mac's ops_* tables)
+- Logged as architecture decision in MCP knowledge layer
+- Rate date stored is 2026-03-13 (effective date of current Sunwest rate sheet, not today)
+
+**Commits:**
+- `6eb5623` — Add Market Watch Phase A: rate_history database + snapshot job + API
+
+**Files created/modified:**
+- `prisma/schema.prisma` (added RateHistory model)
+- `scripts/create-rate-history-table.js` (new — one-time table setup)
+- `scripts/rate-history-snapshot.js` (new — daily snapshot job)
+- `src/app/api/rates/history/route.js` (new — API endpoint)
+
+**Open items:**
+- [ ] **David** — Run `node scripts/rate-history-snapshot.js` daily after pulling rate sheets
+- [ ] **David** — Backfill Jan-Mar 2026 data using --date flag with historical rate files
+- [ ] **Dev** — Market Watch Phase B: FRED API integration (Treasury yields)
+- [ ] **Dev** — Market Watch Phase C: Rate History chart UI (Recharts)
+- [ ] **Dev** — Market Watch Phase D: Economic calendar
+- [ ] **Dev** — Homepage ticker: Review UMBS/S&P500 items per Claw's zero-third-party-data rule
+- [ ] **Dev** — Large file upload (>4.5MB) — still open
+- [ ] **Dev** — A2P/10DLC: Resubmit campaign
+- [ ] **Dev** — Upgrade Claude Code to v2.1.78+
