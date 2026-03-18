@@ -52,7 +52,7 @@ export const authOptions = {
 
   session: {
     strategy: 'jwt',
-    maxAge: 60 * 60, // 60 minutes for MLO (borrower sessions managed separately)
+    maxAge: 30 * 24 * 60 * 60, // 30 days — MLO sessions persist across browser restarts
   },
 
   callbacks: {
