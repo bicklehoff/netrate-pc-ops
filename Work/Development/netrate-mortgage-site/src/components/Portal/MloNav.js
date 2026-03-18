@@ -6,7 +6,7 @@
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { useSession } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 
 const NAV_ITEMS = [
   {
@@ -97,6 +97,15 @@ export default function MloNav() {
           </Link>
         );
       })}
+      <button
+        onClick={() => signOut({ callbackUrl: '/portal/mlo/login' })}
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all ml-1"
+        title="Sign Out"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+        </svg>
+      </button>
     </nav>
   );
 }
