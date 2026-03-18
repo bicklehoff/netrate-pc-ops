@@ -18,7 +18,6 @@ const PRODUCTS = [
 const STATUSES = [
   { value: 'all', label: 'All' },
   { value: 'open', label: 'Open' },
-  { value: 'in_progress', label: 'In Progress' },
   { value: 'resolved', label: 'Resolved' },
   { value: 'closed', label: 'Closed' },
 ];
