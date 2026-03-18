@@ -13,6 +13,7 @@ export default function ContactPage() {
     loanType: '',
     message: '',
   });
+  const [smsConsent, setSmsConsent] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -155,6 +156,25 @@ export default function ContactPage() {
           />
         </div>
 
+        {/* SMS Opt-In Consent */}
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={smsConsent}
+              onChange={(e) => setSmsConsent(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand/50 shrink-0"
+            />
+            <span className="text-sm text-gray-700 leading-relaxed">
+              By checking this box, you consent to receive SMS customer care and marketing messages
+              from NetRate Mortgage. Message frequency may vary. Standard Message and Data Rates may
+              apply. Reply STOP to opt out. Reply HELP for help.{' '}
+              <a href="/privacy" className="text-brand underline hover:text-brand-dark">Privacy Policy</a>{' '}
+              <a href="/terms" className="text-brand underline hover:text-brand-dark">Terms &amp; Conditions</a>
+            </span>
+          </label>
+        </div>
+
         {error && (
           <p className="text-sm text-red-600">{error}</p>
         )}
@@ -166,14 +186,6 @@ export default function ContactPage() {
         >
           {submitting ? 'Sending...' : 'Get My Free Quote'}
         </button>
-
-        <p className="text-[10px] text-gray-400 mt-3 leading-relaxed">
-          By submitting this form, you agree to receive recurring text messages from NetRate Mortgage
-          related to your mortgage inquiry and loan updates. Message frequency may vary. Msg &amp; data
-          rates may apply. Reply STOP to cancel, HELP for help.
-          See our <a href="/privacy" className="underline hover:text-gray-500">Privacy Policy</a> and{' '}
-          <a href="/terms" className="underline hover:text-gray-500">SMS Terms</a>.
-        </p>
       </form>
 
       <div className="mt-8 bg-brand/5 border border-brand/20 rounded-lg p-5 text-center">
