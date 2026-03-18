@@ -1,0 +1,21 @@
+To: Christina Bitner (AE), Tonya Tow Burch (UW Support)
+Subject: Devoe #2200043054 - Condition 101 / Residual Income Clarification
+
+Hi Christina / Tonya,
+
+I'm reviewing the conditional approval on the Devoe file and have a question about the residual income calculation on the Financial Assessment Worksheet.
+
+The RI comes back at -$1,869.49/mo with a shortfall of $2,803.66, and condition 101 asks for additional income or assets to cover this gap. Looking at Section H, the two US Bank mortgage payments ($2,145 + $2,284 = $4,429/mo) are included in "Other Monthly Expenses."
+
+Since both of those liens are mandatory obligations being paid off at closing (condition 200), will the RI be recalculated excluding those payments? Post-payoff, the borrowers' RI would be approximately +$2,559/mo -- well above the $998 West region threshold.
+
+A couple of additional questions while I have you:
+
+1. The UW analysis notes income was calculated "per 2025 W2s," but condition 101 asks for 2024 W2s. Do you need the 2024 W2s in addition to the 2025s already on file, or should the condition reference 2025?
+
+2. Section G shows $0.00 for real estate taxes. This is a $1M SFR in Jefferson County -- I'd expect property taxes in the $4,000-6,000/year range. Will the tax cert (condition 102) update this figure and trigger an RI recalculation?
+
+Thanks,
+David Burson
+NetRate Mortgage LLC | NMLS #641790
+303-444-5251

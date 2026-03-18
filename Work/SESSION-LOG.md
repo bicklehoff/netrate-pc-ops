@@ -1621,4 +1621,70 @@ This brief contains:
 - [ ] **Dev** — Large file upload (>4.5MB) needs direct-to-storage approach to bypass Vercel body limit
 - [ ] **Dev** — Test CoreBot "Process Docs" end-to-end on Devoe loan (files uploaded, ready to process)
 - [ ] **Dev** — Backlog: Automated doc chase reminders (ticket created in DB)
-- [ ] **Dev** — REGISTRY.md needs updating with new routes/components from Phases 4-6
+- [x] **Dev** — REGISTRY.md needs updating with new routes/components from Phases 4-6
+
+---
+
+## 2026-03-18 — PC Dev (EOD)
+
+**Department:** Dev
+**Focus:** Devoe HECM approval review, loan processing engine architecture, relay protocol fix
+
+**Key decisions:**
+- Processing engine should be its own service (not Next.js serverless) — needs background jobs, persistent connections, long-running operations
+- Current Neon/Prisma foundation is correct for the database layer — extend existing models, don't replace
+- HECM playbook approach: plan all conditions up front, execute in priority order (approval blockers → borrower docs → broker orders → title → post-appraisal)
+
+**Devoe file review (HECM refi — FAR):**
+- Reviewed full conditional approval from FOA (UW: Breanne Leivan)
+- Identified approval blocker: Condition 101.1 — $2,803.66/mo RI shortfall
+- Key finding: RI calculation includes two US Bank mortgage payments ($4,429/mo) being paid off at closing — may be an error. Post-payoff RI would be ~$2,559 vs $998 required (passes easily)
+- Also flagged: $0 property taxes on $1M Jefferson County home seems wrong
+- Also flagged: Condition asks for 2024 W2s but UW notes reference 2025 W2s
+- Drafted FOA email with all 3 questions (saved to Work/Products/devoe-foa-email-draft.txt) — David sent
+- Mapped all conditions into 4 parallel lanes: borrower, broker, title, lender
+- Began condition-by-condition review (Gen1-Gen4, 100, 101 complete, 102-Fun3 remaining)
+
+**Loan processing engine design notes (for future sessions):**
+- 4-lane condition tracking: borrower, broker, title, lender
+- Condition freshness/validity windows tied to closing date
+- Borrower communication types: "need now" / "heads up" / "after X send Y"
+- Minimize borrower touches — calculate optimal request timing from closing date backwards
+- Conditions can cross-satisfy (credit report + mortgage statement + payoff = payment proof)
+- Document metadata extraction needed: account numbers, statement dates, payment-through dates
+- Vendor contacts at loan level: insurance agent, title co, appraiser, employers, lender contacts
+- HECM financial assessment calculator: RI, LESA, asset dissipation
+- Order-out emails should auto-populate from loan-level vendor contacts
+- Borrower checklist status: upcoming → ready_to_collect → received → stale
+
+**Relay protocol:**
+- Pulled netrate-governance (a3c32ae) — relay bugs #8 and #9 fixed
+- Added Ironclad Relay Protocol to CLAUDE.md (5 rules)
+- Confirmed to Mac and Claw via relay
+
+**Claw upgrade plan (acked, not yet executed):**
+- Claude Code Feature Adoption Plan published by Claw
+- Phase 1: Upgrade to v2.1.78+ (PC currently on v2.1.62)
+- Phases 2-5: Scheduled tasks, custom skills, feature watch, backlog
+
+**Commits:**
+- `1cb9505` — Update REGISTRY.md with Phase 4-6, Market Watch, and recent additions
+- `f5458ae` — Add Ironclad Relay Protocol to CLAUDE.md
+
+**Files created:**
+- `Work/Products/HECM-PROCESSING-PLAYBOOK.md` (draft — condition map from Devoe approval)
+- `Work/Products/devoe-foa-email-draft.txt` (email to FOA re: RI shortfall questions)
+
+**Open items:**
+- [ ] **Dev** — Large file upload (>4.5MB) — needs resolution this week (website launch goal)
+- [ ] **Dev** — Test CoreBot "Process Docs" end-to-end on Devoe loan
+- [ ] **Dev** — Backlog: Automated doc chase reminders
+- [ ] **Dev** — Devoe condition review: resume at condition 102 (tax cert) through Fun3
+- [ ] **Dev** — HECM playbook: finalize after completing condition review
+- [ ] **Dev** — Portal backend: HECM financial assessment calculator (RI/LESA)
+- [ ] **Dev** — Portal backend: Condition model enrichment (freshness, borrowerMessage, dependencies, linked docs)
+- [ ] **Dev** — Portal backend: Loan-level vendor contacts (LoanContact model)
+- [ ] **Dev** — Portal backend: Borrower communication timeline engine
+- [ ] **Dev** — Architecture decision: processing engine as standalone service (tech stack TBD)
+- [ ] **Dev** — Upgrade Claude Code to v2.1.78+ (Claw adoption plan Phase 1)
+- [ ] **Dev** — A2P/10DLC: Resubmit campaign with updated opt-in language (open from prior session)
