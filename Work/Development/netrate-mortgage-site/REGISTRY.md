@@ -19,6 +19,7 @@ Component inventory for dev sessions. One line per item. Updated by dev sessions
 ### Borrower Portal
 - `GET /api/portal/loans` — borrower's loans
 - `GET /api/portal/loans/[id]/docs` — loan documents
+- `GET /api/portal/loans/[id]/checklist` — borrower-facing checklist (doc requests + conditions + submission status)
 - `POST /api/portal/apply` — submit loan application
 
 ### MLO Portal — Pipeline & Loans
@@ -26,7 +27,10 @@ Component inventory for dev sessions. One line per item. Updated by dev sessions
 - `GET|POST /api/portal/mlo/loans/[id]` — loan detail CRUD
 - `GET|POST /api/portal/mlo/loans/[id]/dates` — loan milestone dates
 - `GET|POST /api/portal/mlo/loans/[id]/docs` — document requests/uploads
-- `POST /api/portal/mlo/loans/[id]/files` — upload to WorkDrive
+- `GET|POST /api/portal/mlo/loans/[id]/files` — WorkDrive file browser (list, upload, download, delete)
+- `POST /api/portal/mlo/loans/[id]/files/create-folder` — create WorkDrive subfolders (FLOOR, SUBMITTED, EXTRA, CLOSING)
+- `POST /api/portal/mlo/loans/[id]/files/move` — move files between folder tabs
+- `GET|POST /api/portal/mlo/loans/[id]/conditions` — loan conditions CRUD (stage, status, blocking, borrower-facing)
 - `GET|POST /api/portal/mlo/loans/[id]/payroll` — CD metadata + payroll snapshot
 - `GET /api/portal/mlo/loans/[id]/ssn` — decrypt borrower SSN (audit logged)
 - `GET /api/portal/mlo/loans/[id]/xml` — export MISMO XML
@@ -62,19 +66,27 @@ Component inventory for dev sessions. One line per item. Updated by dev sessions
 - `POST /api/dialer/sms/incoming` — inbound SMS webhook
 - `POST /api/dialer/sms/status` — SMS delivery webhook
 
-### Integrations
+### Market Watch
+- `GET /api/rates/history` — rate history data from rate_history table
+- `POST /api/rates/snapshot` — take daily rate snapshot (cron job)
+
+### CoreBot
 - `POST /api/corebot/ingest` — receives loan data from Zoho Flow (LDox → Core)
+- `POST /api/corebot/process` — batch doc processing (scan FLOOR, identify via Claude, rename, update conditions)
+- `POST /api/corebot/identify` — single file identification (suggest doc type without auto-rename)
+- `POST /api/corebot/rename` — single file rename per naming protocol
+- `POST /api/corebot/order-out` — send branded vendor order emails (title, appraisal, HOI, flood cert)
 
 ## UI Pages
 
 ### Public
-- `/` — homepage (rate table, trust bar, lead capture)
+- `/` — homepage (rate table, market ticker, trust bar, lead capture)
 - `/rates` — rate tool (scenario form → results → comparison)
 - `/services` — services overview
 - `/about` — about NetRate
-- `/contact` — contact form
+- `/contact` — contact form (with SMS opt-in checkbox)
 - `/terms` — terms of service
-- `/privacy` — privacy policy
+- `/privacy` — privacy policy (includes SMS sharing verbiage)
 - `/do-not-sell` — CCPA opt-out
 - `/licensing` — NMLS / state licensing
 - `/accessibility` — accessibility statement
@@ -126,6 +138,7 @@ Component inventory for dev sessions. One line per item. Updated by dev sessions
 - `Lender` — wholesale lender master (fees, lock extensions)
 - `RateSheet` — rate sheet per lender/type/date (LLPA as JSONB)
 - `RateRow` — individual rate option (rate, 30-day price, 45-day price)
+- `RateHistory` — daily rate snapshots (raw SQL table, not Prisma-managed)
 
 ### CRM & Leads
 - `Lead` — website lead (source, UTM, Zoho sync)
@@ -141,17 +154,36 @@ Component inventory for dev sessions. One line per item. Updated by dev sessions
 - **Zoho CRM** — lead sync → `src/app/api/lead/route.js`
 - **Google Cloud Storage** — rate sheet storage → `src/lib/gcs.js`
 - **LendingDocs (LDox)** — loan processing, MISMO XML → `src/lib/mismo-parser.js`
-- **Corebot** — Zoho Flow webhook (LDox → Core) → `src/app/api/corebot/ingest/route.js`
+- **CoreBot** — doc processing engine (Claude API + WorkDrive) → `src/lib/corebot/processor.js`, `src/lib/corebot/prompts.js`
+- **Resend** — outbound email (order-outs, borrower notifications) → `src/lib/email-templates/order-outs.js`
+- **Claude API** — document identification brain for CoreBot → `@anthropic-ai/sdk`
 - **NextAuth** — auth (magic link + credentials) → `src/lib/auth.js`
 - **PII Encryption** — AES-256-GCM for SSN/DOB → `src/lib/encryption.js`
+- **Microsoft Clarity** — session recordings + heatmaps → layout.js (ID: vv85vtrn77)
+
+## Key Components
+
+### CoreBot
+- `DocWorkspace` — intelligent doc workspace for MLOs (submission checklist, FLOOR identify/rename, folder tabs, file move)
+- `WorkDrivePanel` — file browser with FLOOR/SUBMITTED/EXTRA/CLOSING tabs (upload, download, delete per folder)
+- `BorrowerChecklist` — borrower-facing checklist (needed items with upload, received items with green check)
+
+### Constants
+- `src/lib/constants/doc-types.js` — 3-letter prefix naming protocol (APP, AST, CRD, DOC, HOI, INC, INV, LND, LOE, PUR, TTL)
+- `src/lib/constants/submission-checklists.js` — submission checklists by loan type and purpose
+- `src/lib/constants/loan-types.js` — loan type picklist
+- `src/lib/constants/lenders.js` — lender picklist
 
 ## Scripts
 - `scripts/parse-amwest-xlsx.js` — parse AmWest rate sheet XLSX into rate rows
+- `scripts/parse-sunwest-xlsx.js` — parse Sunwest rate sheet XLSX (current default lender)
 - `scripts/upload-to-gcs.js` — upload rate JSON to GCS
+- `scripts/backlog.js` — CLI backlog viewer (reads tickets from Neon)
+- `scripts/create-rate-history.js` — create rate_history table (raw SQL, bypasses Prisma)
 
 ## Recent Additions (last 5)
-1. **Dev Backlog** — ticketing system on MLO portal (Ticket/TicketEntry models, /portal/mlo/backlog)
-2. **Payroll on Overview** — CD upload + Send to Payroll on funded loan overview section
-3. **Pipeline Breadcrumb** — breadcrumb navigation from pipeline to loan detail
-4. **WorkDrive Auto-Create** — auto-creates WorkDrive folders for legacy loans on CD upload
-5. **Rate Tool Engagement** — comparison report modal, PDF download, break-even chart, education
+1. **Market Watch Phase A** — rate_history table, daily snapshot job, /api/rates/history endpoint
+2. **GCS Market Data** — homepage market ticker/trends wired to GCS market.json with static fallback
+3. **Sunwest Rate Parser** — replaced AmWest with Sunwest as default lender, 25bps March promo
+4. **Clarity + GA4 Events** — Microsoft Clarity tracking + GA4 custom conversion events
+5. **CoreBot Phases 4-6** — order-outs, doc workspace (DocWorkspace replacing WorkDrivePanel), borrower checklist
