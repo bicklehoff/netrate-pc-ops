@@ -64,7 +64,7 @@ console.log(`  Governance: ${govModels.length} models`);
 const PC_LOANS_MODELS = [
   'Borrower', 'Mlo', 'Loan', 'LoanBorrower', 'LoanEvent',
   'Document', 'Contact', 'CallLog', 'CallNote', 'SmsMessage',
-  'LoanDates', 'Condition', 'LoanNote', 'LoanTask',
+  'LoanDates', 'Condition', 'LoanNote', 'LoanTask', 'LoanContact',
 ];
 
 const PC_RATES_MODELS = [

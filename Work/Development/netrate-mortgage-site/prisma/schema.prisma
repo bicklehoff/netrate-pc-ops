@@ -170,6 +170,7 @@ model Loan {
   conditions      Condition[]
   loanNotes       LoanNote[]
   tasks           LoanTask[]
+  loanContacts    LoanContact[]
 
   @@map("loans")
 }
@@ -427,14 +428,32 @@ model Condition {
   // Link to existing Document (optional — some conditions ARE document requests)
   documentId          String?   @map("document_id") @db.Uuid
 
+  // Processing Engine — Freshness & Chase Tracking
+  freshnessDays       Int?      @map("freshness_days")           // How many days before this goes stale (null = never stale)
+  lastCheckedAt       DateTime? @map("last_checked_at")          // When the engine last reviewed this condition
+  chaseCount          Int       @default(0) @map("chase_count")  // How many times we've followed up
+  lastChasedAt        DateTime? @map("last_chased_at")           // When last follow-up was sent
+  nextChaseAt         DateTime? @map("next_chase_at")            // When to follow up next (engine reads this)
+
+  // Processing Engine — Dependencies
+  dependsOnId         String?   @map("depends_on_id") @db.Uuid   // Self-ref: this condition can't clear until dependsOn clears
+  // Example: "Title clear" depends on "Appraisal received"
+
+  // Borrower Communication
+  borrowerMessage     String?   @map("borrower_message")         // Consumer-friendly description for borrower portal
+  // Example: internal="Provide 2 months bank statements" → borrower="Please upload your 2 most recent bank statements"
+
   createdAt           DateTime  @default(now()) @map("created_at")
   updatedAt           DateTime  @updatedAt @map("updated_at")
 
   loan                Loan      @relation(fields: [loanId], references: [id], onDelete: Cascade)
   document            Document? @relation(fields: [documentId], references: [id])
+  dependsOn           Condition? @relation("ConditionDependency", fields: [dependsOnId], references: [id])
+  dependedOnBy        Condition[] @relation("ConditionDependency")
 
   @@index([loanId])
   @@index([loanId, status])
+  @@index([nextChaseAt])
   @@map("conditions")
 }
 
@@ -473,6 +492,31 @@ model LoanTask {
   @@index([loanId])
   @@index([assignedToId, status])
   @@map("loan_tasks")
+}
+
+// ─── Loan Contacts (Per-Loan Vendor Contacts) ───────────────────
+// Who to contact for each loan: title company, appraiser, insurance
+// agent, realtor, etc. The processing engine uses this to know
+// who to email for order-outs and follow-ups.
+
+model LoanContact {
+  id              String    @id @default(uuid()) @db.Uuid
+  loanId          String    @map("loan_id") @db.Uuid
+  role            String    // 'title_company' | 'appraiser' | 'insurance_agent' | 'realtor' | 'buyer_agent' | 'seller_agent' | 'attorney' | 'lender_contact' | 'other'
+  name            String
+  company         String?
+  email           String?
+  phone           String?
+  notes           String?
+  isPrimary       Boolean   @default(true) @map("is_primary")  // Primary contact for this role on this loan
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  loan            Loan      @relation(fields: [loanId], references: [id], onDelete: Cascade)
+
+  @@index([loanId])
+  @@index([loanId, role])
+  @@map("loan_contacts")
 }
 
 // ═══════════════════════════════════════════════════════════════
