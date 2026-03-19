@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import TrustBar from '@/components/TrustBar';
 import HomepageRatesTable from '@/components/HomepageRatesTable';
+import StickyRateBar from '@/components/StickyRateBar';
 import { fetchGCSFile, isGCSConfigured } from '@/lib/gcs';
 import staticSunwest from '@/data/rates/sunwest.json';
 import { computeHomepageRates } from '@/lib/rates/homepage';
@@ -72,6 +73,7 @@ export default async function HomePage() {
   ];
   return (
     <div>
+      <StickyRateBar rate={conv30Rate} apr={conv30Apr} />
       {/* ===== RATE TICKER (animated) — live rate data only ===== */}
       <div className="bg-gray-950 border-b border-gray-800 overflow-hidden">
         <div className="ticker-track text-[12px] py-2 whitespace-nowrap">
