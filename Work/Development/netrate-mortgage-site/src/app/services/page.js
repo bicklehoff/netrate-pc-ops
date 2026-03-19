@@ -2,7 +2,7 @@ import Link from 'next/link';
 
 export const metadata = {
   title: 'Services | NetRate Mortgage',
-  description: 'Refinance, home purchase, and cash-out loans. Conventional, FHA, VA, and jumbo. Licensed in Colorado, Oregon, and Texas.',
+  description: 'Refinance, home purchase, and cash-out loans. Conventional, FHA, VA, and jumbo. Licensed in California, Colorado, Oregon, and Texas.',
 };
 
 export default function ServicesPage() {
@@ -116,7 +116,7 @@ export default function ServicesPage() {
           </div>
           <div className="bg-white border border-gray-200 rounded-lg p-4">
             <h3 className="font-semibold text-gray-900 mb-1">California</h3>
-            <p className="text-sm text-gray-500 italic">License application in progress. Coming soon.</p>
+            <p className="text-sm text-gray-600">Licensed and lending.</p>
           </div>
         </div>
         <p className="text-sm text-gray-500">

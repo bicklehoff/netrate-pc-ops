@@ -83,7 +83,7 @@
 
 **AI policy (FIRM):** ZERO mention of AI, machine learning, automation, or related technology on any consumer-facing content — website, emails, social, marketing materials. Reasons: (1) Not a selling point for mortgage borrowers. (2) Compliance risk — regulators are actively scrutinizing AI claims in financial services. (3) It raises more questions than it answers and could undermine trust. The AI/automation story is fine for industry press, podcasts, or B2B contexts — but NEVER on the consumer-facing site or materials.
 
-**Who we are (internal, never public):** David Burson (LO/owner) + Jamie + AI agents handling operations. Licensed in CO, TX, OR. CA in progress (2026).
+**Who we are (internal, never public):** David Burson (LO/owner) + Jamie + AI agents handling operations. Licensed in CA, CO, TX, OR.
 
 ---
 

@@ -69,7 +69,7 @@ Full protocol details in GOVERNANCE.md (Session Handoff Protocol). MCP fallback:
 - **Phone:** 303-444-5251
 - **Business email:** david@netratemortgage.com
 - **Structure:** Solo operation, one loan officer (Jamie Cunningham)
-- **States licensed:** CO, TX, OR (CA in progress)
+- **States licensed:** CA, CO, TX, OR
 
 ## Communication Preferences
 

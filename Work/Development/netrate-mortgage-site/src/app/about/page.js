@@ -31,7 +31,7 @@ const VALUE_PROPS = [
 const CREDENTIALS = [
   { label: 'NMLS (Individual)', value: '#641790' },
   { label: 'NMLS (Company)', value: '#1111861' },
-  { label: 'Licensed States', value: 'CO, TX, OR' },
+  { label: 'Licensed States', value: 'CA, CO, TX, OR' },
   { label: 'Founded', value: '2013' },
   { label: 'Loans Funded (2025)', value: '50' },
   { label: 'Volume (2025)', value: '$26.6M' },

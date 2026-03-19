@@ -449,8 +449,8 @@ export default async function HomePage() {
               <div className="text-sm text-gray-400 mt-1">State-Licensed Mortgage Broker</div>
             </div>
             <div className="text-center">
-              <div className="text-xl font-bold text-brand">CO, TX, OR</div>
-              <div className="text-sm text-gray-400 mt-1">Licensed States (CA coming soon)</div>
+              <div className="text-xl font-bold text-brand">CA, CO, TX, OR</div>
+              <div className="text-sm text-gray-400 mt-1">Licensed States</div>
             </div>
             <div className="text-center">
               <div className="text-xl font-bold text-brand">Founded 2013</div>

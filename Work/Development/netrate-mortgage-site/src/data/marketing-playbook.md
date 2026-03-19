@@ -53,7 +53,7 @@
 
 **AI policy (FIRM):** ZERO mention of AI, machine learning, automation, or related technology on any consumer-facing content — website, emails, social, marketing materials. Reasons: (1) Not a selling point for mortgage borrowers. (2) Compliance risk — regulators are actively scrutinizing AI claims in financial services. (3) It raises more questions than it answers and could undermine trust. The AI/automation story is fine for industry press, podcasts, or B2B contexts — but NEVER on the consumer-facing site or materials.
 
-**Who we are (internal, never public):** David Burson (LO/owner) + Jamie + AI agents handling operations. Licensed in CO, TX, OR. CA in progress (2026).
+**Who we are (internal, never public):** David Burson (LO/owner) + Jamie + AI agents handling operations. Licensed in CA, CO, TX, OR.
 
 ---
 
@@ -262,7 +262,7 @@ This lets us see which entry point converts best and calculate true cost-per-fun
 - Budget: ~$1,000/mo for paid channels
 - Loan economics: ~$3,000 net per funded loan, target acquisition cost under $800
 - Currently buying rate table leads ($500-1,500/mo) — proven channel, will continue
-- Licensed in CO, TX, OR; CA coming 2026
+- Licensed in CA, CO, TX, OR
 - Core product: refi + purchase (non-realtor-driven). Cash-out refi in soft markets
 - No content writing capacity unless it's high-ROI
 - Need to generate loans immediately AND build long-term engine
@@ -389,7 +389,7 @@ Ad copy angle: "See Today's Actual Rates — No Application Required. Compare re
 - Dev should add UTM parameter capture so Zoho CRM knows which ad/keyword generated each lead
 
 **Targeting:**
-- Geo: CO, TX, OR (add CA when licensed)
+- Geo: CA, CO, TX, OR
 - Device: Desktop and mobile (rate tool needs to work well on mobile)
 - Schedule: Mortgage research peaks on weekday evenings and weekends
 - Audiences: Layer on homeowner audiences and in-market audiences for refinancing

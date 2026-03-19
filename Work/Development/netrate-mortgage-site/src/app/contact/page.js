@@ -132,7 +132,7 @@ export default function ContactPage() {
             </div>
 
             <p className="text-xs text-gray-400 pt-2">
-              Company NMLS #1111861 | Licensed in CO, TX, OR
+              Company NMLS #1111861 | Licensed in CA, CO, TX, OR
             </p>
           </div>
         </div>
