@@ -257,6 +257,28 @@ export default async function HomePage() {
       {/* ===== TRUST BAR ===== */}
       <TrustBar />
 
+      {/* ===== SOCIAL PROOF STRIP ===== */}
+      <div className="bg-white border-b border-gray-100">
+        <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-center gap-3 flex-wrap text-sm">
+          <div className="flex items-center gap-1.5">
+            <span className="w-5 h-5 bg-[#4285f4] rounded-full flex items-center justify-center text-white font-bold text-[10px] flex-shrink-0">G</span>
+            <span className="font-bold text-gray-900">4.9</span>
+            <span className="text-yellow-400 text-xs">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
+          </div>
+          <span className="text-gray-300">|</span>
+          <span className="text-gray-500 italic">&ldquo;He worked hard to get me the best rate and was communicative throughout.&rdquo;</span>
+          <span className="text-gray-300">|</span>
+          <a
+            href="https://www.google.com/maps/search/?api=1&query=Locus+Mortgage&query_place_id=ChIJa5-5jCXza4cRptwJxaP23eU"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-brand font-semibold hover:text-brand-dark transition-colors whitespace-nowrap"
+          >
+            35 reviews &rarr;
+          </a>
+        </div>
+      </div>
+
       {/* ===== TOOLS & CALCULATORS ===== */}
       <section id="tools" className="max-w-6xl mx-auto px-6 py-14">
         <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2 mb-7">
@@ -318,80 +340,6 @@ export default async function HomePage() {
               </CardTag>
             );
           })}
-        </div>
-      </section>
-
-      {/* ===== REVIEWS — Featured + supporting ===== */}
-      <section className="bg-gray-50 py-16 lg:py-20">
-        <div className="max-w-6xl mx-auto px-6">
-          {/* Header */}
-          <div className="flex items-center gap-4 mb-10">
-            <div className="w-8 h-8 bg-[#4285f4] rounded-full flex items-center justify-center text-white font-extrabold text-lg flex-shrink-0">G</div>
-            <div>
-              <div className="flex items-center gap-3">
-                <span className="text-3xl font-extrabold text-gray-900">4.9</span>
-                <span className="text-yellow-400 text-[22px] tracking-wider">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
-              </div>
-              <div className="text-sm text-gray-500">
-                35 Google Reviews &middot;{' '}
-                <a
-                  href="https://www.google.com/maps/search/?api=1&query=Locus+Mortgage&query_place_id=ChIJa5-5jCXza4cRptwJxaP23eU"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-brand font-semibold hover:text-brand-dark transition-colors"
-                >
-                  Read all &rarr;
-                </a>{' '}
-                <span className="text-[11px] text-gray-400">(Formerly Locus Mortgage)</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Reviews grid — featured left, 4 supporting right */}
-          <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr_1fr] gap-5">
-            {/* Featured review */}
-            <div className="bg-white rounded-xl p-7 border-2 border-brand relative lg:row-span-2">
-              <span className="absolute top-4 right-4 bg-brand text-white text-[10px] font-bold px-2.5 py-1 rounded tracking-wide">FEATURED</span>
-              <div className="text-yellow-400 text-sm mb-3">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-              <p className="text-[17px] text-gray-700 leading-relaxed">
-                &ldquo;My family and I have worked with David a few times and he is absolutely incredible! He is very knowledgeable, extremely responsive, and truly a wonderful person who helps you through the entire loan process.&rdquo;
-              </p>
-              <p className="text-sm text-gray-400 mt-4">Sohayla R. &middot; 4 weeks ago</p>
-            </div>
-
-            {/* Supporting reviews */}
-            <div className="bg-white rounded-xl p-6 border border-gray-200">
-              <div className="text-yellow-400 text-sm mb-3">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-              <p className="text-[15px] text-gray-700 leading-relaxed">
-                &ldquo;I&apos;ve worked with Jamie on multiple transactions — two purchases and a refinance — and every single time he delivered exceptional service.&rdquo;
-              </p>
-              <p className="text-sm text-gray-400 mt-4">Alex Z. &middot; 12 weeks ago</p>
-            </div>
-
-            <div className="bg-white rounded-xl p-6 border border-gray-200">
-              <div className="text-yellow-400 text-sm mb-3">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-              <p className="text-[15px] text-gray-700 leading-relaxed">
-                &ldquo;David was an excellent partner in helping me close on a refinance. He worked hard to get me the best rate and was communicative throughout.&rdquo;
-              </p>
-              <p className="text-sm text-gray-400 mt-4">Charlie B. &middot; Nov 2024</p>
-            </div>
-
-            <div className="bg-white rounded-xl p-6 border border-gray-200">
-              <div className="text-yellow-400 text-sm mb-3">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-              <p className="text-[15px] text-gray-700 leading-relaxed">
-                &ldquo;Whenever he quoted us he was correct and there were no surprises. If you want someone honest, use David.&rdquo;
-              </p>
-              <p className="text-sm text-gray-400 mt-4">Ben W. &middot; May 2019</p>
-            </div>
-
-            <div className="bg-white rounded-xl p-6 border border-gray-200">
-              <div className="text-yellow-400 text-sm mb-3">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-              <p className="text-[15px] text-gray-700 leading-relaxed">
-                &ldquo;Some of the best mortgage rates around. Very knowledgeable, totally straight forward, friendly, available off hours and weekends.&rdquo;
-              </p>
-              <p className="text-sm text-gray-400 mt-4">Steven P. &middot; 2023</p>
-            </div>
-          </div>
         </div>
       </section>
 
