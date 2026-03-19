@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import TrustBar from '@/components/TrustBar';
-import HomepageRatesTable from '@/components/HomepageRatesTable';
 import StickyRateBar from '@/components/StickyRateBar';
 import { fetchGCSFile, isGCSConfigured } from '@/lib/gcs';
 import staticSunwest from '@/data/rates/sunwest.json';
@@ -62,15 +61,6 @@ export default async function HomePage() {
     { product: 'VA 30-Yr', label: 'Military', rate: '5.375%*', apr: '5.52%' },
   ];
 
-  // Full rates table (30-yr from live data, rest are estimates)
-  const tableProducts = [
-    { product: '30-Year Fixed', rate: conv30Rate, apr: conv30Apr, change: null, payment: conv30Payment, note: null },
-    { product: '15-Year Fixed', rate: '5.250%*', apr: '5.38%', change: null, payment: '$3,213', note: null },
-    { product: 'FHA 30-Year', rate: '5.500%*', apr: '6.12%', change: null, payment: '$2,271', note: null },
-    { product: 'VA 30-Year', rate: '5.375%*', apr: '5.52%', change: null, payment: '$2,240', note: null },
-    { product: 'Jumbo 30-Year', rate: '6.250%*', apr: '6.31%', change: null, payment: '$4,928', note: '($800K)' },
-    { product: 'DSCR (Investor)', rate: '7.125%*', apr: '7.28%', change: null, payment: '$2,694', note: null },
-  ];
   return (
     <div>
       <StickyRateBar rate={conv30Rate} apr={conv30Apr} />
@@ -267,19 +257,6 @@ export default async function HomePage() {
 
       {/* ===== TRUST BAR ===== */}
       <TrustBar />
-
-      {/* ===== TODAY'S RATES TABLE ===== */}
-      <section id="rates" className="max-w-6xl mx-auto px-6 py-14">
-        <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2 mb-6">
-          <h2 className="text-2xl font-extrabold text-gray-900">Today&apos;s Mortgage Rates</h2>
-          <span className="text-sm text-gray-400">{effectiveDateFull} &middot; 760+ FICO &middot; $400K loan</span>
-        </div>
-        <HomepageRatesTable
-          products={tableProducts}
-          effectiveDate={effectiveDateFull}
-          disclaimer="30-Year Fixed rate updated daily from wholesale pricing. *Other rates are estimates and may vary. All rates assume 760+ FICO, rate/term refinance, $400K loan, 75% LTV. Jumbo based on $800K. DSCR based on investment property, 1.25x coverage. Use our Rate Tool for your specific scenario."
-        />
-      </section>
 
       {/* ===== MARKET — CTA to Rate Watch ===== */}
       <section className="bg-gray-50 border-y border-gray-100 py-12">
