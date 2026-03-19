@@ -118,10 +118,40 @@ export default async function HomePage() {
         <div className="relative z-10 max-w-6xl mx-auto px-6 py-16 lg:py-20 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           {/* Left — Text */}
           <div>
-            <div className="inline-flex items-center gap-2 bg-brand/20 border border-brand/30 rounded-full px-3.5 py-1.5 text-xs font-semibold text-brand-light mb-5">
-              <span className="w-1.5 h-1.5 bg-brand-light rounded-full animate-pulse" />
-              Rates updated today
+            {/* Trust strip — above headline per Stitch analysis */}
+            <div className="flex items-center gap-2.5 mb-5 opacity-60 hover:opacity-100 transition-opacity">
+              <a
+                href="https://www.google.com/maps/search/?api=1&query=Locus+Mortgage&query_place_id=ChIJa5-5jCXza4cRptwJxaP23eU"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 bg-white/[0.05] rounded-full pl-1.5 pr-3 py-1 hover:bg-white/[0.10] transition-colors"
+              >
+                <span className="w-5 h-5 rounded-full bg-white/20 text-white flex items-center justify-center text-[10px] font-extrabold flex-shrink-0">G</span>
+                <span className="text-white/60 text-xs tracking-wide">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
+                <span className="text-white/80 font-bold text-xs">4.9</span>
+              </a>
+              <a
+                href="https://www.bbb.org/us/co/louisville/profile/mortgage-lenders/locus-mortgage-1296-90159653#sealclick"
+                target="_blank"
+                rel="nofollow noopener noreferrer"
+                className="inline-flex items-center gap-1.5 bg-white/[0.05] rounded-full px-3 py-1 hover:bg-white/[0.10] transition-colors"
+              >
+                <span className="text-xs font-semibold text-white/50">BBB A+</span>
+              </a>
+              <a
+                href="https://nmlsconsumeraccess.org/EntityDetails.aspx/COMPANY/1111861"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 bg-white/[0.05] rounded-full px-3 py-1 hover:bg-white/[0.10] transition-colors"
+              >
+                <span className="text-xs font-semibold text-white/50">NMLS #1111861</span>
+              </a>
+              <div className="inline-flex items-center gap-2 bg-brand/20 border border-brand/30 rounded-full px-3 py-1 text-[11px] font-semibold text-brand-light">
+                <span className="w-1.5 h-1.5 bg-brand-light rounded-full animate-pulse" />
+                Rates updated today
+              </div>
             </div>
+
             <h1 className="text-4xl lg:text-[44px] font-extrabold leading-[1.15] text-white">
               See your actual mortgage rate{' '}
               <span className="text-brand-light">before you apply.</span>
@@ -146,7 +176,7 @@ export default async function HomePage() {
             <div className="flex gap-3 mt-7 flex-wrap">
               <Link
                 href="/rates"
-                className="bg-brand text-white px-8 py-3.5 rounded-xl text-base font-bold hover:bg-brand-dark transition-colors"
+                className="bg-brand text-white px-8 py-3.5 rounded-xl text-base font-bold hover:bg-brand-dark hover:shadow-[0_0_20px_rgba(34,211,238,0.2)] transition-all"
               >
                 Check Today&apos;s Rates
               </Link>
@@ -156,43 +186,6 @@ export default async function HomePage() {
               >
                 Apply Now
               </Link>
-            </div>
-
-            {/* Trust strip */}
-            <div className="flex items-center gap-3 mt-7 pt-6 border-t border-white/10 opacity-60 hover:opacity-100 transition-opacity">
-              <a
-                href="https://www.google.com/maps/search/?api=1&query=Locus+Mortgage&query_place_id=ChIJa5-5jCXza4cRptwJxaP23eU"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-white/[0.05] rounded-full pl-2 pr-3.5 py-1.5 hover:bg-white/[0.10] transition-colors"
-              >
-                <span className="w-6 h-6 rounded-full bg-white/20 text-white flex items-center justify-center text-xs font-extrabold flex-shrink-0">G</span>
-                <span className="text-white/60 text-sm tracking-wide">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
-                <span className="text-white/80 font-bold text-sm">4.9</span>
-              </a>
-              <a
-                href="https://www.bbb.org/us/co/louisville/profile/mortgage-lenders/locus-mortgage-1296-90159653#sealclick"
-                target="_blank"
-                rel="nofollow noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-white/[0.05] rounded-full pl-2 pr-3.5 py-1.5 hover:bg-white/[0.10] transition-colors"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="https://seal-denver.bbb.org/seals/blue-seal-120-61-bbb-90159653.png"
-                  alt="BBB Accredited Business — A+ Rating"
-                  className="h-6 w-auto brightness-0 invert opacity-50"
-                  loading="lazy"
-                />
-              </a>
-              <a
-                href="https://nmlsconsumeraccess.org/EntityDetails.aspx/COMPANY/1111861"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-white/[0.05] rounded-full pl-2 pr-3.5 py-1.5 hover:bg-white/[0.10] transition-colors"
-              >
-                <span className="w-6 h-6 rounded-md bg-white/10 text-white/60 flex items-center justify-center text-[9px] font-bold flex-shrink-0">N</span>
-                <span className="text-sm font-semibold text-white/50">NMLS</span>
-              </a>
             </div>
           </div>
 
