@@ -123,14 +123,13 @@ export default function RateResults({ scenario, rateData, compareRates = [], onT
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-200 text-xs text-gray-500 uppercase tracking-wider">
-              <th className="text-left px-5 py-3">Rate</th>
-              <th className="text-right px-3 py-3">APR</th>
-              <th className="text-right px-3 py-3">Monthly P&I</th>
-              {currentPI && <th className="text-right px-3 py-3">Monthly Savings</th>}
-              <th className="text-right px-3 py-3">Credit / Charge</th>
-              <th className="text-right px-5 py-3">Lender Cost</th>
-              <th className="px-3 py-3"></th>
-              <th className="px-2 py-3 print:hidden"></th>
+              <th className="text-left px-3 py-3">Rate</th>
+              <th className="text-right px-2 py-3">APR</th>
+              <th className="text-right px-2 py-3">Monthly P&I</th>
+              {currentPI && <th className="text-right px-2 py-3">Savings</th>}
+              <th className="text-right px-3 py-3">Cost / Credit</th>
+              <th className="px-2 py-3"></th>
+              <th className="px-1 py-3 print:hidden"></th>
             </tr>
           </thead>
           <tbody>
@@ -144,25 +143,22 @@ export default function RateResults({ scenario, rateData, compareRates = [], onT
               return (
                 <tr key={r.rate}
                   className={`border-b border-gray-100 ${isPar ? "bg-cyan-50" : i % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-cyan-50 transition-colors`}>
-                  <td className="px-5 py-3 font-semibold text-gray-800">{r.rate.toFixed(3)}%</td>
-                  <td className="text-right px-3 py-3 font-mono text-gray-500">{r.apr ? r.apr.toFixed(3) + '%' : '—'}</td>
-                  <td className="text-right px-3 py-3 font-mono text-gray-700">
+                  <td className="px-3 py-3 font-semibold text-gray-800">{r.rate.toFixed(3)}%</td>
+                  <td className="text-right px-2 py-3 font-mono text-gray-500">{r.apr ? r.apr.toFixed(3) + '%' : '—'}</td>
+                  <td className="text-right px-2 py-3 font-mono text-gray-700">
                     ${r.monthlyPI.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
                   {currentPI && (
-                    <td className={`text-right px-3 py-3 font-mono ${savings > 0 ? "text-green-700" : "text-gray-400"}`}>
+                    <td className={`text-right px-2 py-3 font-mono ${savings > 0 ? "text-green-700" : "text-gray-400"}`}>
                       {savings > 0 ? `-$${savings.toFixed(0)}/mo` : "\u2014"}
                     </td>
                   )}
-                  <td className={`text-right px-3 py-3 font-semibold ${isCredit ? "text-green-700" : "text-red-600"}`}>
-                    {isCredit ? "Credit" : "Charge"}
-                  </td>
-                  <td className={`text-right px-5 py-3 font-mono font-semibold ${isCredit ? "text-green-700" : "text-red-600"}`}>
+                  <td className={`text-right px-3 py-3 font-mono font-semibold ${isCredit ? "text-green-700" : "text-red-600"}`}>
                     {isCredit
                       ? `($${Math.abs(r.creditDollars).toLocaleString("en-US", { maximumFractionDigits: 0 })})`
                       : `$${Math.abs(r.creditDollars).toLocaleString("en-US", { maximumFractionDigits: 0 })}`}
                   </td>
-                  <td className="px-3 py-3">
+                  <td className="px-2 py-3">
                     <div className="flex flex-wrap gap-1">
                       {isBestValue && <span className="text-xs bg-blue-100 text-blue-800 rounded px-2 py-1 whitespace-nowrap">SWEET SPOT</span>}
                       {isBestCredit && <span className="text-xs bg-purple-100 text-purple-800 rounded px-2 py-1 whitespace-nowrap">SWEET SPOT</span>}
@@ -170,7 +166,7 @@ export default function RateResults({ scenario, rateData, compareRates = [], onT
                       {isNoCost && !isPar && <span className="text-xs bg-green-100 text-green-800 rounded px-2 py-1 whitespace-nowrap">NO COST</span>}
                     </div>
                   </td>
-                  <td className="px-2 py-3 print:hidden">
+                  <td className="px-1 py-3 print:hidden">
                     {(() => {
                       const isCompared = compareRates.some(c => c.rate === r.rate);
                       return (
