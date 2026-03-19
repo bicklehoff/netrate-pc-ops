@@ -22,9 +22,9 @@ const UPCOMING_EVENTS = [
 
 export default function BelowFold() {
   return (
-    <div className="max-w-[1200px] mx-auto px-7">
+    <div className="px-5">
       {/* What Happened Today */}
-      <div className="bg-surface rounded-xl px-9 py-8 mt-8 border-l-4 border-l-red-500">
+      <div className="bg-surface rounded-xl px-9 py-8 border border-white/10 border-l-4 border-l-red-500">
         <h2 className="text-white text-[26px] font-extrabold leading-tight mb-4">
           What Happened Today
         </h2>
@@ -58,7 +58,7 @@ export default function BelowFold() {
           {UPCOMING_EVENTS.map((ev, i) => (
             <div
               key={i}
-              className={`bg-surface rounded-xl px-6 py-5 ${
+              className={`bg-surface rounded-xl px-6 py-5 border border-white/10 ${
                 ev.big ? 'border-l-[3px] border-l-amber-500' : ''
               }`}
             >
@@ -92,7 +92,7 @@ export default function BelowFold() {
       </div>
 
       {/* SEO Text */}
-      <div className="mt-12 pt-8 border-t border-slate-800">
+      <div className="mt-12 pt-8 border-t border-white/10">
         <h2 className="text-slate-500 text-base font-semibold mb-4">
           About NetRate&apos;s Rate Watch
         </h2>
@@ -127,7 +127,7 @@ export default function BelowFold() {
       </div>
 
       {/* Disclaimer */}
-      <div className="mt-8 pt-5 pb-10 border-t border-slate-800">
+      <div className="mt-8 pt-5 pb-10 border-t border-white/10">
         <p className="text-slate-600 text-[11px] leading-relaxed max-w-[900px]">
           Market commentary is for informational purposes only and does not constitute financial
           advice. Rates shown are wholesale par rates (zero discount points) and are subject to

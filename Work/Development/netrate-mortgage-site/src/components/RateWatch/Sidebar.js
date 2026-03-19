@@ -54,10 +54,10 @@ function RateRow({ product, rate, change }) {
         : 'unch';
   return (
     <tr>
-      <td className="py-2 text-slate-200 font-semibold text-[15px] border-t border-slate-800">
+      <td className="py-2 text-slate-200 font-semibold text-[15px] border-t border-white/10">
         {product}
       </td>
-      <td className="py-2 text-right text-white font-bold text-[15px] border-t border-slate-800">
+      <td className="py-2 text-right text-white font-bold text-[15px] border-t border-white/10">
         {rate ? rate.toFixed(3) + '%' : '—'}{' '}
         <span className={`text-[13px] ${chgClass}`}>{chgText}</span>
       </td>
@@ -69,7 +69,7 @@ export default function Sidebar({ fredLatest, todayRate, rateChange }) {
   return (
     <div className="flex flex-col overflow-y-auto max-h-[500px]">
       {/* Today's Rates */}
-      <div className="px-6 py-5 border-b border-slate-800">
+      <div className="px-6 py-5 border-b border-white/10">
         <h3 className="text-slate-300 text-[13px] font-bold uppercase tracking-wide mb-3.5 flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-green-500" />
           Today&apos;s Rates (760+ credit)
@@ -92,7 +92,7 @@ export default function Sidebar({ fredLatest, todayRate, rateChange }) {
       </div>
 
       {/* Treasury Yields */}
-      <div className="px-6 py-5 border-b border-slate-800">
+      <div className="px-6 py-5 border-b border-white/10">
         <h3 className="text-slate-300 text-[13px] font-bold uppercase tracking-wide mb-3.5">
           Treasury Yields
         </h3>
@@ -108,7 +108,7 @@ export default function Sidebar({ fredLatest, todayRate, rateChange }) {
           return (
             <div
               key={key}
-              className="flex justify-between py-2 border-b border-slate-800 last:border-b-0 text-[15px]"
+              className="flex justify-between py-2 border-b border-white/10 last:border-b-0 text-[15px]"
             >
               <span className="text-slate-300">{labelMap[key]}</span>
               <span>
@@ -128,7 +128,7 @@ export default function Sidebar({ fredLatest, todayRate, rateChange }) {
         {ECONOMIC_EVENTS.map((ev, i) => (
           <div
             key={i}
-            className={`py-2.5 border-b border-slate-800 last:border-b-0 ${
+            className={`py-2.5 border-b border-white/10 last:border-b-0 ${
               ev.highlight ? 'border-l-[3px] border-l-amber-500 pl-2.5 -ml-2.5' : ''
             } ${ev.future ? 'opacity-80' : ''}`}
           >

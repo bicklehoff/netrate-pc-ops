@@ -131,36 +131,40 @@ export default async function RateWatchPage() {
         rateHistory={rateHistory}
       />
 
-      {/* Dashboard: Chart + Sidebar */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] items-start">
-        {/* Chart Area */}
-        <div className="px-7 py-6 lg:border-r border-slate-800">
+      {/* Bento Dashboard */}
+      <div className="px-5 py-6 grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4">
+        {/* Chart Card */}
+        <div className="bg-surface rounded-xl border border-white/10 p-5 overflow-hidden">
           <RateChart rateHistory={rateHistory} fredData={fredData.series} />
         </div>
 
-        {/* Sidebar */}
-        <Sidebar
-          fredLatest={fredData.latest}
-          todayRate={todayRate}
-          rateChange={rateChange}
-        />
+        {/* Sidebar Card */}
+        <div className="bg-surface rounded-xl border border-white/10 overflow-hidden">
+          <Sidebar
+            fredLatest={fredData.latest}
+            todayRate={todayRate}
+            rateChange={rateChange}
+          />
+        </div>
+
+        {/* Commentary Card — spans full width */}
+        <div className="lg:col-span-2 bg-surface rounded-xl border border-white/10 overflow-hidden">
+          <div className="px-6 py-5">
+            <Commentary />
+          </div>
+        </div>
       </div>
 
-      {/* Commentary */}
-      <div className="px-7 pb-6 lg:mr-[360px] lg:border-r border-slate-800">
-        <Commentary />
-      </div>
+      {/* Below the Fold — bento cards */}
+      <BelowFold />
 
       {/* Disclaimer strip */}
-      <div className="px-7 py-3.5 border-t border-slate-800 text-xs text-slate-400 leading-relaxed">
+      <div className="px-7 py-3.5 border-t border-white/10 text-xs text-slate-400 leading-relaxed">
         Market commentary is for informational purposes only and does not constitute financial
         advice. Rates shown are wholesale par rates and are subject to change. Actual rates depend on
         individual borrower scenario. Data updated daily on business days. NMLS #1111861. Equal
         Housing Lender.
       </div>
-
-      {/* Below the Fold */}
-      <BelowFold />
     </div>
   );
 }
