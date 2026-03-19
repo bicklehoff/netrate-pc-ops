@@ -47,7 +47,6 @@ export default async function HomePage() {
   const conv30Rate = d ? `${d.conv30.rate.toFixed(3)}%` : '5.875%';
   const conv30Apr = d ? `${d.conv30.apr.toFixed(2)}%` : '5.94%';
   const conv30Payment = d ? `$${d.conv30.payment.toLocaleString()}` : '$2,366';
-  const effectiveDateFull = d?.effectiveDateFormatted || 'March 13, 2026';
   const effectiveDateShort = d?.effectiveDateShort || 'Mar 13, 2026';
   const effectiveTime = d?.effectiveTime || '6:00 AM PST';
 
