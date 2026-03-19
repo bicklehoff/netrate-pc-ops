@@ -10,6 +10,7 @@ import { LO_CONFIG } from '@/lib/rates/config';
 import { STATE_DEFAULTS } from '@/lib/rates/closing-costs';
 import { getUtmParams, formatUtmString } from '@/lib/utm';
 import { PURPOSE_LABELS, PROP_LABELS, fmtDollar, fmtPI, getAutoPickRates } from './reportUtils';
+import MobileRateCarousel from './MobileRateCarousel';
 
 export default function ComparisonReport({ compareRates, scenario, rateData, onClose }) {
   const [showFeeDetail, setShowFeeDetail] = useState(false);
@@ -185,9 +186,18 @@ export default function ComparisonReport({ compareRates, scenario, rateData, onC
             </div>
           </div>
 
+          {/* ===== MOBILE CAROUSEL (swipeable cards) ===== */}
+          <MobileRateCarousel
+            ratesToShow={ratesToShow}
+            scenario={scenario}
+            currentPI={currentPI}
+            lenderFees={lenderFees}
+            thirdPartyCosts={thirdPartyCosts}
+          />
+
           {/* ===== SECTION 1: SAVINGS & PAY-BACK (REFI ONLY) ===== */}
           {isRefi && currentPI && (
-            <div className="mb-6 print-page">
+            <div className="mb-6 print-page hidden md:block">
               <table className="w-full text-sm border border-gray-300">
                 <thead>
                   <tr className="bg-cyan-50">
@@ -331,7 +341,7 @@ export default function ComparisonReport({ compareRates, scenario, rateData, onC
           )}
 
           {/* ===== SECTION 2: RATE COMPARISON (ALL PURPOSES) ===== */}
-          <div className="mb-6 print-page">
+          <div className="mb-6 print-page hidden md:block">
             <h3 className="text-base font-semibold text-gray-800 mb-3">Comparison of {ratesToShow.length === 1 ? 'Selected' : ratesToShow.length} Rate{ratesToShow.length > 1 ? 's' : ''}</h3>
             <table className="w-full text-sm border border-gray-300">
               <thead>
