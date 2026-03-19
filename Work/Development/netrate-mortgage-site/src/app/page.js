@@ -332,7 +332,7 @@ export default async function HomePage() {
             },
             {
               icon: '✔', iconClass: 'bg-gradient-to-br from-sky-50 to-sky-100 text-sky-600',
-              title: 'Apply Online', desc: 'Ready to go? Start your secure application. Takes about 15 minutes.',
+              title: 'Start Secure Application', desc: 'Ready to go? AES-256 encrypted. Takes about 15 minutes.',
               href: '/portal/apply', cta: 'Start',
             },
           ].map((tool) => {

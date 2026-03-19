@@ -202,8 +202,8 @@ export default function RootLayout({ children }) {
                   <li><a href="/rates" className="hover:text-white transition-colors">Today&apos;s Rates</a></li>
                   <li><a href="/services" className="hover:text-white transition-colors">Refinance</a></li>
                   <li><a href="/services" className="hover:text-white transition-colors">Home Purchase</a></li>
-                  <li><a href="/contact" className="hover:text-white transition-colors">Get a Quote</a></li>
-                  <li><a href="/portal/apply" className="hover:text-white transition-colors">Apply Online</a></li>
+                  <li><a href="/contact" className="hover:text-white transition-colors">See My Rate</a></li>
+                  <li><a href="/portal/apply" className="hover:text-white transition-colors">Start Secure Application</a></li>
                 </ul>
               </div>
 

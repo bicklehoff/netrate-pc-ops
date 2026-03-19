@@ -66,7 +66,7 @@ export default function ContactPage() {
             href="/portal/apply"
             className="text-brand font-medium hover:text-brand-dark transition-colors"
           >
-            Start Your Application &rarr;
+            Start Secure Application &rarr;
           </Link>
           <Link
             href="/rates"
@@ -185,7 +185,7 @@ export default function ContactPage() {
           disabled={submitting}
           className="w-full bg-brand text-white rounded-lg py-3 font-semibold hover:bg-brand-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {submitting ? 'Sending...' : 'Get My Free Quote'}
+          {submitting ? 'Sending...' : 'See My Personalized Quote'}
         </button>
       </form>
 
