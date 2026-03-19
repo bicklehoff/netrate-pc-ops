@@ -28,7 +28,7 @@ export default function ReverseMortgage() {
             There are two things about a reverse mortgage that change how you think about it — and neither one gets mentioned in the commercials.
           </p>
           <p className="mt-4">
-            <strong>1. How you qualify.</strong> The income requirements are more lenient than a traditional mortgage — because you&apos;re not required to make monthly payments. This opens doors that may be closed for most conventional and FHA loans.
+            <strong>1. How you qualify.</strong> The income requirements are dramatically lower than a traditional mortgage — because you&apos;re not required to make monthly payments. This opens doors that are closed for most conventional and FHA loans.
           </p>
           <p className="mt-4">
             <strong>2. You can treat it as an interest-only loan.</strong> Most people assume a reverse mortgage means your balance grows forever and your equity disappears. But nothing stops you from making interest-only payments each month. You keep the balance flat, preserve your equity, and still get all the benefits — no required payment, access to a line of credit if applicable, and easier qualifying. You&apos;re just choosing to pay, not being forced to.
@@ -77,7 +77,7 @@ export default function ReverseMortgage() {
             You don&apos;t have to pull cash out of a reverse mortgage. You can set it up as a line of credit — available when you need it, untouched when you don&apos;t.
           </p>
           <p className="mt-4">
-            The unique feature: the unused portion of a reverse mortgage line of credit can grow over time (this applies to HECMs — terms vary on proprietary products). The longer you wait to use it, the more you have available. It&apos;s a financial safety net that gets larger the longer it sits there, and you never have to requalify for it and there is never a balloon payment due.
+            The unique feature: the unused portion of a reverse mortgage line of credit can grow over time (this applies to HECMs — terms vary on proprietary products). The longer you wait to use it, the more you have available. It&apos;s a financial safety net that gets larger the longer it sits there.
           </p>
 
           <h3 className="text-xl font-semibold text-gray-900 mt-6 mb-2">3. Purchase a Home</h3>
@@ -186,7 +186,7 @@ export default function ReverseMortgage() {
         </div>
 
         <p className="text-xs text-gray-400 pt-4 border-t border-gray-100">
-          This is educational content, not financial advice. Reverse mortgage terms vary based on age, home value, and interest rates. All borrowers must complete HUD-approved counseling. Licensed in Colorado. NMLS #1111861.
+          This is educational content, not financial advice. Reverse mortgage terms vary based on age, home value, and interest rates. All borrowers must complete HUD-approved counseling. Licensed in California, Colorado, Oregon, and Texas. NMLS #1111861.
         </p>
       </div>
     </div>

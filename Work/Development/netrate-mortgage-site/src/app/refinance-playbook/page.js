@@ -204,7 +204,7 @@ export default function RefinancePlaybook() {
         </div>
 
         <p className="text-xs text-gray-400 pt-4 border-t border-gray-100">
-          This is educational content, not financial advice. Escrow refund amounts and timing vary by lender, servicer, and time of year. Licensed in Colorado. NMLS #1111861.
+          This is educational content, not financial advice. Escrow refund amounts and timing vary by lender, servicer, and time of year. Licensed in California, Colorado, Oregon, and Texas. NMLS #1111861.
         </p>
       </div>
     </div>

@@ -140,7 +140,7 @@ export default function WhyNetRate() {
         <section>
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Who Is NetRate Mortgage?</h2>
           <p>
-            David Burson — a licensed mortgage broker in Colorado. NMLS #641790. One person, not a call center. A broker who believes you should see the real numbers before you commit to anything.
+            David Burson — a licensed mortgage broker in California, Colorado, Oregon, and Texas. NMLS #641790. One person, not a call center. A broker who believes you should see the real numbers before you commit to anything.
           </p>
         </section>
 
@@ -151,7 +151,7 @@ export default function WhyNetRate() {
         </div>
 
         <p className="text-xs text-gray-400 pt-4 border-t border-gray-100">
-          Licensed in Colorado. NMLS #1111861. Equal Housing Opportunity. Rates shown are approximate and subject to change. Not a commitment to lend.
+          Licensed in California, Colorado, Oregon, and Texas. NMLS #1111861. Equal Housing Opportunity. Rates shown are approximate and subject to change. Not a commitment to lend.
         </p>
       </div>
     </div>

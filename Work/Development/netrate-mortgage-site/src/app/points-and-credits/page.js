@@ -140,7 +140,7 @@ export default function PointsAndCredits() {
         </div>
 
         <p className="text-xs text-gray-400 pt-4 border-t border-gray-100">
-          This is educational content, not financial advice. Rate and point pricing varies daily. Licensed in Colorado. NMLS #1111861.
+          This is educational content, not financial advice. Rate and point pricing varies daily. Licensed in California, Colorado, Oregon, and Texas. NMLS #1111861.
         </p>
       </div>
     </div>

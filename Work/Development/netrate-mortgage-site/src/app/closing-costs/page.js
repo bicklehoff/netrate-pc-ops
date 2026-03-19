@@ -159,7 +159,7 @@ export default function ClosingCosts() {
         </div>
 
         <p className="text-xs text-gray-400 pt-4 border-t border-gray-100">
-          This is educational content, not financial advice. Closing costs vary based on loan type, property location, and lender. Licensed in Colorado. NMLS #1111861.
+          This is educational content, not financial advice. Closing costs vary based on loan type, property location, and lender. Licensed in California, Colorado, Oregon, and Texas. NMLS #1111861.
         </p>
       </div>
     </div>

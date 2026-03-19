@@ -17,23 +17,23 @@ export default function California() {
       <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
         California Mortgage Rates
       </h1>
-      <p className="text-lg text-gray-500 mb-10">Licensed in California. Same Low Rates.</p>
+      <p className="text-lg text-gray-500 mb-10">Licensed in California.</p>
 
       <div className="space-y-8 text-gray-700 leading-relaxed">
         <section>
           <p>
-            NetRate Mortgage is licensed to originate loans in California. Our rates are the same whether you&apos;re in Denver or Los Angeles — because wholesale pricing doesn&apos;t change by state.
+            NetRate Mortgage is a mortgage broker licensed to originate loans in California. We work with wholesale lenders to get you access to rates and pricing that aren&apos;t available through retail banks or direct lenders.
           </p>
-          <p className="mt-4">What does change by state:</p>
-          <ul className="list-disc pl-6 space-y-2 mt-2">
-            <li><strong>Closing costs</strong> — title insurance rates, recording fees, and transfer taxes vary by county and state</li>
-            <li><strong>Loan limits</strong> — conforming loan limits are higher in many California counties due to high home values, which affects whether your loan is conforming, high-balance, or jumbo</li>
-            <li><strong>Third-party fees</strong> — escrow, title, and settlement costs differ by state</li>
-          </ul>
           <p className="mt-4">
-            The rate itself — and everything that drives it (market, lender margin, LLPAs) — works the same nationwide.{' '}
+            Pricing can vary by state — not every wholesale lender operates in every state, and some lenders price differently depending on the market. What doesn&apos;t change is our approach: we shop multiple wholesale lenders on your behalf and show you the options side by side.{' '}
             <Link href="/how-pricing-works" className="text-brand hover:text-brand-dark font-medium">How mortgage pricing works &rarr;</Link>
           </p>
+          <p className="mt-4">A few things that vary in California specifically:</p>
+          <ul className="list-disc pl-6 space-y-2 mt-2">
+            <li><strong>Loan limits</strong> — conforming loan limits are higher in many California counties due to high home values, which affects whether your loan is conforming, high-balance, or jumbo</li>
+            <li><strong>Closing costs</strong> — title insurance rates, recording fees, and transfer taxes vary by county and state</li>
+            <li><strong>Third-party fees</strong> — escrow, title, and settlement costs differ by state</li>
+          </ul>
         </section>
 
         <section>
@@ -43,6 +43,9 @@ export default function California() {
             <li><strong>Home Purchase</strong> — Conventional, FHA, VA</li>
             <li><strong>Reverse Mortgage</strong> — HECM and proprietary products. <Link href="/reverse-mortgage" className="text-brand hover:text-brand-dark font-medium">Reverse Mortgage Guide &rarr;</Link></li>
             <li><strong>Jumbo Loans</strong> — For loan amounts above the conforming limit</li>
+            <li><strong>DSCR Loans</strong> — Investment property loans qualified on rental income, not personal income</li>
+            <li><strong>Bank Statement Loans</strong> — For self-employed borrowers who can&apos;t document income through tax returns</li>
+            <li><strong>Second Mortgages</strong> — HELOCs and closed-end seconds</li>
           </ul>
         </section>
 
@@ -61,7 +64,7 @@ export default function California() {
             </li>
           </ol>
           <p className="mt-4">
-            We&apos;re a wholesale mortgage broker — not a bank, not a call center.{' '}
+            We&apos;re a mortgage broker — not a bank, not a call center.{' '}
             <Link href="/why-netrate" className="text-brand hover:text-brand-dark font-medium">Why that matters &rarr;</Link>
           </p>
         </section>
