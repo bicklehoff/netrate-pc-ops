@@ -43,6 +43,7 @@ const jsonLd = {
       },
       areaServed: [
         { '@type': 'State', name: 'Colorado' },
+        { '@type': 'State', name: 'California' },
         { '@type': 'State', name: 'Texas' },
         { '@type': 'State', name: 'Oregon' },
       ],
@@ -70,6 +71,7 @@ const jsonLd = {
       ],
       areaServed: [
         { '@type': 'State', name: 'Colorado' },
+        { '@type': 'State', name: 'California' },
         { '@type': 'State', name: 'Texas' },
         { '@type': 'State', name: 'Oregon' },
       ],
@@ -146,6 +148,25 @@ export default function RootLayout({ children }) {
               <a href="/rates" className="text-gray-600 hover:text-brand transition-colors">Rates</a>
               <a href="/#tools" className="text-gray-600 hover:text-brand transition-colors">Tools</a>
               <a href="/rate-watch" className="text-gray-600 hover:text-brand transition-colors">Market</a>
+              <div className="relative group">
+                <button className="text-gray-600 hover:text-brand transition-colors flex items-center gap-1">
+                  Resources
+                  <svg className="w-3.5 h-3.5 transition-transform group-hover:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                </button>
+                <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                  <div className="bg-white rounded-xl shadow-lg border border-gray-200 py-2 w-56">
+                    <a href="/how-pricing-works" className="block px-4 py-2 text-gray-600 hover:bg-gray-50 hover:text-brand transition-colors">How Pricing Works</a>
+                    <a href="/points-and-credits" className="block px-4 py-2 text-gray-600 hover:bg-gray-50 hover:text-brand transition-colors">Points &amp; Credits</a>
+                    <a href="/closing-costs" className="block px-4 py-2 text-gray-600 hover:bg-gray-50 hover:text-brand transition-colors">Closing Costs</a>
+                    <a href="/breakeven" className="block px-4 py-2 text-gray-600 hover:bg-gray-50 hover:text-brand transition-colors">Breakeven Math</a>
+                    <a href="/refinance-playbook" className="block px-4 py-2 text-gray-600 hover:bg-gray-50 hover:text-brand transition-colors">Refinance Playbook</a>
+                    <a href="/reverse-mortgage" className="block px-4 py-2 text-gray-600 hover:bg-gray-50 hover:text-brand transition-colors">Reverse Mortgages</a>
+                    <div className="border-t border-gray-100 my-1"></div>
+                    <a href="/why-netrate" className="block px-4 py-2 text-gray-600 hover:bg-gray-50 hover:text-brand transition-colors">Why NetRate</a>
+                    <a href="/good-deal" className="block px-4 py-2 text-gray-600 hover:bg-gray-50 hover:text-brand transition-colors">Is It a Good Deal?</a>
+                  </div>
+                </div>
+              </div>
               <a href="/about" className="text-gray-600 hover:text-brand transition-colors">About</a>
               <a href="/contact" className="text-gray-600 hover:text-brand transition-colors">Contact</a>
               <a href="/portal/apply" className="bg-brand text-white px-4 py-2 rounded-lg hover:bg-brand-dark glow-brand transition-all">
@@ -190,9 +211,9 @@ export default function RootLayout({ children }) {
         {/* Footer */}
         <footer className="bg-deep text-gray-400 mt-auto">
           <div className="max-w-6xl mx-auto px-6 py-12">
-            <div className="grid md:grid-cols-3 gap-8 mb-8">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-8">
               {/* Company */}
-              <div>
+              <div className="col-span-2 md:col-span-1">
                 <div className="flex items-center gap-0.5 mb-3">
                   <span className="text-lg font-bold text-white">Net</span>
                   <span className="text-lg font-bold text-brand">Rate</span>
@@ -213,7 +234,32 @@ export default function RootLayout({ children }) {
                   <li><a href="/services" className="hover:text-white transition-colors">Refinance</a></li>
                   <li><a href="/services" className="hover:text-white transition-colors">Home Purchase</a></li>
                   <li><a href="/contact" className="hover:text-white transition-colors">See My Rate</a></li>
-                  <li><a href="/portal/apply" className="hover:text-white transition-colors">Start Secure Application</a></li>
+                  <li><a href="/portal/apply" className="hover:text-white transition-colors">Apply Now</a></li>
+                </ul>
+              </div>
+
+              {/* Resources */}
+              <div>
+                <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-3">Resources</h3>
+                <ul className="space-y-2 text-sm">
+                  <li><a href="/how-pricing-works" className="hover:text-white transition-colors">How Pricing Works</a></li>
+                  <li><a href="/points-and-credits" className="hover:text-white transition-colors">Points &amp; Credits</a></li>
+                  <li><a href="/closing-costs" className="hover:text-white transition-colors">Closing Costs</a></li>
+                  <li><a href="/breakeven" className="hover:text-white transition-colors">Breakeven Math</a></li>
+                  <li><a href="/refinance-playbook" className="hover:text-white transition-colors">Refinance Playbook</a></li>
+                  <li><a href="/reverse-mortgage" className="hover:text-white transition-colors">Reverse Mortgages</a></li>
+                  <li><a href="/why-netrate" className="hover:text-white transition-colors">Why NetRate</a></li>
+                  <li><a href="/good-deal" className="hover:text-white transition-colors">Is It a Good Deal?</a></li>
+                </ul>
+              </div>
+
+              {/* States */}
+              <div>
+                <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-3">States</h3>
+                <ul className="space-y-2 text-sm">
+                  <li><a href="/california" className="hover:text-white transition-colors">California</a></li>
+                  <li><a href="/texas" className="hover:text-white transition-colors">Texas</a></li>
+                  <li><a href="/oregon" className="hover:text-white transition-colors">Oregon</a></li>
                 </ul>
               </div>
 
