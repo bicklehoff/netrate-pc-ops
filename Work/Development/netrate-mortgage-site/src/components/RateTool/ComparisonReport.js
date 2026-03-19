@@ -296,6 +296,32 @@ export default function ComparisonReport({ compareRates, scenario, rateData, onC
                       );
                     })}
                   </tr>
+                  {/* Visual payback progress bars */}
+                  <tr className="bg-cyan-50 print:hidden">
+                    <td className="px-4 py-3 text-gray-500 text-[10px] uppercase tracking-wider">Breakeven Visual</td>
+                    {ratesToShow.map(r => {
+                      const sav = currentPI - r.monthlyPI;
+                      const total = lenderFees + thirdPartyCosts + r.creditDollars;
+                      const months = sav > 0 ? total / sav : null;
+                      const years = months !== null && months > 0 ? months / 12 : 0;
+                      // Scale: 5 years = full bar, instant = full bar green
+                      const pct = months !== null && months <= 0 ? 100 : Math.min(100, Math.max(5, (1 - years / 5) * 100));
+                      const color = years <= 0 ? 'bg-emerald-500' : years < 2 ? 'bg-brand' : years < 3.5 ? 'bg-amber-400' : 'bg-red-400';
+                      return (
+                        <td key={r.rate} className="px-4 py-3">
+                          <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all ${color}`}
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                          <div className="text-[10px] text-gray-500 mt-1 text-center tabular-nums">
+                            {months !== null && months <= 0 ? 'Instant ✓' : months !== null ? `${years.toFixed(1)} yrs` : '—'}
+                          </div>
+                        </td>
+                      );
+                    })}
+                  </tr>
                 </tbody>
               </table>
               <p className="text-xs text-gray-400 mt-2">
