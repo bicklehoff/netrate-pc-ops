@@ -26,18 +26,18 @@ export default function PrivacyPage() {
         </p>
         <ul className="list-disc pl-5 space-y-1">
           <li><strong>Google Analytics 4 (GA4):</strong> for site analytics, traffic sources, and behavioral insights. We use Google Analytics to understand how visitors interact with our website. No personal data is sold or shared. You may opt out through your browser settings.</li>
+          <li><strong>Microsoft Clarity:</strong> for session replay and heatmap analytics. Clarity records anonymized user interactions (clicks, scrolls, mouse movements) to help us improve site usability. Clarity does not collect passwords, payment information, or other sensitive form fields. You may opt out via your browser&apos;s Do Not Track setting. Learn more at <a href="https://clarity.microsoft.com" className="text-brand underline" target="_blank" rel="noopener noreferrer">clarity.microsoft.com</a>.</li>
           <li><strong>Microsoft Ads (UET Tag):</strong> for advertising attribution and remarketing</li>
           <li><strong>Zoho CRM:</strong> for secure management of lead submissions and communications</li>
         </ul>
         <p>
-          These tools may use cookies or tracking technologies to function. You may be presented with a cookie
-          consent banner upon visiting our site, which allows you to manage your preferences. Your continued
-          use of the site after receiving this notice constitutes your consent to our use of cookies in
-          accordance with our policy.
+          These tools may use cookies or tracking technologies to function. By continuing to use our site,
+          you consent to our use of these technologies in accordance with this policy. You may manage cookie
+          preferences through your browser settings at any time.
         </p>
         <p>
-          We do not sell personal information. For more information or to opt-out of tracking where available,
-          please refer to your browser settings or our cookie banner preferences.
+          We do not sell personal information. For more information or to opt out of tracking where available,
+          please refer to your browser settings.
         </p>
 
         <h3 className="text-base font-semibold text-gray-800">Anonymous Information</h3>

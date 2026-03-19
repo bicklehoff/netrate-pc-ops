@@ -19,6 +19,7 @@ function formatScenarioSummary(scenario) {
 
 export default function LeadCapture({ scenario }) {
   const [form, setForm] = useState({ name: "", email: "", phone: "", message: "" });
+  const [smsConsent, setSmsConsent] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -42,6 +43,7 @@ export default function LeadCapture({ scenario }) {
           email: form.email,
           phone: form.phone,
           message: fullMessage,
+          smsConsent,
         }),
       });
 
@@ -98,13 +100,21 @@ export default function LeadCapture({ scenario }) {
           className="sm:col-span-2 bg-brand text-white rounded py-3 font-semibold hover:bg-brand-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
           {submitting ? 'Sending...' : 'Request My Personalized Quote'}
         </button>
-        <p className="sm:col-span-2 text-[10px] text-gray-300 leading-relaxed">
-          By submitting, you agree to receive recurring text messages from NetRate Mortgage
-          related to your inquiry. Msg frequency varies. Msg &amp; data rates may apply.
-          Reply STOP to cancel, HELP for help.{' '}
-          <a href="/privacy" className="underline hover:text-gray-400">Privacy Policy</a>{' '}&amp;{' '}
-          <a href="/terms" className="underline hover:text-gray-400">SMS Terms</a>.
-        </p>
+        <label className="sm:col-span-2 flex items-start gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={smsConsent}
+            onChange={(e) => setSmsConsent(e.target.checked)}
+            className="mt-0.5 h-3.5 w-3.5 rounded border-gray-300 text-brand focus:ring-brand/50 shrink-0"
+          />
+          <span className="text-[10px] text-gray-400 leading-relaxed">
+            I consent to receive SMS messages from NetRate Mortgage related to my inquiry.
+            Msg frequency varies. Msg &amp; data rates may apply.
+            Reply STOP to cancel, HELP for help.{' '}
+            <a href="/privacy" className="underline hover:text-gray-500">Privacy Policy</a>{' '}&amp;{' '}
+            <a href="/terms" className="underline hover:text-gray-500">SMS Terms</a>.
+          </span>
+        </label>
       </form>
     </div>
   );

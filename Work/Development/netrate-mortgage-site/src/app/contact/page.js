@@ -35,6 +35,7 @@ export default function ContactPage() {
           ...form,
           message: messageWithUtm,
           leadSource: 'Website - Contact Form',
+          smsConsent,
         }),
       });
 

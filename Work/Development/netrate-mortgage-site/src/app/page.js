@@ -10,33 +10,7 @@ export const revalidate = 300;
 
 const GCS_BUCKET = process.env.GCS_BUCKET_NAME || 'netrate-rates';
 
-// ── Static fallback for market data (used when GCS market.json isn't available) ──
-const MARKET_FALLBACK = {
-  ticker: {
-    treasury10yr: { value: 4.136, change: 0.04, direction: 'up' },
-    umbs50: { value: 99.81, change: -0.16, direction: 'down' },
-    freddieMac30yr: { value: 6.37, source: 'Freddie Mac PMMS' },
-    sp500: { value: 5842, changePct: 0.3, direction: 'up' },
-  },
-  rateTrend: {
-    dataPoints: [70, 75, 72, 68, 65, 60, 55, 50], // sparkline bar heights (%)
-    commentary: 'The 30-year fixed has dropped 0.375% over the last 8 weeks. If the Fed holds in March, wholesale pricing should stay favorable through Q2.',
-  },
-  marketUpdates: [
-    { sentiment: 'positive', text: 'Fed holds rates steady — mortgage rates ease', date: 'Mar 1' },
-    { sentiment: 'cautious', text: 'Jobs report stronger than expected — watch for bond sell-off', date: 'Feb 28' },
-    { sentiment: 'neutral', text: 'Wholesale lenders reprice lower after 10-year drops to 4.15%', date: 'Feb 26' },
-    { sentiment: 'positive', text: 'Refi applications up 12% week-over-week (MBA data)', date: 'Feb 24' },
-    { sentiment: 'cautious', text: 'CPI comes in at 2.8% — slightly above expectations', date: 'Feb 20' },
-  ],
-};
-
-const SENTIMENT_COLORS = {
-  positive: 'bg-green-600',
-  negative: 'bg-red-500',
-  cautious: 'bg-amber-500',
-  neutral: 'bg-brand',
-};
+// Market data constants removed — fabricated data replaced with Rate Watch page
 
 /**
  * Fetch rate data for homepage display.
@@ -55,24 +29,12 @@ async function getHomepageRateData() {
   return staticSunwest;
 }
 
-/**
- * Fetch market data from GCS. Falls back to hardcoded values.
- */
-async function getMarketData() {
-  if (isGCSConfigured()) {
-    try {
-      return await fetchGCSFile(GCS_BUCKET, 'live/market.json');
-    } catch {
-      // market.json doesn't exist yet — use fallback
-    }
-  }
-  return MARKET_FALLBACK;
-}
+// Market data fetch removed — replaced with Rate Watch page
 
 export default async function HomePage() {
   // ─── Live Rate Data ─────────────────────────────────────────
   const lenderData = await getHomepageRateData();
-  const market = await getMarketData();
+  // market data removed — Rate Watch page handles market display
   let liveRates = null;
   try {
     liveRates = computeHomepageRates(lenderData);
@@ -85,17 +47,11 @@ export default async function HomePage() {
   const conv30Rate = d ? `${d.conv30.rate.toFixed(3)}%` : '5.875%';
   const conv30Apr = d ? `${d.conv30.apr.toFixed(2)}%` : '5.94%';
   const conv30Payment = d ? `$${d.conv30.payment.toLocaleString()}` : '$2,366';
-  const conv30RateNum = d ? d.conv30.rate : 5.875;
   const effectiveDateFull = d?.effectiveDateFormatted || 'March 13, 2026';
   const effectiveDateShort = d?.effectiveDateShort || 'Mar 13, 2026';
   const effectiveTime = d?.effectiveTime || '6:00 AM PST';
 
-  // ─── Market Data (from GCS market.json → fallback) ─────────
-  const t = market?.ticker || MARKET_FALLBACK.ticker;
-  const nationalAvg30 = t.freddieMac30yr?.value || 6.37;
-  const savingsGap = (nationalAvg30 - conv30RateNum).toFixed(2);
-  const mktUpdates = market?.marketUpdates || MARKET_FALLBACK.marketUpdates;
-  const trendData = market?.rateTrend || MARKET_FALLBACK.rateTrend;
+  // Market data removed — Rate Watch page handles all market display
 
   // Hero card products (30-yr from live data, rest are estimates)
   const heroProducts = [
@@ -116,46 +72,33 @@ export default async function HomePage() {
   ];
   return (
     <div>
-      {/* ===== MARKET TICKER (animated) ===== */}
+      {/* ===== RATE TICKER (animated) — live rate data only ===== */}
       <div className="bg-gray-950 border-b border-gray-800 overflow-hidden">
         <div className="ticker-track text-[12px] py-2 whitespace-nowrap">
           {[0, 1].map((dup) => (
             <div key={dup} className="flex items-center gap-8 px-8 shrink-0">
-              <span className="text-gray-500 font-medium uppercase tracking-wider text-[10px]">Market</span>
+              <span className="text-gray-500 font-medium uppercase tracking-wider text-[10px]">Today&apos;s Rate</span>
               <div className="flex items-center gap-1.5">
-                <span className="text-gray-400">10-Yr Treasury</span>
-                <span className="text-white font-bold">{t.treasury10yr.value}%</span>
-                <span className={`${t.treasury10yr.direction === 'up' ? 'text-red-400' : 'text-green-400'} font-semibold`}>
-                  {t.treasury10yr.direction === 'up' ? '\u25B2' : '\u25BC'} {Math.abs(t.treasury10yr.change)}
-                </span>
-              </div>
-              <div className="w-px h-3.5 bg-gray-800" />
-              <div className="flex items-center gap-1.5">
-                <span className="text-gray-400">UMBS 5.0</span>
-                <span className="text-white font-bold">{t.umbs50.value}</span>
-                <span className={`${t.umbs50.direction === 'down' ? 'text-red-400' : 'text-green-400'} font-semibold`}>
-                  {t.umbs50.direction === 'up' ? '\u25B2' : '\u25BC'} {Math.abs(t.umbs50.change)}
-                </span>
-              </div>
-              <div className="w-px h-3.5 bg-gray-800" />
-              <div className="flex items-center gap-1.5">
-                <span className="text-gray-400">Nat&apos;l Avg 30-Yr</span>
-                <span className="text-white font-bold">{nationalAvg30}%</span>
-                <span className="text-gray-500 text-[11px]">Freddie Mac</span>
-              </div>
-              <div className="w-px h-3.5 bg-gray-800" />
-              <div className="flex items-center gap-1.5">
-                <span className="text-gray-400">NetRate Mortgage 30-Yr</span>
+                <span className="text-gray-400">NetRate 30-Yr Fixed</span>
                 <span className="text-brand-light font-bold">{conv30Rate}</span>
                 <span className="text-gray-400 text-[11px]">APR {conv30Apr}</span>
               </div>
               <div className="w-px h-3.5 bg-gray-800" />
               <div className="flex items-center gap-1.5">
-                <span className="text-gray-400">S&amp;P 500</span>
-                <span className="text-white font-bold">{t.sp500.value.toLocaleString()}</span>
-                <span className={`${t.sp500.direction === 'up' ? 'text-green-400' : 'text-red-400'} font-semibold`}>
-                  {t.sp500.direction === 'up' ? '\u25B2' : '\u25BC'} {t.sp500.changePct}%
-                </span>
+                <span className="text-gray-400">Monthly P&amp;I</span>
+                <span className="text-white font-bold">{conv30Payment}</span>
+                <span className="text-gray-500 text-[11px]">$400K loan</span>
+              </div>
+              <div className="w-px h-3.5 bg-gray-800" />
+              <div className="flex items-center gap-1.5">
+                <span className="text-gray-400">Scenario</span>
+                <span className="text-gray-300">760+ FICO &middot; 75% LTV &middot; Purchase</span>
+              </div>
+              <div className="w-px h-3.5 bg-gray-800" />
+              <div className="flex items-center gap-1.5">
+                <a href="/rate-watch" className="text-brand hover:text-brand-light transition-colors">
+                  Rate Watch &rarr;
+                </a>
               </div>
               <div className="w-px h-3.5 bg-gray-800" />
               <span className="text-gray-600 text-[11px]">{effectiveDateShort} &middot; {effectiveTime}</span>
@@ -297,84 +240,22 @@ export default async function HomePage() {
           </div>
         </div>
 
-        {/* ===== RATE COMPARISON CHART (inside hero, above the fold) ===== */}
+        {/* ===== RATE HIGHLIGHT (inside hero) ===== */}
         <div className="relative z-10 max-w-6xl mx-auto px-6 pb-14">
           <div className="bg-white/[0.06] backdrop-blur-sm border border-white/10 rounded-2xl p-6 lg:p-8">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-5">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <h3 className="text-base font-bold text-white">National Average vs. NetRate Mortgage</h3>
-                <p className="text-[13px] text-gray-400 mt-0.5">30-Year Fixed &middot; 6-month trend</p>
+                <h3 className="text-base font-bold text-white">Wholesale vs. Retail — See the Difference</h3>
+                <p className="text-[13px] text-gray-400 mt-1">
+                  We publish our actual wholesale rates daily alongside the Freddie Mac national average. No fabricated charts — real data you can verify.
+                </p>
               </div>
-              <div className="flex items-center gap-5 text-[12px]">
-                <span className="flex items-center gap-1.5">
-                  <span className="w-5 h-[2px] bg-gray-400 inline-block" style={{ borderTop: '2px dashed #9ca3af' }} />
-                  <span className="text-gray-400">National Avg</span>
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="w-5 h-[2px] bg-brand-light inline-block rounded" />
-                  <span className="text-brand-light">NetRate Mortgage</span>
-                </span>
-              </div>
-            </div>
-            <svg viewBox="0 0 700 180" className="w-full h-auto" preserveAspectRatio="xMidYMid meet">
-              <defs>
-                <linearGradient id="gapFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#0891b2" stopOpacity="0.2" />
-                  <stop offset="100%" stopColor="#0891b2" stopOpacity="0.02" />
-                </linearGradient>
-              </defs>
-              {/* Grid lines */}
-              {[40, 70, 100, 130].map((y) => (
-                <line key={y} x1="50" y1={y} x2="670" y2={y} stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
-              ))}
-              {/* Y-axis labels */}
-              <text x="42" y="44" textAnchor="end" className="text-[11px]" fill="#6b7280">7.0%</text>
-              <text x="42" y="74" textAnchor="end" className="text-[11px]" fill="#6b7280">6.5%</text>
-              <text x="42" y="104" textAnchor="end" className="text-[11px]" fill="#6b7280">6.0%</text>
-              <text x="42" y="134" textAnchor="end" className="text-[11px]" fill="#6b7280">5.5%</text>
-              {/* X-axis labels */}
-              <text x="80" y="168" textAnchor="middle" className="text-[11px]" fill="#6b7280">Oct</text>
-              <text x="200" y="168" textAnchor="middle" className="text-[11px]" fill="#6b7280">Nov</text>
-              <text x="320" y="168" textAnchor="middle" className="text-[11px]" fill="#6b7280">Dec</text>
-              <text x="440" y="168" textAnchor="middle" className="text-[11px]" fill="#6b7280">Jan</text>
-              <text x="560" y="168" textAnchor="middle" className="text-[11px]" fill="#6b7280">Feb</text>
-              <text x="650" y="168" textAnchor="middle" className="text-[11px]" fill="#6b7280">Now</text>
-              {/* Savings gap fill between the two lines */}
-              <path
-                d="M80,52 L200,46 L320,58 L440,64 L560,68 L650,72 L650,110 L560,106 L440,100 L320,88 L200,72 L80,80 Z"
-                fill="url(#gapFill)"
-              />
-              {/* National avg line (dashed, gray) */}
-              <path
-                d="M80,52 L200,46 L320,58 L440,64 L560,68 L650,72"
-                fill="none"
-                stroke="#9ca3af"
-                strokeWidth="2"
-                strokeDasharray="6,5"
-              />
-              {/* NetRate line (solid, teal) */}
-              <path
-                d="M80,80 L200,72 L320,88 L440,100 L560,106 L650,110"
-                fill="none"
-                stroke="#22d3ee"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              {/* End dots */}
-              <circle cx="650" cy="72" r="4" fill="#1f2937" stroke="#9ca3af" strokeWidth="2" />
-              <circle cx="650" cy="110" r="5" fill="#0891b2" stroke="#22d3ee" strokeWidth="2" />
-              {/* End labels */}
-              <text x="662" y="68" className="text-[12px] font-bold" fill="#9ca3af">{nationalAvg30}%</text>
-              <text x="662" y="115" className="text-[12px] font-bold" fill="#22d3ee">{conv30Rate}</text>
-            </svg>
-            {/* Savings callout */}
-            <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/10">
-              <span className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-400">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
-                {savingsGap}% below the national average
-              </span>
-              <span className="text-[12px] text-gray-500">Source: Freddie Mac PMMS &middot; NetRate Mortgage wholesale pricing</span>
+              <a
+                href="/rate-watch"
+                className="bg-brand text-white px-6 py-3 rounded-lg font-semibold text-sm hover:bg-brand-dark transition-colors whitespace-nowrap"
+              >
+                View Rate Watch &rarr;
+              </a>
             </div>
           </div>
         </div>
@@ -396,47 +277,22 @@ export default async function HomePage() {
         />
       </section>
 
-      {/* ===== RATE TRENDS + MARKET UPDATES ===== */}
+      {/* ===== MARKET — CTA to Rate Watch ===== */}
       <section id="market" className="bg-gray-50 border-y border-gray-100 py-12">
-        <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Left — Rate trend */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-7">
-            <h3 className="text-base font-bold text-gray-900 flex items-center gap-2 mb-4">
-              <span className="w-7 h-7 rounded-md bg-cyan-50 text-brand flex items-center justify-center text-sm">&#9650;</span>
-              30-Year Rate Trend
-            </h3>
-            {/* Sparkline bars */}
-            <div className="relative h-28 bg-gradient-to-b from-cyan-50 to-white rounded-lg border border-gray-100 flex items-end px-3 mb-4 overflow-hidden">
-              <span className="absolute top-2.5 left-3.5 text-[11px] text-gray-400">{trendData.dataPoints?.length || 8} weeks</span>
-              <span className="absolute top-2.5 right-3.5 text-base font-extrabold text-brand">{conv30Rate}</span>
-              {(trendData.dataPoints || [70, 75, 72, 68, 65, 60, 55, 50]).map((h, i, arr) => (
-                <div
-                  key={i}
-                  className={`flex-1 mx-0.5 rounded-t bg-brand min-h-[8px] ${i === arr.length - 1 ? 'opacity-100' : 'opacity-60'}`}
-                  style={{ height: `${h}%` }}
-                />
-              ))}
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="bg-white rounded-2xl border border-gray-200 p-8 flex flex-col md:flex-row items-center gap-8">
+            <div className="flex-1">
+              <h3 className="text-xl font-extrabold text-gray-900 mb-2">Rate Watch</h3>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                Track daily wholesale mortgage rates, compare to the national average, and see what economic events could move rates next. Updated every business day with real data — no estimates.
+              </p>
             </div>
-            <p className="text-sm text-gray-500 leading-relaxed">
-              {trendData.commentary || 'The 30-year fixed has dropped 0.375% over the last 8 weeks. If the Fed holds in March, wholesale pricing should stay favorable through Q2.'}
-            </p>
-          </div>
-
-          {/* Right — Market updates */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-7">
-            <h3 className="text-base font-bold text-gray-900 flex items-center gap-2 mb-4">
-              <span className="w-7 h-7 rounded-md bg-amber-50 text-amber-600 flex items-center justify-center text-sm">&#9733;</span>
-              Market Updates
-            </h3>
-            <ul className="divide-y divide-gray-100">
-              {mktUpdates.slice(0, 5).map((item, i) => (
-                <li key={i} className="flex items-center gap-3 py-2.5">
-                  <span className={`w-2 h-2 rounded-full ${SENTIMENT_COLORS[item.sentiment] || item.color || 'bg-brand'} flex-shrink-0`} />
-                  <span className="text-sm text-gray-700 flex-1">{item.text || item.headline}</span>
-                  <span className="text-xs text-gray-400 whitespace-nowrap ml-2">{item.date}</span>
-                </li>
-              ))}
-            </ul>
+            <a
+              href="/rate-watch"
+              className="bg-brand text-white px-8 py-3 rounded-lg font-semibold hover:bg-brand-dark transition-colors whitespace-nowrap"
+            >
+              View Rate Watch &rarr;
+            </a>
           </div>
         </div>
       </section>
@@ -586,7 +442,7 @@ export default async function HomePage() {
           <div className="flex flex-wrap justify-center gap-10 lg:gap-12">
             <div className="text-center">
               <div className="text-xl font-bold text-brand">NMLS #641790</div>
-              <div className="text-sm text-gray-400 mt-1">Federally Registered Broker</div>
+              <div className="text-sm text-gray-400 mt-1">State-Licensed Mortgage Broker</div>
             </div>
             <div className="text-center">
               <div className="text-xl font-bold text-brand">CO, TX, OR</div>

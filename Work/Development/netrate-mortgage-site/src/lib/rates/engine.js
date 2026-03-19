@@ -71,9 +71,32 @@ export function calculatePI(rate, loanAmount, termYears = 30) {
   return loanAmount * r / (1 - Math.pow(1 + r, -n));
 }
 
+/**
+ * Calculate APR using binary search.
+ * APR = the rate at which P&I on (loanAmount - netFinanceCharges) equals
+ * the P&I at the note rate on loanAmount.
+ */
+export function calculateAPR(noteRate, loanAmount, netFinanceCharges, termYears = 30) {
+  if (netFinanceCharges <= 0) return noteRate; // credit exceeds fees — APR ≈ note rate
+  const targetPayment = calculatePI(noteRate, loanAmount, termYears);
+  const adjustedLoan = loanAmount - netFinanceCharges;
+  if (adjustedLoan <= 0) return noteRate;
+  let lo = noteRate;
+  let hi = noteRate + 5;
+  for (let i = 0; i < 100; i++) {
+    const mid = (lo + hi) / 2;
+    const payment = calculatePI(mid, adjustedLoan, termYears);
+    if (payment < targetPayment) lo = mid;
+    else hi = mid;
+    if (Math.abs(hi - lo) < 0.0001) break;
+  }
+  return Math.round(((lo + hi) / 2) * 1000) / 1000;
+}
+
 export function priceRates(scenario, rateData, lockPeriod = "30day") {
   const llpa = calculateLLPA(scenario, rateData);
   const colIdx = lockPeriod === "45day" ? 2 : 1;
+  const lenderFees = rateData.lender?.lenderFees || 0;
 
   return rateData.rateTable30yr.map(row => {
     const rate = row[0];
@@ -81,6 +104,9 @@ export function priceRates(scenario, rateData, lockPeriod = "30day") {
     const adjPrice = basePrice + llpa.total;
     const creditDollars = (adjPrice / 100) * scenario.loanAmount;
     const monthlyPI = calculatePI(rate, scenario.loanAmount);
-    return { rate, basePrice, adjPrice, creditDollars, monthlyPI };
+    // APR: net finance charges = lender fees minus any lender credit
+    const netCharges = Math.max(0, lenderFees - creditDollars);
+    const apr = calculateAPR(rate, scenario.loanAmount, netCharges);
+    return { rate, basePrice, adjPrice, creditDollars, monthlyPI, apr };
   }).filter(r => r.adjPrice > -6 && r.adjPrice < 5);
 }

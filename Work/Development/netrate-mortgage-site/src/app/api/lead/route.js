@@ -5,7 +5,7 @@ export async function POST(request) {
   try {
     const body = await request.json();
     const { name, email, phone, message, leadSource, source, sourceDetail,
-            utmSource, utmMedium, utmCampaign } = body;
+            utmSource, utmMedium, utmCampaign, smsConsent } = body;
 
     if (!name || !email) {
       return NextResponse.json(
@@ -14,12 +14,17 @@ export async function POST(request) {
       );
     }
 
+    // Append SMS consent status to message (no schema migration needed)
+    const fullMessage = smsConsent !== undefined
+      ? [message, `[SMS Consent: ${smsConsent ? 'YES' : 'NO'}]`].filter(Boolean).join('\n')
+      : message;
+
     const lead = await prisma.lead.create({
       data: {
         name,
         email,
         phone: phone || null,
-        message: message || null,
+        message: fullMessage || null,
         source: source || leadSource || 'website',
         sourceDetail: sourceDetail || null,
         utmSource: utmSource || null,
