@@ -472,7 +472,7 @@ export default async function HomePage() {
               <img
                 src="https://seal-denver.bbb.org/seals/blue-seal-120-61-bbb-90159653.png"
                 alt="BBB Accredited Business — A+ Rating"
-                className="h-8 w-auto brightness-0 invert opacity-50"
+                className="h-8 w-auto"
                 loading="lazy"
               />
               A+ Rated &middot; Accredited Since 2013
