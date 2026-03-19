@@ -19,6 +19,8 @@ export function TextField({
   className = '',
   ...rest
 }) {
+  // Floating labels replace traditional placeholders
+  delete rest.placeholder;
   const error = errors?.[name];
 
   return (
