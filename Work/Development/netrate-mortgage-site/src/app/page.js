@@ -55,10 +55,10 @@ export default async function HomePage() {
 
   // Hero card products (30-yr from live data, rest are estimates)
   const heroProducts = [
-    { product: '30-Yr Fixed', rate: conv30Rate, apr: conv30Apr },
-    { product: '15-Yr Fixed', rate: '5.250%*', apr: '5.38%' },
-    { product: 'FHA 30-Yr', rate: '5.500%*', apr: '6.12%' },
-    { product: 'VA 30-Yr', rate: '5.375%*', apr: '5.52%' },
+    { product: '30-Yr Fixed', label: 'Conforming', rate: conv30Rate, apr: conv30Apr },
+    { product: '15-Yr Fixed', label: 'Conforming', rate: '5.250%*', apr: '5.38%' },
+    { product: 'FHA 30-Yr', label: 'Government', rate: '5.500%*', apr: '6.12%' },
+    { product: 'VA 30-Yr', label: 'Military', rate: '5.375%*', apr: '5.52%' },
   ];
 
   // Full rates table (30-yr from live data, rest are estimates)
@@ -197,7 +197,12 @@ export default async function HomePage() {
           {/* Right — Rate snapshot table (Glassmorphism) */}
           <div className="bg-surface/70 backdrop-blur-xl border border-white/10 rounded-2xl shadow-lg shadow-brand/[0.05] overflow-hidden">
             <div className="flex items-center justify-between px-6 pt-6 pb-4">
-              <span className="text-xs font-bold text-white uppercase tracking-wide">Today&apos;s Rates</span>
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-bold text-white uppercase tracking-wide">Today&apos;s Rates</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-brand-light bg-brand/10 border border-brand/20 rounded-full px-2 py-0.5">
+                  Market: Stable
+                </span>
+              </div>
               <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-brand-light bg-brand/15 border border-brand/30 rounded-full px-2.5 py-0.5">
                 <span className="w-1.5 h-1.5 bg-brand-light rounded-full animate-pulse" />
                 LIVE
@@ -214,7 +219,10 @@ export default async function HomePage() {
               <tbody>
                 {heroProducts.map((row, i) => (
                   <tr key={row.product} className={i < 3 ? 'border-b border-white/[0.06]' : ''}>
-                    <td className="py-2.5 px-6 text-sm font-semibold text-gray-300">{row.product}</td>
+                    <td className="py-2.5 px-6">
+                      <div className="text-sm font-semibold text-gray-300">{row.product}</div>
+                      <div className="text-[10px] text-gray-500 uppercase tracking-wider">{row.label}</div>
+                    </td>
                     <td className="py-2.5 px-3 text-right text-[17px] font-extrabold text-white tabular-nums">{row.rate}</td>
                     <td className="py-2.5 px-6 text-right text-sm text-gray-400 tabular-nums">{row.apr}</td>
                   </tr>
