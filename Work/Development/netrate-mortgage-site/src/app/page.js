@@ -157,28 +157,28 @@ export default async function HomePage() {
             </div>
 
             {/* Trust strip */}
-            <div className="flex items-center gap-3 mt-7 pt-6 border-t border-white/10">
+            <div className="flex items-center gap-3 mt-7 pt-6 border-t border-white/10 opacity-60 hover:opacity-100 transition-opacity">
               <a
                 href="https://www.google.com/maps/search/?api=1&query=Locus+Mortgage&query_place_id=ChIJa5-5jCXza4cRptwJxaP23eU"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-white/[0.07] rounded-full pl-2 pr-3.5 py-1.5 hover:bg-white/[0.12] transition-colors"
+                className="inline-flex items-center gap-2 bg-white/[0.05] rounded-full pl-2 pr-3.5 py-1.5 hover:bg-white/[0.10] transition-colors"
               >
-                <span className="w-6 h-6 rounded-full bg-[#4285f4] text-white flex items-center justify-center text-xs font-extrabold flex-shrink-0">G</span>
-                <span className="text-yellow-400 text-sm tracking-wide">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
-                <span className="text-white font-bold text-sm">4.9</span>
+                <span className="w-6 h-6 rounded-full bg-white/20 text-white flex items-center justify-center text-xs font-extrabold flex-shrink-0">G</span>
+                <span className="text-white/60 text-sm tracking-wide">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
+                <span className="text-white/80 font-bold text-sm">4.9</span>
               </a>
               <a
                 href="https://www.bbb.org/us/co/louisville/profile/mortgage-lenders/locus-mortgage-1296-90159653#sealclick"
                 target="_blank"
                 rel="nofollow noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-white/[0.07] rounded-full pl-2 pr-3.5 py-1.5 hover:bg-white/[0.12] transition-colors"
+                className="inline-flex items-center gap-2 bg-white/[0.05] rounded-full pl-2 pr-3.5 py-1.5 hover:bg-white/[0.10] transition-colors"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="https://seal-denver.bbb.org/seals/blue-seal-120-61-bbb-90159653.png"
                   alt="BBB Accredited Business — A+ Rating"
-                  className="h-6 w-auto"
+                  className="h-6 w-auto brightness-0 invert opacity-50"
                   loading="lazy"
                 />
               </a>
@@ -186,10 +186,10 @@ export default async function HomePage() {
                 href="https://nmlsconsumeraccess.org/EntityDetails.aspx/COMPANY/1111861"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-white/[0.07] rounded-full pl-2 pr-3.5 py-1.5 hover:bg-white/[0.12] transition-colors"
+                className="inline-flex items-center gap-2 bg-white/[0.05] rounded-full pl-2 pr-3.5 py-1.5 hover:bg-white/[0.10] transition-colors"
               >
-                <span className="w-6 h-6 rounded-md bg-white/10 text-white flex items-center justify-center text-[9px] font-bold flex-shrink-0">N</span>
-                <span className="text-sm font-semibold text-gray-300">NMLS</span>
+                <span className="w-6 h-6 rounded-md bg-white/10 text-white/60 flex items-center justify-center text-[9px] font-bold flex-shrink-0">N</span>
+                <span className="text-sm font-semibold text-white/50">NMLS</span>
               </a>
             </div>
           </div>
@@ -468,7 +468,7 @@ export default async function HomePage() {
               <img
                 src="https://seal-denver.bbb.org/seals/blue-seal-120-61-bbb-90159653.png"
                 alt="BBB Accredited Business — A+ Rating"
-                className="h-8 w-auto"
+                className="h-8 w-auto brightness-0 invert opacity-50"
                 loading="lazy"
               />
               A+ Rated &middot; Accredited Since 2013
