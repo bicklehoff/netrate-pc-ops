@@ -1,0 +1,67 @@
+'use client';
+
+export default function HeroStrip({ todayRate, rateChange, fredLatest }) {
+  const changeClass =
+    rateChange > 0 ? 'text-red-500' : rateChange < 0 ? 'text-green-500' : 'text-amber-500';
+  const changeText =
+    rateChange > 0
+      ? `+${rateChange.toFixed(3)} from yesterday`
+      : rateChange < 0
+        ? `${rateChange.toFixed(3)} from yesterday`
+        : 'Unchanged from yesterday';
+
+  // Trend based on 5-day direction
+  const trendClass =
+    rateChange > 0 ? 'text-red-500' : rateChange < 0 ? 'text-green-500' : 'text-brand';
+  const trendLabel =
+    rateChange > 0 ? 'Trending Higher' : rateChange < 0 ? 'Trending Lower' : 'Stable';
+
+  const today = new Date();
+  const dateStr = today.toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-[1fr_340px] gap-6 px-7 py-6 border-b border-slate-800 bg-gradient-to-br from-slate-900 to-slate-800/50">
+      <div>
+        <div className="inline-block bg-red-500/15 text-red-500 text-xs font-bold uppercase tracking-wide px-3 py-1 rounded mb-3">
+          Today&apos;s Update
+        </div>
+        <h1 className="text-white text-[30px] font-extrabold leading-tight mb-2.5">
+          Daily Mortgage Rate Snapshot
+        </h1>
+        <p className="text-slate-300 text-base leading-relaxed mb-2">
+          Live wholesale mortgage rates updated every business day. See how NetRate compares to the
+          national average and track trends over time.
+        </p>
+        <div className="text-slate-500 text-[13px]">
+          {dateStr} &middot; Updated daily on business days
+        </div>
+      </div>
+      <div className="flex flex-col gap-4">
+        <div className="bg-slate-800 rounded-xl px-6 py-5 text-center">
+          <div className="text-slate-400 text-xs uppercase tracking-wide mb-1.5">
+            Today&apos;s 30yr Fixed (760+)
+          </div>
+          <div className="text-white text-[44px] font-extrabold leading-none">
+            {todayRate ? todayRate.toFixed(3) + '%' : '—'}
+          </div>
+          <div className={`text-sm font-semibold mt-1.5 ${changeClass}`}>{changeText}</div>
+        </div>
+        <div className="bg-slate-800 rounded-xl px-6 py-5 text-center border border-slate-700">
+          <div className="text-slate-400 text-xs uppercase tracking-wide mb-2">
+            Near-Term Rate Outlook
+          </div>
+          <div className={`text-[28px] font-extrabold mb-1.5 ${trendClass}`}>{trendLabel}</div>
+          <div className="text-slate-400 text-[13px] leading-snug">
+            {fredLatest?.DGS10
+              ? `10yr Treasury at ${fredLatest.DGS10.value}%. Watch upcoming economic data for direction.`
+              : 'Watch upcoming economic data for direction.'}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
