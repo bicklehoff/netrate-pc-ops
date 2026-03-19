@@ -63,7 +63,7 @@ export default async function RatesPage({ searchParams }) {
       <div className="mt-10 bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
         <h2 className="text-lg font-semibold text-gray-900 mb-2">Like what you see?</h2>
         <p className="text-sm text-gray-600 mb-4">
-          Lock in your rate by starting an application. It takes about 10 minutes.
+          Ready to proceed? Start an application — it takes about 10 minutes.
         </p>
         <div className="flex items-center justify-center gap-4 flex-wrap">
           <Link

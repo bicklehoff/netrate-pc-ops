@@ -74,7 +74,7 @@ export default function ComparisonReport({ compareRates, scenario, rateData, onC
           email: form.email,
           phone: form.phone,
           message: description,
-          leadSource: 'Rate Tool - Lock My Rate',
+          leadSource: 'Rate Tool - Get My Rate',
         }),
       });
       if (!res.ok) throw new Error('Something went wrong. Please try again or call us directly.');
@@ -306,32 +306,6 @@ export default function ComparisonReport({ compareRates, scenario, rateData, onC
                       );
                     })}
                   </tr>
-                  {/* Visual payback progress bars */}
-                  <tr className="bg-cyan-50 print:hidden">
-                    <td className="px-4 py-3 text-gray-500 text-[10px] uppercase tracking-wider">Breakeven Visual</td>
-                    {ratesToShow.map(r => {
-                      const sav = currentPI - r.monthlyPI;
-                      const total = lenderFees + thirdPartyCosts + r.creditDollars;
-                      const months = sav > 0 ? total / sav : null;
-                      const years = months !== null && months > 0 ? months / 12 : 0;
-                      // Scale: 5 years = full bar, instant = full bar green
-                      const pct = months !== null && months <= 0 ? 100 : Math.min(100, Math.max(5, (1 - years / 5) * 100));
-                      const color = years <= 0 ? 'bg-emerald-500' : years < 2 ? 'bg-brand' : years < 3.5 ? 'bg-amber-400' : 'bg-red-400';
-                      return (
-                        <td key={r.rate} className="px-4 py-3">
-                          <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                            <div
-                              className={`h-full rounded-full transition-all ${color}`}
-                              style={{ width: `${pct}%` }}
-                            />
-                          </div>
-                          <div className="text-[10px] text-gray-500 mt-1 text-center tabular-nums">
-                            {months !== null && months <= 0 ? 'Instant ✓' : months !== null ? `${years.toFixed(1)} yrs` : '—'}
-                          </div>
-                        </td>
-                      );
-                    })}
-                  </tr>
                 </tbody>
               </table>
               <p className="text-xs text-gray-400 mt-2">
@@ -524,7 +498,7 @@ export default function ComparisonReport({ compareRates, scenario, rateData, onC
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">Thank you!</h3>
                 <p className="text-sm text-gray-600">
-                  I&apos;ll review your scenario and reach out shortly to lock your rate and discuss next steps.
+                  I&apos;ll review your scenario and reach out shortly to discuss next steps.
                 </p>
                 <p className="text-sm text-brand font-medium mt-3">
                   &mdash; {LO_CONFIG.name}, {LO_CONFIG.phone}
@@ -532,9 +506,9 @@ export default function ComparisonReport({ compareRates, scenario, rateData, onC
               </div>
             ) : (
               <div className="max-w-md mx-auto">
-                <h3 className="text-lg font-bold text-gray-900 text-center mb-1">Ready to Lock In Your Rate?</h3>
+                <h3 className="text-lg font-bold text-gray-900 text-center mb-1">Ready to Get Started?</h3>
                 <p className="text-sm text-gray-500 text-center mb-4">
-                  Like what you see? Drop your info and I&apos;ll reach out to lock your rate and walk you through next steps.
+                  Like what you see? Drop your info and I&apos;ll reach out to walk you through next steps.
                 </p>
                 <form onSubmit={handleSubmit} className="space-y-3">
                   <input type="text" placeholder="Full Name" required value={form.name}
@@ -549,7 +523,7 @@ export default function ComparisonReport({ compareRates, scenario, rateData, onC
                   {error && <p className="text-sm text-red-600">{error}</p>}
                   <button type="submit" disabled={submitting}
                     className="w-full bg-brand text-white rounded-lg py-3 font-semibold hover:bg-brand-dark transition-colors disabled:opacity-50">
-                    {submitting ? 'Sending...' : 'Lock My Rate'}
+                    {submitting ? 'Sending...' : 'Get My Rate'}
                   </button>
                 </form>
                 <p className="text-xs text-gray-400 text-center mt-3">No credit pull. No obligation. Just real numbers.</p>
