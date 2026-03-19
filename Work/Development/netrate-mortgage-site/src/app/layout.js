@@ -2,6 +2,7 @@ import './globals.css';
 import { Inter, JetBrains_Mono } from 'next/font/google';
 import Script from 'next/script';
 import CookieBanner from '@/components/CookieBanner';
+import GlassNav from '@/components/GlassNav';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -133,8 +134,8 @@ export default function RootLayout({ children }) {
             strategy="afterInteractive"
           />
         )}
-        {/* Navigation */}
-        <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+        {/* Navigation — glassmorphism on scroll */}
+        <GlassNav>
           <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
             <a href="/" className="flex items-center gap-0.5">
               <span className="text-xl font-bold text-gray-900">Net</span>
@@ -146,12 +147,12 @@ export default function RootLayout({ children }) {
               <a href="/#tools" className="text-gray-600 hover:text-brand transition-colors">Tools</a>
               <a href="/rate-watch" className="text-gray-600 hover:text-brand transition-colors">Market</a>
               <a href="/about" className="text-gray-600 hover:text-brand transition-colors">About</a>
-              <a href="/portal/apply" className="bg-brand text-white px-4 py-2 rounded-lg hover:bg-brand-dark transition-colors">
+              <a href="/portal/apply" className="bg-brand text-white px-4 py-2 rounded-lg hover:bg-brand-dark glow-brand transition-all">
                 Apply Now
               </a>
             </nav>
           </div>
-        </header>
+        </GlassNav>
 
         {/* Main content */}
         <main className="flex-1">
