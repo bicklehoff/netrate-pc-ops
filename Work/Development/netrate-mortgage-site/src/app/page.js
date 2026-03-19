@@ -56,9 +56,9 @@ export default async function HomePage() {
   // Hero card products (30-yr from live data, rest are estimates)
   const heroProducts = [
     { product: '30-Yr Fixed', label: 'Conforming', rate: conv30Rate, apr: conv30Apr },
-    { product: '15-Yr Fixed', label: 'Conforming', rate: '5.250%*', apr: '5.38%' },
-    { product: 'FHA 30-Yr', label: 'Government', rate: '5.500%*', apr: '6.12%' },
-    { product: 'VA 30-Yr', label: 'Military', rate: '5.375%*', apr: '5.52%' },
+    { product: '15-Yr Fixed', label: 'Conforming', rate: '5.250%', apr: '5.38%' },
+    { product: 'FHA 30-Yr', label: 'Government', rate: '5.500%', apr: '6.12%' },
+    { product: 'VA 30-Yr', label: 'Military', rate: '5.375%', apr: '5.52%' },
   ];
 
   return (
@@ -239,9 +239,9 @@ export default async function HomePage() {
           <div className="bg-white/[0.06] backdrop-blur-sm border border-white/10 rounded-2xl p-6 lg:p-8">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <h3 className="text-base font-bold text-white">Wholesale vs. Retail — See the Difference</h3>
+                <h3 className="text-base font-bold text-white">Rates &amp; Market Data — Updated Daily</h3>
                 <p className="text-[13px] text-gray-400 mt-1">
-                  We publish our actual wholesale rates daily alongside the Freddie Mac national average. No fabricated charts — real data you can verify.
+                  Track mortgage rates, Treasury yields, and economic events that move the market. Real data from Freddie Mac and the Fed — not estimates.
                 </p>
               </div>
               <a
@@ -265,7 +265,7 @@ export default async function HomePage() {
             <div className="flex-1">
               <h3 className="text-xl font-extrabold text-gray-900 mb-2">Rate Watch</h3>
               <p className="text-sm text-gray-600 leading-relaxed">
-                Track daily wholesale mortgage rates, compare to the national average, and see what economic events could move rates next. Updated every business day with real data — no estimates.
+                See where mortgage rates are today, how they compare to the national average, and what economic events could move them next. Updated every business day.
               </p>
             </div>
             <a
