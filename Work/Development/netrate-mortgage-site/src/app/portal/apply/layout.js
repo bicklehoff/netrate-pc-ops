@@ -11,7 +11,7 @@ export default function ApplyLayout({ children }) {
   return (
     <ApplicationProvider>
       {/* Fixed full-screen overlay — hides portal nav/footer */}
-      <div className="fixed inset-0 z-40 bg-gray-50 flex flex-col overflow-auto">
+      <div className="fixed inset-0 z-[60] bg-gray-50 flex flex-col overflow-auto">
         {/* Minimal header — logo + security + exit */}
         <header className="bg-white border-b border-gray-200 sticky top-0 z-50 shrink-0">
           <div className="max-w-3xl mx-auto px-6 py-3.5 flex items-center justify-between">
