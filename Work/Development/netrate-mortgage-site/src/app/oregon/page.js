@@ -66,7 +66,7 @@ export default function Oregon() {
           <p className="mb-4">Same as anywhere else:</p>
           <ol className="list-decimal pl-6 space-y-4">
             <li>
-              <strong>See the rates</strong> — <Link href="/rates" className="text-brand hover:text-brand-dark font-medium">Check today&apos;s rates</Link>. No application, no credit pull.
+              <strong>See the rates</strong> — <Link href="/rates?state=OR" className="text-brand hover:text-brand-dark font-medium">Check today&apos;s Oregon rates</Link>. No application, no credit pull.
             </li>
             <li>
               <strong>Compare your options</strong> — Every rate, every point/credit combination, side by side.
@@ -92,7 +92,7 @@ export default function Oregon() {
         </section>
 
         <div className="pt-4">
-          <Link href="/rates" className="inline-block bg-brand text-white px-6 py-3 rounded-lg font-semibold hover:bg-brand-dark transition-colors">
+          <Link href="/rates?state=OR" className="inline-block bg-brand text-white px-6 py-3 rounded-lg font-semibold hover:bg-brand-dark transition-colors">
             See Today&apos;s Rates &rarr;
           </Link>
         </div>

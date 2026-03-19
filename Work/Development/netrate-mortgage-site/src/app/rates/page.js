@@ -43,14 +43,16 @@ async function getRateData() {
   }
 }
 
-export default async function RatesPage() {
+export default async function RatesPage({ searchParams }) {
   const rateData = await getRateData();
+  const sp = await searchParams;
+  const defaultState = sp?.state || null;
 
   return (
     <div>
       <TrustBar />
       <div className="max-w-3xl mx-auto px-4 py-8">
-      <RateTool initialRateData={rateData} />
+      <RateTool initialRateData={rateData} defaultState={defaultState} />
 
       {/* Apply CTA */}
       <div className="mt-10 bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">

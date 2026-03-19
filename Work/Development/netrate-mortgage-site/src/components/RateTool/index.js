@@ -9,10 +9,13 @@ import LeadCapture from './LeadCapture';
 import ComparisonReport from './ComparisonReport';
 import { LO_CONFIG } from '@/lib/rates/config';
 import { trackRateToolInteraction, startEngagementTimer } from '@/lib/analytics';
+import { getThirdPartyCosts } from '@/lib/rates/closing-costs';
 
-export default function RateTool({ initialRateData }) {
+export default function RateTool({ initialRateData, defaultState }) {
   // Use GCS data if available, fall back to static bundled data
   const rateData = initialRateData?.lenders?.[0] || staticSunwestData;
+
+  const initialState = defaultState || 'CO';
 
   // 30-second engagement timer
   useEffect(() => {
@@ -40,8 +43,8 @@ export default function RateTool({ initialRateData }) {
     fico: 760,
     loanAmount: 0,
     ltv: 0,
-    state: 'CO',
-    thirdPartyCosts: 2800,
+    state: initialState,
+    thirdPartyCosts: getThirdPartyCosts(initialState),
   });
 
   const [compareRates, setCompareRates] = useState([]);
