@@ -26,8 +26,9 @@ export default function HeroStrip({ todayRate, rateChange, fredLatest }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-[1fr_340px] gap-6 px-7 py-6 border-b border-slate-800 bg-gradient-to-br from-slate-900 to-slate-800/50">
       <div>
-        <div className="inline-block bg-red-500/15 text-red-500 text-xs font-bold uppercase tracking-wide px-3 py-1 rounded mb-3">
-          Today&apos;s Update
+        <div className="inline-flex items-center gap-2 bg-brand/15 text-brand-light text-xs font-bold uppercase tracking-wide px-3 py-1.5 rounded-full mb-3">
+          <span className="w-1.5 h-1.5 bg-brand-light rounded-full animate-pulse" />
+          Live Update
         </div>
         <h1 className="text-white text-[30px] font-extrabold leading-tight mb-2.5">
           Daily Mortgage Rate Snapshot
@@ -45,10 +46,10 @@ export default function HeroStrip({ todayRate, rateChange, fredLatest }) {
           <div className="text-slate-400 text-xs uppercase tracking-wide mb-1.5">
             Today&apos;s 30yr Fixed (760+)
           </div>
-          <div className="text-white text-[44px] font-extrabold leading-none">
+          <div className="text-white text-[44px] font-extrabold leading-none tabular-nums">
             {todayRate ? todayRate.toFixed(3) + '%' : '—'}
           </div>
-          <div className={`text-sm font-semibold mt-1.5 ${changeClass}`}>{changeText}</div>
+          <div className={`text-sm font-semibold mt-1.5 tabular-nums ${changeClass}`}>{changeText}</div>
         </div>
         <div className="bg-slate-800 rounded-xl px-6 py-5 text-center border border-slate-700">
           <div className="text-slate-400 text-xs uppercase tracking-wide mb-2">

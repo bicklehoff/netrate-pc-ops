@@ -117,7 +117,7 @@ export default async function HomePage() {
           {/* Left — Text */}
           <div>
             <div className="inline-flex items-center gap-2 bg-brand/20 border border-brand/30 rounded-full px-3.5 py-1.5 text-xs font-semibold text-brand-light mb-5">
-              <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
+              <span className="w-1.5 h-1.5 bg-brand-light rounded-full animate-pulse" />
               Rates updated today
             </div>
             <h1 className="text-4xl lg:text-[44px] font-extrabold leading-[1.15] text-white">
@@ -278,7 +278,7 @@ export default async function HomePage() {
       </section>
 
       {/* ===== MARKET — CTA to Rate Watch ===== */}
-      <section id="market" className="bg-gray-50 border-y border-gray-100 py-12">
+      <section className="bg-gray-50 border-y border-gray-100 py-12">
         <div className="max-w-6xl mx-auto px-6">
           <div className="bg-white rounded-2xl border border-gray-200 p-8 flex flex-col md:flex-row items-center gap-8">
             <div className="flex-1">
