@@ -80,20 +80,69 @@ export default function ContactPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-16">
-      <h1 className="text-3xl font-bold text-gray-900 mb-4">Get a Free Quote</h1>
-      <p className="text-gray-600 mb-2">
-        Tell us a little about what you&apos;re looking for. No application, no credit check, no obligation.
-        We&apos;ll review your information and get back to you — usually within a few hours on business days.
+    <div className="max-w-5xl mx-auto px-6 py-16">
+      <h1 className="text-3xl font-bold text-gray-900 mb-4">Contact Us</h1>
+      <p className="text-gray-600 mb-10">
+        We&apos;re here to help. Reach out however works best for you.
       </p>
-      <p className="text-sm text-gray-500 mb-10">
-        If you&apos;d rather skip the form, call us at{' '}
-        <a href="tel:303-444-5251" className="text-brand hover:text-brand-dark font-medium">303-444-5251</a>
-        {' '}or email{' '}
-        <a href="mailto:david@netratemortgage.com" className="text-brand hover:text-brand-dark font-medium">david@netratemortgage.com</a>.
-        {' '}Or{' '}
-        <a href="https://book.netratemortgage.com" target="_blank" rel="noopener noreferrer" className="text-brand hover:text-brand-dark font-medium">schedule a call online &rarr;</a>
-      </p>
+
+      <div className="grid md:grid-cols-2 gap-12 mb-12">
+        {/* Left: Contact Info + Booking */}
+        <div>
+          <div className="space-y-5">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900 mb-3">David Burson</h2>
+              <p className="text-sm text-gray-500">Mortgage Broker — NMLS #641790</p>
+            </div>
+
+            <div className="space-y-3 text-sm">
+              <a href="tel:303-444-5251" className="flex items-center gap-3 text-gray-700 hover:text-brand transition-colors">
+                <svg className="w-5 h-5 text-brand flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" />
+                </svg>
+                303-444-5251
+              </a>
+              <a href="mailto:david@netratemortgage.com" className="flex items-center gap-3 text-gray-700 hover:text-brand transition-colors">
+                <svg className="w-5 h-5 text-brand flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                </svg>
+                david@netratemortgage.com
+              </a>
+              <div className="flex items-start gap-3 text-gray-700">
+                <svg className="w-5 h-5 text-brand flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 0115 0z" />
+                </svg>
+                <span>357 South McCaslin Blvd., #200<br />Louisville, CO 80027</span>
+              </div>
+            </div>
+
+            <div className="pt-3">
+              <a
+                href="https://book.netratemortgage.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 bg-brand text-white px-5 py-2.5 rounded-lg font-medium hover:bg-brand-dark glow-brand transition-all"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+                </svg>
+                Schedule a Free Consultation
+              </a>
+            </div>
+
+            <p className="text-xs text-gray-400 pt-2">
+              Company NMLS #1111861 | Licensed in CO, TX, OR
+            </p>
+          </div>
+        </div>
+
+        {/* Right: Quote Form */}
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900 mb-1">Get a Free Quote</h2>
+          <p className="text-sm text-gray-500 mb-5">
+            No application, no credit check, no obligation. We&apos;ll get back to you within a few hours on business days.
+          </p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid md:grid-cols-2 gap-4">
@@ -191,7 +240,7 @@ export default function ContactPage() {
         </button>
       </form>
 
-      <div className="mt-8 bg-brand/5 border border-brand/20 rounded-lg p-5 text-center">
+      <div className="mt-6 bg-brand/5 border border-brand/20 rounded-lg p-5 text-center">
         <p className="text-sm text-gray-700">
           <strong>Ready to apply?</strong> Skip the quote and{' '}
           <Link href="/portal/apply" className="text-brand font-medium hover:text-brand-dark">
@@ -199,21 +248,6 @@ export default function ContactPage() {
           </Link>
         </p>
       </div>
-
-      <div className="mt-12 pt-8 border-t border-gray-200">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Direct Contact</h2>
-        <div className="space-y-2 text-sm text-gray-600">
-          <p><span className="font-medium text-gray-900">David Burson</span> — Mortgage Broker</p>
-          <p>
-            <span className="font-medium text-gray-900">Phone:</span>{' '}
-            <a href="tel:303-444-5251" className="text-brand hover:text-brand-dark">303-444-5251</a>
-          </p>
-          <p>
-            <span className="font-medium text-gray-900">Email:</span>{' '}
-            <a href="mailto:david@netratemortgage.com" className="text-brand hover:text-brand-dark">david@netratemortgage.com</a>
-          </p>
-          <p>357 South McCaslin Blvd., #200, Louisville, CO 80027</p>
-          <p className="text-xs text-gray-400 pt-1">NMLS #641790 | Company NMLS #1111861</p>
         </div>
       </div>
     </div>
