@@ -31,9 +31,10 @@ export default function PrivacyPage() {
           <li><strong>Zoho CRM:</strong> for secure management of lead submissions and communications</li>
         </ul>
         <p>
-          These tools may use cookies or tracking technologies to function. By continuing to use our site,
-          you consent to our use of these technologies in accordance with this policy. You may manage cookie
-          preferences through your browser settings at any time.
+          These tools may use cookies or similar tracking technologies to function. By continuing to use
+          our Site, you acknowledge our use of these technologies as described in this policy. You may
+          disable or manage cookies through your browser settings at any time. Disabling cookies may
+          affect Site functionality.
         </p>
         <p>
           We do not sell personal information. For more information or to opt out of tracking where available,
