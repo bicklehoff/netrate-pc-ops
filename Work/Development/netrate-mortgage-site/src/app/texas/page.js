@@ -37,6 +37,8 @@ export default function Texas() {
           </ul>
         </section>
 
+        <CountyLoanLimits defaultState="TX" />
+
         <section>
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Texas-Specific Rules Worth Knowing</h2>
           <p className="mb-4">Texas has a few mortgage rules that don&apos;t exist in other states:</p>
@@ -90,8 +92,6 @@ export default function Texas() {
             <li><a href="https://nmlsconsumeraccess.org" target="_blank" rel="noopener noreferrer" className="text-brand hover:text-brand-dark font-medium">Verify on NMLS Consumer Access &rarr;</a></li>
           </ul>
         </section>
-
-        <CountyLoanLimits defaultState="TX" />
 
         <div className="pt-4">
           <Link href="/rates?state=TX" className="inline-block bg-brand text-white px-6 py-3 rounded-lg font-semibold hover:bg-brand-dark transition-colors">

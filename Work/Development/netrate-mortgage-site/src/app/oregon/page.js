@@ -37,6 +37,8 @@ export default function Oregon() {
           </ul>
         </section>
 
+        <CountyLoanLimits defaultState="OR" />
+
         <section>
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Oregon Residents: Something Most Brokers Won&apos;t Tell You</h2>
           <p>
@@ -91,8 +93,6 @@ export default function Oregon() {
             <li><a href="https://nmlsconsumeraccess.org" target="_blank" rel="noopener noreferrer" className="text-brand hover:text-brand-dark font-medium">Verify on NMLS Consumer Access &rarr;</a></li>
           </ul>
         </section>
-
-        <CountyLoanLimits defaultState="OR" />
 
         <div className="pt-4">
           <Link href="/rates?state=OR" className="inline-block bg-brand text-white px-6 py-3 rounded-lg font-semibold hover:bg-brand-dark transition-colors">
