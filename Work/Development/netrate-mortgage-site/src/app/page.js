@@ -119,6 +119,7 @@ export default async function HomePage() {
           {/* Left — Text */}
           <div>
             {/* Trust strip — above headline per Stitch analysis */}
+            {/* TODO: Update Google Maps link after GBP name change from Locus → NetRate */}
             <div className="flex items-center gap-2.5 mb-5 opacity-60 hover:opacity-100 transition-opacity">
               <a
                 href="https://www.google.com/maps/search/?api=1&query=Locus+Mortgage&query_place_id=ChIJa5-5jCXza4cRptwJxaP23eU"
