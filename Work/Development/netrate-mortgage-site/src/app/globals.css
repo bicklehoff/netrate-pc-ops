@@ -40,6 +40,17 @@ th[class*="font-mono"] {
   font-variant-numeric: tabular-nums;
 }
 
+/* Brand glow on interactive elements */
+.glow-brand {
+  transition: box-shadow 0.2s ease;
+}
+.glow-brand:hover {
+  box-shadow: 0 0 20px rgba(34, 211, 238, 0.2);
+}
+.glow-brand:focus-visible {
+  box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);
+}
+
 /* Market ticker scrolling animation */
 @keyframes ticker-scroll {
   0% { transform: translateX(0); }
