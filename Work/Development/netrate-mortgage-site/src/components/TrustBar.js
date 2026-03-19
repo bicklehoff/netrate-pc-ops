@@ -8,8 +8,7 @@ export default function TrustBar() {
         </div>
         <div className="w-px h-8 bg-white/10 hidden sm:block" />
         <div className="flex items-center gap-2.5">
-          <span className="text-2xl font-extrabold text-white leading-none">4</span>
-          <span className="text-sm text-gray-400">States<br className="hidden sm:block" /> Licensed</span>
+          <span className="text-2xl font-extrabold text-white leading-none">CA · CO · OR · TX</span>
         </div>
         <div className="w-px h-8 bg-white/10 hidden sm:block" />
         <div className="flex items-center gap-2.5">
