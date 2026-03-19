@@ -39,6 +39,33 @@ const CREDENTIALS = [
   { label: 'Lending Partners', value: '11' },
 ];
 
+const REVIEWS = [
+  {
+    name: 'Ben W.',
+    text: 'David was absolutely incredible. Whenever he quoted us he was correct and there were no surprises. My final mortgage was $50 less per month than what he quoted me 6 months prior. If you want someone to do an honest and great job then use David.',
+  },
+  {
+    name: 'Ian B.',
+    text: 'David has structured his business to provide extremely low costs. I got a few comps and David was lower price by a wide margin. Will definitely go to David for my next refi!',
+  },
+  {
+    name: 'Ahmadreza H.',
+    text: 'He was able to find the best refinance rate for us and the communication was super clear and efficient. This was the second time he helped us — I highly recommend him.',
+  },
+  {
+    name: 'Jovita S.',
+    text: 'I had the best mortgage experience ever. David was very professional and genuinely wanted to find the best deal to fit my needs. I ended up saving much more than I thought I could.',
+  },
+  {
+    name: 'Chip C.',
+    text: 'He answered all questions, no matter how basic, and walked me through the whole process making me feel totally comfortable in what was for me, an uncomfortable situation.',
+  },
+  {
+    name: 'Sohayla R.',
+    text: 'He is very knowledgeable, extremely responsive, and truly a wonderful person who helps you through the entire loan process. We have been recommending him to family and friends!',
+  },
+];
+
 export default function AboutPage() {
   return (
     <div>
@@ -74,7 +101,7 @@ export default function AboutPage() {
 
       {/* Who Is David */}
       <section className="max-w-5xl mx-auto px-6 py-14">
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_320px] gap-10 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_300px] gap-10 items-start">
           <div>
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Meet David Burson</h2>
             <div className="space-y-4 text-gray-600 leading-relaxed">
@@ -102,24 +129,47 @@ export default function AboutPage() {
             </div>
           </div>
 
-          {/* Google Reviews */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-            <div className="flex items-center gap-3 mb-4">
-              <span className="w-10 h-10 rounded-full bg-[#4285f4] text-white flex items-center justify-center text-lg font-extrabold">G</span>
-              <div>
-                <div className="text-yellow-500 text-lg tracking-wide">★★★★★</div>
-                <div className="text-sm text-gray-600"><strong className="text-gray-900">4.9</strong> on Google Reviews</div>
+          {/* Headshot + Google badge */}
+          <div className="flex flex-col items-center gap-5">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/david-burson.jpg"
+              alt="David Burson — Mortgage Broker, NetRate Mortgage"
+              className="w-56 h-56 rounded-2xl object-cover object-top shadow-lg border-2 border-gray-100"
+            />
+            <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm w-full">
+              <div className="flex items-center gap-3 mb-3">
+                <span className="w-9 h-9 rounded-full bg-[#4285f4] text-white flex items-center justify-center text-base font-extrabold flex-shrink-0">G</span>
+                <div>
+                  <div className="text-yellow-500 text-base tracking-wide">★★★★★</div>
+                  <div className="text-sm text-gray-600"><strong className="text-gray-900">4.9</strong> · 35 reviews</div>
+                </div>
               </div>
+              {/* TODO: Update Google Maps link after GBP name change from Locus → NetRate */}
+              <a
+                href="https://www.google.com/maps/search/?api=1&query=Locus+Mortgage&query_place_id=ChIJa5-5jCXza4cRptwJxaP23eU"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-brand font-semibold hover:text-brand-dark transition-colors"
+              >
+                Read All Reviews &rarr;
+              </a>
             </div>
-            <a
-              href="https://www.google.com/maps/search/?api=1&query=Locus+Mortgage&query_place_id=ChIJa5-5jCXza4cRptwJxaP23eU"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm text-brand font-semibold hover:text-brand-dark transition-colors"
-            >
-              Read Reviews on Google &rarr;
-            </a>
           </div>
+        </div>
+      </section>
+
+      {/* Review Snippets */}
+      <section className="max-w-5xl mx-auto px-6 pb-14">
+        <h2 className="text-lg font-bold text-gray-900 mb-6 uppercase tracking-wider text-center">What Clients Say</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {REVIEWS.map((review) => (
+            <div key={review.name} className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+              <div className="text-yellow-500 text-sm mb-2">★★★★★</div>
+              <p className="text-sm text-gray-600 leading-relaxed mb-3">&ldquo;{review.text}&rdquo;</p>
+              <p className="text-xs font-semibold text-gray-900">{review.name}</p>
+            </div>
+          ))}
         </div>
       </section>
 
