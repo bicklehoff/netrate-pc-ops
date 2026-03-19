@@ -91,6 +91,8 @@ export default function ContactPage() {
         <a href="tel:303-444-5251" className="text-brand hover:text-brand-dark font-medium">303-444-5251</a>
         {' '}or email{' '}
         <a href="mailto:david@netratemortgage.com" className="text-brand hover:text-brand-dark font-medium">david@netratemortgage.com</a>.
+        {' '}Or{' '}
+        <a href="https://book.netratemortgage.com" target="_blank" rel="noopener noreferrer" className="text-brand hover:text-brand-dark font-medium">schedule a call online &rarr;</a>
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
