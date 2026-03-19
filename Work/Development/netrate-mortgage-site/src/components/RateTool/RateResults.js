@@ -1,21 +1,8 @@
 'use client';
 
-import { useEffect } from 'react';
 import { calculateLLPA, calculatePI, priceRates } from '@/lib/rates/engine';
-import { getAutoPickRates } from './reportUtils';
 
-export default function RateResults({ scenario, rateData, compareRates = [], onToggleCompare, onViewReport, onAutoSelect }) {
-  // Auto-select suggested rates when compareRates is empty and data is valid
-  useEffect(() => {
-    if (compareRates.length === 0 && scenario.loanAmount > 0 && scenario.propertyValue > 0 && onAutoSelect) {
-      const r = priceRates(scenario, rateData);
-      const lf = rateData.lender.lenderFees;
-      const tp = scenario.thirdPartyCosts || 0;
-      const picks = getAutoPickRates(r, lf, tp);
-      if (picks.length > 0) onAutoSelect(picks);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scenario.loanAmount]);
+export default function RateResults({ scenario, rateData, compareRates = [], onToggleCompare, onViewReport }) {
 
   if (!scenario.loanAmount || scenario.loanAmount <= 0 || !scenario.propertyValue) {
     return (
@@ -45,11 +32,46 @@ export default function RateResults({ scenario, rateData, compareRates = [], onT
   const thirdPartyCosts = scenario.thirdPartyCosts || 0;
   const totalFixed = lenderFees + thirdPartyCosts;
 
-  // Find the best-value (discounted) rate for badge
-  const costRates = rates.filter(r => r.adjPrice >= 0.25);
-  const bestValueRate = costRates.length > 0
-    ? costRates.reduce((best, r) => Math.abs(r.adjPrice - 0.75) < Math.abs(best.adjPrice - 0.75) ? r : best)
-    : null;
+  // Find sweet spots in both directions from par.
+  // CHARGE SIDE (below par): cheapest cost per 1/8th of rate drop from par.
+  // CREDIT SIDE (above par): most credit per 1/8th of rate increase from par.
+  let bestValueRate = null;
+  let bestCreditRate = null;
+  {
+    const parRate = rates[parIdx];
+    if (parRate) {
+      const parCost = (parRate.adjPrice / 100) * scenario.loanAmount;
+
+      // Charge side — lowest cost per eighth below par
+      let bestCostPerEighth = Infinity;
+      for (const r of rates) {
+        if (r.rate >= parRate.rate || r.adjPrice <= 0) continue;
+        const eighthsBelow = (parRate.rate - r.rate) / 0.125;
+        if (eighthsBelow <= 0) continue;
+        const totalCost = ((r.adjPrice / 100) * scenario.loanAmount) - parCost;
+        if (totalCost <= 0) continue;
+        const costPerEighth = totalCost / eighthsBelow;
+        if (costPerEighth < bestCostPerEighth) {
+          bestCostPerEighth = costPerEighth;
+          bestValueRate = r;
+        }
+      }
+
+      // Credit side — most credit per eighth above par
+      let bestCreditPerEighth = 0;
+      for (const r of rates) {
+        if (r.rate <= parRate.rate || r.creditDollars >= 0) continue;
+        const eighthsAbove = (r.rate - parRate.rate) / 0.125;
+        if (eighthsAbove <= 0) continue;
+        const totalCredit = Math.abs(r.creditDollars);
+        const creditPerEighth = totalCredit / eighthsAbove;
+        if (creditPerEighth > bestCreditPerEighth) {
+          bestCreditPerEighth = creditPerEighth;
+          bestCreditRate = r;
+        }
+      }
+    }
+  }
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg my-4 overflow-hidden">
@@ -118,6 +140,7 @@ export default function RateResults({ scenario, rateData, compareRates = [], onT
               const savings = currentPI ? currentPI - r.monthlyPI : 0;
               const isNoCost = (totalFixed + r.creditDollars) <= 0;
               const isBestValue = bestValueRate && r.rate === bestValueRate.rate;
+              const isBestCredit = bestCreditRate && r.rate === bestCreditRate.rate;
               return (
                 <tr key={r.rate}
                   className={`border-b border-gray-100 ${isPar ? "bg-cyan-50" : i % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-cyan-50 transition-colors`}>
@@ -140,9 +163,12 @@ export default function RateResults({ scenario, rateData, compareRates = [], onT
                       : `$${Math.abs(r.creditDollars).toLocaleString("en-US", { maximumFractionDigits: 0 })}`}
                   </td>
                   <td className="px-3 py-3">
-                    {isBestValue && <span className="text-xs bg-blue-100 text-blue-800 rounded px-2 py-1 whitespace-nowrap">BEST VALUE</span>}
-                    {isPar && !isBestValue && <span className="text-xs text-white rounded px-2 py-1 whitespace-nowrap bg-brand">PAR</span>}
-                    {isNoCost && !isPar && !isBestValue && <span className="text-xs bg-green-100 text-green-800 rounded px-2 py-1 whitespace-nowrap">NO COST</span>}
+                    <div className="flex flex-wrap gap-1">
+                      {isBestValue && <span className="text-xs bg-blue-100 text-blue-800 rounded px-2 py-1 whitespace-nowrap">SWEET SPOT</span>}
+                      {isBestCredit && <span className="text-xs bg-purple-100 text-purple-800 rounded px-2 py-1 whitespace-nowrap">SWEET SPOT</span>}
+                      {isPar && <span className="text-xs text-white rounded px-2 py-1 whitespace-nowrap bg-brand">PAR</span>}
+                      {isNoCost && !isPar && <span className="text-xs bg-green-100 text-green-800 rounded px-2 py-1 whitespace-nowrap">NO COST</span>}
+                    </div>
                   </td>
                   <td className="px-2 py-3 print:hidden">
                     {(() => {

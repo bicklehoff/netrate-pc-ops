@@ -86,7 +86,6 @@ export default function RateTool({ initialRateData, defaultState }) {
           compareRates={compareRates}
           onToggleCompare={handleToggleCompare}
           onViewReport={() => setShowReport(true)}
-          onAutoSelect={(picks) => setCompareRates(picks)}
         />
         <RateEducation />
         <LeadCapture scenario={scenario} />
