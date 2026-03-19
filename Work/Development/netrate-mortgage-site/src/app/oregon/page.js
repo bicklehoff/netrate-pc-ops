@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import CountyLoanLimits from '@/components/CountyLoanLimits';
 
 export const metadata = {
   title: 'Oregon Mortgage Rates — Wholesale Rates from a Licensed Broker | NetRate Mortgage',
@@ -90,6 +91,8 @@ export default function Oregon() {
             <li><a href="https://nmlsconsumeraccess.org" target="_blank" rel="noopener noreferrer" className="text-brand hover:text-brand-dark font-medium">Verify on NMLS Consumer Access &rarr;</a></li>
           </ul>
         </section>
+
+        <CountyLoanLimits defaultState="OR" />
 
         <div className="pt-4">
           <Link href="/rates?state=OR" className="inline-block bg-brand text-white px-6 py-3 rounded-lg font-semibold hover:bg-brand-dark transition-colors">
