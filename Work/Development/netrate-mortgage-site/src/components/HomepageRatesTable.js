@@ -156,7 +156,7 @@ function LeadModal({ product, onClose }) {
                 No credit pull. No obligation. Just real numbers.
               </p>
               <p className="text-xs text-gray-400 text-center mt-2">
-                Have questions? <a href="https://book.netratemortgage.com" target="_blank" rel="noopener noreferrer" className="text-brand hover:text-brand-dark underline">Schedule a call with David &rarr;</a>
+                Have questions? <a href="/book" className="text-brand hover:text-brand-dark underline">Schedule a call with David &rarr;</a>
               </p>
               <p className="text-[10px] text-gray-300 text-center mt-2 leading-relaxed">
                 By submitting, you agree to receive recurring text messages from NetRate Mortgage

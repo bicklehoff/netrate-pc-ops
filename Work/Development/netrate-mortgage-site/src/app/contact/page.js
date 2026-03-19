@@ -119,9 +119,7 @@ export default function ContactPage() {
 
             <div className="pt-3">
               <a
-                href="https://book.netratemortgage.com"
-                target="_blank"
-                rel="noopener noreferrer"
+                href="/book"
                 className="inline-flex items-center gap-2 bg-brand text-white px-5 py-2.5 rounded-lg font-medium hover:bg-brand-dark glow-brand transition-all"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

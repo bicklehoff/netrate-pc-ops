@@ -252,7 +252,7 @@ export default function ApplyPage() {
                 </button>
               </div>
               <p className="text-xs text-gray-400 text-center mt-4">
-                Have questions? <a href="https://book.netratemortgage.com" target="_blank" rel="noopener noreferrer" className="text-brand hover:text-brand-dark underline">Schedule a call with David &rarr;</a>
+                Have questions? <a href="/book" className="text-brand hover:text-brand-dark underline">Schedule a call with David &rarr;</a>
               </p>
             </div>
           </div>
