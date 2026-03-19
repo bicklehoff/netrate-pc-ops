@@ -152,7 +152,7 @@ export default function RootLayout({ children }) {
         </main>
 
         {/* Google Reviews Banner — site-wide */}
-        <div className="bg-gray-800 border-t border-gray-700">
+        <div className="bg-surface border-t border-white/10">
           <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-center gap-3">
             {/* Google "G" logo */}
             <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -178,7 +178,7 @@ export default function RootLayout({ children }) {
         </div>
 
         {/* Footer */}
-        <footer className="bg-gray-900 text-gray-400 mt-auto">
+        <footer className="bg-deep text-gray-400 mt-auto">
           <div className="max-w-6xl mx-auto px-6 py-12">
             <div className="grid md:grid-cols-3 gap-8 mb-8">
               {/* Company */}

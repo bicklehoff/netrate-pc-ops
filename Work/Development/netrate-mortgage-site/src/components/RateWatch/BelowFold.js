@@ -24,7 +24,7 @@ export default function BelowFold() {
   return (
     <div className="max-w-[1200px] mx-auto px-7">
       {/* What Happened Today */}
-      <div className="bg-slate-800 rounded-xl px-9 py-8 mt-8 border-l-4 border-l-red-500">
+      <div className="bg-surface rounded-xl px-9 py-8 mt-8 border-l-4 border-l-red-500">
         <h2 className="text-white text-[26px] font-extrabold leading-tight mb-4">
           What Happened Today
         </h2>
@@ -58,7 +58,7 @@ export default function BelowFold() {
           {UPCOMING_EVENTS.map((ev, i) => (
             <div
               key={i}
-              className={`bg-slate-800 rounded-xl px-6 py-5 ${
+              className={`bg-surface rounded-xl px-6 py-5 ${
                 ev.big ? 'border-l-[3px] border-l-amber-500' : ''
               }`}
             >

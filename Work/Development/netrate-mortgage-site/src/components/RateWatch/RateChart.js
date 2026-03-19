@@ -553,7 +553,7 @@ export default function RateChart({ rateHistory, fredData }) {
                 className={`px-4 py-1.5 text-sm font-semibold border border-slate-600 transition-all first:rounded-l-md last:rounded-r-md ${
                   creditTier === tier
                     ? 'bg-brand text-white border-brand'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white'
+                    : 'bg-surface text-slate-300 hover:bg-slate-700 hover:text-white'
                 }`}
               >
                 {tier === '760' ? '760+' : tier}
@@ -571,7 +571,7 @@ export default function RateChart({ rateHistory, fredData }) {
                 className={`px-4 py-1.5 text-sm font-semibold border border-slate-600 transition-all first:rounded-l-md last:rounded-r-md ${
                   timeRange === r.days
                     ? 'bg-brand text-white border-brand'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white'
+                    : 'bg-surface text-slate-300 hover:bg-slate-700 hover:text-white'
                 }`}
               >
                 {r.label}
@@ -598,7 +598,7 @@ export default function RateChart({ rateHistory, fredData }) {
       </div>
 
       {/* Chart */}
-      <div className="bg-slate-800 rounded-xl p-4">
+      <div className="bg-surface rounded-xl p-4">
         <canvas ref={canvasRef} style={{ maxHeight: '300px' }} />
       </div>
     </div>

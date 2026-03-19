@@ -102,7 +102,7 @@ export default async function RateWatchPage() {
   const rateChange = todayRate && prevRate ? Math.round((todayRate - prevRate) * 1000) / 1000 : 0;
 
   return (
-    <div className="bg-slate-900 text-slate-200 min-h-screen">
+    <div className="bg-deep text-slate-200 min-h-screen">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

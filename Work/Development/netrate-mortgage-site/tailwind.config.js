@@ -13,6 +13,8 @@ module.exports = {
           dark: '#0e7490',
           light: '#22d3ee',
         },
+        deep: '#0B1218',
+        surface: '#161F27',
       },
       fontFamily: {
         sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],

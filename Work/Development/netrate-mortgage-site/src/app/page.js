@@ -108,7 +108,7 @@ export default async function HomePage() {
       </div>
 
       {/* ===== HERO — 2-column, left text + right rate teaser ===== */}
-      <section className="relative overflow-hidden bg-gray-900">
+      <section className="relative overflow-hidden bg-deep">
         {/* Decorative glow */}
         <div className="absolute top-0 right-0 w-[600px] h-[600px] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(8,145,178,0.15) 0%, transparent 60%)' }} />
         <div className="absolute -bottom-20 -left-20 w-[400px] h-[400px] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(8,145,178,0.08) 0%, transparent 60%)' }} />
@@ -436,7 +436,7 @@ export default async function HomePage() {
       </section>
 
       {/* ===== CREDENTIALS — Dark band ===== */}
-      <section className="bg-gray-900 py-14">
+      <section className="bg-deep py-14">
         <div className="max-w-6xl mx-auto px-6">
           <h2 className="text-3xl font-extrabold text-white text-center mb-9">Licensed. Independent. Direct.</h2>
           <div className="flex flex-wrap justify-center gap-10 lg:gap-12">

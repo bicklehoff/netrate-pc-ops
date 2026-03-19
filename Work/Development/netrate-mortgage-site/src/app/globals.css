@@ -15,6 +15,11 @@
   --border: #e2e8f0;
   --success: #059669;
   --warning: #dc2626;
+  /* Pro-Dark palette */
+  --bg-deep: #0B1218;
+  --bg-surface: #161F27;
+  --accent-primary: #22D3EE;
+  --border-subtle: rgba(255, 255, 255, 0.1);
 }
 
 body {

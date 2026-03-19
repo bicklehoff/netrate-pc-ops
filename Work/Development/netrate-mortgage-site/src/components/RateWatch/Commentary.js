@@ -8,7 +8,7 @@ export default function Commentary() {
   });
 
   return (
-    <div className="bg-slate-800 rounded-xl px-6 py-5 border-l-4 border-l-brand">
+    <div className="bg-surface rounded-xl px-6 py-5 border-l-4 border-l-brand">
       <div className="flex justify-between items-center mb-2.5">
         <span className="text-brand text-[13px] font-bold uppercase tracking-wide">
           Market Commentary

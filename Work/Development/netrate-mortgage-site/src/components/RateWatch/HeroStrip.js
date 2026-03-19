@@ -24,7 +24,7 @@ export default function HeroStrip({ todayRate, rateChange, fredLatest }) {
   });
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-[1fr_340px] gap-6 px-7 py-6 border-b border-slate-800 bg-gradient-to-br from-slate-900 to-slate-800/50">
+    <div className="grid grid-cols-1 md:grid-cols-[1fr_340px] gap-6 px-7 py-6 border-b border-white/10 bg-gradient-to-br from-deep to-surface/50">
       <div>
         <div className="inline-flex items-center gap-2 bg-brand/15 text-brand-light text-xs font-bold uppercase tracking-wide px-3 py-1.5 rounded-full mb-3">
           <span className="w-1.5 h-1.5 bg-brand-light rounded-full animate-pulse" />
@@ -42,7 +42,7 @@ export default function HeroStrip({ todayRate, rateChange, fredLatest }) {
         </div>
       </div>
       <div className="flex flex-col gap-4">
-        <div className="bg-slate-800 rounded-xl px-6 py-5 text-center">
+        <div className="bg-surface rounded-xl px-6 py-5 text-center">
           <div className="text-slate-400 text-xs uppercase tracking-wide mb-1.5">
             Today&apos;s 30yr Fixed (760+)
           </div>
@@ -51,7 +51,7 @@ export default function HeroStrip({ todayRate, rateChange, fredLatest }) {
           </div>
           <div className={`text-sm font-semibold mt-1.5 tabular-nums ${changeClass}`}>{changeText}</div>
         </div>
-        <div className="bg-slate-800 rounded-xl px-6 py-5 text-center border border-slate-700">
+        <div className="bg-surface rounded-xl px-6 py-5 text-center border border-white/10">
           <div className="text-slate-400 text-xs uppercase tracking-wide mb-2">
             Near-Term Rate Outlook
           </div>
