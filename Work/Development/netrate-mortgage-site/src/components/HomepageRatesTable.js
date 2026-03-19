@@ -191,11 +191,11 @@ export default function HomepageRatesTable({ products, disclaimer }) {
             {products.map((row) => (
               <tr key={row.product} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                 <td className="py-3.5 px-4 font-semibold text-gray-900">{row.product}</td>
-                <td className="py-3.5 px-4 text-xl font-extrabold text-gray-900">{row.rate}</td>
-                <td className="py-3.5 px-4 text-sm text-gray-600">{row.apr}</td>
+                <td className="py-3.5 px-4 text-xl font-extrabold text-gray-900 tabular-nums">{row.rate}</td>
+                <td className="py-3.5 px-4 text-sm text-gray-600 tabular-nums">{row.apr}</td>
                 <td className="py-3.5 px-4">
                   {row.change != null ? (
-                    <span className={`text-sm font-semibold ${row.change < 0 ? 'text-green-600' : row.change > 0 ? 'text-red-600' : 'text-gray-400'}`}>
+                    <span className={`text-sm font-semibold tabular-nums ${row.change < 0 ? 'text-green-600' : row.change > 0 ? 'text-red-600' : 'text-gray-400'}`}>
                       {row.change < 0 ? '\u25BC' : row.change > 0 ? '\u25B2' : '\u2014'}{' '}
                       {Math.abs(row.change).toFixed(3)}
                     </span>
@@ -203,7 +203,7 @@ export default function HomepageRatesTable({ products, disclaimer }) {
                     <span className="text-sm text-gray-300">&mdash;</span>
                   )}
                 </td>
-                <td className="py-3.5 px-4 text-sm text-gray-500">
+                <td className="py-3.5 px-4 text-sm text-gray-500 tabular-nums">
                   {row.payment}
                   {row.note && <span className="text-[11px] text-gray-400 ml-1">{row.note}</span>}
                 </td>

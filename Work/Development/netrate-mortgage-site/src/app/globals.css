@@ -22,6 +22,19 @@ body {
   background: var(--bg-page);
 }
 
+/* Tabular numbers — align decimals in rate tables, cards, and financial displays */
+.font-mono,
+.tabular-nums,
+[data-numeric] {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Apply tabular-nums to all table cells containing financial data */
+td[class*="font-mono"],
+th[class*="font-mono"] {
+  font-variant-numeric: tabular-nums;
+}
+
 /* Market ticker scrolling animation */
 @keyframes ticker-scroll {
   0% { transform: translateX(0); }
