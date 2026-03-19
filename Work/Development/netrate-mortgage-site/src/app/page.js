@@ -194,18 +194,18 @@ export default async function HomePage() {
             </div>
           </div>
 
-          {/* Right — Rate snapshot table */}
-          <div className="bg-white border border-gray-200 rounded-2xl shadow-lg shadow-black/[0.08] overflow-hidden">
+          {/* Right — Rate snapshot table (Glassmorphism) */}
+          <div className="bg-surface/70 backdrop-blur-xl border border-white/10 rounded-2xl shadow-lg shadow-brand/[0.05] overflow-hidden">
             <div className="flex items-center justify-between px-6 pt-6 pb-4">
-              <span className="text-xs font-bold text-gray-900 uppercase tracking-wide">Today&apos;s Rates</span>
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-500 bg-emerald-50 border border-emerald-200 rounded-full px-2.5 py-0.5">
-                <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+              <span className="text-xs font-bold text-white uppercase tracking-wide">Today&apos;s Rates</span>
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-brand-light bg-brand/15 border border-brand/30 rounded-full px-2.5 py-0.5">
+                <span className="w-1.5 h-1.5 bg-brand-light rounded-full animate-pulse" />
                 LIVE
               </span>
             </div>
             <table className="w-full">
               <thead>
-                <tr className="border-y border-gray-100 bg-gray-50/60">
+                <tr className="border-y border-white/10 bg-white/[0.03]">
                   <th className="text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider py-2 px-6">Product</th>
                   <th className="text-right text-[10px] font-bold text-gray-400 uppercase tracking-wider py-2 px-3">Rate</th>
                   <th className="text-right text-[10px] font-bold text-gray-400 uppercase tracking-wider py-2 px-6">APR</th>
@@ -213,15 +213,15 @@ export default async function HomePage() {
               </thead>
               <tbody>
                 {heroProducts.map((row, i) => (
-                  <tr key={row.product} className={i < 3 ? 'border-b border-gray-100' : ''}>
-                    <td className="py-2.5 px-6 text-sm font-semibold text-gray-700">{row.product}</td>
-                    <td className="py-2.5 px-3 text-right text-[17px] font-extrabold text-gray-900">{row.rate}</td>
-                    <td className="py-2.5 px-6 text-right text-sm text-gray-500">{row.apr}</td>
+                  <tr key={row.product} className={i < 3 ? 'border-b border-white/[0.06]' : ''}>
+                    <td className="py-2.5 px-6 text-sm font-semibold text-gray-300">{row.product}</td>
+                    <td className="py-2.5 px-3 text-right text-[17px] font-extrabold text-white tabular-nums">{row.rate}</td>
+                    <td className="py-2.5 px-6 text-right text-sm text-gray-400 tabular-nums">{row.apr}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <div className="px-6 pt-4 pb-2 border-t border-gray-100">
+            <div className="px-6 pt-4 pb-2 border-t border-white/10">
               <p className="text-xs text-gray-500 text-center">
                 + points, lender credits, and monthly payment for each
               </p>
@@ -229,13 +229,13 @@ export default async function HomePage() {
             <div className="px-6 pb-5 pt-1">
               <Link
                 href="/rates"
-                className="block text-center py-3 bg-brand text-white rounded-xl text-sm font-bold hover:bg-brand-dark transition-colors"
+                className="block text-center py-3 bg-brand text-white rounded-xl text-sm font-bold hover:bg-brand-dark hover:shadow-[0_0_20px_rgba(34,211,238,0.2)] transition-all"
               >
                 Compare Your Options &rarr;
               </Link>
             </div>
             <div className="px-6 pb-4">
-              <p className="text-[11px] text-gray-400 text-center">760+ FICO &middot; $400K &middot; Rate/Term Refi &middot; 0 pts &middot; {effectiveDateShort}</p>
+              <p className="text-[11px] text-gray-500 text-center">760+ FICO &middot; $400K &middot; Rate/Term Refi &middot; 0 pts &middot; {effectiveDateShort}</p>
             </div>
           </div>
         </div>
