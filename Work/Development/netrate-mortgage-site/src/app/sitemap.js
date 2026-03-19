@@ -89,6 +89,12 @@ export default function sitemap() {
     },
     // State landing pages
     {
+      url: `${BASE_URL}/colorado`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.7,
+    },
+    {
       url: `${BASE_URL}/california`,
       lastModified: new Date(),
       changeFrequency: 'monthly',

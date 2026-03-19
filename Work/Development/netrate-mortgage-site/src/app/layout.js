@@ -257,6 +257,7 @@ export default function RootLayout({ children }) {
               <div>
                 <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-3">States</h3>
                 <ul className="space-y-2 text-sm">
+                  <li><a href="/colorado" className="hover:text-white transition-colors">Colorado</a></li>
                   <li><a href="/california" className="hover:text-white transition-colors">California</a></li>
                   <li><a href="/texas" className="hover:text-white transition-colors">Texas</a></li>
                   <li><a href="/oregon" className="hover:text-white transition-colors">Oregon</a></li>
