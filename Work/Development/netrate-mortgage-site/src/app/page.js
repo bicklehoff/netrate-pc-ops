@@ -143,7 +143,7 @@ export default async function HomePage() {
             </div>
 
             <h1 className="text-4xl lg:text-[44px] font-extrabold leading-[1.15] text-white">
-              See your actual mortgage rate{' '}
+              See real mortgage rates{' '}
               <span className="text-brand-light">before you apply.</span>
             </h1>
             <p className="text-lg text-gray-400 mt-4 max-w-lg">
@@ -256,26 +256,6 @@ export default async function HomePage() {
 
       {/* ===== TRUST BAR ===== */}
       <TrustBar />
-
-      {/* ===== MARKET — CTA to Rate Watch ===== */}
-      <section className="bg-gray-50 border-y border-gray-100 py-12">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="bg-white rounded-2xl border border-gray-200 p-8 flex flex-col md:flex-row items-center gap-8">
-            <div className="flex-1">
-              <h3 className="text-xl font-extrabold text-gray-900 mb-2">Rate Watch</h3>
-              <p className="text-sm text-gray-600 leading-relaxed">
-                See where mortgage rates are today, how they compare to the national average, and what economic events could move them next. Updated every business day.
-              </p>
-            </div>
-            <a
-              href="/rate-watch"
-              className="bg-brand text-white px-8 py-3 rounded-lg font-semibold hover:bg-brand-dark transition-colors whitespace-nowrap"
-            >
-              View Rate Watch &rarr;
-            </a>
-          </div>
-        </div>
-      </section>
 
       {/* ===== TOOLS & CALCULATORS ===== */}
       <section id="tools" className="max-w-6xl mx-auto px-6 py-14">
@@ -421,7 +401,7 @@ export default async function HomePage() {
           <h2 className="text-3xl font-extrabold text-white text-center mb-9">Licensed. Independent. Direct.</h2>
           <div className="flex flex-wrap justify-center gap-10 lg:gap-12">
             <div className="text-center">
-              <div className="text-xl font-bold text-brand">NMLS #641790</div>
+              <div className="text-xl font-bold text-brand">NMLS #1111861</div>
               <div className="text-sm text-gray-400 mt-1">State-Licensed Mortgage Broker</div>
             </div>
             <div className="text-center">
@@ -434,7 +414,7 @@ export default async function HomePage() {
             </div>
             <div className="text-center">
               <div className="text-xl font-bold text-brand">Direct-to-Consumer</div>
-              <div className="text-sm text-gray-400 mt-1">Not a Bank. Not a Realtor.</div>
+              <div className="text-sm text-gray-400 mt-1">Not a Bank.</div>
             </div>
           </div>
           <div className="flex flex-wrap justify-center gap-8 mt-8 items-center">
