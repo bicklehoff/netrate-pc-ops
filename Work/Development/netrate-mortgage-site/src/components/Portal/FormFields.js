@@ -14,7 +14,6 @@ export function TextField({
   register,
   errors,
   type = 'text',
-  placeholder = '',
   required = false,
   helper = '',
   className = '',
@@ -24,23 +23,30 @@ export function TextField({
 
   return (
     <div className={className}>
-      <label htmlFor={name} className="block text-sm font-medium text-gray-700 mb-1">
-        {label} {required && <span className="text-red-400">*</span>}
-      </label>
-      <input
-        id={name}
-        type={type}
-        placeholder={placeholder}
-        {...register(name)}
-        className={`
-          w-full px-4 py-2.5 border rounded-lg outline-none transition-colors
-          ${error
-            ? 'border-red-300 focus:ring-2 focus:ring-red-100 focus:border-red-400'
-            : 'border-gray-300 focus:ring-2 focus:ring-brand/20 focus:border-brand'
-          }
-        `}
-        {...rest}
-      />
+      <div className="relative">
+        <input
+          id={name}
+          type={type}
+          placeholder=" "
+          {...register(name)}
+          className={`
+            peer w-full px-4 pt-6 pb-2 h-14 border rounded-lg outline-none transition-colors text-sm
+            ${error
+              ? 'border-red-300 focus:ring-2 focus:ring-red-100 focus:border-red-400'
+              : 'border-gray-300 focus:ring-2 focus:ring-brand/20 focus:border-brand'
+            }
+          `}
+          {...rest}
+        />
+        <label
+          htmlFor={name}
+          className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-gray-400 transition-all pointer-events-none
+            peer-focus:top-3.5 peer-focus:text-[11px] peer-focus:text-brand peer-focus:translate-y-0
+            peer-[:not(:placeholder-shown)]:top-3.5 peer-[:not(:placeholder-shown)]:text-[11px] peer-[:not(:placeholder-shown)]:translate-y-0"
+        >
+          {label}{required && ' *'}
+        </label>
+      </div>
       {helper && !error && (
         <p className="text-xs text-gray-400 mt-1">{helper}</p>
       )}
@@ -75,26 +81,31 @@ export function SSNField({ label, name, errors, setValue, watch }) {
 
   return (
     <div>
-      <label htmlFor={name} className="block text-sm font-medium text-gray-700 mb-1">
-        {label} <span className="text-red-400">*</span>
-      </label>
       <div className="relative">
         <input
           id={name}
           type={visible ? 'text' : 'password'}
           inputMode="numeric"
           maxLength={11}
-          placeholder="XXX-XX-XXXX"
+          placeholder=" "
           value={rawValue}
           onChange={handleChange}
           className={`
-            w-full px-4 pr-10 py-2.5 border rounded-lg outline-none transition-colors font-mono
+            peer w-full px-4 pr-10 pt-6 pb-2 h-14 border rounded-lg outline-none transition-colors font-mono text-sm
             ${error
               ? 'border-red-300 focus:ring-2 focus:ring-red-100 focus:border-red-400'
               : 'border-gray-300 focus:ring-2 focus:ring-brand/20 focus:border-brand'
             }
           `}
         />
+        <label
+          htmlFor={name}
+          className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-gray-400 transition-all pointer-events-none
+            peer-focus:top-3.5 peer-focus:text-[11px] peer-focus:text-brand peer-focus:translate-y-0
+            peer-[:not(:placeholder-shown)]:top-3.5 peer-[:not(:placeholder-shown)]:text-[11px] peer-[:not(:placeholder-shown)]:translate-y-0"
+        >
+          {label} *
+        </label>
         <button
           type="button"
           onClick={() => setVisible((v) => !v)}
@@ -142,27 +153,36 @@ export function SelectField({
 
   return (
     <div className={className}>
-      <label htmlFor={name} className="block text-sm font-medium text-gray-700 mb-1">
-        {label} {required && <span className="text-red-400">*</span>}
-      </label>
-      <select
-        id={name}
-        {...register(name)}
-        className={`
-          w-full px-4 py-2.5 border rounded-lg outline-none transition-colors bg-white
-          ${error
-            ? 'border-red-300 focus:ring-2 focus:ring-red-100 focus:border-red-400'
-            : 'border-gray-300 focus:ring-2 focus:ring-brand/20 focus:border-brand'
-          }
-        `}
-      >
-        <option value="">{placeholder}</option>
-        {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
+      <div className="relative">
+        <select
+          id={name}
+          {...register(name)}
+          className={`
+            peer w-full px-4 pt-6 pb-2 h-14 border rounded-lg outline-none transition-colors bg-white text-sm appearance-none
+            ${error
+              ? 'border-red-300 focus:ring-2 focus:ring-red-100 focus:border-red-400'
+              : 'border-gray-300 focus:ring-2 focus:ring-brand/20 focus:border-brand'
+            }
+          `}
+        >
+          <option value="">{placeholder}</option>
+          {options.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+        <label
+          htmlFor={name}
+          className="absolute left-4 top-2 text-[11px] text-gray-400 pointer-events-none"
+        >
+          {label}{required && ' *'}
+        </label>
+        {/* Chevron */}
+        <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </div>
       {error && (
         <p className="text-xs text-red-500 mt-1">{error.message}</p>
       )}
