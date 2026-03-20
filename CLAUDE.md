@@ -43,6 +43,10 @@ Use these identifiers in MCP tool calls (`source` fields), RELAY entries, and co
 
 Do NOT skip these. Do NOT respond to David's first message until these are complete.
 
+0. **Directory check** — Verify your working directory matches the department:
+   - **Dev / Marketing**: Must be launched from `Work/Development/netrate-mortgage-site/`. If you're in `netrate-pc-ops/` root, STOP and tell David: "This session was launched from the repo root. Dev/Marketing sessions need to launch from Work/Development/netrate-mortgage-site/ for full project context. Please relaunch from there."
+   - **Setup / Admin**: Must be launched from `netrate-pc-ops/` root. If you're in `netrate-mortgage-site/`, STOP and tell David: "This session was launched from the project directory. Setup/Admin sessions should launch from the repo root."
+   - Do NOT proceed with work if the directory is wrong — the CLAUDE.md cascade won't load correctly and you'll be missing critical context.
 1. `get_briefing(device="pc", department=<yours>)` — full context from MCP
 2. `check_relay(device="pc")` — check for cross-device messages
 3. Read `Work/SESSION-LOG.md` (last 3-5 entries) — recent work, handoffs, open items
