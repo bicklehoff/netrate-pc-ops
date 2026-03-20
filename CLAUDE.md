@@ -7,7 +7,6 @@ Pull `netrate-governance` repo. Read `GOVERNANCE.md`. It contains ALL shared pro
 - **Session Handoff Protocol (SHP)** — session start, session close, triggers, automatic context recovery
 - **EOD Protocol** — end of day (8 steps, includes SHP)
 - **Spotter Protocol** — friction scanner
-- **Auditor Role** — independent review
 - **Department Model, Tracker Architecture, Cross-Device Rules, Document Generation, Process Documentation**
 
 **Nothing in this file replaces governance.** This file contains PC-specific context only. Governance is the single source of truth for all shared protocols. Mac is the authority for the base layer.
@@ -31,9 +30,9 @@ All devices share context via the **MCP knowledge layer** (Neon Postgres).
 | `david` | David Burson (human operator) |
 | `admin` | Mac Admin department |
 | `dev` | Mac Dev department |
-| `pc-dev` | PC Dev / WebDev / Products / Integrations department |
+| `pc-dev` | PC Dev department (all code — website, tools, calculators, integrations, APIs) |
 | `pc-setup` | PC Setup department |
-| `pc-marketing` | PC Marketing department |
+| `pc-marketing` | PC Marketing department (strategy owned by Claw; PC executes from briefs) |
 | `claw` | Claw (Lenovo Legion / Ubuntu device) |
 
 Use these identifiers in MCP tool calls (`source` fields), RELAY entries, and completion reports.
@@ -87,35 +86,33 @@ Full protocol details in GOVERNANCE.md (Session Handoff Protocol). MCP fallback:
 
 | Department | Docs Folder | Code Access | Responsibilities |
 |------------|-------------|-------------|------------------|
-| WebDev | `Work/WebDev/` | Full — `netrate-mortgage-site/` | Website build, rate tool port, SEO, public pages |
-| Products | `Work/Products/` | Full — `netrate-mortgage-site/` | Borrower reports, calculators, client-facing tools |
-| Integrations | `Work/Integrations/` | Full — `netrate-mortgage-site/` | Email reading, CRM hooks, public API endpoints |
-| Marketing | `Work/Marketing/` | Full — `netrate-mortgage-site/` | Content, copy, lead capture, trust signals |
+| Dev | `Work/Dev/` (+ `Work/Dev/Products/`, `Work/Dev/Integrations/`) | Full — `netrate-mortgage-site/` | All code — website, tools, calculators, integrations, APIs, CRM hooks |
+| Marketing | `Work/Marketing/` | Full — `netrate-mortgage-site/` | Implementation of content, copy, lead capture, trust signals. Strategy owned by Claw — PC executes from briefs. |
 | Admin | `Work/Admin/` | None | PC-side admin (minimal — process docs only, NO trackers) |
 | Setup | Root files | None | CLAUDE.md, Work/SESSION-LOG.md, folder structure |
-| Auditor | None (read-only) | Read only | Independent system review |
 
-All code departments (WebDev, Products, Integrations, Marketing) share write access to `Work/Development/netrate-mortgage-site/`. Ownership rules apply to **docs folders** — don't write to another department's docs folder without asking David.
+**Daily Auditor** runs as a scheduled task (8 AM daily), not a department. Checks: uncommitted files, stale relays, session log gaps, build health, CLAUDE.md accuracy, stale open items. Read-only — reports findings via MCP.
+
+All code departments (Dev, Marketing) share write access to `Work/Development/netrate-mortgage-site/`. Ownership rules apply to **docs folders** — don't write to another department's docs folder without asking David.
 
 ## Session Launch Rules
 
 | Session Type | Launch From |
 |---|---|
-| Dev / WebDev / Products / Integrations / Marketing | `Work/Development/netrate-mortgage-site/` |
+| Dev / Marketing | `Work/Development/netrate-mortgage-site/` |
 | Setup | This repo root (`netrate-pc-ops/`) |
-| Auditor | This repo root |
 
 All code sessions launch from the project directory. CLAUDE.md files cascade up from project → Development/ → root, giving full context automatically.
 
 **Ownership rules:**
 - All code departments may freely edit code in `Work/Development/netrate-mortgage-site/`
-- Only modify files in YOUR department's **docs folder** (e.g. `Work/WebDev/`, `Work/Marketing/`)
+- Only modify files in YOUR department's **docs folder** (e.g. `Work/Dev/`, `Work/Marketing/`)
 - You may READ other departments' docs but not edit them
 - All departments may write their own entries to `Work/SESSION-LOG.md`
 - If you need something from another department, note it as an "open item"
 
 **If David doesn't assign a department:**
-Ask: "Which department should I work as? (WebDev, Products, Integrations, Admin, Setup, or Auditor)"
+Ask: "Which department should I work as? (Dev, Marketing, Admin, or Setup)"
 
 ---
 
@@ -230,10 +227,10 @@ netrate-pc-ops/
 │   │       ├── src/                   ← Next.js app code
 │   │       ├── prisma/                ← Database schema
 │   │       └── ...
-│   ├── WebDev/                        ← Docs: architecture plans, specs
-│   ├── Marketing/                     ← Docs: playbook, brand, dev briefs
-│   ├── Products/                      ← Docs: calculator specs
-│   ├── Integrations/                  ← Docs: Twilio, Zoho, GCS reference
+│   ├── Dev/                           ← Docs: architecture plans, specs
+│   │   ├── Products/                  ← Calculator specs, borrower tools
+│   │   └── Integrations/             ← Twilio, Zoho, GCS reference
+│   ├── Marketing/                     ← Docs: playbook, brand, dev briefs (strategy owned by Claw)
 │   └── Admin/                         ← PC-side admin (process docs only)
 ├── .claude/
 │   ├── agents/

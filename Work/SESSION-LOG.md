@@ -5,6 +5,27 @@
 
 ---
 
+## 2026-03-19 — Dev — Booking Page + Zoho API + Compliance Review
+
+**Focus:** Custom booking page, Zoho Bookings API integration, Claw compliance relay
+
+**Key accomplishments:**
+- Built /book page with Zoho Bookings API — 4-step flow: date → time slots (live) → contact info → confirmation
+- Created zoho-bookings.js API client, /api/bookings/slots and /api/bookings/book routes
+- Replaced all book.netratemortgage.com links with internal /book route (4 files)
+- Diagnosed Zoho Bookings custom domain SSL issue — missing domain authentication, needs Zoho support
+- Replied to Claw compliance review relay: items 4,5,8,9 already done; 1-3 (calculators) scheduled for tomorrow
+
+**Open items for tomorrow:**
+- Booking post-confirmation: create Contact record + add Notification model to Prisma for MLO portal
+- Build /cost-of-waiting, /refinance-calculator, /reverse-mortgage-calculator (Claw items 1-3)
+- Add Jumbo Loans to OR/TX state pages (Claw item 6)
+- Add rate disclaimers to educational pages (Claw item 7)
+- Tunnel vision: redesign apply flow stepper to vertical sidebar
+- Push 32 marketing skills to shared repo for Claw
+
+---
+
 ## 2026-03-18 — Dev — Major Infrastructure + Launch Prep + Rate Watch Start
 
 **Focus:** Market Watch Phase A, scheduled tasks, Devoe HECM analysis, launch readiness, FRED API integration
