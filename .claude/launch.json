@@ -3,10 +3,9 @@
   "configurations": [
     {
       "name": "dev",
-      "runtimeExecutable": "C:\\Program Files\\nodejs\\node.exe",
-      "runtimeArgs": ["D:\\PROJECTS\\netrate-pc-ops\\Work\\Development\\netrate-mortgage-site\\node_modules\\next\\dist\\bin\\next", "dev", "-p", "3002"],
-      "port": 3002,
-      "autoPort": false
+      "runtimeExecutable": "C:/Windows/System32/cmd.exe",
+      "runtimeArgs": ["/c", "npm run dev"],
+      "port": 3000
     }
   ]
 }

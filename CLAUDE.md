@@ -43,14 +43,10 @@ Use these identifiers in MCP tool calls (`source` fields), RELAY entries, and co
 
 Do NOT skip these. Do NOT respond to David's first message until these are complete.
 
-0. **Directory check** — Verify your working directory matches the department:
-   - **Dev / Marketing**: Must be launched from `Work/Development/netrate-mortgage-site/`. If you're in `netrate-pc-ops/` root, STOP and tell David: "This session was launched from the repo root. Dev/Marketing sessions need to launch from Work/Development/netrate-mortgage-site/ for full project context. Please relaunch from there."
-   - **Setup / Admin**: Must be launched from `netrate-pc-ops/` root. If you're in `netrate-mortgage-site/`, STOP and tell David: "This session was launched from the project directory. Setup/Admin sessions should launch from the repo root."
-   - Do NOT proceed with work if the directory is wrong — the CLAUDE.md cascade won't load correctly and you'll be missing critical context.
 1. `get_briefing(device="pc", department=<yours>)` — full context from MCP
 2. `check_relay(device="pc")` — check for cross-device messages
 3. Read `Work/SESSION-LOG.md` (last 3-5 entries) — recent work, handoffs, open items
-4. Read `REGISTRY.md` in your codebase (if it exists) — know what's been built
+4. Read `REGISTRY.md` (if it exists) — know what's been built
 5. `git log --oneline -5` — see recent commits
 6. Check for uncommitted/untracked files — previous session may have crashed
 7. `get_recent_sessions(device="pc", since=today)` — what other sessions did today
@@ -88,28 +84,21 @@ Full protocol details in GOVERNANCE.md (Session Handoff Protocol). MCP fallback:
 
 ## PC Departments
 
-| Department | Docs Folder | Code Access | Responsibilities |
-|------------|-------------|-------------|------------------|
-| Dev | `Work/Dev/` (+ `Work/Dev/Products/`, `Work/Dev/Integrations/`) | Full — `netrate-mortgage-site/` | All code — website, tools, calculators, integrations, APIs, CRM hooks |
-| Marketing | `Work/Marketing/` | Full — `netrate-mortgage-site/` | Implementation of content, copy, lead capture, trust signals. Strategy owned by Claw — PC executes from briefs. |
-| Admin | `Work/Admin/` | None | PC-side admin (minimal — process docs only, NO trackers) |
-| Setup | Root files | None | CLAUDE.md, Work/SESSION-LOG.md, folder structure |
+All departments launch from the same place: **this repo root** (`netrate-pc-ops/.claude`). One launch point, every session.
 
-**Daily Auditor** runs as a scheduled task (8 AM daily), not a department. Checks: uncommitted files, stale relays, session log gaps, build health, CLAUDE.md accuracy, stale open items. Read-only — reports findings via MCP.
+| Department | Docs Folder | Responsibilities |
+|------------|-------------|------------------|
+| Dev | `Work/Dev/` (+ `Products/`, `Integrations/` subfolders) | All code — website, tools, calculators, integrations, APIs, CRM hooks |
+| Marketing | `Work/Marketing/` | Implementation of content, copy, lead capture, trust signals. Strategy owned by Claw — PC executes from briefs. |
+| Admin | `Work/Admin/` | PC-side admin (minimal — process docs only, NO trackers) |
+| Setup | Root files | CLAUDE.md, Work/SESSION-LOG.md, folder structure |
 
-All code departments (Dev, Marketing) share write access to `Work/Development/netrate-mortgage-site/`. Ownership rules apply to **docs folders** — don't write to another department's docs folder without asking David.
+**Daily Auditor** runs as a scheduled task (8 AM daily), not a department. Checks: uncommitted files, stale relays, session log gaps, build health, CLAUDE.md accuracy, stale open items, context layer drift, code review (deep on Mondays). Read-only — reports findings via MCP.
 
-## Session Launch Rules
-
-| Session Type | Launch From |
-|---|---|
-| Dev / Marketing | `Work/Development/netrate-mortgage-site/` |
-| Setup | This repo root (`netrate-pc-ops/`) |
-
-All code sessions launch from the project directory. CLAUDE.md files cascade up from project → Development/ → root, giving full context automatically.
+All departments have full access to code and docs. Ownership rules apply to **docs folders** — don't write to another department's docs folder without asking David.
 
 **Ownership rules:**
-- All code departments may freely edit code in `Work/Development/netrate-mortgage-site/`
+- All departments may freely edit code (`src/`, `prisma/`, `scripts/`, etc.)
 - Only modify files in YOUR department's **docs folder** (e.g. `Work/Dev/`, `Work/Marketing/`)
 - You may READ other departments' docs but not edit them
 - All departments may write their own entries to `Work/SESSION-LOG.md`
@@ -117,6 +106,91 @@ All code sessions launch from the project directory. CLAUDE.md files cascade up 
 
 **If David doesn't assign a department:**
 Ask: "Which department should I work as? (Dev, Marketing, Admin, or Setup)"
+
+**Critical Dev Rules:**
+- **Commit often** with descriptive messages. Push to main = Vercel auto-deploys.
+- **No tracker writes.** All trackers live on Mac. Log your work in SESSION-LOG; David relays to Mac.
+- **Read DEV-PLAYBOOK.md** for hard-won patterns (Prisma, deployment, etc.)
+
+---
+
+## Tech Stack
+
+- **Framework:** Next.js 14 (App Router), React 18
+- **Styling:** Tailwind CSS 3.4 — brand color `#0891b2` (cyan-600)
+- **Database:** Prisma 6 + Neon Postgres (serverless via `@neondatabase/serverless`)
+- **Auth:** NextAuth 4 (MLO: credentials/JWT), custom magic link + SMS (borrower)
+- **Hosting:** Vercel (auto-deploys from this repo's root directory)
+- **File Storage:** Vercel Blob (document uploads)
+- **Encryption:** AES-256-GCM for SSN/DOB (`src/lib/encryption.js`)
+- **GA4 Measurement ID:** G-QPEE5ZSZ79
+- **GSC:** Verified via GoDaddy DNS
+- **Domain:** netratemortgage.com (GoDaddy → Vercel)
+
+## Key Integrations
+
+| Integration | Library/Service | Key Files |
+|---|---|---|
+| Twilio Voice/SMS | `@twilio/voice-sdk` | `src/lib/twilio-voice.js`, `src/lib/twilio-verify.js` |
+| Zoho CRM | REST API (OAuth) | `src/app/api/lead/route.js` |
+| GCS Rate Pipeline | `@google-cloud/storage` | `src/lib/gcs.js`, `scripts/upload-to-gcs.js` |
+| Google Maps | Places API | Address autocomplete in application form |
+
+## Database Models (Prisma)
+
+**Original (9):** Borrower, Mlo, Loan, LoanEvent, Document, Contact, CallLog, CallNote, SmsMessage
+
+**Phase 1 — CORE Foundation (4 new, in schema but migration not yet run):**
+- `LoanDates` — 30+ milestone dates (1:1 with Loan)
+- `Condition` — loan conditions tracking (stage, status, blocking, borrower-facing)
+- `LoanNote` — operational notes (separate from LoanEvent audit trail)
+- `LoanTask` — per-loan task management (priority, assignment, due dates)
+
+**New Loan fields (Phase 1):** loanType, lenderName, loanNumber, loanAmount, interestRate, loanTerm
+
+Schema: `prisma/schema.prisma`
+
+## Picklist Constants
+
+`src/lib/constants/` — loan-types.js, lenders.js (more coming in future phases)
+
+## Key Directories
+
+```
+src/
+├── app/
+│   ├── api/           Backend routes (auth, dialer, portal, lead, rates)
+│   ├── portal/        Borrower dashboard + MLO dashboard
+│   ├── rates/         Public rate display
+│   ├── services/      Service pages
+│   └── ...            Other public pages (about, contact, licensing, privacy, etc.)
+├── components/Portal/ React components (Dialer, LoanDetail, Pipeline, Forms)
+├── lib/               Utilities (auth, encryption, prisma, twilio, loan-states)
+├── data/              Static data (rate JSON, marketing playbook)
+└── generated/prisma/  Auto-generated Prisma client
+```
+
+## Patterns
+
+- **Card style:** `bg-white rounded-xl border border-gray-200 p-6 shadow-sm`
+- **Button style:** `bg-brand text-white rounded-lg hover:bg-brand-dark`
+- **API auth guard:** Check NextAuth session + role in API routes
+- **Prisma client:** Singleton at `src/lib/prisma.js`
+- **Loan states:** State machine at `src/lib/loan-states.js`
+- **Password wall:** `SITE_PASSWORD` env var → middleware at `src/middleware.js`
+
+## Webhook URLs (Twilio)
+
+Must use `www.netratemortgage.com` (not bare domain — Vercel redirects bare → www, causing 405).
+
+## Dev Commands
+
+```bash
+npm run dev          # Local dev server (port 3000)
+npm run build        # Production build
+npx prisma studio    # Database GUI
+npx prisma migrate dev --name <name>  # New migration
+```
 
 ---
 
@@ -149,7 +223,7 @@ This structured format lets Mac's enforcement system validate the completion.
 Mac writes marketing copy → pushes to netrate-ops → PC reads from GitHub
 Mac writes rate tool source → pushes to netrate-ops → PC reads for porting
 Mac updates trackers → Neon Postgres reflects changes → TrackerPortal dashboard
-PC builds website → pushes to netrate-pc-ops → Vercel auto-deploys from Work/Development/netrate-mortgage-site/
+PC builds website → pushes to netrate-pc-ops → Vercel auto-deploys from repo root
 PC completes tracked work → writes completion report to RELAY.md → Mac validates via enforcement system
 All devices share context → MCP knowledge layer (Neon Postgres) → get_briefing / log_session / capture_thought
 Cross-device proposals/questions → post to RELAY.md in netrate-governance → other device pulls and reads
@@ -220,41 +294,26 @@ PC connects to the shared knowledge layer via `.mcp.json` in repo root. The MCP 
 
 ```
 netrate-pc-ops/
-├── CLAUDE.md                          ← This file (PC-specific rules)
-├── .mcp.json                          ← MCP server config (knowledge layer)
+├── CLAUDE.md                ← This file (all rules, all departments)
+├── .mcp.json                ← MCP server config (knowledge layer)
+├── .claude/                 ← Claude Code config (hooks, launch, settings)
+├── DEV-PLAYBOOK.md          ← Hard-won dev patterns (Prisma, deployment, etc.)
+├── REGISTRY.md              ← Feature inventory (what's been built)
+├── package.json             ← Next.js project
+├── src/                     ← Next.js app code
+├── prisma/                  ← Database schema
+├── public/                  ← Static assets
+├── scripts/                 ← Utility scripts
+├── docs/                    ← Technical documentation
 ├── Work/
-│   ├── SESSION-LOG.md                 ← ONE log for ALL PC sessions
-│   ├── Development/
-│   │   ├── CLAUDE.md                  ← Dev department rules
-│   │   └── netrate-mortgage-site/     ← Website + portal codebase
-│   │       ├── CLAUDE.md              ← Project tech stack
-│   │       ├── src/                   ← Next.js app code
-│   │       ├── prisma/                ← Database schema
-│   │       └── ...
-│   ├── Dev/                           ← Docs: architecture plans, specs
-│   │   ├── Products/                  ← Calculator specs, borrower tools
-│   │   └── Integrations/             ← Twilio, Zoho, GCS reference
-│   ├── Marketing/                     ← Docs: playbook, brand, dev briefs (strategy owned by Claw)
-│   └── Admin/                         ← PC-side admin (process docs only)
-├── .claude/
-│   ├── agents/
-│   ├── scripts/
-│   └── settings.local.json
+│   ├── SESSION-LOG.md       ← ONE log for ALL PC sessions
+│   ├── Dev/                 ← Docs: architecture plans, specs
+│   │   ├── Products/        ← Calculator specs, borrower tools
+│   │   └── Integrations/    ← Twilio, Zoho, GCS reference
+│   ├── Marketing/           ← Docs: playbook, brand, dev briefs (strategy owned by Claw)
+│   └── Admin/               ← PC-side admin (process docs only)
 ```
 
 ---
 
-## Active Projects
-
-### Website + Portal (WEBSITE-2026 — tracked on Mac)
-- **Code:** `Work/Development/netrate-mortgage-site/` (in this repo)
-- **Hosting:** Vercel (deploys from this repo, root dir = `Work/Development/netrate-mortgage-site`)
-- **Stack:** Next.js 14, Tailwind CSS 3.4, React 18, Prisma 6, Neon Postgres
-- **GA4 Measurement ID:** G-QPEE5ZSZ79
-- **GSC:** Verified via GoDaddy DNS
-- **Domain:** netratemortgage.com (GoDaddy → Vercel)
-- **Git history:** Pre-migration commits archived in `bicklehoff/netrate-mortgage-site` (read-only)
-
----
-
-*This file captures PC-specific operations context. Shared rules live in netrate-governance. Governance changes are authored by Mac (base layer authority) and propagated to all devices.*
+*This file captures all PC operations context — ops rules, tech stack, and dev patterns in one place. Shared rules live in netrate-governance. Governance changes are authored by Mac (base layer authority) and propagated to all devices.*

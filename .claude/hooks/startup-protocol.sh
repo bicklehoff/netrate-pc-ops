@@ -1,7 +1,7 @@
 #!/bin/bash
-# NetRate PC — Root SessionStart Hook
-# For Setup and Auditor sessions launched from repo root.
-# Injects SESSION-LOG and git context. No REGISTRY (not a dev codebase).
+# NetRate PC — SessionStart Hook
+# Injects critical context into agent before first user message.
+# The agent WILL see this output whether it follows CLAUDE.md or not.
 
 echo "=============================================="
 echo "  NETRATE PC — SESSION STARTUP CONTEXT"
@@ -10,8 +10,20 @@ echo ""
 echo "You MUST run get_briefing(device='pc', department=<yours>) and check_relay(device='pc') before responding to David."
 echo ""
 
+# --- REGISTRY (what's been built) ---
+REPO_DIR="$(dirname "$0")/../.."
+REGISTRY="$REPO_DIR/REGISTRY.md"
+if [ -f "$REGISTRY" ]; then
+  echo "=== REGISTRY.md (feature inventory) ==="
+  cat "$REGISTRY"
+  echo ""
+else
+  echo "=== REGISTRY.md not found ==="
+  echo ""
+fi
+
 # --- SESSION-LOG (recent work) ---
-SESSION_LOG="$(dirname "$0")/../../Work/SESSION-LOG.md"
+SESSION_LOG="$REPO_DIR/Work/SESSION-LOG.md"
 if [ -f "$SESSION_LOG" ]; then
   echo "=== SESSION-LOG.md (last 30 lines) ==="
   tail -30 "$SESSION_LOG"
@@ -22,7 +34,6 @@ else
 fi
 
 # --- Git log (recent commits) ---
-REPO_DIR="$(dirname "$0")/../.."
 if git -C "$REPO_DIR" rev-parse --git-dir >/dev/null 2>&1; then
   echo "=== Recent commits (git log -5) ==="
   git -C "$REPO_DIR" log --oneline -5 2>/dev/null || echo "(git log failed)"
