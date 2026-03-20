@@ -5,6 +5,39 @@
 
 ---
 
+## 2026-03-20 — Dev — Calculator Batch, Pricing Engine Spec, Rate Sheet Parsers
+
+**Focus:** Calculator UX improvements, pricing engine architecture, county data infrastructure, rate sheet analysis and parsing
+
+**Key accomplishments:**
+- Calculator UX batch: Compare button CTA upgrade, DSCR 5-tier explainer system, Reverse Mortgage rename (from HECM Optimizer) with co-borrower toggle + DOB tooltips + auto-CMT fetch, Save/Load removed, Cost of Waiting added to homepage grid
+- Fixed 3 dead links: /cost-of-waiting, /refinance-calculator, /reverse-mortgage-calculator
+- Built county loan limits module (FHFA 2026 data, 3,235 counties) + county tax rates (CO/CA/TX/OR)
+- Analyzed 14 raw rate sheets from 11 wholesale lenders — assessed parseability and program coverage
+- Built EverStream parser (first lender): CSV rate parser (403 products) + XLSX LLPA parser (19 sheets)
+- Spec'd Pricing Engine (POST /api/pricing/scenario), Refi Scenario Modeler (4-option rebuild), Rate Sheet Pipeline (OC raw → PC parse)
+- Designed reprice detection (tier boundary crossing → flag stale rate), shared borrower profile (localStorage), agency vs nonqm rate portal split
+
+**Decisions:**
+- Pricing engine is the foundation — all calcs call it
+- /rates (agency) and /rates/non-qm (DSCR, bank stmt, etc.) for SEO
+- Rate sheet parsing moves from Claw to PC — OC only uploads raw files
+- Morning pull 6AM scheduled on OC, intraday reprices via Marketing + Cliq
+
+**Open items:**
+- Build parsers for AmWest, Keystone, Rocket Pro TPO, Orion (next priority)
+- Wire pricing engine API endpoint
+- Purchase calc rebuild (DTI, MI, program eligibility)
+- Refi Scenario Modeler rebuild (sliders, graphs, 4 options)
+- Cost of Waiting: opportunity cost layer (S&P, CDs, extra principal)
+- Extra Payments / 15yr calc (backlog)
+- Strike Rate alert system (highest priority from Claw)
+- Awaiting Claw response on pipeline architecture + raw AmWest sheet
+
+**Commits:** e980600, 86c43d4, 5a93378
+
+---
+
 ## 2026-03-19 — Dev — Booking Page + Zoho API + Compliance Review
 
 **Focus:** Custom booking page, Zoho Bookings API integration, Claw compliance relay
