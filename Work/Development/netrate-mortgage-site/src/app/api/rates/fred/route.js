@@ -19,7 +19,9 @@ const SERIES_CONFIG = {
   DGS30: { label: '30yr Treasury', frequency: 'daily' },
 };
 
-// Fallback data when FRED API key is not set
+// Fallback data when FRED API key is not set or API is down.
+// IMPORTANT: Update these periodically — they're shown when the live feed fails.
+// Last updated: 2026-03-20
 const FALLBACK_DATA = {
   MORTGAGE30US: [
     { date: '2026-03-13', value: 6.65 },
@@ -44,6 +46,8 @@ const FALLBACK_DATA = {
   DGS10: [{ date: '2026-03-18', value: 4.264 }],
   DGS30: [{ date: '2026-03-18', value: 4.883 }],
 };
+
+const FALLBACK_DATE = '2026-03-20';
 
 async function fetchFredSeries(seriesId, days = 365) {
   const apiKey = process.env.FRED_API_KEY;
@@ -85,11 +89,23 @@ export async function GET(request) {
       ? Object.keys(SERIES_CONFIG)
       : seriesParam.split(',').filter(s => SERIES_CONFIG[s]);
 
-    const results = {};
+    // Fetch all series in parallel instead of sequentially
+    const fetchResults = await Promise.all(
+      seriesToFetch.map(async (seriesId) => {
+        const data = await fetchFredSeries(seriesId, days);
+        return [seriesId, data];
+      })
+    );
 
-    for (const seriesId of seriesToFetch) {
-      const data = await fetchFredSeries(seriesId, days);
-      results[seriesId] = data || FALLBACK_DATA[seriesId] || [];
+    const results = {};
+    let usedFallback = false;
+    for (const [seriesId, data] of fetchResults) {
+      if (data) {
+        results[seriesId] = data;
+      } else {
+        results[seriesId] = FALLBACK_DATA[seriesId] || [];
+        usedFallback = true;
+      }
     }
 
     // Compute latest values for convenience
@@ -107,10 +123,15 @@ export async function GET(request) {
       }
     }
 
+    const source = !process.env.FRED_API_KEY ? 'fallback'
+      : usedFallback ? 'partial-fallback'
+      : 'fred';
+
     const response = NextResponse.json({
       series: results,
       latest,
-      source: process.env.FRED_API_KEY ? 'fred' : 'fallback',
+      source,
+      ...(usedFallback && { fallbackDate: FALLBACK_DATE, stale: true }),
     });
 
     response.headers.set(

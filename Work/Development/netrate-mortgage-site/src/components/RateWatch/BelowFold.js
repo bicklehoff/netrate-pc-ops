@@ -1,4 +1,8 @@
-const UPCOMING_EVENTS = [
+'use client';
+
+import { useState, useEffect } from 'react';
+
+const FALLBACK_EVENTS = [
   {
     date: 'Fri Apr 3',
     name: 'March Jobs Report',
@@ -20,7 +24,32 @@ const UPCOMING_EVENTS = [
   },
 ];
 
+const FALLBACK_NARRATIVE = {
+  paragraphs: [
+    'Markets are digesting the latest economic data and Fed commentary. Treasury yields have been volatile as investors weigh inflation concerns against signs of economic cooling. <strong class="text-white">The path forward depends on upcoming data releases.</strong>',
+    'Mortgage rates track the 10-year Treasury closely, and both have been range-bound over the past few weeks. The next major catalyst will be the April jobs report — a weaker number could push rates back toward February lows, while a strong print would keep them elevated.',
+    '<strong class="text-white">Bottom line:</strong> Rates are in a holding pattern. The next few weeks of economic data will determine whether we break lower or push higher. If you\'re in the market, this is a reasonable time to lock — but there\'s no urgency unless you have a closing deadline.',
+  ],
+};
+
 export default function BelowFold() {
+  const [summary, setSummary] = useState(null);
+
+  useEffect(() => {
+    fetch('/api/market/summary')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => { if (data?.summary) setSummary(data.summary); })
+      .catch(() => {});
+  }, []);
+
+  const events = summary?.upcomingEvents?.length ? summary.upcomingEvents : FALLBACK_EVENTS;
+
+  // If we have a live summary, use its commentary for the narrative.
+  // Otherwise use the hardcoded fallback.
+  const narrativeParagraphs = summary?.commentary
+    ? [summary.commentary]
+    : FALLBACK_NARRATIVE.paragraphs;
+
   return (
     <div className="px-5">
       {/* What Happened Today */}
@@ -29,25 +58,9 @@ export default function BelowFold() {
           What Happened Today
         </h2>
         <div className="space-y-3 text-slate-300 text-[15px] leading-[1.8]">
-          <p>
-            Markets are digesting the latest economic data and Fed commentary. Treasury yields have
-            been volatile as investors weigh inflation concerns against signs of economic cooling.{' '}
-            <strong className="text-white">
-              The path forward depends on upcoming data releases.
-            </strong>
-          </p>
-          <p>
-            Mortgage rates track the 10-year Treasury closely, and both have been range-bound over
-            the past few weeks. The next major catalyst will be the April jobs report — a weaker
-            number could push rates back toward February lows, while a strong print would keep them
-            elevated.
-          </p>
-          <p>
-            <strong className="text-white">Bottom line:</strong> Rates are in a holding pattern.
-            The next few weeks of economic data will determine whether we break lower or push higher.
-            If you&apos;re in the market, this is a reasonable time to lock — but there&apos;s no
-            urgency unless you have a closing deadline.
-          </p>
+          {narrativeParagraphs.map((p, i) => (
+            <p key={i} dangerouslySetInnerHTML={{ __html: p }} />
+          ))}
         </div>
       </div>
 
@@ -55,7 +68,7 @@ export default function BelowFold() {
       <div className="mt-6">
         <h3 className="text-white text-lg font-bold mb-4">What Could Move Rates Next</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {UPCOMING_EVENTS.map((ev, i) => (
+          {events.map((ev, i) => (
             <div
               key={i}
               className={`bg-surface rounded-xl px-6 py-5 border border-white/10 ${

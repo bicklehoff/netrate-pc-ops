@@ -1388,3 +1388,32 @@ model OpsComplianceRule {
   @@index([netrateStatus])
   @@map("ops_compliance_rules")
 }
+
+// ═══════════════════════════════════════════════════════════════
+// MARKET DOMAIN — PC (Daily Market Summaries for Rate Watch)
+// Authority: PC. Written by Claw (Claude Code) on schedule, displayed on /rate-watch.
+// ═══════════════════════════════════════════════════════════════
+
+model MarketSummary {
+  id                Int       @id @default(autoincrement())
+  date              DateTime  @unique @db.Date
+  // MBS Live / Treasury snapshot
+  treasury10yr      Decimal?  @map("treasury_10yr") @db.Decimal(5, 3)
+  treasury10yrChg   Decimal?  @map("treasury_10yr_chg") @db.Decimal(5, 3)
+  mbs6Coupon        String?   @map("mbs_6_coupon") @db.VarChar(20) // e.g. "100.28"
+  mbs6Change        Decimal?  @map("mbs_6_change") @db.Decimal(5, 3)
+  // Commentary
+  headline          String    @db.VarChar(200)  // e.g. "Bonds Rally on Softer Data"
+  commentary        String    @db.Text          // 2-3 sentence consumer-friendly summary
+  sentiment         String    @default("neutral") @db.VarChar(20) // bullish, bearish, neutral
+  // What could move rates (up to 3 upcoming events as JSON array)
+  // Shape: [{ date, name, impact }]
+  upcomingEvents    Json?     @map("upcoming_events") @db.JsonB
+  // Metadata
+  createdBy         String    @default("claw") @map("created_by") @db.VarChar(50)
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  @@index([date])
+  @@map("market_summaries")
+}

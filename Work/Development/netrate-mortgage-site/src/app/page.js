@@ -295,7 +295,7 @@ export default async function HomePage() {
             {
               icon: 'Ψ', iconClass: 'bg-gradient-to-br from-emerald-50 to-emerald-100 text-green-600',
               title: 'DSCR Calculator', desc: 'Investment property? Enter rental income and expenses to see if your deal qualifies for a DSCR loan.',
-              href: null, cta: 'Coming soon',
+              href: '/tools/dscr-calculator', cta: 'Calculate',
             },
             {
               icon: '↩', iconClass: 'bg-gradient-to-br from-amber-50 to-amber-100 text-amber-600',
@@ -305,12 +305,12 @@ export default async function HomePage() {
             {
               icon: '↻', iconClass: 'bg-gradient-to-br from-violet-50 to-violet-100 text-violet-600',
               title: 'Refi Analyzer', desc: 'Is refinancing worth it? Enter your current loan and we\'ll show the break-even timeline and total savings.',
-              href: null, cta: 'Coming soon',
+              href: '/tools/refi-analyzer', cta: 'Analyze',
             },
             {
               icon: '⌂', iconClass: 'bg-gradient-to-br from-pink-50 to-pink-100 text-pink-600',
               title: 'Purchase Calculator', desc: 'Estimate your monthly payment, cash to close, and how much home you can afford.',
-              href: null, cta: 'Coming soon',
+              href: '/tools/purchase-calculator', cta: 'Calculate',
             },
             {
               icon: '✔', iconClass: 'bg-gradient-to-br from-sky-50 to-sky-100 text-sky-600',

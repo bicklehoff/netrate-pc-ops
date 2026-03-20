@@ -5,6 +5,7 @@ import RateChart from '@/components/RateWatch/RateChart';
 import Sidebar from '@/components/RateWatch/Sidebar';
 import Commentary from '@/components/RateWatch/Commentary';
 import BelowFold from '@/components/RateWatch/BelowFold';
+import Predictions from '@/components/RateWatch/Predictions';
 
 export const revalidate = 300; // ISR: 5 minutes
 
@@ -107,6 +108,13 @@ export default async function RateWatchPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
+      {/* Stale data warning */}
+      {fredData.stale && (
+        <div className="mx-5 mt-4 px-4 py-2.5 bg-amber-900/30 border border-amber-700/40 rounded-lg text-amber-300 text-xs">
+          Market data may be delayed — live feed temporarily unavailable. Showing data from {fredData.fallbackDate || 'cache'}.
+        </div>
+      )}
+
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row items-baseline gap-4 px-7 pt-8">
         <h1 className="text-white text-[42px] font-extrabold tracking-tight">
@@ -154,6 +162,9 @@ export default async function RateWatchPage() {
           </div>
         </div>
       </div>
+
+      {/* Prediction Markets */}
+      <Predictions />
 
       {/* Below the Fold — bento cards */}
       <BelowFold />
