@@ -3,7 +3,6 @@
 export default function PredictionCard({ market }) {
   const prices = market.outcomePrices || [0.5, 0.5];
   const outcomes = market.outcomes || ['Yes', 'No'];
-  const yesProb = prices[0] || 0.5;
 
   const endDate = market.endDate ? new Date(market.endDate) : null;
   const daysLeft = endDate
