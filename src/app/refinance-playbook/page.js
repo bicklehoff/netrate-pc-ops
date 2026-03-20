@@ -142,7 +142,7 @@ export default function RefinancePlaybook() {
           </p>
           <p className="mt-4">
             We&apos;re building a calculator to model all four options side by side so you can see the trade-offs before you decide.{' '}
-            <Link href="/refinance-calculator" className="text-brand hover:text-brand-dark font-medium">Refinance Calculator &rarr;</Link>
+            <Link href="/tools/refi-analyzer" className="text-brand hover:text-brand-dark font-medium">Refinance Calculator &rarr;</Link>
           </p>
         </section>
 

@@ -166,7 +166,7 @@ export default function ReverseMortgage() {
           </p>
 
           <div className="pt-4">
-            <Link href="/reverse-mortgage-calculator" className="inline-block bg-brand text-white px-6 py-3 rounded-lg font-semibold hover:bg-brand-dark transition-colors">
+            <Link href="/tools/reverse-mortgage-calculator" className="inline-block bg-brand text-white px-6 py-3 rounded-lg font-semibold hover:bg-brand-dark transition-colors">
               Try Our Reverse Mortgage Calculator &rarr;
             </Link>
           </div>

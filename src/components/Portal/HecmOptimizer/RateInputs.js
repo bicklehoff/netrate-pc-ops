@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect } from 'react';
 import { useScenario } from './ScenarioContext';
 
 function NumInput({ label, value, onChange, step = 0.001, min, className = '', inputClass = '', suffix = '', ...rest }) {
@@ -47,37 +47,36 @@ function DollarInput({ label, value, onChange, className = '', inputClass = '', 
 
 export default function RateInputs() {
   const { state, setField } = useScenario();
-  const [refreshing, setRefreshing] = useState(false);
 
   const handleNum = (field) => (e) => setField(field, parseFloat(e.target.value) || 0);
   const handleDollar = (field) => (e) => setField(field, parseFloat(e.target.value) || 0);
 
-  const refreshRates = async () => {
-    setRefreshing(true);
-    try {
-      const res = await fetch('/api/portal/mlo/treasury-rates');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.oneYear) setField('oneYearCMT', data.oneYear);
-        if (data.tenYear) setField('tenYearCMT', data.tenYear);
+  // Auto-fetch CMT rates on page load
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchRates() {
+      try {
+        const res = await fetch('/api/portal/mlo/treasury-rates');
+        if (res.ok && !cancelled) {
+          const data = await res.json();
+          if (data.oneYear) setField('oneYearCMT', data.oneYear);
+          if (data.tenYear) setField('tenYearCMT', data.tenYear);
+        }
+      } catch {
+        // silently fail — fields remain editable for manual entry
       }
-    } catch {
-      // silently fail — user can enter manually
     }
-    setRefreshing(false);
-  };
+    fetchRates();
+    return () => { cancelled = true; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-4">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold text-gray-700">Rates & Costs</h3>
-        <button
-          onClick={refreshRates}
-          disabled={refreshing}
-          className="text-xs text-cyan-600 hover:text-cyan-700 font-medium disabled:opacity-50"
-        >
-          {refreshing ? 'Refreshing...' : 'Refresh CMT Rates'}
-        </button>
+        {state.oneYearCMT > 0 && (
+          <span className="text-xs text-green-600">CMT rates loaded</span>
+        )}
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">

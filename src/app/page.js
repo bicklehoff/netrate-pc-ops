@@ -300,7 +300,7 @@ export default async function HomePage() {
             {
               icon: '↩', iconClass: 'bg-gradient-to-br from-amber-50 to-amber-100 text-amber-600',
               title: 'Reverse Mortgage', desc: 'See how much equity you could access with a reverse mortgage. Age, home value, and rate — that\'s all we need.',
-              href: '/tools/hecm-optimizer', cta: 'Estimate',
+              href: '/tools/reverse-mortgage-calculator', cta: 'Estimate',
             },
             {
               icon: '↻', iconClass: 'bg-gradient-to-br from-violet-50 to-violet-100 text-violet-600',
@@ -311,6 +311,11 @@ export default async function HomePage() {
               icon: '⌂', iconClass: 'bg-gradient-to-br from-pink-50 to-pink-100 text-pink-600',
               title: 'Purchase Calculator', desc: 'Estimate your monthly payment, cash to close, and how much home you can afford.',
               href: '/tools/purchase-calculator', cta: 'Calculate',
+            },
+            {
+              icon: '⏳', iconClass: 'bg-gradient-to-br from-red-50 to-red-100 text-red-600',
+              title: 'Cost of Waiting', desc: 'What does it cost you every month you don\'t refinance? See the real number with your loan details.',
+              href: '/tools/cost-of-waiting', cta: 'See the cost',
             },
             {
               icon: '✔', iconClass: 'bg-gradient-to-br from-sky-50 to-sky-100 text-sky-600',

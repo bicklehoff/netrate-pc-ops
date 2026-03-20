@@ -90,7 +90,7 @@ export default function Breakeven() {
 
           <p className="mt-4">
             Use our{' '}
-            <Link href="/cost-of-waiting" className="text-brand hover:text-brand-dark font-medium">Cost of Waiting Calculator &rarr;</Link>
+            <Link href="/tools/cost-of-waiting" className="text-brand hover:text-brand-dark font-medium">Cost of Waiting Calculator &rarr;</Link>
             {' '}to see exactly what you&apos;re losing by not acting — and what a no-cost refinance could save you starting today.
           </p>
         </section>

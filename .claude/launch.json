@@ -4,7 +4,7 @@
     {
       "name": "dev",
       "runtimeExecutable": "C:/Windows/System32/cmd.exe",
-      "runtimeArgs": ["/c", "npm run dev"],
+      "runtimeArgs": ["/c", "cd /d D:\\PROJECTS\\netrate-pc-ops && npm run dev"],
       "port": 3000
     }
   ]

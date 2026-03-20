@@ -172,14 +172,14 @@ export default function RateResults({ scenario, rateData, compareRates = [], onT
                       return (
                         <button
                           onClick={() => onToggleCompare?.(r)}
-                          className={`whitespace-nowrap text-xs rounded-md px-2 py-1 border transition-colors ${
+                          className={`whitespace-nowrap text-xs font-medium rounded-md px-3 py-1.5 border transition-all ${
                             isCompared
-                              ? 'bg-brand text-white border-brand'
-                              : 'border-gray-300 text-gray-400 hover:border-brand hover:text-brand'
+                              ? 'bg-brand text-white border-brand shadow-sm'
+                              : 'border-brand/40 text-brand hover:bg-brand hover:text-white hover:border-brand hover:shadow-sm'
                           } ${!isCompared && compareRates.length >= 3 ? 'opacity-30 cursor-not-allowed' : ''}`}
                           disabled={!isCompared && compareRates.length >= 3}
                         >
-                          {isCompared ? '✓' : 'Compare'}
+                          {isCompared ? '✓ Selected' : '+ Compare'}
                         </button>
                       );
                     })()}

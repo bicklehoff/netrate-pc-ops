@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+// useState removed — no longer needed after Save/Load removal
 import { ScenarioProvider } from './ScenarioContext';
 import BorrowerInputs from './BorrowerInputs';
 import RateInputs from './RateInputs';
@@ -10,7 +10,7 @@ import RefiSection from './RefiSection';
 import FeesSection from './FeesSection';
 import ApplicationSection from './ApplicationSection';
 import PrintView from './PrintView';
-import SaveLoadModal from './SaveLoadModal';
+// SaveLoadModal removed — not borrower-facing
 
 function Legend() {
   return (
@@ -28,24 +28,17 @@ function Legend() {
 }
 
 function PageContent() {
-  const [showSaveLoad, setShowSaveLoad] = useState(false);
 
   return (
     <div className="max-w-7xl mx-auto space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">HECM Optimizer</h1>
-          <p className="text-sm text-gray-500">Reverse mortgage scenario comparison & margin optimizer</p>
+          <h1 className="text-xl font-bold text-gray-900">Reverse Mortgage Calculator</h1>
+          <p className="text-sm text-gray-500">See how much equity you could access with a reverse mortgage</p>
         </div>
         <div className="flex items-center gap-3">
           <Legend />
-          <button
-            onClick={() => setShowSaveLoad(true)}
-            className="px-3 py-1.5 text-xs font-medium text-cyan-600 border border-cyan-300 rounded hover:bg-cyan-50 print:hidden"
-          >
-            Save / Load
-          </button>
           <button
             onClick={() => window.print()}
             className="px-3 py-1.5 text-xs font-medium text-gray-600 border border-gray-300 rounded hover:bg-gray-50 print:hidden"
@@ -77,8 +70,7 @@ function PageContent() {
       {/* Print View (hidden on screen) */}
       <PrintView />
 
-      {/* Save/Load Modal */}
-      <SaveLoadModal open={showSaveLoad} onClose={() => setShowSaveLoad(false)} />
+      {/* Save/Load removed — not borrower-facing */}
     </div>
   );
 }
