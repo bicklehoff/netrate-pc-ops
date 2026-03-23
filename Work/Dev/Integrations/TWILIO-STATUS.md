@@ -33,17 +33,84 @@
 
 ---
 
-## Zoho Voice (Alternative SMS Provider)
+## Zoho Voice 10DLC — APPROVED (Reference for Twilio Resubmission)
 
-David also has a **Zoho Voice** account with an approved A2P campaign. This was originally planned for borrower portal SMS verification before we switched to Twilio Verify.
+David got a Zoho Voice 10DLC campaign approved in January 2026 after a lengthy back-and-forth with Zoho support (ticket #150515754). This is the template for what works.
 
 | Field | Value |
 |-------|-------|
 | **Zoho Voice Refresh Token** | NOT CONFIGURED (empty in .env) |
 | **Zoho Voice Sender Number** | NOT CONFIGURED (empty in .env) |
-| **Status** | David has an approved campaign but env vars never set up on PC |
+| **Support contact** | Sujin + Naveen Kumar, Technical Support Engineers, support@zohovoice.com |
+| **Ticket #** | 150515754 |
+| **Status** | APPROVED — SMS enabled Jan 12, 2026 |
+| **Fees** | Brand creation $4 + Campaign registration $30 = $34 one-time |
 
-**TODO:** David needs to provide Zoho Voice credentials if we want a fallback SMS provider. The approved Zoho Voice campaign could serve as a reference for what language/format gets approved — useful when resubmitting Twilio A2P.
+### Zoho Voice Approval Timeline (Dec 2025 — Jan 2026)
+
+1. **Dec 4, 2025** — David submitted initial request. Described opt-in flow: BankingBridge embedded form on landing page, SMS consent language below form, Privacy Policy with dedicated "Text Messaging (SMS)" section.
+2. **Dec 5, 2025** — Zoho reviewer (DineshKumar) said opt-in form link was broken ("page can't be found"). Also requested specific privacy policy verbiage (see below).
+3. **Dec 15, 2025** — David followed up.
+4. **Dec 16, 2025** — Naveen Kumar said "Contact Us page is still not live" — locusmortgage.com/rate-quote was down.
+5. **Dec 18, 2025** — David sent new link. Naveen asked "where can we find the SMS opt-in consent?"
+6. **Dec 19, 2025** — David pointed to privacy policy at locusmortgage.com/privacy-policy-2/ with full Text Messaging section.
+7. **Dec 22, 2025** — Naveen said "we do not see the SMS opt-in on your website. We need an option where clients can view the SMS opt-in and check a box."
+8. **Dec 23, 2025** — David explained the BankingBridge form is the only place phone numbers are collected, and it has the opt-in built in.
+9. **Dec 30, 2025** — Naveen provided screenshot template showing required checkbox format and exact wording (see below).
+10. **Dec 31, 2025** — David added the required language and links to locusmortgage.com/stay-in-touch/. Confirmed: checkbox is optional, unchecked by default, phone field is optional, disclosure includes STOP/HELP/frequency/rates + Privacy Policy + Terms links.
+11. **Jan 4, 2026** — Zoho requested specific privacy policy verbiage about SMS data sharing (see below). Also confirmed fees: $4 brand + $30 campaign.
+12. **Jan 5, 2026** — David confirmed charges, added privacy policy verbiage. Sent link to updated privacy policy at locusmortgage.com/privacy-policy-2/.
+13. **Jan 6, 2026** — Zoho initiated 10DLC process. "Takes 3-4 weeks, submitted to local carriers."
+14. **Jan 9, 2026** — Zoho asked David to open Zoho Voice > call config > initiate SMS request. David had trouble with dropdown showing no numbers.
+15. **Jan 11, 2026** — Sujin confirmed SMS request was initiated, said she'd process and enable it.
+16. **Jan 12, 2026** — David confirmed. SMS enabled.
+
+### EXACT Privacy Policy Verbiage That Got Approved (MUST INCLUDE)
+
+Zoho explicitly required this language in the privacy policy (red text in their email):
+
+> "We will not share your opt-in to an SMS campaign with any third party for purposes unrelated to providing you with the services of that campaign. We may share your Personal Data, including your SMS opt-in or consent status, with third parties that help us provide our messaging services, including but not limited to platform providers, phone companies, and any other vendors who assist us in the delivery of text messages.
+>
+> All the above categories exclude text messaging originator opt-in data and consent; this information will not be shared with any third parties."
+
+### EXACT Checkbox Language That Got Approved
+
+From Zoho's template (Dec 30 email):
+
+> "(with an optional check box) By clicking here you consent to receive SMS Customer care and Marketing SMS from [Brand name]. Message frequency may vary. Standard Message and Data Rates may apply. Reply STOP to opt out. Reply Help for help. [privacy policy URL as a hyperlink] [terms URL as a hyperlink]."
+
+Requirements:
+- Checkbox must be **optional** and **unchecked by default**
+- Phone number field must be **optional**
+- Disclosure must include: STOP/HELP, frequency, data rates
+- Must link to Privacy Policy and Terms as hyperlinks
+
+### David's Approved Opt-In Page Description
+
+From David's Dec 4, 2025 email to Zoho:
+
+> "Users come to our mortgage quote landing page and submit the embedded BankingBridge form, which collects their name, email, and mobile number. Directly below this form on our site we display the required SMS consent language, including brand name, message type, frequency, STOP/HELP instructions, and a link to our Privacy Policy."
+
+### What the Privacy Policy Needed (that got approved)
+
+The approved privacy policy at locusmortgage.com/privacy-policy-2/ included:
+- **TEXT MESSAGING (SMS) AND PHONE COMMUNICATIONS** section header
+- When we collect phone numbers (form submission, partner forms, explicit opt-in)
+- What messages we send (inquiry, rate quotes, status updates, service notifications, marketing)
+- **Message Frequency and Charges** — frequency varies, msg & data rates may apply
+- **How to Opt Out** — reply STOP, or call/email to remove
+- **Consent Not Required for Credit** — explicit statement
+- **How We Share SMS Data** — third-party providers for delivery only, NOT for their own marketing
+- The specific Zoho-required verbiage about not sharing opt-in with third parties
+
+### Key Lessons from Zoho Approval Process
+
+1. **The opt-in page must be LIVE and accessible** — reviewers actually visit the URL
+2. **A visible checkbox is required** — even if the form is from a third party (BankingBridge), there must be a checkbox ON YOUR SITE
+3. **Privacy policy must have a dedicated SMS section** — not just a general data collection clause
+4. **Specific verbiage about SMS data sharing is REQUIRED** — the red text above is mandatory
+5. **The reviewer will go back and forth 5+ times** — it took David 6 weeks and 16 exchanges
+6. **Broken links = immediate rejection** — every URL must resolve
 
 ---
 
