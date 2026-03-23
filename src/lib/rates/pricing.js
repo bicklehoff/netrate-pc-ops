@@ -36,15 +36,36 @@ function calculateComp(loanAmount, loanPurpose) {
 
 const LENDER_FEES = {
   everstream: 999,
-  tls: 1195,
-  keystone: 995,
+  tls: 1281,
+  keystone: 1125,
   swmc: 1195,    // Non-DPA, non-streamline
-  amwest: 995,
+  amwest: 1295,
+};
+
+// LLPA mode per lender:
+// 'baked' = LLPAs are already in the base rate sheet prices. Do NOT apply additional adjustments.
+// 'separate' = Base prices are pre-LLPA. Apply lender-specific grids or GSE fallback.
+const LENDER_LLPA_MODE = {
+  tls: 'baked',        // Product codes encode the tier — each product IS a specific LLPA scenario
+  swmc: 'baked',       // Base prices include LLPAs — confirmed via LoanSifter comparison
+  keystone: 'baked',   // Base prices include LLPAs — confirmed via LoanSifter comparison
+  amwest: 'separate',  // Separate FT_LLPAS and LLPAS sheets — must apply
+  everstream: 'separate', // 19 separate LLPA sheets — must apply
 };
 
 // ─── LLPA (Loan-Level Price Adjustments) ──────────────────────────
 // Standard GSE LLPA grids (Fannie Mae / Freddie Mac)
-// Used for lenders that don't provide their own LLPAs.
+//
+// IMPORTANT: Not all lenders need external LLPA application.
+// - TLS: LLPAs baked into product codes (each product IS a tier). Skip.
+// - SWMC: LLPAs baked into base prices. Skip.
+// - Keystone: LLPAs baked into base prices. Skip.
+// - AmWest: Separate LLPA sheets (FT_LLPAS, LLPAS). MUST apply.
+// - EverStream: Separate 19 LLPA sheets. MUST apply.
+//
+// Lenders with llpaMode = 'baked' skip LLPA application entirely.
+// Lenders with llpaMode = 'separate' use their own grids or GSE fallback.
+//
 // Each FICO band maps to an array of 9 LTV tier adjustments.
 // LTV tiers: <=30, 30.01-60, 60.01-70, 70.01-75, 75.01-80, 80.01-85, 85.01-90, 90.01-95, >95
 // Values are in points (positive = cost to borrower, added to price)
@@ -125,6 +146,11 @@ function calculateLLPAForScenario(scenario, lenderLlpas, program) {
   // their pricing is already tier-adjusted in the rate sheet
   if (program.category === 'nonqm' || program.category === 'other') {
     return { total: 0, breakdown: [{ label: 'Non-QM (LLPAs in base price)', value: 0 }] };
+  }
+
+  // Check lender LLPA mode — if 'baked', prices already include LLPAs
+  if (program._llpaMode === 'baked') {
+    return { total: 0, breakdown: [{ label: 'LLPAs in base price', value: 0 }] };
   }
 
   // Select the right LLPA grid
@@ -405,6 +431,9 @@ export function priceScenario(scenario, allPrograms, options = {}) {
       if (lockRates.length === 0) continue;
 
       // Calculate LLPA for this lender/program
+      // Tag program with lender's LLPA mode so the LLPA function can skip if 'baked'
+      const llpaMode = LENDER_LLPA_MODE[lenderId] || 'separate';
+      program._llpaMode = llpaMode;
       const lenderLlpas = lenderData.llpas || null; // lender-specific LLPAs if available
       const llpa = calculateLLPAForScenario(enrichedScenario, lenderLlpas, program);
 
