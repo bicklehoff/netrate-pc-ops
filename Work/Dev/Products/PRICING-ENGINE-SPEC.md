@@ -334,6 +334,86 @@ const borrowerProfile = {
 
 ---
 
+## Rate Portal Pages (Three Views, One Engine)
+
+One pricing engine serves three consumer-facing rate pages. Each page pre-filters results by category but the API call is identical — only the display layer differs.
+
+### Page Structure
+
+| Route | Default Filter | Audience | SEO Target |
+|-------|---------------|----------|------------|
+| `/rates` | `category === 'agency'` | Traditional borrowers | "wholesale mortgage rates", "today's mortgage rates" |
+| `/rates/non-qm` | `category === 'nonqm'` | Investors, self-employed, ITIN, foreign national | "DSCR rates", "bank statement loan rates", "non-QM mortgage rates" |
+| `/rates/heloc` | `subcategory === 'heloc' \|\| subcategory === 'second'` | Homeowners tapping equity | "HELOC rates", "home equity loan rates", "second mortgage rates" |
+
+### How It Works
+
+Same pattern as state pages (e.g., `/rates/colorado` defaults to CO). Each rate portal page:
+
+1. Calls `POST /api/pricing/scenario` with the same borrower scenario
+2. Receives the full result set (all eligible programs across all categories)
+3. Filters to its default category in the UI
+4. Borrower can toggle/expand to see other categories if relevant
+
+### API Response Shape
+
+```json
+{
+  "scenario": { ... },
+  "results": [
+    {
+      "lender": "tls",
+      "program": "Conventional 30yr Fixed",
+      "category": "agency",
+      "subcategory": "conventional",
+      "rate": 5.875,
+      "price": 0.115,
+      "priceFormat": "discount",
+      "lockDays": 30,
+      "eligible": true,
+      "tags": ["PAR"]
+    },
+    {
+      "lender": "tls",
+      "program": "DSCR 30yr Fixed [E35]",
+      "category": "nonqm",
+      "subcategory": "dscr",
+      "rate": 6.375,
+      "price": 0.284,
+      "priceFormat": "discount",
+      "lockDays": 30,
+      "eligible": true,
+      "tags": []
+    }
+  ],
+  "bestExecution": {
+    "agency": { "programId": "...", "rate": 5.875, "price": 0.115 },
+    "nonqm": { "programId": "...", "rate": 6.375, "price": 0.284 },
+    "heloc": { "programId": "...", "rate": 7.171, "price": 0.125 }
+  }
+}
+```
+
+### Downstream Consumers
+
+All calculators consume the same result set:
+
+- **Rate Tool / Compare:** Borrower picks two rows from `results`, sees them side by side
+- **Purchase Calculator:** Grabs `bestExecution.agency` (or borrower's selection) → feeds payment formula
+- **Refi Scenario Modeler:** Uses selected rate for all 4 structuring options
+- **Cost of Waiting:** Uses `bestExecution.agency.rate` as the "new rate" input
+- **DSCR Calculator:** Pulls from `results` where `subcategory === 'dscr'`
+- **HELOC page:** Pulls from `results` where `subcategory === 'heloc' || 'second'`
+
+### Content Requirements (Claw Marketing)
+
+Each page needs unique content — relay sent to Claw:
+- `/rates` — hero, how wholesale rates work, rate disclaimers
+- `/rates/non-qm` — what is Non-QM, who qualifies, program explainers (DSCR, bank statement, ITIN, FN)
+- `/rates/heloc` — HELOC vs home equity loan, when to use, current rate environment
+
+---
+
 ## Build Order
 
 ### Phase 1: Data infrastructure

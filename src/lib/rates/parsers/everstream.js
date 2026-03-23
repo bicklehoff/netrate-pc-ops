@@ -8,6 +8,7 @@
  * Exports: parseRates, parseLLPAs, parse, lenderId
  */
 
+/* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/no-unused-vars */
 const XLSX = require('xlsx');
 
 const lenderId = 'everstream';
