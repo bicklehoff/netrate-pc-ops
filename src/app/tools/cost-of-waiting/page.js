@@ -95,7 +95,7 @@ export default function CostOfWaitingPage() {
         const interestSavedExtra = interestPaidBase - interestPaidExtra;
         return { yearsSaved: Math.round(yearsSaved * 10) / 10, interestSaved: interestSavedExtra };
       })(),
-      sp500: fvAnnuity(monthlySavings, 0.10, yr),
+      sp500: fvAnnuity(monthlySavings, 0.07, yr),
       cds: fvAnnuity(monthlySavings, 0.045, yr),
     }));
 
@@ -202,7 +202,7 @@ export default function CostOfWaitingPage() {
                   <th className="text-left px-6 py-3 text-gray-500 font-medium">Time Horizon</th>
                   <th className="text-right px-6 py-3 text-gray-500 font-medium">
                     <span className="inline-flex items-center gap-1">
-                      <span className="w-2 h-2 rounded-full bg-green-500" />S&P 500 (~10%)
+                      <span className="w-2 h-2 rounded-full bg-green-500" />S&P 500 (~7%)
                     </span>
                   </th>
                   <th className="text-right px-6 py-3 text-gray-500 font-medium">
@@ -224,7 +224,7 @@ export default function CostOfWaitingPage() {
             </table>
 
             <div className="px-6 py-3 bg-gray-50 text-xs text-gray-400">
-              S&P 500 uses historical average ~10% annual return. CD/HYSA rates reflect current market (~4.5% APY).
+              S&P 500 uses historical average ~7% inflation-adjusted annual return. CD/HYSA rates reflect current market (~4.5% APY).
               Returns are hypothetical and not guaranteed. Extra principal calculation assumes your new rate of {newRate}%.
             </div>
           </div>
