@@ -12,7 +12,7 @@
  */
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { calculatePI, calculateAPR } from './engine';
+import { calculatePI, calculateAPR, getFicoBand, getLtvBandIndex } from './engine';
 import { getLoanLimits, classifyLoan } from '@/data/county-loan-limits';
 
 // ─── Broker Compensation ──────────────────────────────────────────
@@ -41,6 +41,166 @@ const LENDER_FEES = {
   swmc: 1195,    // Non-DPA, non-streamline
   amwest: 995,
 };
+
+// ─── LLPA (Loan-Level Price Adjustments) ──────────────────────────
+// Standard GSE LLPA grids (Fannie Mae / Freddie Mac)
+// Used for lenders that don't provide their own LLPAs.
+// Each FICO band maps to an array of 9 LTV tier adjustments.
+// LTV tiers: <=30, 30.01-60, 60.01-70, 70.01-75, 75.01-80, 80.01-85, 85.01-90, 90.01-95, >95
+// Values are in points (positive = cost to borrower, added to price)
+
+const LTV_BANDS = ['<=30', '30.01-60', '60.01-70', '70.01-75', '75.01-80', '80.01-85', '85.01-90', '90.01-95', '>95'];
+
+const GSE_PURCHASE_LLPA = {
+  '>=800':   [0, 0, 0, 0, 0.375, 0.375, 0.25, 0.25, 0.125],
+  '780-799': [0, 0, 0, 0, 0.375, 0.375, 0.25, 0.25, 0.125],
+  '760-779': [0, 0, 0, 0.25, 0.625, 0.625, 0.5, 0.5, 0.25],
+  '740-759': [0, 0, 0.125, 0.375, 0.875, 1.0, 0.75, 0.625, 0.5],
+  '720-739': [0, 0, 0.25, 0.75, 1.25, 1.25, 1.0, 0.875, 0.75],
+  '700-719': [0, 0, 0.375, 0.875, 1.375, 1.5, 1.25, 1.125, 0.875],
+  '680-699': [0, 0, 0.625, 1.125, 1.75, 1.875, 1.5, 1.375, 1.125],
+  '660-679': [0, 0, 0.75, 1.375, 1.875, 2.125, 1.75, 1.625, 1.25],
+  '640-659': [0, 0, 1.125, 1.5, 2.25, 2.5, 2.0, 1.875, 1.5],
+  '620-639': [0, 0.125, 1.5, 2.125, 2.75, 2.875, 2.625, 2.25, 1.75],
+};
+
+const GSE_REFI_LLPA = {
+  '>=800':   [0, 0, 0, 0.125, 0.5, 1.0, 1.0, 1.0, 1.125],
+  '780-799': [0, 0, 0, 0.125, 0.5, 1.0, 1.0, 1.0, 1.125],
+  '760-779': [0, 0, 0.125, 0.375, 0.875, 1.375, 1.25, 1.25, 1.375],
+  '740-759': [0, 0, 0.25, 0.75, 1.125, 1.75, 1.625, 1.625, 1.75],
+  '720-739': [0, 0, 0.5, 1.0, 1.625, 2.125, 2.0, 1.875, 2.0],
+  '700-719': [0, 0, 0.625, 1.25, 1.875, 2.5, 2.25, 2.25, 2.375],
+  '680-699': [0, 0, 0.875, 1.625, 2.25, 2.875, 2.625, 2.375, 2.5],
+  '660-679': [0, 0.375, 1.5, 2.25, 2.875, 3.375, 2.875, 2.75, 2.875],
+  '640-659': [0, 0.5, 1.875, 2.625, 3.375, 3.875, 3.375, 3.125, 3.25],
+  '620-639': [0, 0.625, 2.375, 3.125, 4.125, 4.5, 4.25, 3.125, 3.25],
+};
+
+const GSE_CASHOUT_LLPA = {
+  '>=800':   [0.375, 0.375, 0.625, 0.875, 1.375],
+  '780-799': [0.375, 0.375, 0.625, 0.875, 1.375],
+  '760-779': [0.375, 0.375, 0.875, 1.25, 1.875],
+  '740-759': [0.375, 0.375, 1.0, 1.625, 2.375],
+  '720-739': [0.375, 0.5, 1.375, 2.0, 2.75],
+  '700-719': [0.375, 0.5, 1.625, 2.625, 3.25],
+  '680-699': [0.375, 0.625, 2.0, 2.875, 3.75],
+  '660-679': [0.75, 1.25, 3.125, 4.375, 5.125],
+  '640-659': [0.875, 1.875, 3.625, 5.125, 5.625],
+  '620-639': [1.0, 2.0, 4.0, 5.5, 5.75],
+};
+
+// Additional adjustments by property type / feature
+const GSE_ADDITIONAL_LLPA = {
+  condo:        [0, 0, 0.125, 0.125, 0.75, 0.75, 0.75, 0.75, 0.75],
+  manufactured: [0, 0, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5],
+  investment:   [0, 0.25, 0.25, 0.25, 0.5, 0.75, 0.75, 0.75, 0.75],
+  secondHome:   [0, 0, 0, 0, 0, 0.125, 0.125, 0.125, 0.125],
+  highBal:      [0.5, 0.5, 0.75, 0.75, 1.0, 1.0, 1.0, 1.0, 1.0],
+  subFin:       [0.625, 0.625, 0.625, 0.875, 1.125, 1.125, 1.125, 1.875, 1.875],
+};
+
+/**
+ * Calculate LLPA adjustment for a scenario.
+ * Uses lender-specific grids if available, falls back to GSE standard.
+ *
+ * @param {Object} scenario - { creditScore, ltv, loanPurpose, propertyType, occupancy, loanAmount }
+ * @param {Object} lenderLlpas - Lender-specific LLPA data (optional, same format as sunwest.json)
+ * @param {Object} program - The program being priced (for category-specific behavior)
+ * @returns {{ total: number, breakdown: Array }}
+ */
+function calculateLLPAForScenario(scenario, lenderLlpas, program) {
+  const { creditScore, ltv, loanPurpose, loanAmount } = scenario;
+  const propertyType = scenario.propertyType || 'sfr';
+  const occupancy = scenario.occupancy || program.occupancy || 'primary';
+
+  const ficoBand = getFicoBand(creditScore);
+  const ltvIdx = getLtvBandIndex(ltv);
+  let total = 0;
+  const breakdown = [];
+
+  // Non-QM products (DSCR, bank statement, etc.) don't use GSE LLPAs —
+  // their pricing is already tier-adjusted in the rate sheet
+  if (program.category === 'nonqm' || program.category === 'other') {
+    return { total: 0, breakdown: [{ label: 'Non-QM (LLPAs in base price)', value: 0 }] };
+  }
+
+  // Select the right LLPA grid
+  const llpaSource = lenderLlpas || {
+    purchaseLlpa: GSE_PURCHASE_LLPA,
+    refiLlpa: GSE_REFI_LLPA,
+    cashoutLlpa: GSE_CASHOUT_LLPA,
+    additionalLlpa: GSE_ADDITIONAL_LLPA,
+    loanAmtAdj: [],
+  };
+
+  // FICO × LTV base adjustment
+  let matrix;
+  if (loanPurpose === 'purchase') matrix = llpaSource.purchaseLlpa;
+  else if (loanPurpose === 'cashout') matrix = llpaSource.cashoutLlpa;
+  else matrix = llpaSource.refiLlpa;
+
+  if (matrix) {
+    const maxIdx = loanPurpose === 'cashout' ? 4 : 8;
+    const useIdx = Math.min(ltvIdx, maxIdx);
+    const baseAdj = matrix[ficoBand]?.[useIdx] ?? 0;
+    total += baseAdj;
+    breakdown.push({
+      label: `FICO/LTV (${ficoBand}, ${LTV_BANDS[ltvIdx] || '?'})`,
+      value: baseAdj,
+    });
+  }
+
+  // Property type adjustments
+  const addl = llpaSource.additionalLlpa || GSE_ADDITIONAL_LLPA;
+  if (propertyType === 'condo' && addl.condo) {
+    const adj = addl.condo[Math.min(ltvIdx, 8)] ?? 0;
+    total += adj;
+    if (adj !== 0) breakdown.push({ label: 'Attached Condo', value: adj });
+  }
+  if (propertyType === 'manufactured' && addl.manufactured) {
+    const adj = addl.manufactured[Math.min(ltvIdx, 8)] ?? 0;
+    total += adj;
+    if (adj !== 0) breakdown.push({ label: 'Manufactured Home', value: adj });
+  }
+
+  // Occupancy adjustments
+  if (occupancy === 'investment' && addl.investment) {
+    const adj = addl.investment[Math.min(ltvIdx, 8)] ?? 0;
+    total += adj;
+    if (adj !== 0) breakdown.push({ label: 'Investment Property', value: adj });
+  }
+  if (occupancy === 'secondary' && addl.secondHome) {
+    const adj = addl.secondHome[Math.min(ltvIdx, 8)] ?? 0;
+    total += adj;
+    if (adj !== 0) breakdown.push({ label: 'Second Home', value: adj });
+  }
+
+  // High balance adjustment
+  if (program.isHighBalance && addl.highBal) {
+    const adj = addl.highBal[Math.min(ltvIdx, 8)] ?? 0;
+    total += adj;
+    if (adj !== 0) breakdown.push({ label: 'High Balance', value: adj });
+  }
+
+  // Loan amount tier adjustments (lender-specific)
+  if (llpaSource.loanAmtAdj) {
+    for (const tier of llpaSource.loanAmtAdj) {
+      if (loanAmount >= tier.min && loanAmount <= tier.max) {
+        total += tier.adj;
+        if (tier.adj !== 0) {
+          breakdown.push({
+            label: `Loan Amount ($${(tier.min / 1000).toFixed(0)}K-$${(tier.max / 1000).toFixed(0)}K)`,
+            value: tier.adj,
+          });
+        }
+        break;
+      }
+    }
+  }
+
+  return { total, breakdown };
+}
 
 // ─── Price Format Normalization ───────────────────────────────────
 
@@ -192,12 +352,19 @@ export function priceScenario(scenario, allPrograms, options = {}) {
       const lockRates = program.rates.filter(r => r.lockDays === lockDays);
       if (lockRates.length === 0) continue;
 
+      // Calculate LLPA for this lender/program
+      const lenderLlpas = lenderData.llpas || null; // lender-specific LLPAs if available
+      const llpa = calculateLLPAForScenario(enrichedScenario, lenderLlpas, program);
+
       for (const rateEntry of lockRates) {
         // Normalize price to discount format
         const rawDiscount = toDiscountFormat(rateEntry.price, program.priceFormat || 'discount');
 
+        // Apply LLPA adjustments (increases cost — worse FICO/LTV = higher adjustment)
+        const afterLlpa = rawDiscount + llpa.total;
+
         // Add broker comp (lender-paid = increases cost to borrower)
-        const afterComp = rawDiscount + compPoints;
+        const afterComp = afterLlpa + compPoints;
 
         // Convert to dollars
         const costDollars = (afterComp / 100) * loanAmount;
@@ -231,6 +398,8 @@ export function priceScenario(scenario, allPrograms, options = {}) {
           apr: Math.round(apr * 1000) / 1000,
           rawPrice: rateEntry.price,
           priceFormat: program.priceFormat || 'discount',
+          llpaPoints: Math.round(llpa.total * 1000) / 1000,
+          llpaBreakdown: llpa.breakdown,
           compPoints: Math.round(compPoints * 1000) / 1000,
           compDollars: Math.round(compAmount),
           costPoints: Math.round(afterComp * 1000) / 1000,
