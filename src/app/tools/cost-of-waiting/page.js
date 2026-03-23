@@ -69,37 +69,54 @@ export default function CostOfWaitingPage() {
       return monthlyPmt * ((Math.pow(1 + r, n) - 1) / r);
     };
 
+    // Calculate extra principal paydown schedule with snapshots at each horizon
+    const r = nRate / 100 / 12;
+    let balanceExtra = loan;   // balance with extra payments
+    let balanceBase = loan;    // balance with normal payments
+    let monthsPaidOff = 0;
+    let totalInterestExtra = 0;
     const horizons = [5, 10, 15, 20];
+    const horizonMonths = horizons.map(y => y * 12);
+    const equityAdvantage = {}; // extra equity built at each horizon
+    let paidOff = false;
+
+    for (let m = 1; m <= months; m++) {
+      // Normal schedule
+      if (balanceBase > 0) {
+        const intBase = balanceBase * r;
+        const princBase = Math.min(newPmt - intBase, balanceBase);
+        balanceBase -= princBase;
+      }
+      // Extra payment schedule
+      if (balanceExtra > 0) {
+        const intExtra = balanceExtra * r;
+        totalInterestExtra += intExtra;
+        const princExtra = Math.min(newPmt + monthlySavings - intExtra, balanceExtra);
+        balanceExtra -= princExtra;
+        if (balanceExtra <= 0 && !paidOff) {
+          monthsPaidOff = m;
+          paidOff = true;
+        }
+      }
+      // Snapshot at each horizon
+      if (horizonMonths.includes(m)) {
+        const yr = m / 12;
+        equityAdvantage[yr] = Math.max(0, balanceBase - balanceExtra);
+      }
+    }
+    if (!paidOff) monthsPaidOff = months;
+    const totalInterestBase = newPmt * months - loan;
+    const interestSavedExtra = totalInterestBase - totalInterestExtra;
+    const yearsSaved = Math.round(((months - monthsPaidOff) / 12) * 10) / 10;
+
     const opportunities = horizons.map(yr => ({
       years: yr,
-      extraPrincipal: (() => {
-        // Calculate how many months shaved off by paying extra principal
-        // and total interest saved
-        const r = nRate / 100 / 12;
-        let balance = loan;
-        let monthsPaid = 0;
-        const basePmt = newPmt;
-        const extraPmt = basePmt + monthlySavings;
-        let interestPaidExtra = 0;
-        let interestPaidBase = 0;
-        while (balance > 0 && monthsPaid < months) {
-          const intThisMonth = balance * r;
-          interestPaidExtra += intThisMonth;
-          const princThisMonth = Math.min(extraPmt - intThisMonth, balance);
-          balance -= princThisMonth;
-          monthsPaid++;
-        }
-        // Base interest (no extra payments)
-        interestPaidBase = newPmt * months - loan;
-        const yearsSaved = ((months - monthsPaid) / 12);
-        const interestSavedExtra = interestPaidBase - interestPaidExtra;
-        return { yearsSaved: Math.round(yearsSaved * 10) / 10, interestSaved: interestSavedExtra };
-      })(),
+      extraPrincipal: equityAdvantage[yr] || 0,
       sp500: fvAnnuity(monthlySavings, 0.07, yr),
       cds: fvAnnuity(monthlySavings, 0.045, yr),
     }));
 
-    return { currentPmt, newPmt, monthlySavings, table, lifetimeSavings, interestSaved, opportunities };
+    return { currentPmt, newPmt, monthlySavings, table, lifetimeSavings, interestSaved, opportunities, yearsSaved, interestSavedExtra };
   }, [loanAmount, currentRate, newRate, term]);
 
   return (
@@ -182,7 +199,7 @@ export default function CostOfWaitingPage() {
               </p>
             </div>
 
-            {/* Extra principal — mortgage payoff acceleration */}
+            {/* Extra principal summary */}
             <div className="px-6 py-4 border-b border-gray-100">
               <div className="flex items-center gap-2 mb-2">
                 <span className="w-2 h-2 rounded-full bg-cyan-500" />
@@ -190,24 +207,29 @@ export default function CostOfWaitingPage() {
               </div>
               <p className="text-sm text-gray-600">
                 Put {dollar(results.monthlySavings)}/mo toward extra principal and pay off your loan{' '}
-                <strong className="text-cyan-700">{results.opportunities[0].extraPrincipal.yearsSaved} years early</strong>,
-                saving <strong className="text-cyan-700">{dollar(results.opportunities[0].extraPrincipal.interestSaved)}</strong> in interest.
+                <strong className="text-cyan-700">{results.yearsSaved} years early</strong>,
+                saving <strong className="text-cyan-700">{dollar(results.interestSavedExtra)}</strong> in interest.
               </p>
             </div>
 
-            {/* Investment comparison table */}
+            {/* Investment comparison table — 3 columns */}
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100">
-                  <th className="text-left px-6 py-3 text-gray-500 font-medium">Time Horizon</th>
-                  <th className="text-right px-6 py-3 text-gray-500 font-medium">
+                  <th className="text-left px-4 py-3 text-gray-500 font-medium">Time</th>
+                  <th className="text-right px-4 py-3 text-gray-500 font-medium">
+                    <span className="inline-flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-cyan-500" />Extra Equity
+                    </span>
+                  </th>
+                  <th className="text-right px-4 py-3 text-gray-500 font-medium">
                     <span className="inline-flex items-center gap-1">
                       <span className="w-2 h-2 rounded-full bg-green-500" />S&P 500 (~7%)
                     </span>
                   </th>
-                  <th className="text-right px-6 py-3 text-gray-500 font-medium">
+                  <th className="text-right px-4 py-3 text-gray-500 font-medium">
                     <span className="inline-flex items-center gap-1">
-                      <span className="w-2 h-2 rounded-full bg-blue-500" />CDs / HYSA (~4.5%)
+                      <span className="w-2 h-2 rounded-full bg-blue-500" />CDs (~4.5%)
                     </span>
                   </th>
                 </tr>
@@ -215,17 +237,19 @@ export default function CostOfWaitingPage() {
               <tbody>
                 {results.opportunities.map(row => (
                   <tr key={row.years} className="border-b border-gray-50 last:border-0">
-                    <td className="px-6 py-3 text-gray-700">{row.years} years</td>
-                    <td className="px-6 py-3 text-right font-semibold text-green-700 tabular-nums">{dollar(row.sp500)}</td>
-                    <td className="px-6 py-3 text-right font-semibold text-blue-700 tabular-nums">{dollar(row.cds)}</td>
+                    <td className="px-4 py-3 text-gray-700">{row.years} yr</td>
+                    <td className="px-4 py-3 text-right font-semibold text-cyan-700 tabular-nums">{dollar(row.extraPrincipal)}</td>
+                    <td className="px-4 py-3 text-right font-semibold text-green-700 tabular-nums">{dollar(row.sp500)}</td>
+                    <td className="px-4 py-3 text-right font-semibold text-blue-700 tabular-nums">{dollar(row.cds)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
 
             <div className="px-6 py-3 bg-gray-50 text-xs text-gray-400">
-              S&P 500 uses historical average ~7% inflation-adjusted annual return. CD/HYSA rates reflect current market (~4.5% APY).
-              Returns are hypothetical and not guaranteed. Extra principal calculation assumes your new rate of {newRate}%.
+              Extra Equity shows additional mortgage paydown vs normal payments at {newRate}%.
+              S&P 500 uses ~7% inflation-adjusted historical return. CDs reflect ~4.5% APY.
+              All assume {dollar(results.monthlySavings)}/mo contributed monthly. Returns are hypothetical.
             </div>
           </div>
 
