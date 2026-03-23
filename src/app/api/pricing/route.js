@@ -91,7 +91,12 @@ export async function POST(request) {
       county: body.county || null,
       creditScore: body.creditScore || 740,
       propertyValue: body.propertyValue ? Number(body.propertyValue) : null,
+      propertyType: body.propertyType || 'sfr',
+      occupancy: body.occupancy || 'primary',
       term: body.term || 30,
+      employmentType: body.employmentType || 'w2',
+      subFinancing: body.subFinancing || false,
+      subFinancingBalance: body.subFinancingBalance ? Number(body.subFinancingBalance) : 0,
       includeBuydowns: body.includeBuydowns || false,
       includeIO: body.includeIO || false,
     };

@@ -110,12 +110,14 @@ const GSE_ADDITIONAL_LLPA = {
  * @returns {{ total: number, breakdown: Array }}
  */
 function calculateLLPAForScenario(scenario, lenderLlpas, program) {
-  const { creditScore, ltv, loanPurpose, loanAmount } = scenario;
+  const { creditScore, ltv, cltv, loanPurpose, loanAmount, subFinancing } = scenario;
   const propertyType = scenario.propertyType || 'sfr';
   const occupancy = scenario.occupancy || program.occupancy || 'primary';
 
   const ficoBand = getFicoBand(creditScore);
-  const ltvIdx = getLtvBandIndex(ltv);
+  // Use CLTV for LLPA lookup when sub financing exists (per GSE guidelines)
+  const effectiveLtv = (subFinancing && cltv) ? Math.max(ltv, cltv) : ltv;
+  const ltvIdx = getLtvBandIndex(effectiveLtv);
   let total = 0;
   const breakdown = [];
 
@@ -174,6 +176,13 @@ function calculateLLPAForScenario(scenario, lenderLlpas, program) {
     const adj = addl.secondHome[Math.min(ltvIdx, 8)] ?? 0;
     total += adj;
     if (adj !== 0) breakdown.push({ label: 'Second Home', value: adj });
+  }
+
+  // Subordinate financing adjustment
+  if (subFinancing && addl.subFin) {
+    const adj = addl.subFin[Math.min(ltvIdx, 8)] ?? 0;
+    total += adj;
+    if (adj !== 0) breakdown.push({ label: 'Subordinate Financing', value: adj });
   }
 
   // High balance adjustment
@@ -271,6 +280,34 @@ function checkEligibility(program, scenario) {
     return { eligible: false, reason: 'io_not_requested' };
   }
 
+  // Fast Track eligibility — requires W-2, no sub financing, primary/second home, standard property
+  if (program.isFastTrack) {
+    if (scenario.employmentType === 'selfEmployed') {
+      return { eligible: false, reason: 'fast_track_requires_w2' };
+    }
+    if (scenario.subFinancing) {
+      return { eligible: false, reason: 'fast_track_no_sub_financing' };
+    }
+    if (scenario.occupancy === 'investment') {
+      return { eligible: false, reason: 'fast_track_no_investment' };
+    }
+    if (scenario.propertyType === 'manufactured' || scenario.propertyType === '3unit' || scenario.propertyType === '4unit') {
+      return { eligible: false, reason: 'fast_track_property_type' };
+    }
+  }
+
+  // Self-employed routing — show bank statement products, hide W-2-only programs
+  if (scenario.employmentType === 'selfEmployed') {
+    // Bank statement and DSCR products are good for self-employed
+    // Standard agency still eligible (just with full doc requirements)
+  }
+
+  // Sub financing — apply CLTV-based adjustments (handled in LLPA calc)
+  // Some programs have max CLTV limits
+  if (scenario.subFinancing && scenario.cltv > 95 && program.category === 'agency') {
+    return { eligible: false, reason: 'cltv_exceeds_95' };
+  }
+
   return { eligible: true };
 }
 
@@ -292,9 +329,14 @@ export function priceScenario(scenario, allPrograms, options = {}) {
     category = null,       // null = show all categories
     state = null,
     county = null,
-    creditScore = 740,     // Phase 2: LLPA lookup
+    creditScore = 740,
     propertyValue = null,
     term = 30,
+    employmentType = 'w2',         // 'w2' | 'selfEmployed' — defaults to W-2
+    subFinancing = false,          // subordinate financing (second mortgage/HELOC staying in place)
+    subFinancingBalance = 0,       // balance of second lien (for CLTV calc)
+    propertyType = 'sfr',
+    occupancy = 'primary',
   } = scenario;
 
   const lockDays = options.lockDays || 30;
@@ -302,6 +344,11 @@ export function priceScenario(scenario, allPrograms, options = {}) {
 
   // Derived values
   const ltv = propertyValue ? (loanAmount / propertyValue) * 100 : 80;
+
+  // CLTV — if sub financing exists, combined LTV drives certain LLPA lookups
+  const cltv = (propertyValue && subFinancing && subFinancingBalance > 0)
+    ? ((loanAmount + subFinancingBalance) / propertyValue) * 100
+    : ltv; // no sub financing → CLTV = LTV
 
   // County loan limits
   let loanCategory = 'conforming';
@@ -323,10 +370,15 @@ export function priceScenario(scenario, allPrograms, options = {}) {
   const enrichedScenario = {
     ...scenario,
     ltv,
+    cltv,
     loanCategory,
     loanPurpose,
     loanType,
     category,
+    employmentType,
+    subFinancing,
+    propertyType,
+    occupancy,
     compAmount,
     compPoints,
   };
@@ -439,7 +491,10 @@ export function priceScenario(scenario, allPrograms, options = {}) {
     scenario: enrichedScenario,
     derived: {
       ltv: Math.round(ltv * 100) / 100,
+      cltv: Math.round(cltv * 100) / 100,
       loanCategory,
+      employmentType,
+      subFinancing,
       compAmount: Math.round(compAmount),
       compPoints: Math.round(compPoints * 1000) / 1000,
     },
