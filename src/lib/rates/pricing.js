@@ -30,9 +30,137 @@ function calculateComp(loanAmount, loanPurpose) {
   return Math.min(raw, cap);
 }
 
+// ─── FHA UFMIP (Upfront Mortgage Insurance Premium) ──────────────
+// 1.75% of base loan amount, financed into the loan
+// This increases the total loan amount used for P&I calculation
+
+function calculateUFMIP(baseLoanAmount) {
+  return Math.round(baseLoanAmount * 0.0175 * 100) / 100;
+}
+
+// ─── FHA Monthly MIP ─────────────────────────────────────────────
+// Based on loan term, LTV, and loan amount
+// These are the standard FHA MIP rates (annual, divided by 12 for monthly)
+//
+// Loan term > 15 years:
+//   LTV ≤ 90%: 0.50% annual (for life if originated after 6/3/2013 with LTV > 90%)
+//   LTV > 90% ≤ 95%: 0.50% annual
+//   LTV > 95%: 0.55% annual
+//   Loan amount > $726,200 (high balance): add 0.25%
+//
+// Loan term ≤ 15 years:
+//   LTV ≤ 90%: 0.15% annual
+//   LTV > 90%: 0.40% annual
+
+function calculateFHAMonthlyMIP(totalLoanAmount, ltv, term) {
+  let annualRate;
+  if (term > 15) {
+    if (ltv <= 90) annualRate = 0.0050;
+    else if (ltv <= 95) annualRate = 0.0050;
+    else annualRate = 0.0055;
+    // High balance surcharge
+    if (totalLoanAmount > 726200) annualRate += 0.0025;
+  } else {
+    if (ltv <= 90) annualRate = 0.0015;
+    else annualRate = 0.0040;
+  }
+  return Math.round((totalLoanAmount * annualRate / 12) * 100) / 100;
+}
+
+// ─── VA Funding Fee ──────────────────────────────────────────────
+// Based on: first use vs subsequent, down payment %, and disability exemption
+// Financed into the loan (increases total loan amount)
+//
+// Purchase / Cash-Out Refi:
+//   First use:      0% down = 2.15%, 5-10% down = 1.50%, ≥10% down = 1.25%
+//   Subsequent use: 0% down = 3.30%, 5-10% down = 1.50%, ≥10% down = 1.25%
+//
+// Rate/Term Refi (IRRRL): 0.50% regardless
+// Exempt: disabled veterans, surviving spouses → 0%
+
+const VA_FUNDING_FEE = {
+  purchase: {
+    firstUse:      { 0: 0.0215, 5: 0.0150, 10: 0.0125 },
+    subsequentUse: { 0: 0.0330, 5: 0.0150, 10: 0.0125 },
+  },
+  cashout: {
+    firstUse:      { 0: 0.0215, 5: 0.0150, 10: 0.0125 },
+    subsequentUse: { 0: 0.0330, 5: 0.0150, 10: 0.0125 },
+  },
+  refinance: {
+    firstUse:      { 0: 0.0050 },  // IRRRL
+    subsequentUse: { 0: 0.0050 },  // IRRRL
+  },
+};
+
+function calculateVAFundingFee(baseLoanAmount, loanPurpose, downPaymentPct = 0, options = {}) {
+  const { isSubsequentUse = false, isExempt = false } = options;
+  if (isExempt) return 0;
+
+  const purposeKey = loanPurpose === 'cashout' ? 'cashout'
+    : loanPurpose === 'purchase' ? 'purchase' : 'refinance';
+  const useKey = isSubsequentUse ? 'subsequentUse' : 'firstUse';
+  const tiers = VA_FUNDING_FEE[purposeKey]?.[useKey] || { 0: 0.0215 };
+
+  // Find applicable tier based on down payment
+  let rate;
+  if (downPaymentPct >= 10 && tiers[10] !== undefined) rate = tiers[10];
+  else if (downPaymentPct >= 5 && tiers[5] !== undefined) rate = tiers[5];
+  else rate = tiers[0];
+
+  return Math.round(baseLoanAmount * rate * 100) / 100;
+}
+
+// ─── Conventional PMI (Private Mortgage Insurance) ───────────────
+// Required when LTV > 80% for conventional loans
+// Rates vary by FICO and LTV. These are industry-average monthly rates.
+// Actual PMI depends on insurer (MGIC, Radian, Essent, etc.)
+//
+// Values are annual PMI rate as percentage of loan amount
+// Monthly PMI = loanAmount * annualRate / 12
+
+const PMI_RATES = {
+  // FICO bands → LTV tiers: 80.01-85, 85.01-90, 90.01-95, 95.01-97
+  '>=760': [0.0019, 0.0027, 0.0046, 0.0063],
+  '740-759': [0.0025, 0.0035, 0.0053, 0.0071],
+  '720-739': [0.0033, 0.0047, 0.0068, 0.0090],
+  '700-719': [0.0042, 0.0059, 0.0082, 0.0105],
+  '680-699': [0.0055, 0.0078, 0.0105, 0.0136],
+  '660-679': [0.0070, 0.0098, 0.0130, 0.0175],
+  '640-659': [0.0085, 0.0120, 0.0165, 0.0220],
+  '620-639': [0.0100, 0.0145, 0.0200, 0.0265],
+};
+
+function calculateConventionalPMI(loanAmount, ltv, creditScore) {
+  if (ltv <= 80) return 0;
+
+  // Determine PMI LTV tier index
+  let ltvIdx;
+  if (ltv <= 85) ltvIdx = 0;
+  else if (ltv <= 90) ltvIdx = 1;
+  else if (ltv <= 95) ltvIdx = 2;
+  else ltvIdx = 3;
+
+  // Determine FICO band
+  let ficoBand;
+  if (creditScore >= 760) ficoBand = '>=760';
+  else if (creditScore >= 740) ficoBand = '740-759';
+  else if (creditScore >= 720) ficoBand = '720-739';
+  else if (creditScore >= 700) ficoBand = '700-719';
+  else if (creditScore >= 680) ficoBand = '680-699';
+  else if (creditScore >= 660) ficoBand = '660-679';
+  else if (creditScore >= 640) ficoBand = '640-659';
+  else ficoBand = '620-639';
+
+  const annualRate = PMI_RATES[ficoBand]?.[ltvIdx] ?? 0.0080;
+  return Math.round((loanAmount * annualRate / 12) * 100) / 100;
+}
+
 // ─── Lender Fee Defaults ──────────────────────────────────────────
 // Per-lender origination/UW fees (from rate sheets)
-// These are charged to borrower as closing costs, separate from rate pricing
+// "Fees In" pricing: lender fees are baked into the rate pricing (subtracted from price)
+// so the borrower sees the TRUE cost of each option. Lender fees do NOT appear
+// separately in closing costs — only third-party costs (title, escrow, recording) do.
 
 const LENDER_FEES = {
   everstream: 999,
@@ -45,26 +173,30 @@ const LENDER_FEES = {
 // LLPA mode per lender:
 // 'baked' = LLPAs are already in the base rate sheet prices. Do NOT apply additional adjustments.
 // 'separate' = Base prices are pre-LLPA. Apply lender-specific grids or GSE fallback.
+// ALL lenders have LLPAs applied separately — confirmed via LoanSifter comparison.
+// LoanSifter shows adjustment breakdown for Keystone: FICO/LTV, loan amount, state.
+// EverStream, AmWest, SWMC have LLPA grids on their rate sheets.
+// Keystone and TLS don't publish LLPAs — use GSE standard as fallback.
 const LENDER_LLPA_MODE = {
-  tls: 'baked',        // Product codes encode the tier — each product IS a specific LLPA scenario
-  swmc: 'baked',       // Base prices include LLPAs — confirmed via LoanSifter comparison
-  keystone: 'baked',   // Base prices include LLPAs — confirmed via LoanSifter comparison
-  amwest: 'separate',  // Separate FT_LLPAS and LLPAS sheets — must apply
-  everstream: 'separate', // 19 separate LLPA sheets — must apply
+  tls: 'separate',        // No LLPA sheet — use GSE standard
+  swmc: 'separate',       // LLPA grids at rows 1316+ on RATESHEET
+  keystone: 'separate',   // No LLPA sheet — use GSE standard
+  amwest: 'separate',     // FT_LLPAS and LLPAS sheets
+  everstream: 'separate', // 19 LLPA sheets in companion XLSX
 };
 
 // ─── LLPA (Loan-Level Price Adjustments) ──────────────────────────
 // Standard GSE LLPA grids (Fannie Mae / Freddie Mac)
 //
-// IMPORTANT: Not all lenders need external LLPA application.
-// - TLS: LLPAs baked into product codes (each product IS a tier). Skip.
-// - SWMC: LLPAs baked into base prices. Skip.
-// - Keystone: LLPAs baked into base prices. Skip.
-// - AmWest: Separate LLPA sheets (FT_LLPAS, LLPAS). MUST apply.
-// - EverStream: Separate 19 LLPA sheets. MUST apply.
+// ALL lenders have LLPAs applied separately (confirmed via LoanSifter comparison).
+// - TLS: No LLPA sheet on rate sheet — use GSE standard as fallback.
+// - SWMC: LLPA grids at rows 1316+ on rate sheet — TODO: extract lender-specific.
+// - Keystone: No LLPA sheet — use GSE standard as fallback.
+// - AmWest: Separate FT_LLPAS and LLPAS sheets — TODO: wire lender-specific.
+// - EverStream: 19 LLPA sheets in companion XLSX — TODO: wire lender-specific.
 //
-// Lenders with llpaMode = 'baked' skip LLPA application entirely.
-// Lenders with llpaMode = 'separate' use their own grids or GSE fallback.
+// All lenders use llpaMode = 'separate'. Lender-specific grids used when available,
+// GSE standard as fallback when lender doesn't publish their own grid.
 //
 // Each FICO band maps to an array of 9 LTV tier adjustments.
 // LTV tiers: <=30, 30.01-60, 60.01-70, 70.01-75, 75.01-80, 80.01-85, 85.01-90, 90.01-95, >95
@@ -291,6 +423,11 @@ function checkEligibility(program, scenario) {
     return { eligible: false, reason: 'conforming_loan_no_hb_needed' };
   }
 
+  // Exclude "Same Servicer" products — David never uses these
+  if (program.name && /same\s*servicer/i.test(program.name)) {
+    return { eligible: false, reason: 'same_servicer_excluded' };
+  }
+
   // Streamline only for refis
   if (program.isStreamline && loanPurpose === 'purchase') {
     return { eligible: false, reason: 'streamline_not_for_purchase' };
@@ -363,6 +500,10 @@ export function priceScenario(scenario, allPrograms, options = {}) {
     subFinancingBalance = 0,       // balance of second lien (for CLTV calc)
     propertyType = 'sfr',
     occupancy = 'primary',
+    // VA-specific
+    vaSubsequentUse = false,       // first use vs subsequent (affects funding fee)
+    vaExempt = false,              // disabled veteran / surviving spouse (no funding fee)
+    downPaymentPct = 0,            // for VA funding fee tiers
   } = scenario;
 
   const lockDays = options.lockDays || 30;
@@ -447,26 +588,68 @@ export function priceScenario(scenario, allPrograms, options = {}) {
         // Add broker comp (lender-paid = increases cost to borrower)
         const afterComp = afterLlpa + compPoints;
 
-        // Convert to dollars
-        const costDollars = (afterComp / 100) * loanAmount;
+        // "Fees In" — bake lender fee into pricing so borrower sees true cost
+        // Convert lender fee to points: fee / loanAmount * 100
+        const lenderFeePoints = (lenderFee / loanAmount) * 100;
+        const feesIn = afterComp + lenderFeePoints;
 
-        // Monthly P&I
-        const monthlyPI = calculatePI(rateEntry.rate, loanAmount, program.term);
+        // Convert to dollars (fees-in total — includes lender fee, LLPAs, comp)
+        const costDollars = (feesIn / 100) * loanAmount;
 
-        // APR: finance charges = lender fee + net points cost
-        const netFinanceCharges = Math.max(0, lenderFee + costDollars);
+        // ─── Loan-type-specific calculations ─────────────────────
+        // FHA: UFMIP financed into loan, monthly MIP added to payment
+        // VA: Funding fee financed into loan
+        // Conv: PMI if LTV > 80%
+
+        let totalLoanAmount = loanAmount;  // Base loan
+        let monthlyMI = 0;                 // Monthly mortgage insurance
+        let upfrontMI = 0;                 // Financed upfront premium
+        let upfrontMILabel = null;
+
+        if (program.loanType === 'fha') {
+          // FHA UFMIP — financed into loan
+          upfrontMI = calculateUFMIP(loanAmount);
+          upfrontMILabel = 'UFMIP (1.75%)';
+          totalLoanAmount = loanAmount + upfrontMI;
+          // FHA Monthly MIP
+          monthlyMI = calculateFHAMonthlyMIP(totalLoanAmount, ltv, program.term);
+        } else if (program.loanType === 'va') {
+          // VA Funding Fee — financed into loan
+          upfrontMI = calculateVAFundingFee(loanAmount, loanPurpose, downPaymentPct, {
+            isSubsequentUse: vaSubsequentUse,
+            isExempt: vaExempt,
+          });
+          upfrontMILabel = vaExempt ? 'VA Funding Fee (Exempt)' : `VA Funding Fee`;
+          totalLoanAmount = loanAmount + upfrontMI;
+          // VA has no monthly MI
+        } else if (program.loanType === 'conventional' && ltv > 80) {
+          // Conventional PMI
+          monthlyMI = calculateConventionalPMI(loanAmount, ltv, creditScore);
+        }
+        // USDA: has guarantee fee (1%) + annual fee (0.35%) — TODO: add when USDA programs are parsed
+
+        // Monthly P&I — calculated on total loan amount (includes financed premiums)
+        const monthlyPI = calculatePI(rateEntry.rate, totalLoanAmount, program.term);
+
+        // Total monthly payment (P&I + MI)
+        const totalPayment = Math.round((monthlyPI + monthlyMI) * 100) / 100;
+
+        // APR: finance charges = net cost to borrower + upfront MI (if financed)
+        const netFinanceCharges = Math.max(0, costDollars + upfrontMI);
         const apr = calculateAPR(rateEntry.rate, loanAmount, netFinanceCharges, program.term);
 
-        // Tags
+        // Tags — based on fees-in pricing (true cost to borrower)
         const tags = [];
-        if (Math.abs(afterComp) < 0.15) tags.push('PAR');
-        if (afterComp < -0.5) tags.push('NO COST');
+        if (Math.abs(feesIn) < 0.15) tags.push('PAR');
+        if (feesIn < -0.5) tags.push('NO COST');
         if (program.isStreamline) tags.push('STREAMLINE');
         if (program.isFastTrack) tags.push('FAST TRACK');
+        if (vaExempt && program.loanType === 'va') tags.push('VA EXEMPT');
 
         results.push({
           lender: lenderId,
-          lenderFee,
+          lenderFee,                    // Still tracked for transparency
+          lenderFeePoints: Math.round(lenderFeePoints * 1000) / 1000,
           program: program.name,
           programId: program.id,
           productCode: program.productCode || null,
@@ -483,9 +666,18 @@ export function priceScenario(scenario, allPrograms, options = {}) {
           llpaBreakdown: llpa.breakdown,
           compPoints: Math.round(compPoints * 1000) / 1000,
           compDollars: Math.round(compAmount),
-          costPoints: Math.round(afterComp * 1000) / 1000,
-          costDollars: Math.round(costDollars),
+          costPoints: Math.round(feesIn * 1000) / 1000,     // "Fees In" — includes lender fee
+          costDollars: Math.round(costDollars),              // "Fees In" — includes lender fee
+          costBeforeFees: Math.round(afterComp * 1000) / 1000, // Pre-fee cost (for debugging)
+          // Loan amounts
+          baseLoanAmount: loanAmount,
+          totalLoanAmount: Math.round(totalLoanAmount),      // Includes financed UFMIP/VA FF
+          upfrontMI: Math.round(upfrontMI),
+          upfrontMILabel,
+          // Payments
           monthlyPI: Math.round(monthlyPI * 100) / 100,
+          monthlyMI: Math.round(monthlyMI * 100) / 100,
+          totalPayment,                                      // P&I + MI
           lockDays,
           tags,
         });
@@ -511,6 +703,9 @@ export function priceScenario(scenario, allPrograms, options = {}) {
           costPoints: r.costPoints,
           costDollars: r.costDollars,
           monthlyPI: r.monthlyPI,
+          monthlyMI: r.monthlyMI,
+          totalPayment: r.totalPayment,
+          totalLoanAmount: r.totalLoanAmount,
         };
       }
     }
@@ -528,12 +723,13 @@ export function priceScenario(scenario, allPrograms, options = {}) {
       compPoints: Math.round(compPoints * 1000) / 1000,
     },
     closingCosts: {
-      lenderFee: 'varies', // per-result
-      brokerComp: Math.round(compAmount),
-      brokerCompNote: 'Lender-paid — included in rate pricing',
+      // "Fees In" pricing — lender fee and broker comp are baked into rate pricing.
+      // Closing costs shown to borrower are ONLY third-party costs.
+      lenderFee: 'Included in rate pricing (Fees In)',
+      brokerComp: 'Included in rate pricing (lender-paid)',
       thirdParty: {
         estimate: state ? getThirdPartyCostEstimate(state, loanPurpose) : null,
-        note: 'Estimated — actual costs vary by transaction',
+        note: 'Estimated third-party costs only — lender fees already reflected in rate/pricing above',
       },
     },
     results,
@@ -566,3 +762,16 @@ function getThirdPartyCostEstimate(state, purpose) {
   const table = purpose === 'purchase' ? purchaseCosts : refiCosts;
   return table[state] || null;
 }
+
+// ─── Exports ─────────────────────────────────────────────────────
+// Export utility functions for use by individual calculators
+
+export {
+  calculateUFMIP,
+  calculateFHAMonthlyMIP,
+  calculateVAFundingFee,
+  calculateConventionalPMI,
+  calculateComp,
+  calculateLLPAForScenario,
+  getThirdPartyCostEstimate,
+};
