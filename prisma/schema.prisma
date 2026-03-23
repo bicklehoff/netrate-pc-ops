@@ -1417,3 +1417,55 @@ model MarketSummary {
   @@index([date])
   @@map("market_summaries")
 }
+
+// ═══════════════════════════════════════════════════════════════
+// STRIKE RATE / RATE ALERTS — PC (Lead Capture)
+// Authority: PC. Designed by Claw Marketing.
+// ═══════════════════════════════════════════════════════════════
+
+model RateAlert {
+  id              String    @id @default(uuid()) @db.Uuid
+  email           String    @db.VarChar(255)
+
+  // Alert type: "strike" (target-based) or "watch" (daily/market-move subscription)
+  type            String    @default("strike") @db.VarChar(20)
+
+  // Strike Rate fields (null for "watch" type)
+  loanType        String?   @map("loan_type") @db.VarChar(30)    // conventional, fha, va, usda, jumbo, dscr
+  targetRate      Decimal?  @map("target_rate") @db.Decimal(5, 3) // e.g. 5.500
+  loanAmount      Decimal?  @map("loan_amount") @db.Decimal(12, 2)
+  state           String?   @db.VarChar(2)
+  term            Int       @default(30)
+
+  // Subscription preferences
+  rateAlerts      Boolean   @default(true) @map("rate_alerts")      // Strike/proximity/market-move emails
+  newsletter      Boolean   @default(true)                           // Monthly newsletter opt-in
+
+  // Status
+  status          String    @default("active") @db.VarChar(20)       // active, paused, triggered, unsubscribed
+  confirmedAt     DateTime? @map("confirmed_at")                     // Email confirmed (double opt-in)
+  confirmToken    String?   @unique @map("confirm_token") @db.VarChar(64)
+
+  // Tracking
+  lastCheckedAt   DateTime? @map("last_checked_at")                  // Last time alert was evaluated
+  lastNotifiedAt  DateTime? @map("last_notified_at")                 // Last email sent
+  notifyCount     Int       @default(0) @map("notify_count")         // Total notifications sent
+  triggeredAt     DateTime? @map("triggered_at")                     // When strike rate was hit
+  triggeredRate   Decimal?  @map("triggered_rate") @db.Decimal(5, 3) // The rate that triggered
+
+  // Contact linkage (optional — linked after they become a lead)
+  contactId       String?   @map("contact_id") @db.Uuid
+
+  // GA4 attribution
+  source          String?   @db.VarChar(50)   // e.g. "rate-tool", "rate-watch", "state-co"
+  gaClientId      String?   @map("ga_client_id") @db.VarChar(100)
+
+  // Metadata
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@index([email])
+  @@index([status, type])
+  @@index([type, status, loanType])
+  @@map("rate_alerts")
+}

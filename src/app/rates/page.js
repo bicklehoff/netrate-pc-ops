@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import RateTool from '@/components/RateTool';
+import StrikeRateForm from '@/components/RateTool/StrikeRateForm';
 import TrustBar from '@/components/TrustBar';
 import { fetchGCSFile, isGCSConfigured } from '@/lib/gcs';
 
@@ -58,6 +59,15 @@ export default async function RatesPage({ searchParams }) {
       </div>
       <div className="max-w-3xl mx-auto px-4 py-8">
       <RateTool initialRateData={rateData} defaultState={defaultState} />
+
+      {/* Strike Rate / Rate Alert signup */}
+      <div className="mt-10">
+        <h2 className="text-lg font-semibold text-gray-900 mb-3">Not ready yet? Set a Strike Rate.</h2>
+        <p className="text-sm text-gray-600 mb-4">
+          Tell us your target rate — we&apos;ll email you the moment it&apos;s available. No commitment, no credit pull.
+        </p>
+        <StrikeRateForm source="rate-tool" />
+      </div>
 
       {/* Apply CTA */}
       <div className="mt-10 bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
