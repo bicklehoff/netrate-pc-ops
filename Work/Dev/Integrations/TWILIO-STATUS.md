@@ -159,11 +159,16 @@ Note: There was originally a SECOND phone number purchased during early campaign
 - **Status:** FAILED
 - **Details:** Two additional submission attempts were charged ($10.70 each) but details not recorded. These may have been duplicate submissions or earlier attempts before Attempt 1.
 
-#### Current State (as of 2026-03-23)
+#### Attempt 6 — March 23, 2026 (CURRENT)
+- **Status:** IN_PROGRESS
 - **Campaign SID:** QE2c6890da8086d771620e9b13fadeba0b
-- **Status:** FAILED (last rejection: Error 30908)
-- **Account Status:** REACTIVATED (funds added 2026-03-23)
-- **Next Step:** Resubmit campaign (will cost another $10.70)
+- **Submitted:** 2026-03-23T20:36:14Z
+- **Account Status:** ACTIVE (funds added, auto-recharge enabled)
+- **All pages verified accessible:** /contact (200), /privacy (200), /terms (200)
+- **Privacy policy has required SMS verbiage:** confirmed in source code
+- **Changes from attempt 5:** Account funded and active during review (was suspended before). No content changes needed — privacy policy was already compliant.
+- **Expected review time:** A few days to 3-4 weeks
+- **CHECK STATUS:** `curl -s -u "ACc65dbcde3c13ff402fcf2b68903921d0:32d4d0af844adc0a9923b885d51f4e9e" "https://messaging.twilio.com/v1/Services/MG0eb6cca59bd54081d648905dbe9ce469/Compliance/Usa2p" | node -e "const d=require('fs').readFileSync(0,'utf8');const j=JSON.parse(d);console.log('Status:',j.compliance[0].campaign_status,'Errors:',JSON.stringify(j.compliance[0].errors))"`
 
 ### Campaign Configuration (current submission)
 ```
