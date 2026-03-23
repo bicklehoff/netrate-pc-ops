@@ -5,6 +5,53 @@
 
 ---
 
+## 2026-03-23 — Dev — Pricing Engine, Parsers, Strike Rate, Second Lien Comparison
+
+**Focus:** Rate sheet pipeline, pricing engine architecture, lead capture, and new calculator
+
+**Key accomplishments:**
+- Analyzed 14 rate sheets from 11 wholesale lenders — identified lenders, compared par rates, ranked parseability
+- Built parsers for all 5 core lenders: TLS (160 products), Keystone (18), SWMC (24), AmWest (16) + EverStream (already done)
+- Rate comparison: TLS wins FHA/DSCR, AmWest ties Conv, EverStream wins Jumbo/VA. Rocket/Plains Commerce dropped (don't win anything)
+- Final lender lineup: core 5 + niche 2 (Jet for ITIN/FN, Orion for doctor loans/40yr)
+- Built pricing engine API (POST /api/pricing) with:
+  - Broker comp: 2% lender-paid, capped at $3,595 refi / $4,595 purchase
+  - Per-lender origination fees
+  - Price format normalization (100-based ↔ discount)
+  - GSE LLPA grids (FICO×LTV × purpose × property type × occupancy)
+  - County loan limit classification (conforming/HB/jumbo)
+  - Employment type (W-2/self-employed) for Fast Track eligibility
+  - Sub financing + CLTV calculation
+  - Best execution ranking per category
+- Three rate portal pages spec'd: /rates (agency), /rates/non-qm, /rates/heloc — one engine, three views
+- Strike Rate / Rate Alert system: DB table, API, signup form with two modes (strike + watch), wired to /rates page, GA4 event
+- Second Lien Comparison calculator (/tools/second-lien-comparison): keep HELOC vs cash-out payoff with LLPA impact, sub fee, education section
+- Relayed to Claw Marketing for rate portal content (3 pages)
+- Relayed to Mac/Claw about missed EOD protocol
+
+**Decisions:**
+- One pricing engine serves all pages and calculators — no separate non-QM or HELOC pricer
+- Employment type + sub financing are new scenario fields (default W-2, no sub)
+- HELOC payment stays as borrower input (too many second lien types to model automatically)
+- Sub fee ~$200 added to keep-second option costs
+- CLTV used for LLPA lookup when sub financing exists (per GSE guidelines)
+- Rate alerts: auto-confirm for now, Resend email integration Phase 2
+
+**Open items:**
+- OC needs to pull daily rate sheets for 5 lenders → GCS (David setting up with Claw)
+- Build parse→upload script (raw from GCS → parse → write parsed JSON back to GCS)
+- Wire Rate Tool UI to call pricing engine API (replace current single-lender logic)
+- Strike Rate Phase 2: Resend confirmation email, daily cron check, hit/proximity/market-move notifications
+- Extract AmWest Fast Track LLPA grids from FT_LLPAS sheet (lender-specific, not GSE)
+- Build parser skill for streamlined rate sheet processing
+- David's reminders: comp plan review, lender fees table, state-level average fees for purchases
+- HELOC rate sheets (David has better lenders than Rocket for this)
+- Niche parsers: Jet (ITIN, FN), Orion (doctor loans, Titan Flex)
+
+**Commits:** 30052bf, e3ee098, 930cde9, ba042b5, 25fea3d, 804ab88, bd7d4e0
+
+---
+
 ## 2026-03-20 — Dev — Calculator Batch, Pricing Engine Spec, Rate Sheet Parsers
 
 **Focus:** Calculator UX improvements, pricing engine architecture, county data infrastructure, rate sheet analysis and parsing
