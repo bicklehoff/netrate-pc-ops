@@ -136,9 +136,11 @@ export function compareSubFinancingOptions(params) {
   const optB_totalMonthly = optB_payment; // no second lien payment
 
   // ── Comparison ──
+  const SUB_FEE = 200; // subordination fee charged by second lien holder for Option A
   const monthlySavings = optA_totalMonthly - optB_totalMonthly;
   const pricingDifference = optA_totalDollars - optB_totalDollars;
   const closingCosts = lenderFee + thirdPartyCosts;
+  const optA_closingCosts = closingCosts + SUB_FEE; // Option A has sub fee on top
 
   // Which option wins?
   let winner, reason;
@@ -185,6 +187,8 @@ export function compareSubFinancingOptions(params) {
       estimatedPayment: Math.round(optA_payment),
       secondLienPayment: Math.round(secondLienPayment),
       totalMonthly: Math.round(optA_totalMonthly),
+      closingCosts: optA_closingCosts,
+      subFee: SUB_FEE,
     },
     optionB: {
       label: 'Pay Off the Second (Cash-Out Refi)',
@@ -203,6 +207,7 @@ export function compareSubFinancingOptions(params) {
       estimatedPayment: Math.round(optB_payment),
       secondLienPayment: 0,
       totalMonthly: Math.round(optB_totalMonthly),
+      closingCosts: closingCosts,
       ltv80Warning: optB_ltv > 80,
     },
     comparison: {

@@ -170,6 +170,15 @@ export default function SubFinancingComparison() {
                     <span>{formatDollars(result.optionA.totalMonthly)}/mo</span>
                   </div>
                 </div>
+                <div className="border-t border-gray-100 pt-2">
+                  <div className="flex justify-between text-sm text-gray-600">
+                    <span>Subordination fee</span>
+                    <span>~$200</span>
+                  </div>
+                  <div className="text-xs text-gray-400 mt-1">
+                    Charged by your second lien holder to agree to stay behind the new first mortgage.
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -255,17 +264,61 @@ export default function SubFinancingComparison() {
             </div>
           </div>
 
-          {/* Explainer */}
+          {/* Second lien education */}
+          <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+            <h3 className="font-semibold text-gray-900 mb-3">Understanding Your Second Lien</h3>
+            <div className="space-y-4 text-sm text-gray-700">
+              <div>
+                <p className="font-medium text-gray-900 mb-1">HELOC (Home Equity Line of Credit)</p>
+                <p>A revolving credit line secured by your home. During the <strong>draw period</strong> (typically
+                  10 years), you make interest-only payments and can borrow up to your limit. After the draw
+                  period ends, it converts to a <strong>repayment period</strong> — the balance becomes fully
+                  amortizing over 15-20 years, and payments jump significantly. The rate is variable (tied to
+                  prime), meaning your payment changes as rates move. At the end of the term, any remaining
+                  balance is due as a <strong>balloon payment</strong>.</p>
+              </div>
+              <div>
+                <p className="font-medium text-gray-900 mb-1">Fixed-Rate Second Mortgage</p>
+                <p>A one-time lump sum with a fixed rate and fixed payment. Simpler than a HELOC —
+                  no draw period, no rate changes, no balloon. But the rate is typically higher than a
+                  first mortgage because the lender is in second position.</p>
+              </div>
+              <div>
+                <p className="font-medium text-gray-900 mb-1">Why Paying It Off Might Make Sense</p>
+                <ul className="list-disc pl-5 space-y-1 text-gray-600">
+                  <li>Eliminates the variable rate risk (HELOCs can get very expensive when rates rise)</li>
+                  <li>Avoids the balloon payment surprise when the HELOC draw period ends</li>
+                  <li>Removes the subordinate financing pricing penalty on your first mortgage</li>
+                  <li>Simplifies to one payment instead of two</li>
+                  <li>No subordination fee (~$200) and no waiting for the second lien holder to approve</li>
+                </ul>
+              </div>
+              <div>
+                <p className="font-medium text-gray-900 mb-1">Why Keeping It Might Make Sense</p>
+                <ul className="list-disc pl-5 space-y-1 text-gray-600">
+                  <li>Cash-out refi means a larger loan amount and higher first mortgage payment</li>
+                  <li>Cash-out has its own pricing adjustment (potentially worse than the sub financing hit)</li>
+                  <li>If your HELOC balance is small, the pricing impact may not justify closing costs</li>
+                  <li>You keep access to the credit line for future use</li>
+                  <li>Cash-out refi above 80% LTV is restricted or unavailable for conventional loans</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Pricing explainer */}
           <div className="text-xs text-gray-500 space-y-2">
             <p>
-              <strong>Why does keeping a second lien cost more?</strong> When you refinance with a second mortgage
-              or HELOC still in place, lenders treat the combined loan-to-value (CLTV) as your risk level, not
-              just the first mortgage LTV. Plus, there&apos;s an additional pricing adjustment just for having
-              subordinate financing — typically 0.625 to 1.875 points depending on your LTV.
+              <strong>Why does keeping a second lien cost more on the first?</strong> Two reasons: (1) lenders
+              use your combined loan-to-value (CLTV) — first mortgage plus second lien divided by property
+              value — for pricing, pushing you into a worse LTV tier. (2) There&apos;s a separate pricing
+              adjustment just for having subordinate financing, typically 0.625 to 1.875 points depending
+              on LTV. These stack on top of each other.
             </p>
             <p>
-              Rates shown are estimates based on standard GSE pricing adjustments. Your actual rate depends on
-              the full scenario including lender, loan type, and underwriting. Contact us for a precise quote.
+              Rates and pricing adjustments shown are estimates based on standard GSE (Fannie Mae / Freddie Mac)
+              guidelines. Your actual rate depends on the full scenario including lender, loan type, credit,
+              and underwriting. Contact us for a precise quote.
             </p>
           </div>
         </>
