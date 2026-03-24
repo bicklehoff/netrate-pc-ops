@@ -7,8 +7,9 @@
  * Layout: quad products side-by-side (cols B-D, E-G, H-J, K-M).
  * Prices are discount/rebate format (positive = cost, negative = rebate).
  *
- * Products: Fast Track Conv (30/20/15/10yr, HB), Standard Conv, FHA/USDA,
- *           VA, FHA/VA Streamline, FHA/VA HB, Jumbo, HELOC, CES, HomeReady, HomePossible
+ * Also parses: LLPAs (Fast Track + Agency), Government FICO adjustments,
+ *              Jumbo FICO/LTV + loan amount adjustments, State adjustments,
+ *              Lender fees, Comp caps
  *
  * Exports: parseRates, parse, lenderId
  */
@@ -17,6 +18,10 @@
 const XLSX = require('xlsx');
 
 const lenderId = 'amwest';
+
+// ---------------------------------------------------------------------------
+// Cell helpers
+// ---------------------------------------------------------------------------
 
 function cellVal(ws, r, c) {
   const addr = XLSX.utils.encode_cell({ r, c });
@@ -32,13 +37,66 @@ function cellStr(ws, r, c) {
 }
 
 /**
- * Extract rate data from a column group.
- * @param {object} ws - XLSX worksheet
- * @param {number} startRow - 0-indexed row where data starts
- * @param {number} rateCol - column index for rate
- * @param {Array} lockCols - [{col, days}]
- * @param {number} maxRows - max data rows to read
+ * Search for a row containing `text` in any of the given columns.
+ * Returns the 0-indexed row number, or -1 if not found.
  */
+function findRow(ws, text, { startRow = 0, endRow = 200, cols = [0, 1, 2, 3, 4, 5, 6] } = {}) {
+  const needle = String(text).toLowerCase().trim();
+  for (let r = startRow; r <= endRow; r++) {
+    for (const c of cols) {
+      const v = cellVal(ws, r, c);
+      if (v !== null && String(v).toLowerCase().trim().includes(needle)) {
+        return r;
+      }
+    }
+  }
+  return -1;
+}
+
+/** Normalize an LTV band header, e.g. "<= 30.00%" -> "<=30", "≤30" -> "<=30" */
+function normalizeLtvBand(str) {
+  if (str === null || str === undefined) return null;
+  return String(str)
+    .replace(/≤/g, '<=')
+    .replace(/≥/g, '>=')
+    .replace(/\s+/g, '')
+    .replace(/\.00/g, '')
+    .replace(/%/g, '');
+}
+
+/** Parse an LLPA cell value. AmWest uses positive = cost (matches engine convention). */
+function parseLlpa(val) {
+  if (val === null || val === undefined) return null;
+  if (typeof val === 'string') {
+    const lower = val.toLowerCase().trim();
+    if (lower === 'na' || lower === 'n/a' || lower === '') return null;
+    const n = parseFloat(lower);
+    if (isNaN(n)) return null;
+    return n;
+  }
+  if (typeof val === 'number') return val;
+  return null;
+}
+
+/** Parse a loan amount range string like "$900,001-$1,000,000" */
+function parseLoanRange(str) {
+  if (str === null || str === undefined) return null;
+  const s = String(str).replace(/[$,]/g, '');
+  // Handle "<=X" or "<X"
+  const leMatch = s.match(/^[<≤]=?\s*(\d+)$/);
+  if (leMatch) return { min: 0, max: parseInt(leMatch[1], 10) };
+  const parts = s.split(/\s*[-–]\s*/);
+  if (parts.length !== 2) return null;
+  const min = parseInt(parts[0].trim(), 10);
+  const max = parseInt(parts[1].trim(), 10);
+  if (isNaN(min) || isNaN(max)) return null;
+  return { min, max };
+}
+
+// ---------------------------------------------------------------------------
+// Rate extraction (unchanged from original)
+// ---------------------------------------------------------------------------
+
 function extractRates(ws, startRow, rateCol, lockCols, maxRows = 25) {
   const rates = [];
   for (let r = startRow; r < startRow + maxRows; r++) {
@@ -58,16 +116,10 @@ function extractRates(ws, startRow, rateCol, lockCols, maxRows = 25) {
   return rates;
 }
 
-/**
- * Scan a sheet for product sections with a quad layout.
- * Products are in groups of 4: cols (1,2,3), (4,5,6), (7,8,9), (10,11,12).
- * Section headers have product codes like (FFT30), (FHA30), etc.
- */
 function parseConvSheet(ws) {
   const programs = [];
   const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
 
-  // Quad column groups
   const quads = [
     { rateCol: 1, lockCols: [{ col: 2, days: 30 }, { col: 3, days: 45 }] },
     { rateCol: 4, lockCols: [{ col: 5, days: 30 }, { col: 6, days: 45 }] },
@@ -75,23 +127,22 @@ function parseConvSheet(ws) {
     { rateCol: 10, lockCols: [{ col: 11, days: 30 }, { col: 12, days: 45 }] },
   ];
 
-  // Known section start patterns
   const sections = [];
-
-  // Scan for "RATE" header rows which mark data start
   for (let r = 0; r <= range.e.r; r++) {
     const v = cellStr(ws, r, 1);
     if (v === 'RATE') {
-      // Look at the row(s) above for product names/codes
       const sectionLabel = cellStr(ws, r - 2, 1) || cellStr(ws, r - 1, 1);
-      const productRow = r - 1; // row with product codes like (FFT30)
+      const productRow = r - 1;
       sections.push({ headerRow: r, sectionLabel, productRow });
     }
   }
 
   for (const section of sections) {
+    // Check 2 AND 3 rows above "RATE" for "FAST TRACK" header
+    const label3Up = cellStr(ws, section.headerRow - 3, 1);
     const isFastTrack = /FAST\s*TRACK/i.test(section.sectionLabel) ||
-      /^FF|^FMFT/i.test(cellStr(ws, section.productRow, 1));
+      /FAST\s*TRACK/i.test(label3Up) ||
+      /^FF|^FMFT/i.test(cellStr(ws, section.productRow, 1).replace(/[()]/g, ''));
 
     for (let qi = 0; qi < quads.length; qi++) {
       const q = quads[qi];
@@ -101,7 +152,6 @@ function parseConvSheet(ws) {
       const rates = extractRates(ws, section.headerRow + 1, q.rateCol, q.lockCols);
       if (rates.length === 0) continue;
 
-      // Parse product code to determine product details
       const parsed = parseAmwestCode(productCode, isFastTrack);
       if (!parsed) continue;
 
@@ -177,12 +227,565 @@ function parseAmwestCode(rawCode, isFastTrack) {
   return null;
 }
 
-function parseGovSheet(ws) {
-  return parseConvSheet(ws); // Same quad layout
+// ---------------------------------------------------------------------------
+// LLPA parsing — Conventional (FT_LLPAS and LLPAS sheets)
+// ---------------------------------------------------------------------------
+
+/**
+ * Parse a FICO/LTV grid from an LLPA sheet.
+ * @param {object} ws - worksheet
+ * @param {number} headerRow - 0-indexed row with "FICO/LTV" + LTV band headers
+ * @param {number} maxFicoRows - how many FICO rows to read
+ * @returns {{ matrix: { ficoLabel: [values] }, ltvBands: [string] }} or null
+ */
+function parseLlpaMatrix(ws, headerRow, maxFicoRows = 12) {
+  // LTV bands start at col 2 (col 1 = "FICO/LTV" label)
+  const ltvBands = [];
+  for (let c = 2; c <= 12; c++) {
+    const v = cellVal(ws, headerRow, c);
+    if (v === null) continue;
+    const band = normalizeLtvBand(v);
+    if (band) ltvBands.push({ col: c, band });
+  }
+  if (ltvBands.length === 0) return null;
+
+  const matrix = {};
+  for (let r = headerRow + 1; r < headerRow + 1 + maxFicoRows; r++) {
+    const ficoLabel = cellVal(ws, r, 1);
+    if (ficoLabel === null) continue;
+    const label = String(ficoLabel).trim();
+    if (!label || label === '') continue;
+    // Stop if we hit a section header or non-FICO row
+    if (/purchase|refinance|cashout|rate.?term|additional|llpa|loan\s*terms/i.test(label)) break;
+    // Skip rows that aren't FICO ranges (must contain digits)
+    if (!/\d/.test(label)) continue;
+
+    const values = ltvBands.map(lb => parseLlpa(cellVal(ws, r, lb.col)));
+    if (values.some(v => v !== null)) {
+      // Normalize: "≥800" → ">=800", "780 - 799" → "780-799"
+      const normalizedLabel = label.replace(/\s*[-–]\s*/g, '-').replace(/≥/g, '>=').replace(/≤/g, '<=');
+      matrix[normalizedLabel] = values;
+    }
+  }
+
+  return {
+    matrix,
+    ltvBands: ltvBands.map(lb => lb.band),
+  };
 }
 
 /**
+ * Parse additional adjustments block (ARM, Condo, Sub Financing, etc.)
+ * These appear right after the FICO/LTV grid with a header row like
+ * "Purchase Loan Additional (all amortization terms)" followed by a "LTV" row,
+ * then data rows.
+ */
+function parseAdditionalAdj(ws, startRow, numLtvCols) {
+  const additional = {};
+  // Scan forward to find the data rows — skip "Purchase/Rate&Term Loan Additional" header and "LTV" header
+  let dataStart = startRow;
+  for (let r = startRow; r < startRow + 5; r++) {
+    const label = cellStr(ws, r, 1);
+    if (/additional|^ltv$/i.test(label)) { dataStart = r + 1; continue; }
+    if (/arm|condo|unit|n.?o.?o|second|sub\s*fin|high|baltimore|manufactured/i.test(label)) {
+      dataStart = r;
+      break;
+    }
+  }
+
+  for (let r = dataStart; r < dataStart + 12; r++) {
+    const label = cellStr(ws, r, 1);
+    if (!label) continue;
+    // Stop at next major section header
+    if (/fico.?ltv|^rate.?term|^cash\s*out|llpa\s*waiver|other\s*price/i.test(label)) break;
+    // Skip headers
+    if (/additional|^ltv$/i.test(label)) continue;
+
+    const values = [];
+    for (let c = 2; c < 2 + numLtvCols; c++) {
+      values.push(parseLlpa(cellVal(ws, r, c)));
+    }
+
+    const key = label.toLowerCase();
+    if (/^arm/i.test(key)) additional.arm = values;
+    else if (/attached\s*condo|condo/i.test(key)) additional.condo = values;
+    else if (/2[-–]4\s*unit/i.test(key)) additional['2to4unit'] = values;
+    else if (/n.?o.?o|non.?owner/i.test(key)) additional.investment = values;
+    else if (/second\s*home/i.test(key)) additional.secondHome = values;
+    else if (/sub\s*fin/i.test(key)) additional.subFinancing = values;
+    else if (/high\s*bal.*fixed|hb.*fixed/i.test(key)) additional.highBalFixed = values;
+    else if (/high\s*bal.*arm|hb.*arm/i.test(key)) additional.highBalArm = values;
+    else if (/baltimore/i.test(key)) additional.baltimoreMD = values;
+    else if (/manufactured/i.test(key)) additional.manufactured = values;
+  }
+  return additional;
+}
+
+/**
+ * Parse a full LLPA sheet (FT_LLPAS or LLPAS).
+ * Returns { ficoLtvGrids, additionalAdjustments, ltvBuckets }
+ */
+function parseConvLlpaSheet(ws) {
+  if (!ws) return null;
+
+  const result = {
+    ficoLtvGrids: { purchase: {}, refinance: {}, cashout: {} },
+    additionalAdjustments: { purchase: {}, refinance: {}, cashout: {} },
+    ltvBuckets: { purchaseRefi: [], cashout: [] },
+  };
+
+  // Find the Purchase header — search for "Purchase" in rows 14-20
+  const purchaseRow = findRow(ws, 'Purchase', { startRow: 14, endRow: 22, cols: [1, 2] });
+  if (purchaseRow === -1) return null;
+
+  // FICO/LTV header is on the next row
+  const purchaseHeaderRow = purchaseRow + 1;
+  const purchaseGrid = parseLlpaMatrix(ws, purchaseHeaderRow);
+  if (purchaseGrid) {
+    result.ficoLtvGrids.purchase = purchaseGrid.matrix;
+    result.ltvBuckets.purchaseRefi = purchaseGrid.ltvBands;
+
+    // Additional adjustments start after the FICO rows
+    const ficoCount = Object.keys(purchaseGrid.matrix).length;
+    const additionalStart = purchaseHeaderRow + 1 + ficoCount;
+    result.additionalAdjustments.purchase = parseAdditionalAdj(ws, additionalStart, purchaseGrid.ltvBands.length);
+  }
+
+  // Find Rate&Term (refi) section
+  const refiRow = findRow(ws, 'Rate&Term', { startRow: purchaseHeaderRow + 10, endRow: purchaseHeaderRow + 35, cols: [1, 2] });
+  if (refiRow !== -1) {
+    const refiHeaderRow = refiRow + 1;
+    const refiGrid = parseLlpaMatrix(ws, refiHeaderRow);
+    if (refiGrid) {
+      result.ficoLtvGrids.refinance = refiGrid.matrix;
+      const ficoCount = Object.keys(refiGrid.matrix).length;
+      const additionalStart = refiHeaderRow + 1 + ficoCount;
+      result.additionalAdjustments.refinance = parseAdditionalAdj(ws, additionalStart, refiGrid.ltvBands.length);
+    }
+  }
+
+  // Find Cashout section
+  const searchStart = refiRow !== -1 ? refiRow + 10 : purchaseHeaderRow + 30;
+  const cashoutRow = findRow(ws, 'Cash Out', { startRow: searchStart, endRow: searchStart + 25, cols: [1, 2] });
+  if (cashoutRow !== -1) {
+    const cashoutHeaderRow = cashoutRow + 1;
+    const cashoutGrid = parseLlpaMatrix(ws, cashoutHeaderRow);
+    if (cashoutGrid) {
+      result.ficoLtvGrids.cashout = cashoutGrid.matrix;
+      result.ltvBuckets.cashout = cashoutGrid.ltvBands;
+      const ficoCount = Object.keys(cashoutGrid.matrix).length;
+      const additionalStart = cashoutHeaderRow + 1 + ficoCount;
+      result.additionalAdjustments.cashout = parseAdditionalAdj(ws, additionalStart, cashoutGrid.ltvBands.length);
+    }
+  }
+
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// Right-side adjustments (OTHER PRICE ADJUSTMENTS, State, etc.)
+// These appear on both FT_LLPAS and LLPAS sheets in cols M-T (12-19)
+// ---------------------------------------------------------------------------
+
+/**
+ * Parse OTHER PRICE ADJUSTMENTS from the right side of an LLPA sheet.
+ * Returns { loanAmtAdj: [...], lockAdj: {...}, otherAdj: [...] }
+ */
+function parseOtherPriceAdj(ws) {
+  const headerRow = findRow(ws, 'OTHER PRICE ADJUSTMENTS', { startRow: 20, endRow: 70, cols: [12, 13, 14] });
+  if (headerRow === -1) return null;
+
+  const loanAmtAdj = [];
+  const otherAdj = [];
+
+  for (let r = headerRow + 1; r < headerRow + 15; r++) {
+    const label = cellStr(ws, r, 13);
+    if (!label) continue;
+    if (/state\s*adj|llpa\s*waiver|cumulative/i.test(label)) break;
+
+    // Look for value in col 19 (T)
+    const val = parseLlpa(cellVal(ws, r, 19));
+
+    // Loan amount adjustments (separator can be "-", "–", or "to")
+    const loanAmtMatch = label.match(/Loan\s*Amt\s*\$?([\d,]+)\s*(?:[-–]|to)\s*\$?([\d,]+)/i);
+    if (loanAmtMatch && val !== null) {
+      const min = parseInt(loanAmtMatch[1].replace(/,/g, ''), 10);
+      const max = parseInt(loanAmtMatch[2].replace(/,/g, ''), 10);
+      loanAmtAdj.push({ min, max, adj30yr: val, adj15yr: val });
+      continue;
+    }
+
+    if (val !== null) {
+      otherAdj.push({ label, value: val });
+    }
+  }
+
+  return { loanAmtAdj, otherAdj };
+}
+
+/**
+ * Parse State Adjuster section from right side of LLPA sheet.
+ * Returns { stateCode: { adj30yr, adj15yr } }
+ */
+function parseStateAdj(ws) {
+  const headerRow = findRow(ws, 'State Adjuster', { startRow: 30, endRow: 70, cols: [12, 13, 14] });
+  if (headerRow === -1) return {};
+
+  const stateAdj = {};
+
+  for (let r = headerRow + 1; r < headerRow + 15; r++) {
+    // Group label in col 13-14, states in col 15-16, values in col 18-19
+    const groupLabel = cellStr(ws, r, 13);
+    if (!groupLabel) continue;
+    if (/llpa\s*waiver|cumulative|max\s*loan/i.test(groupLabel)) break;
+
+    // Look for state codes — they may be after "Group N:" pattern
+    // Format: "Group 1: TX" with adj in cols S/T (18/19)
+    const stateStr = cellStr(ws, r, 14) || '';
+    const fullStr = groupLabel + ' ' + stateStr;
+
+    // Extract 2-letter state codes
+    const states = fullStr.match(/\b[A-Z]{2}\b/g);
+    if (!states || states.length === 0) continue;
+
+    // Values in columns 18 (30yr) and 19 (15yr)
+    const adj30 = parseLlpa(cellVal(ws, r, 18));
+    const adj15 = parseLlpa(cellVal(ws, r, 19));
+    if (adj30 === null && adj15 === null) continue;
+
+    for (const st of states) {
+      stateAdj[st] = {
+        adj30yr: adj30 || 0,
+        adj15yr: adj15 || 0,
+      };
+    }
+  }
+
+  return stateAdj;
+}
+
+// ---------------------------------------------------------------------------
+// Government adjustments (GOV sheet)
+// ---------------------------------------------------------------------------
+
+/**
+ * Parse government price adjustments from the GOV sheet.
+ * Returns { ficoAdj, loanAmtAdj, purposeAdj, stateAdj, lenderFee }
+ */
+function parseGovAdjustments(ws) {
+  if (!ws) return null;
+
+  const result = {
+    ficoAdj: {},
+    loanAmtAdj: [],
+    purposeAdj: {},
+    stateAdj: {},
+    lenderFee: 1295,
+    streamlineFee: 795,
+  };
+
+  // FICO Adjustments — search for "FICO ADJUSTMENTS" in the GOV sheet
+  // These are in cols I-L area (8-11), rows 79+
+  const ficoRow = findRow(ws, 'FICO ADJUSTMENTS', { startRow: 70, endRow: 100, cols: [8, 9, 10] });
+  if (ficoRow !== -1) {
+    for (let r = ficoRow + 1; r < ficoRow + 15; r++) {
+      const label = cellStr(ws, r, 8) || cellStr(ws, r, 9);
+      if (!label) continue;
+      if (/no\s*fico|note:|state/i.test(label)) break;
+      // Skip non-FICO rows
+      if (!/\d/.test(label)) continue;
+
+      const val = parseLlpa(cellVal(ws, r, 11));
+      if (val === null) continue;
+
+      // Normalize: ">=760" → ">=760", "740-759" → "740-759", strip asterisks
+      const normalizedLabel = label.replace(/^\*+/, '').replace(/\s*[-–]\s*/g, '-').replace(/≥/g, '>=');
+      result.ficoAdj[normalizedLabel] = val;
+    }
+  }
+
+  // Government price adjustments — cols B-G area, rows 77+
+  const govPriceRow = findRow(ws, 'GOVERNMENT PRICE ADJUSTMENTS', { startRow: 70, endRow: 100, cols: [1, 2, 3] });
+  if (govPriceRow !== -1) {
+    for (let r = govPriceRow + 1; r < govPriceRow + 15; r++) {
+      const label = cellStr(ws, r, 1) || cellStr(ws, r, 2);
+      if (!label) continue;
+      if (/fico|state\s*adj/i.test(label)) break;
+
+      const val = parseLlpa(cellVal(ws, r, 6));
+      if (val === null) continue;
+
+      // Loan amount adjustments
+      const loanAmtMatch = label.match(/Loan\s*Amount\s*[<≤]=?\s*\$?([\d,]+)/i);
+      if (loanAmtMatch) {
+        const max = parseInt(loanAmtMatch[1].replace(/,/g, ''), 10);
+        result.loanAmtAdj.push({ min: 0, max, adj30yr: val, adj15yr: val, label });
+        continue;
+      }
+      const loanRangeMatch = label.match(/Loan\s*Amount\s*\$?([\d,]+k?)\s*to\s*\$?([\d,]+)/i);
+      if (loanRangeMatch) {
+        let min = loanRangeMatch[1].replace(/,/g, '');
+        if (min.endsWith('k')) min = parseInt(min) * 1000; else min = parseInt(min);
+        const max = parseInt(loanRangeMatch[2].replace(/,/g, ''), 10);
+        result.loanAmtAdj.push({ min, max, adj30yr: val, adj15yr: val, label });
+        continue;
+      }
+
+      // VA IRRRL adjustment
+      if (/VA\s*IRRRL.*LTV/i.test(label)) {
+        result.purposeAdj.vaIrrrlHighLtv = val;
+        continue;
+      }
+
+      // USDA Streamline
+      if (/USDA\s*STREAMLINE/i.test(label)) {
+        result.purposeAdj.usdaStreamline = val;
+        continue;
+      }
+
+      result.purposeAdj[label] = val;
+    }
+  }
+
+  // State adjuster for Government
+  // Format: col 1 = "Group N", col 2 = state code, col 3 = 30yr adj, col 4 = 15yr adj
+  const govStateRow = findRow(ws, 'State Adjuster for Govt', { startRow: 85, endRow: 120, cols: [1, 2, 3] });
+  if (govStateRow !== -1) {
+    // Skip the "State/Group" header row
+    for (let r = govStateRow + 1; r < govStateRow + 10; r++) {
+      const col1 = cellStr(ws, r, 1);
+      if (!col1) continue;
+      if (/baltimore|temporary|lender/i.test(col1)) break;
+      if (/state.?group|30yr|15yr/i.test(col1)) continue; // skip header
+
+      // State code is in col 2
+      const stateCode = cellStr(ws, r, 2);
+      if (!stateCode || !/^[A-Z]{2}$/.test(stateCode)) continue;
+
+      // Values in cols 4 (30yr) and 5 (15yr) — col 3 is empty
+      const adj30 = parseLlpa(cellVal(ws, r, 4));
+      const adj15 = parseLlpa(cellVal(ws, r, 5));
+      if (adj30 === null && adj15 === null) continue;
+
+      result.stateAdj[stateCode] = { adj30yr: adj30 || 0, adj15yr: adj15 || 0 };
+    }
+  }
+
+  // Lender fees
+  const feeRow = findRow(ws, 'Lender Fees', { startRow: 110, endRow: 130, cols: [1, 2, 3] });
+  if (feeRow !== -1) {
+    const feeStr = cellStr(ws, feeRow, 2) || cellStr(ws, feeRow, 3);
+    const feeMatch = feeStr.match(/\$?([\d,]+)/);
+    if (feeMatch) result.lenderFee = parseInt(feeMatch[1].replace(/,/g, ''), 10);
+    // Check for streamline fee
+    const slStr = cellStr(ws, feeRow + 1, 2) || cellStr(ws, feeRow + 1, 3);
+    const slMatch = slStr.match(/\$?([\d,]+)/);
+    if (slMatch) result.streamlineFee = parseInt(slMatch[1].replace(/,/g, ''), 10);
+  }
+
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// Jumbo adjustments (JUMBO sheet)
+// ---------------------------------------------------------------------------
+
+/**
+ * Parse Jumbo FICO/LTV grid + loan amount adjustments from the JUMBO sheet.
+ */
+function parseJumboAdjustments(ws) {
+  if (!ws) return null;
+
+  const result = {
+    ficoLtvGrid: {},
+    ltvBands: [],
+    occupancyAdj: {},
+    purposeAdj: {},
+    dtiAdj: {},
+    loanAmtAdj: [],
+    lenderFee: 1395,
+  };
+
+  // FICO/LTV grid — header row has LTV bands starting around col 7 (H)
+  // Find the header row by looking for "LTV/CLTV" or "<=55"
+  const headerRow = findRow(ws, 'LTV/CLTV', { startRow: 38, endRow: 50, cols: [4, 5, 6] });
+  if (headerRow === -1) return result;
+
+  // Read LTV bands from the header
+  for (let c = 7; c <= 15; c++) {
+    const v = cellVal(ws, headerRow, c);
+    if (v === null) break;
+    const band = normalizeLtvBand(v);
+    if (band) result.ltvBands.push({ col: c, band });
+  }
+
+  // FICO rows follow the header
+  for (let r = headerRow + 1; r < headerRow + 10; r++) {
+    // Amort type in col 3 (D), FICO in col 5 (F)
+    const ficoLabel = cellStr(ws, r, 5);
+    if (!ficoLabel || !/\d/.test(ficoLabel)) continue;
+    // Stop if we hit a non-data row
+    if (/noo|2nd|purchase|cash|occupancy/i.test(ficoLabel)) break;
+
+    const values = result.ltvBands.map(lb => parseLlpa(cellVal(ws, r, lb.col)));
+    if (values.some(v => v !== null)) {
+      const normalized = ficoLabel.replace(/\s*[-–]\s*/g, '-').replace(/\+/, '+');
+      result.ficoLtvGrid[normalized] = values;
+    }
+  }
+
+  // Occupancy adjustments — search for "NOO" or "2nd Home"
+  const occRow = findRow(ws, 'NOO', { startRow: headerRow + 5, endRow: headerRow + 20, cols: [3, 4, 5] });
+  if (occRow !== -1) {
+    result.occupancyAdj.investment = result.ltvBands.map(lb => parseLlpa(cellVal(ws, occRow, lb.col)));
+    const shRow = findRow(ws, '2nd Home', { startRow: occRow, endRow: occRow + 3, cols: [3, 4, 5] });
+    if (shRow !== -1) {
+      result.occupancyAdj.secondHome = result.ltvBands.map(lb => parseLlpa(cellVal(ws, shRow, lb.col)));
+    }
+  }
+
+  // Loan purpose adjustments
+  const purchRow = findRow(ws, 'PURCHASE', { startRow: headerRow + 10, endRow: headerRow + 25, cols: [3, 4, 5] });
+  if (purchRow !== -1) {
+    result.purposeAdj.purchase = result.ltvBands.map(lb => parseLlpa(cellVal(ws, purchRow, lb.col)));
+    const coRow = findRow(ws, 'CASH-OUT', { startRow: purchRow, endRow: purchRow + 5, cols: [3, 4, 5] });
+    if (coRow !== -1) {
+      result.purposeAdj.cashout = result.ltvBands.map(lb => parseLlpa(cellVal(ws, coRow, lb.col)));
+    }
+  }
+
+  // DTI adjustments
+  const dtiLowRow = findRow(ws, 'DTI <= 30', { startRow: headerRow + 15, endRow: headerRow + 30, cols: [3, 4, 5] });
+  if (dtiLowRow !== -1) {
+    result.dtiAdj.low = result.ltvBands.map(lb => parseLlpa(cellVal(ws, dtiLowRow, lb.col)));
+  }
+  const dtiHighRow = findRow(ws, 'DTI > 45', { startRow: headerRow + 15, endRow: headerRow + 30, cols: [3, 4, 5] });
+  if (dtiHighRow !== -1) {
+    result.dtiAdj.high = result.ltvBands.map(lb => parseLlpa(cellVal(ws, dtiHighRow, lb.col)));
+  }
+
+  // Loan Amount Adjusters — labels in col 3, values in col 6
+  const laRow = findRow(ws, 'LOAN AMOUNT ADJUSTERS', { startRow: headerRow + 20, endRow: headerRow + 40, cols: [3, 4, 5] });
+  if (laRow !== -1) {
+    for (let r = laRow + 1; r < laRow + 15; r++) {
+      const label = cellStr(ws, r, 3) || cellStr(ws, r, 4);
+      if (!label) continue;
+      if (/max\s*price|lender\s*fee/i.test(label)) break;
+
+      // Parse "L.A: <=$900,000" or "L.A: $900,001-$1,000,000"
+      const rangeMatch = label.match(/\$?([\d,]+)\s*[-–]\s*\$?([\d,]+)/);
+      const leMatch = label.match(/[<≤]=?\s*\$?([\d,]+)/);
+
+      let range = null;
+      if (rangeMatch) {
+        range = {
+          min: parseInt(rangeMatch[1].replace(/,/g, ''), 10),
+          max: parseInt(rangeMatch[2].replace(/,/g, ''), 10),
+        };
+      } else if (leMatch) {
+        range = { min: 0, max: parseInt(leMatch[1].replace(/,/g, ''), 10) };
+      }
+      if (!range) continue;
+
+      const val = parseLlpa(cellVal(ws, r, 6));
+      if (val === null) continue;
+
+      result.loanAmtAdj.push({
+        min: range.min,
+        max: range.max,
+        adj30yr: val,
+        adj15yr: val,
+      });
+    }
+  }
+
+  // Lender fee
+  const jFeeRow = findRow(ws, 'Lender Fees', { startRow: 80, endRow: 100, cols: [1, 2, 3] });
+  if (jFeeRow !== -1) {
+    const feeStr = cellStr(ws, jFeeRow, 2) || cellStr(ws, jFeeRow, 3);
+    const feeMatch = feeStr.match(/\$?([\d,]+)/);
+    if (feeMatch) result.lenderFee = parseInt(feeMatch[1].replace(/,/g, ''), 10);
+  }
+
+  result.ltvBands = result.ltvBands.map(lb => lb.band);
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// NOO and 2nd Home additional adjustments (LLPAS sheet right side)
+// ---------------------------------------------------------------------------
+
+/**
+ * Parse NOO Additional Adjustments and 2nd Home Additional Adjustments
+ * from the right side of the LLPAS sheet (cols 12-19).
+ */
+function parseNooAndSecondHomeAdj(ws) {
+  if (!ws) return null;
+
+  const result = { noo: {}, secondHome: {} };
+
+  // NOO Additional Adjustments — search cols 12-14
+  const nooRow = findRow(ws, 'NOO Additional Adjustments', { startRow: 12, endRow: 25, cols: [12, 13, 14] });
+  if (nooRow !== -1) {
+    // LTV bands on the next row
+    const nooHeaderRow = nooRow + 1;
+    const ltvBands = [];
+    for (let c = 14; c <= 20; c++) {
+      const v = cellVal(ws, nooHeaderRow, c);
+      if (v === null) break;
+      const band = normalizeLtvBand(v);
+      if (band) ltvBands.push({ col: c, band });
+    }
+
+    for (let r = nooHeaderRow + 1; r < nooHeaderRow + 8; r++) {
+      const label = cellStr(ws, r, 13);
+      if (!label) continue;
+      if (/2nd\s*home|owned\s*prop/i.test(label)) break;
+
+      const values = ltvBands.map(lb => parseLlpa(cellVal(ws, r, lb.col)));
+      const key = label.toLowerCase().replace(/\s+/g, '_');
+      if (values.some(v => v !== null)) {
+        result.noo[key] = { values, ltvBands: ltvBands.map(lb => lb.band) };
+      }
+    }
+  }
+
+  // 2nd Home Additional Adjustments
+  const shRow = findRow(ws, '2nd Home Additional Adjustments', { startRow: 20, endRow: 35, cols: [12, 13, 14] });
+  if (shRow !== -1) {
+    const shHeaderRow = shRow + 1;
+    const ltvBands = [];
+    for (let c = 14; c <= 20; c++) {
+      const v = cellVal(ws, shHeaderRow, c);
+      if (v === null) break;
+      const band = normalizeLtvBand(v);
+      if (band) ltvBands.push({ col: c, band });
+    }
+
+    for (let r = shHeaderRow + 1; r < shHeaderRow + 5; r++) {
+      const label = cellStr(ws, r, 13);
+      if (!label) continue;
+      if (/owned\s*prop|state/i.test(label)) break;
+
+      const values = ltvBands.map(lb => parseLlpa(cellVal(ws, r, lb.col)));
+      const key = label.toLowerCase().replace(/\s+/g, '_');
+      if (values.some(v => v !== null)) {
+        result.secondHome[key] = { values, ltvBands: ltvBands.map(lb => lb.band) };
+      }
+    }
+  }
+
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// Main parser
+// ---------------------------------------------------------------------------
+
+/**
  * Parse AmWest rate sheet XLSX.
+ * @param {Buffer|ArrayBuffer} xlsxBuffer - raw XLSX file
+ * @returns full parsed result with programs + all adjustment data
  */
 function parseRates(xlsxBuffer) {
   const wb = XLSX.read(xlsxBuffer, { type: 'buffer' });
@@ -210,13 +813,72 @@ function parseRates(xlsxBuffer) {
   if (convWs) programs.push(...parseConvSheet(convWs));
 
   // Parse GOV sheet
-  if (govWs) programs.push(...parseGovSheet(govWs));
+  if (govWs) programs.push(...parseConvSheet(govWs));
 
   // Parse JUMBO sheet
   const jumboWs = wb.Sheets['JUMBO'];
   if (jumboWs) programs.push(...parseConvSheet(jumboWs));
 
-  return { sheetDate, programs };
+  // ─── Parse adjustment sections ────────────────────────────────────
+
+  // Fast Track LLPAs (FFT & FMFT products)
+  const ftLlpas = parseConvLlpaSheet(wb.Sheets['FT_LLPAS']);
+
+  // Agency LLPAs (DU/LP standard products)
+  const agencyLlpas = parseConvLlpaSheet(wb.Sheets['LLPAS']);
+
+  // NOO + 2nd Home additional adjustments (LLPAS sheet right side only)
+  const nooSecondHome = parseNooAndSecondHomeAdj(wb.Sheets['LLPAS']);
+
+  // Other price adjustments + State adjustments (from LLPAS sheet — same on both)
+  const otherPriceAdj = parseOtherPriceAdj(wb.Sheets['LLPAS'] || wb.Sheets['FT_LLPAS']);
+  const stateAdj = parseStateAdj(wb.Sheets['LLPAS'] || wb.Sheets['FT_LLPAS']);
+
+  // Government adjustments
+  const govAdj = parseGovAdjustments(govWs);
+
+  // Jumbo adjustments
+  const jumboAdj = parseJumboAdjustments(jumboWs);
+
+  // ─── Build output in Keystone-compatible format ───────────────────
+
+  // Use agency LLPAs as the primary source (standard products are more common)
+  // Fast Track LLPAs stored separately for programs tagged isFastTrack
+  const primaryLlpas = agencyLlpas || ftLlpas;
+  const llpas = primaryLlpas ? {
+    purchase: primaryLlpas.ficoLtvGrids.purchase,
+    refinance: primaryLlpas.ficoLtvGrids.refinance,
+    cashout: primaryLlpas.ficoLtvGrids.cashout,
+    ltvBands: primaryLlpas.ltvBuckets.purchaseRefi,
+  } : null;
+
+  // Combine loan amount adjustments from all sources
+  const loanAmountAdj = [
+    ...(otherPriceAdj?.loanAmtAdj || []),
+  ];
+
+  // Merge state adjustments (conv + gov — conv takes precedence)
+  const mergedStateAdj = { ...stateAdj };
+  // Gov state adj stored under govAdj for separate application
+
+  return {
+    sheetDate,
+    programs,
+    llpas,
+    loanAmountAdj,
+    stateAdj: mergedStateAdj,
+    specPayups: {},  // AmWest doesn't have spec payup grids like Keystone
+    pricingSpecials: null,
+    occupancyAdj: null,  // Handled via additionalAdjustments in LLPA grids
+    lenderFee: 1295,
+    compCap: { purchase: 4595, refinance: 3595 },
+    // AmWest-specific: full LLPA data for both tiers
+    fastTrackLlpas: ftLlpas,
+    agencyLlpas: agencyLlpas,
+    nooSecondHomeAdj: nooSecondHome,
+    govAdj,
+    jumboAdj,
+  };
 }
 
 function parse({ xlsxBuffer }) {

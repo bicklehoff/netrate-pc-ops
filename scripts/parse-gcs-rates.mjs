@@ -219,7 +219,24 @@ async function parseAmWest(files) {
   const buf = await downloadBuffer(xlsxFile.path);
   const result = amwestParser.parseRates(buf);
   console.log(`  Parsed: ${result.programs.length} programs, date: ${result.sheetDate}`);
-  return { lenderId: 'amwest', sheetDate: result.sheetDate, programs: result.programs };
+  return {
+    lenderId: 'amwest',
+    sheetDate: result.sheetDate,
+    programs: result.programs,
+    llpas: result.llpas,
+    loanAmountAdj: result.loanAmountAdj,
+    stateAdj: result.stateAdj,
+    specPayups: result.specPayups,
+    pricingSpecials: result.pricingSpecials,
+    occupancyAdj: result.occupancyAdj,
+    lenderFee: result.lenderFee,
+    compCap: result.compCap,
+    // AmWest-specific
+    fastTrackLlpas: result.fastTrackLlpas,
+    agencyLlpas: result.agencyLlpas,
+    govAdj: result.govAdj,
+    jumboAdj: result.jumboAdj,
+  };
 }
 
 async function parseEverStream(files) {
@@ -323,6 +340,18 @@ async function main() {
       sheetDate: r.sheetDate,
       programs: r.programs,
       llpas: r.llpas || null,
+      loanAmountAdj: r.loanAmountAdj || null,
+      stateAdj: r.stateAdj || null,
+      specPayups: r.specPayups || null,
+      pricingSpecials: r.pricingSpecials || null,
+      occupancyAdj: r.occupancyAdj || null,
+      lenderFee: r.lenderFee || null,
+      compCap: r.compCap || null,
+      // Lender-specific extended data
+      ...(r.fastTrackLlpas ? { fastTrackLlpas: r.fastTrackLlpas } : {}),
+      ...(r.agencyLlpas ? { agencyLlpas: r.agencyLlpas } : {}),
+      ...(r.govAdj ? { govAdj: r.govAdj } : {}),
+      ...(r.jumboAdj ? { jumboAdj: r.jumboAdj } : {}),
     })),
     date: results[0]?.sheetDate || new Date().toISOString().slice(0, 10),
     lenderCount: results.length,

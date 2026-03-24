@@ -593,26 +593,32 @@ export function priceScenario(scenario, allPrograms, options = {}) {
       program._llpaMode = llpaMode;
 
       // Load lender-specific LLPA data if available
-      // Priority: 1) lender-llpas.js (pre-baked), 2) parsed from rate sheet, 3) GSE defaults
+      // Priority: 1) parsed from rate sheet (normalized keys), 2) lender-llpas.js (pre-baked), 3) GSE defaults
       const lenderLlpaData = loadLenderLLPAs(lenderId);
       let lenderLlpas = null;
-      if (lenderLlpaData) {
+      if (lenderData.llpas) {
+        // Use LLPA grids parsed from the rate sheet (normalized >=800 keys)
+        // Additional adjustments may be per-purpose — select the right one
+        const purposeKey = loanPurpose === 'cashout' ? 'cashout' : loanPurpose === 'purchase' ? 'purchase' : 'refinance';
+        const parsedAdditionalByPurpose = lenderData.agencyLlpas?.additionalAdjustments;
+        const parsedAdditional = parsedAdditionalByPurpose?.[purposeKey]
+          || lenderLlpaData?.additionalAdjustments?.[purposeKey]
+          || lenderLlpaData?.additionalAdjustments || null;
+        lenderLlpas = {
+          purchaseLlpa: lenderData.llpas.purchase || null,
+          refiLlpa: lenderData.llpas.refinance || null,
+          cashoutLlpa: lenderData.llpas.cashout || null,
+          additionalLlpa: parsedAdditional,
+          loanAmtAdj: lenderLlpaData?.loanAmountAdj || [],
+          ltvBands: lenderData.llpas.ltvBands || null,
+        };
+      } else if (lenderLlpaData) {
         lenderLlpas = {
           purchaseLlpa: lenderLlpaData.ficoLtvGrids?.purchase || null,
           refiLlpa: lenderLlpaData.ficoLtvGrids?.refinance || null,
           cashoutLlpa: lenderLlpaData.ficoLtvGrids?.cashout || null,
           additionalLlpa: lenderLlpaData.additionalAdjustments || null,
           loanAmtAdj: lenderLlpaData.loanAmountAdj || [],
-        };
-      } else if (lenderData.llpas) {
-        // Use LLPA grids parsed from the rate sheet (Keystone format)
-        lenderLlpas = {
-          purchaseLlpa: lenderData.llpas.purchase || null,
-          refiLlpa: lenderData.llpas.refinance || null,
-          cashoutLlpa: lenderData.llpas.cashout || null,
-          additionalLlpa: null,
-          loanAmtAdj: [],
-          ltvBands: lenderData.llpas.ltvBands || null,
         };
       }
 
