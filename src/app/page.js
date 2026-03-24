@@ -7,6 +7,26 @@ import { computeHomepageRatesFromParsed } from '@/lib/rates/homepage';
 // Revalidate every 5 minutes (ISR) — matches /api/rates and /rates page
 export const revalidate = 300;
 
+// Sentiment → consumer-friendly label + color
+const SENTIMENT_MAP = {
+  bearish: { label: 'Trending Higher', textClass: 'text-red-400', bgClass: 'bg-red-500/10 border-red-500/20' },
+  bullish: { label: 'Trending Lower', textClass: 'text-green-400', bgClass: 'bg-green-500/10 border-green-500/20' },
+  neutral: { label: 'Stable', textClass: 'text-brand-light', bgClass: 'bg-brand/10 border-brand/20' },
+};
+
+async function getMarketSentiment() {
+  try {
+    const base = process.env.NEXT_PUBLIC_BASE_URL || process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000';
+    const res = await fetch(`${base}/api/market/summary`, { next: { revalidate: 300 } });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.summary?.sentiment || null;
+  } catch {
+    return null;
+  }
+}
+
 export default async function HomePage() {
   // ─── Live Rate Data (from parsed-rates.json — all lenders, all products) ───
   let liveRates = null;
@@ -15,6 +35,10 @@ export default async function HomePage() {
   } catch (err) {
     console.error('Homepage rate computation failed:', err.message);
   }
+
+  // ─── Market Sentiment (from Rate Watch commentary) ───
+  const sentiment = await getMarketSentiment();
+  const market = SENTIMENT_MAP[sentiment] || SENTIMENT_MAP.neutral;
 
   // ─── Display Values (live → fallback) ──────────────────────
   const d = liveRates;
@@ -165,8 +189,8 @@ export default async function HomePage() {
             <div className="flex items-center justify-between px-6 pt-6 pb-4">
               <div className="flex items-center gap-3">
                 <span className="text-xs font-bold text-white uppercase tracking-wide">Today&apos;s Rates</span>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-brand-light bg-brand/10 border border-brand/20 rounded-full px-2 py-0.5">
-                  Market: Stable
+                <span className={`text-[10px] font-bold uppercase tracking-wider ${market.textClass} ${market.bgClass} border rounded-full px-2 py-0.5`}>
+                  {market.label}
                 </span>
               </div>
               <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-brand-light bg-brand/15 border border-brand/30 rounded-full px-2.5 py-0.5">
