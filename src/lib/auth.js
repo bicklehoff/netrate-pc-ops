@@ -50,18 +50,18 @@ export const authOptions = {
           console.log('[AUTH] Password valid:', passwordValid);
 
           if (!passwordValid) return null;
+
+          return {
+            id: mlo.id,
+            email: mlo.email,
+            name: `${mlo.firstName} ${mlo.lastName}`,
+            role: mlo.role,
+            userType: 'mlo',
+          };
         } catch (error) {
           console.error('[AUTH] ERROR:', error.message, error.stack);
           return null;
         }
-
-        return {
-          id: mlo.id,
-          email: mlo.email,
-          name: `${mlo.firstName} ${mlo.lastName}`,
-          role: mlo.role,
-          userType: 'mlo',
-        };
       },
     }),
   ],
