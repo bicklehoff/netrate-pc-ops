@@ -163,10 +163,21 @@ export default function LeadDetailPage() {
               {isPurchase && (
                 <>
                   <Field label="Purchase Price">
-                    <input type="number" value={lead.purchasePrice || ''} onChange={e => updateField('purchasePrice', e.target.value)} className="input-field" placeholder="500000" />
+                    <input type="number" value={lead.purchasePrice || ''} onChange={e => {
+                      const price = parseFloat(e.target.value) || 0;
+                      const dp = parseFloat(lead.downPayment) || 0;
+                      updateField('purchasePrice', e.target.value);
+                      updateField('propertyValue', e.target.value);
+                      if (price && dp) updateField('loanAmount', String(price - dp));
+                    }} className="input-field" placeholder="500000" />
                   </Field>
                   <Field label="Down Payment">
-                    <input type="number" value={lead.downPayment || ''} onChange={e => updateField('downPayment', e.target.value)} className="input-field" placeholder="100000" />
+                    <input type="number" value={lead.downPayment || ''} onChange={e => {
+                      const dp = parseFloat(e.target.value) || 0;
+                      const price = parseFloat(lead.purchasePrice) || 0;
+                      updateField('downPayment', e.target.value);
+                      if (price && dp) updateField('loanAmount', String(price - dp));
+                    }} className="input-field" placeholder="100000" />
                   </Field>
                 </>
               )}

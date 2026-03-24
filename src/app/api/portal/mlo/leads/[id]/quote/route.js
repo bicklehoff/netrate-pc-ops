@@ -7,6 +7,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { priceScenario } from '@/lib/rates/pricing';
+import { fetchGCSFile, isGCSConfigured } from '@/lib/gcs';
 
 export async function POST(request, { params }) {
   try {
@@ -49,10 +50,34 @@ export async function POST(request, { params }) {
       scenario.ltv = (scenario.loanAmount / scenario.propertyValue) * 100;
     }
 
+    // Load rate data from GCS
+    let ratePrograms = [];
+    try {
+      if (isGCSConfigured()) {
+        const manifest = await fetchGCSFile('rate-data/manifest.json');
+        if (manifest?.lenders) {
+          for (const lenderFile of manifest.lenders) {
+            const lenderData = await fetchGCSFile(`rate-data/${lenderFile}`);
+            if (lenderData?.products) {
+              ratePrograms.push(...lenderData.products);
+            }
+          }
+        }
+      }
+    } catch (gcsError) {
+      console.error('GCS rate data load error:', gcsError?.message);
+    }
+
+    if (ratePrograms.length === 0) {
+      return NextResponse.json({
+        error: 'No rate data available. Rate sheets have not been uploaded yet.',
+      }, { status: 503 });
+    }
+
     // Run pricing engine
     let results;
     try {
-      results = priceScenario(scenario);
+      results = priceScenario(scenario, ratePrograms);
     } catch (priceError) {
       return NextResponse.json({
         error: 'Pricing engine error: ' + priceError.message,
