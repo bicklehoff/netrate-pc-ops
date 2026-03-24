@@ -88,7 +88,7 @@ export default function HeroStrip({ todayRate, rateChange, fredLatest }) {
                 </span>
               </div>
             )}
-            <p className="text-slate-300 text-[14px] leading-[1.7] line-clamp-4">
+            <p className="text-slate-300 text-[14px] leading-[1.7]">
               {commentary.commentary}
             </p>
           </>
