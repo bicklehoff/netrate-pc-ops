@@ -7,18 +7,24 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 
-const VALID_STATUSES = ['new', 'contacted', 'qualified', 'converted', 'closed'];
+const VALID_STATUSES = ['new', 'contacted', 'qualified', 'quoted', 'converted', 'closed'];
 
 export async function GET(request, { params }) {
   try {
     const session = await getServerSession(authOptions);
-
     if (!session || session.user.userType !== 'mlo') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
     const lead = await prisma.lead.findUnique({
-      where: { id: params.id },
+      where: { id },
+      include: {
+        quotes: {
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+        },
+      },
     });
 
     if (!lead) {
@@ -35,50 +41,63 @@ export async function GET(request, { params }) {
 export async function PATCH(request, { params }) {
   try {
     const session = await getServerSession(authOptions);
-
     if (!session || session.user.userType !== 'mlo') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
     const body = await request.json();
-    const { status, notes } = body;
 
-    const lead = await prisma.lead.findUnique({
-      where: { id: params.id },
-    });
-
+    const lead = await prisma.lead.findUnique({ where: { id } });
     if (!lead) {
       return NextResponse.json({ error: 'Lead not found' }, { status: 404 });
     }
 
-    const updateData = {};
+    // Whitelist updatable fields
+    const allowed = [
+      'status', 'loanPurpose', 'loanAmount', 'propertyValue', 'propertyState',
+      'propertyCounty', 'propertyType', 'occupancy', 'creditScore', 'creditScoreRange',
+      'employmentType', 'firstTimebuyer', 'annualIncome', 'monthlyDebts',
+      'purchasePrice', 'downPayment', 'preApprovalAmount', 'preApprovalExpires',
+      'currentRate', 'currentBalance', 'currentLender', 'notes',
+    ];
 
-    if (status) {
-      if (!VALID_STATUSES.includes(status)) {
-        return NextResponse.json(
-          { error: `Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}` },
-          { status: 400 }
-        );
+    const data = {};
+    for (const key of allowed) {
+      if (body[key] !== undefined) {
+        // Validate status
+        if (key === 'status' && !VALID_STATUSES.includes(body[key])) {
+          return NextResponse.json(
+            { error: `Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}` },
+            { status: 400 }
+          );
+        }
+        data[key] = body[key];
       }
-      updateData.status = status;
     }
 
-    if (notes) {
-      // Append notes to existing message with timestamp
+    // Handle notes append (special case)
+    if (body.appendNote) {
       const timestamp = new Date().toLocaleString('en-US', {
         month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
       });
-      const noteEntry = `\n--- Note (${timestamp}, ${session.user.name}) ---\n${notes}`;
-      updateData.message = (lead.message || '') + noteEntry;
+      const noteEntry = `\n--- ${timestamp} (${session.user.name}) ---\n${body.appendNote}`;
+      data.notes = (lead.notes || '') + noteEntry;
     }
 
-    if (Object.keys(updateData).length === 0) {
+    if (Object.keys(data).length === 0) {
       return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });
     }
 
     const updated = await prisma.lead.update({
-      where: { id: params.id },
-      data: updateData,
+      where: { id },
+      data,
+      include: {
+        quotes: {
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+        },
+      },
     });
 
     return NextResponse.json({ lead: updated });

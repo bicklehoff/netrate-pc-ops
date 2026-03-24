@@ -666,13 +666,34 @@ model Lead {
   message         String?                         // Rate details, scenario info, free-text
   source          String    @default("website")   // 'homepage_rate_table' | 'rate_tool' | 'contact_form' | 'contact' | 'website'
   sourceDetail    String?   @map("source_detail") // Product clicked, scenario summary, etc.
-  status          String    @default("new")       // 'new' | 'contacted' | 'qualified' | 'converted' | 'closed'
+  status          String    @default("new")       // 'new' | 'contacted' | 'qualified' | 'quoted' | 'converted' | 'closed'
 
-  // Loan scenario
-  loanPurpose     String?   @map("loan_purpose")
+  // Loan scenario inputs
+  loanPurpose     String?   @map("loan_purpose")   // purchase | refinance | cashout | heloc | reverse
   loanAmount      Decimal?  @map("loan_amount") @db.Decimal(12,2)
+  propertyValue   Decimal?  @map("property_value") @db.Decimal(12,2)
   propertyState   String?   @map("property_state")
+  propertyCounty  String?   @map("property_county")
+  propertyType    String?   @map("property_type")  // sfr | condo | townhome | 2-4unit | manufactured
+  occupancy       String?                          // primary | second_home | investment
+  creditScore     Int?      @map("credit_score")
   creditScoreRange String?  @map("credit_score_range")
+  employmentType  String?   @map("employment_type") // w2 | self_employed | retired
+  firstTimebuyer  Boolean?  @map("first_time_buyer")
+  annualIncome    Decimal?  @map("annual_income") @db.Decimal(12,2)
+  monthlyDebts    Decimal?  @map("monthly_debts") @db.Decimal(10,2)
+
+  // Purchase-specific
+  purchasePrice   Decimal?  @map("purchase_price") @db.Decimal(12,2)
+  downPayment     Decimal?  @map("down_payment") @db.Decimal(12,2)
+  preApprovalAmount Decimal? @map("pre_approval_amount") @db.Decimal(12,2)
+  preApprovalExpires DateTime? @map("pre_approval_expires")
+
+  // Refi-specific
+  currentRate     Decimal?  @map("current_rate") @db.Decimal(5,3)
+  currentBalance  Decimal?  @map("current_balance") @db.Decimal(12,2)
+  currentLender   String?   @map("current_lender")
+
   notes           String?
   scenarioData    Json?     @map("scenario_data")
 
@@ -690,10 +711,40 @@ model Lead {
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime? @updatedAt @map("updated_at")
 
+  quotes          LeadQuote[]
+
   @@index([email])
   @@index([status])
   @@index([createdAt])
   @@map("leads")
+}
+
+model LeadQuote {
+  id              String    @id @default(uuid()) @db.Uuid
+  leadId          String    @map("lead_id") @db.Uuid
+
+  // Scenario snapshot (frozen at time of quote)
+  scenario        Json                              // Full pricing engine input
+
+  // Results
+  results         Json                              // Full pricing engine output (all lenders, all rates)
+  bestRate        Decimal?  @map("best_rate") @db.Decimal(5,3)
+  bestLender      String?   @map("best_lender")
+  bestPrice       Decimal?  @map("best_price") @db.Decimal(8,4)
+  monthlyPayment  Decimal?  @map("monthly_payment") @db.Decimal(10,2)
+  compAmount      Decimal?  @map("comp_amount") @db.Decimal(10,2)
+  lenderFee       Decimal?  @map("lender_fee") @db.Decimal(10,2)
+
+  // Status
+  sentAt          DateTime? @map("sent_at")         // When quote PDF was emailed
+  viewedAt        DateTime? @map("viewed_at")       // When borrower opened it
+
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  lead            Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@map("lead_quotes")
 }
 
 // ═══════════════════════════════════════════════════════════════

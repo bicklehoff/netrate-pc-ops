@@ -141,7 +141,7 @@ export default function LeadsTable({ leads, onStatusChange }) {
                   className="px-4 py-3 cursor-pointer"
                   onClick={() => setExpandedId(expandedId === lead.id ? null : lead.id)}
                 >
-                  <span className="font-medium text-gray-900">{lead.name}</span>
+                  <a href={`/portal/mlo/leads/${lead.id}`} className="font-medium text-gray-900 hover:text-brand" onClick={e => e.stopPropagation()}>{lead.name}</a>
                   {lead.sourceDetail && (
                     <span className="block text-xs text-gray-400 mt-0.5 truncate max-w-[200px]">
                       {lead.sourceDetail}
