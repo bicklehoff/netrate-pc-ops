@@ -5,6 +5,80 @@
 
 ---
 
+## 2026-03-24 — Dev (Session 2) — AmWest Parser Rewrite
+
+**Focus:** Rewrite AmWest rate sheet parser to extract all adjustment data (following Keystone model)
+
+**Key accomplishments:**
+- Rewrote `src/lib/rates/parsers/amwest.js` (227 → 712 lines) to extract ALL adjustment sections from 12-sheet XLSX
+- Parses FT_LLPAS + LLPAS sheets: FICO/LTV grids (10 FICO × 9 LTV for purchase/refi, 5 for cashout), additional adjustments (ARM, condo, 2-4 unit, NOO, 2nd home, sub financing, high balance, Baltimore County)
+- Parses GOV sheet: 10 FICO tier adjustments, loan amount adj ($0-$100K: +1.0, $100K-$150K: +0.375), state adjusters (TX: -0.125, NJ: -0.25, FL: -0.15), VA IRRRL/USDA streamline purpose adj
+- Parses JUMBO sheet: 6-band FICO/LTV grid × 8 LTV bands, occupancy adj (NOO, 2nd home), purpose adj (purchase credit, cashout hit), DTI adj, 12 loan amount adjusters ($900K-$3.5M)
+- Conventional loan amount adj: $50K-$75K: +1.5, $75K-$100K: +0.75, $100K-$150K: +0.125
+- State adj: TX = -0.125 (both terms)
+- Lender fees: $1,295 conv/gov, $795 streamlines, $1,395 jumbo
+- Comp caps: $4,595 purchase, $3,595 refi
+- Fixed pricing engine LLPA priority: parsed data (normalized `>=800` keys) now preferred over static lender-llpas JSON (`≥800` keys causing silent lookup failures)
+- Purpose-specific additional adjustments now flow correctly to pricing engine
+- Updated `parse-gcs-rates.mjs` to pass all new fields for AmWest
+- Updated `parsed-rates.json` with live data — verified 16 programs, 739 total across all lenders
+- Verified: AmWest 760 FICO / 75% LTV / purchase = 0.250 LLPA, 6.250% = -$740 credit
+
+**Decisions:**
+- Pricing engine LLPA source priority changed: parsed rate sheet > static JSON > GSE defaults
+- AmWest comp caps set to $4,595 purchase / $3,595 refi (matches OC)
+- Additional adjustments selected by loan purpose (purchase/refi/cashout) not flat
+
+**Open items (parser rewrite series):**
+- Rewrite Windsor parser (Task 2 — 16 sheets, Conv LLPA + Gov LLPA)
+- Rewrite SWMC parser (Task 3 — single sheet, 4400+ rows)
+- Update EverStream parser (Task 4 — needs loan amt/state/comp)
+- Update TLS parser (Task 5 — CSV only, may need separate LLPA source)
+- Update parse-gcs-rates.mjs combined writer for remaining lenders (Task 6)
+- Homepage rates may shift after remaining parser updates — verify after each
+
+**Open items (from relay — not started):**
+- Tickets API broken on Vercel (Mac relay — blocks David)
+- Dashboard contacts scope filtering (Mac relay)
+- Email attachments broken (Mac relay)
+- Signing queue PDF flow (Mac relay)
+- Relay scope prisma generate (Mac relay)
+- DSCR Scenario Builder + Income Qualification Calculator (Claw relay)
+- CRM migration to TrackerPortal (Claw relay)
+
+**Commits:** 42fcb78
+
+---
+
+## 2026-03-24 — Dev (Session 1) — Keystone Parser Rewrite + Rate Watch + Homepage
+
+**Focus:** Keystone parser rewrite, pricing engine overhaul, Rate Watch integration, homepage live rates
+
+**Key accomplishments:**
+- Rewrote Keystone parser to extract ALL adjustment sections (LLPAs, loan amount adj, state adj, spec payups, pricing specials, occupancy adj, comp cap, lender fee)
+- Updated pricing engine to use lender-specific adjustments instead of GSE defaults
+- Verified Keystone 6.250% matches OC exactly ($1,708 credit)
+- Created detailed task templates for 5 remaining parsers (PARSER-REWRITE-TASKS.md)
+- Updated parse-rate-sheet skill to require full sheet reading + adjustment extraction
+- Wired homepage and Rate Watch to use real pricing engine data
+- Added MND comparison grid (NetRate vs national average)
+- Fixed fees-out display (lender fee excluded from costBeforeFees)
+- Added market sentiment from Claw's commentary
+- Rate history DB writer — real pricing engine rates daily
+- National avg rates API + MND scraper scheduled task
+
+**Decisions:**
+- Pricing engine uses lender-specific LLPAs from parsed rate sheets (not GSE defaults)
+- Fees-out display matches industry standard
+- LTV rounding to 2 decimal places prevents floating-point band boundary errors
+- LLPA sign convention: positive = cost in engine, parsers negate if rate sheet uses negative
+- Comp caps per-lender from parsed data, not global
+- MND used as national average comparison source (daily vs Freddie Mac weekly)
+
+**Commits:** 00c8547, fbea639, d2ccf4c, 5c61c1d, d8eafb1, d7a0860, ac2ced3, d0f8e62, d5fbefa
+
+---
+
 ## 2026-03-23 — Dev — Pricing Engine, Parsers, Strike Rate, Second Lien Comparison
 
 **Focus:** Rate sheet pipeline, pricing engine architecture, lead capture, and new calculator
