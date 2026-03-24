@@ -145,9 +145,13 @@ export function computeHomepageRates(lenderData) {
 
 /**
  * Run the pricing engine for a specific loan type + term.
- * Uses the same priceScenario() as the Rate Tool — includes LLPAs, broker comp, lender fees.
+ * Uses the same priceScenario() as the Rate Tool — includes LLPAs and broker comp.
  *
- * @returns {{ rate, apr, payment, costDollars, totalPayment } | null}
+ * Par is found using costBeforeFees (excludes lender fee) to match how MND/Freddie
+ * report rates. This gives an apples-to-apples comparison with national averages.
+ * Lender fee is tracked separately for the detailed Rate Tool display.
+ *
+ * @returns {{ rate, apr, payment, lenderFee, ... } | null}
  */
 function priceProduct(allPrograms, loanType, term) {
   const scenario = {
@@ -173,20 +177,37 @@ function priceProduct(allPrograms, loanType, term) {
     const result = priceScenario(scenario, allPrograms, options);
     if (!result?.results?.length) return null;
 
-    // Find the true PAR rate — lowest absolute costPoints across all results
+    // Find PAR using costPoints (fees in) — this gives the true best rate.
+    // Then report the cost WITHOUT lender fee for display (matching MND/Freddie).
     const parResult = result.results.reduce((best, r) =>
       Math.abs(r.costPoints) < Math.abs(best.costPoints) ? r : best
     );
 
     if (!parResult) return null;
 
+    // Display cost excludes lender fee (apples-to-apples with national avg)
+    const displayCostPts = parResult.costBeforeFees;
+    const displayCostDollars = (displayCostPts / 100) * REFERENCE_SCENARIO.loanAmount;
+
+    // APR excludes lender fee (matching display rate basis)
+    const financeCharges = Math.max(0, displayCostDollars + (parResult.upfrontMI || 0));
+    const apr = calculateAPR(parResult.rate, REFERENCE_SCENARIO.loanAmount, financeCharges, term);
+
     return {
       rate: parResult.rate,
-      apr: parResult.apr,
+      apr,
       payment: Math.round(parResult.monthlyPI),
       totalPayment: Math.round(parResult.totalPayment),
-      costDollars: Math.round(parResult.costDollars),
-      costPoints: Math.round(parResult.costPoints * 1000) / 1000,
+      // Display cost (ex-lender fee — apples-to-apples with national avg)
+      costPoints: Math.round(displayCostPts * 1000) / 1000,
+      costDollars: Math.round(displayCostDollars),
+      // Lender fee tracked separately for transparency
+      lenderFee: parResult.lenderFee,
+      lenderFeePoints: parResult.lenderFeePoints,
+      // Full cost (fees in) for detailed views
+      costPointsFeesIn: parResult.costPoints,
+      costDollarsFeesIn: parResult.costDollars,
+      lender: parResult.lender,
     };
   } catch {
     return null;
