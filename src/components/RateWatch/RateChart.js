@@ -351,11 +351,25 @@ const TIME_RANGES = [
   { label: 'All Time', days: 0 },
 ];
 
-export default function RateChart({ rateHistory, fredData }) {
+export default function RateChart({ rateHistory, fredData: serverFredData }) {
   const canvasRef = useRef(null);
   const chartRef = useRef(null);
   const [creditTier, setCreditTier] = useState('760');
   const [timeRange, setTimeRange] = useState(90);
+  const [fredData, setFredData] = useState(serverFredData || {});
+
+  // Client-side FRED data fetch as fallback (SSR fetch often fails during build)
+  useEffect(() => {
+    if (fredData?.MORTGAGE30US?.length > 0) return; // already have data
+    fetch('/api/rates/fred?series=all&days=365')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.series?.MORTGAGE30US) {
+          setFredData(data.series);
+        }
+      })
+      .catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const buildChart = useCallback(() => {
     if (!canvasRef.current) return;
