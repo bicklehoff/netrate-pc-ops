@@ -1,6 +1,16 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+
 export default function HeroStrip({ todayRate, rateChange, fredLatest }) {
+  const [commentary, setCommentary] = useState(null);
+
+  useEffect(() => {
+    fetch('/api/market/summary')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.summary) setCommentary(data.summary); })
+      .catch(() => {});
+  }, []);
   const changeClass =
     rateChange > 0 ? 'text-red-500' : rateChange < 0 ? 'text-green-500' : 'text-amber-500';
   const changeText =
@@ -26,20 +36,54 @@ export default function HeroStrip({ todayRate, rateChange, fredLatest }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-[1fr_340px] gap-6 px-7 py-6 border-b border-white/10 bg-gradient-to-br from-deep to-surface/50">
       <div>
-        <div className="inline-flex items-center gap-2 bg-brand/15 text-brand-light text-xs font-bold uppercase tracking-wide px-3 py-1.5 rounded-full mb-3">
-          <span className="w-1.5 h-1.5 bg-brand-light rounded-full animate-pulse" />
-          Live Update
+        <div className="flex items-center gap-3 mb-3">
+          <div className="inline-flex items-center gap-2 bg-brand/15 text-brand-light text-xs font-bold uppercase tracking-wide px-3 py-1.5 rounded-full">
+            <span className="w-1.5 h-1.5 bg-brand-light rounded-full animate-pulse" />
+            Market Commentary
+          </div>
+          {commentary?.sentiment && (
+            <span className={`text-xs font-bold uppercase tracking-wide ${
+              commentary.sentiment === 'bearish' ? 'text-red-400' :
+              commentary.sentiment === 'bullish' ? 'text-green-400' : 'text-brand'
+            }`}>
+              {commentary.sentiment}
+            </span>
+          )}
+          <span className="text-slate-500 text-xs">{dateStr}</span>
         </div>
-        <h1 className="text-white text-[30px] font-extrabold leading-tight mb-2.5">
-          Daily Mortgage Rate Snapshot
-        </h1>
-        <p className="text-slate-300 text-base leading-relaxed mb-2">
-          Live wholesale mortgage rates updated every business day. See how NetRate compares to the
-          national average and track trends over time.
-        </p>
-        <div className="text-slate-500 text-[13px]">
-          {dateStr} &middot; Updated daily on business days
-        </div>
+
+        {commentary?.headline ? (
+          <>
+            <h2 className="text-white text-[22px] font-bold leading-tight mb-3">
+              {commentary.headline}
+            </h2>
+            {commentary.treasury10yr && (
+              <div className="flex items-center gap-3 text-[13px] mb-3 text-slate-300">
+                <span>
+                  10yr: {commentary.treasury10yr}%
+                  {commentary.treasury10yrChg != null && (
+                    <span className={commentary.treasury10yrChg > 0 ? 'text-red-400 ml-1' : 'text-green-400 ml-1'}>
+                      ({commentary.treasury10yrChg > 0 ? '+' : ''}{commentary.treasury10yrChg})
+                    </span>
+                  )}
+                </span>
+              </div>
+            )}
+            <p className="text-slate-300 text-[14px] leading-[1.7] line-clamp-4">
+              {commentary.commentary}
+            </p>
+          </>
+        ) : (
+          <>
+            <h1 className="text-white text-[26px] font-extrabold leading-tight mb-2.5">
+              Daily Mortgage Rate Snapshot
+            </h1>
+            <p className="text-slate-300 text-base leading-relaxed">
+              Live wholesale mortgage rates updated every business day. See how NetRate compares to the
+              national average and track trends over time.
+            </p>
+          </>
+        )}
       </div>
       <div className="flex flex-col gap-4">
         <div className="bg-surface rounded-xl px-6 py-5 text-center">

@@ -3,7 +3,7 @@ import HeroStrip from '@/components/RateWatch/HeroStrip';
 import TickerBar from '@/components/RateWatch/TickerBar';
 import RateChart from '@/components/RateWatch/RateChart';
 import Sidebar from '@/components/RateWatch/Sidebar';
-import Commentary from '@/components/RateWatch/Commentary';
+// Commentary now embedded in HeroStrip
 import BelowFold from '@/components/RateWatch/BelowFold';
 import Predictions from '@/components/RateWatch/Predictions';
 
@@ -141,13 +141,6 @@ export default async function RateWatchPage() {
 
       {/* Bento Dashboard */}
       <div className="px-5 py-6 grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4">
-        {/* Commentary Card — TOP, spans full width */}
-        <div className="lg:col-span-2 bg-surface rounded-xl border border-white/10 overflow-hidden">
-          <div className="px-6 py-5">
-            <Commentary />
-          </div>
-        </div>
-
         {/* Chart Card */}
         <div className="bg-surface rounded-xl border border-white/10 p-5 overflow-hidden">
           <RateChart rateHistory={rateHistory} fredData={fredData.series} />
