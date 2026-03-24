@@ -209,7 +209,7 @@ export default async function HomePage() {
               </Link>
             </div>
             <div className="px-6 pb-4">
-              <p className="text-[11px] text-gray-500 text-center">760+ FICO &middot; $400K &middot; Rate/Term Refi &middot; 0 pts &middot; {effectiveDateShort}</p>
+              <p className="text-[11px] text-gray-500 text-center">760+ FICO &middot; $400K &middot; Purchase &middot; 0 pts &middot; {effectiveDateShort}</p>
             </div>
           </div>
         </div>

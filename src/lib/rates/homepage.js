@@ -12,17 +12,15 @@ import { priceScenario } from './pricing';
 
 // ─── Reference Scenario ─────────────────────────────────────────
 // This scenario matches the homepage disclaimers:
-//   "760+ FICO · $400K · Rate/Term Refi"
-//   "Rates assume 760+ FICO, rate/term refinance, $400K loan, 75% LTV"
+//   "760+ FICO · $400K · Purchase · 75% LTV"
 
 const REFERENCE_SCENARIO = {
-  purpose: 'refi',
+  purpose: 'purchase',
   propertyType: 'sfr',
   fico: 760,
   loanAmount: 400000,
   ltv: 75,
   propertyValue: 533333, // $400K / 75% LTV
-  currentPayoff: 400000,
 };
 
 // ─── Date Formatting ─────────────────────────────────────────────
@@ -154,7 +152,7 @@ export function computeHomepageRates(lenderData) {
 function priceProduct(allPrograms, loanType, term) {
   const scenario = {
     loanAmount: REFERENCE_SCENARIO.loanAmount,
-    loanPurpose: 'refinance',
+    loanPurpose: 'purchase',
     loanType,
     category: 'agency',
     creditScore: REFERENCE_SCENARIO.fico,
