@@ -192,6 +192,24 @@ export async function PUT(request) {
       });
     }
 
+    // ─── Create Contacts for All Borrowers ─────────────────
+    // Every borrower becomes a Contact (marketable, searchable, linkable to future leads)
+    await upsertContactFromBorrower(borrower, primary, 'xml_import');
+
+    for (const cb of result.coBorrowers) {
+      if (!cb.firstName || !cb.lastName) continue;
+      const cbBorrower = await prisma.borrower.findFirst({
+        where: {
+          firstName: cb.firstName,
+          lastName: cb.lastName,
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (cbBorrower) {
+        await upsertContactFromBorrower(cbBorrower, cb, 'xml_import');
+      }
+    }
+
     // ─── Audit Trail ──────────────────────────────────────
     await prisma.loanEvent.create({
       data: {
@@ -325,4 +343,71 @@ async function upsertBorrowerFromImport({ firstName, lastName, email, phone, ssn
   }
 
   return borrower;
+}
+
+/**
+ * Create or update a Contact record from a Borrower.
+ * Links Contact to Borrower via borrowerId.
+ * If Contact already exists for this borrower, updates it.
+ */
+async function upsertContactFromBorrower(borrower, rawData, source) {
+  try {
+    // Check if Contact already exists for this borrower
+    let contact = await prisma.contact.findUnique({
+      where: { borrowerId: borrower.id },
+    });
+
+    if (contact) {
+      // Update with latest info
+      contact = await prisma.contact.update({
+        where: { id: contact.id },
+        data: {
+          firstName: rawData.firstName || contact.firstName,
+          lastName: rawData.lastName || contact.lastName,
+          email: rawData.email || contact.email,
+          phone: rawData.phone || contact.phone,
+          source: contact.source, // Don't overwrite source
+        },
+      });
+    } else {
+      // Also check by email to avoid duplicates
+      if (rawData.email) {
+        contact = await prisma.contact.findFirst({
+          where: { email: rawData.email.toLowerCase().trim() },
+        });
+      }
+
+      if (contact) {
+        // Link existing contact to borrower
+        contact = await prisma.contact.update({
+          where: { id: contact.id },
+          data: {
+            borrowerId: borrower.id,
+            firstName: rawData.firstName || contact.firstName,
+            lastName: rawData.lastName || contact.lastName,
+            phone: rawData.phone || contact.phone,
+          },
+        });
+      } else {
+        // Create new Contact
+        contact = await prisma.contact.create({
+          data: {
+            firstName: rawData.firstName || 'Unknown',
+            lastName: rawData.lastName || 'Unknown',
+            email: rawData.email ? rawData.email.toLowerCase().trim() : null,
+            phone: rawData.phone || null,
+            source,
+            tags: ['borrower'],
+            borrowerId: borrower.id,
+          },
+        });
+      }
+    }
+
+    return contact;
+  } catch (error) {
+    // Non-fatal — log and continue (loan import should not fail if contact creation fails)
+    console.error('Contact creation failed (non-fatal):', error?.message);
+    return null;
+  }
 }
