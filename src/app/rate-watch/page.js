@@ -111,9 +111,6 @@ export default async function RateWatchPage() {
   // Use real rate, fall back to DB rate
   const todayRate = realRate || dbRate;
 
-  // Offset to shift historical chart data so it aligns with real pricing engine rate
-  const rateOffset = (realRate && dbRate) ? Math.round((realRate - dbRate) * 1000) / 1000 : 0;
-
   const prevDbRate = tier760.length > 1 ? parseFloat(tier760[tier760.length - 2].rate) : null;
   const rateChange = dbRate && prevDbRate ? Math.round((dbRate - prevDbRate) * 1000) / 1000 : 0;
 
@@ -153,14 +150,13 @@ export default async function RateWatchPage() {
         fredLatest={fredData.latest}
         todayRate={todayRate}
         rateHistory={rateHistory}
-        rateOffset={rateOffset}
       />
 
       {/* Bento Dashboard */}
       <div className="px-5 py-6 grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4">
         {/* Chart Card */}
         <div className="bg-surface rounded-xl border border-white/10 p-5 overflow-hidden">
-          <RateChart rateHistory={rateHistory} fredData={fredData.series} rateOffset={rateOffset} />
+          <RateChart rateHistory={rateHistory} fredData={fredData.series} />
         </div>
 
         {/* Sidebar Card */}

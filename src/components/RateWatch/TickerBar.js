@@ -18,7 +18,7 @@ function Separator() {
   return <div className="w-px h-7 bg-slate-700" />;
 }
 
-export default function TickerBar({ fredLatest, todayRate, rateHistory, rateOffset = 0 }) {
+export default function TickerBar({ fredLatest, todayRate, rateHistory }) {
   // Compute 90-day low/high from rate history (apply offset to align with pricing engine)
   const now = new Date();
   const cutoff90 = new Date(now);
@@ -32,7 +32,7 @@ export default function TickerBar({ fredLatest, todayRate, rateHistory, rateOffs
   let high90Date = '';
 
   for (const r of recent) {
-    const rate = parseFloat(r.rate) + rateOffset;
+    const rate = parseFloat(r.rate);
     if (low90 === null || rate < low90) {
       low90 = rate;
       low90Date = new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
