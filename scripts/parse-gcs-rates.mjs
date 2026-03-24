@@ -303,20 +303,24 @@ async function main() {
   };
   await uploadJson('parsed/manifest.json', manifest);
 
-  // Save combined parsed-rates.json locally
+  // Save parsed-rates.json locally (per-lender structure for pricing engine)
   const totalPrograms = results.reduce((sum, r) => sum + r.programs.length, 0);
-  const allProducts = results.flatMap(r => r.programs);
   const combined = {
-    products: allProducts,
+    lenders: results.map(r => ({
+      lenderId: r.lenderId,
+      sheetDate: r.sheetDate,
+      programs: r.programs,
+      llpas: r.llpas || null,
+    })),
     date: results[0]?.sheetDate || new Date().toISOString().slice(0, 10),
     lenderCount: results.length,
-    lenders: results.map(r => r.lenderId),
+    totalPrograms,
     generatedAt: new Date().toISOString(),
   };
   const localPath = new URL('../src/data/parsed-rates.json', import.meta.url).pathname.replace(/^\/([A-Z]:)/, '$1');
   const { writeFileSync } = await import('fs');
   writeFileSync(localPath, JSON.stringify(combined, null, 2));
-  console.log(`\n✓ Saved ${localPath} (${allProducts.length} products, ${results.length} lenders)`);
+  console.log(`\n✓ Saved ${localPath} (${totalPrograms} products, ${results.length} lenders)`);
 
   // Summary
   console.log('\n=== Summary ===');

@@ -1,6 +1,6 @@
 /**
  * Homepage Rate Computation
- * Server-side only — computes consumer-friendly rates from raw GCS rate sheet data.
+ * Server-side only — computes consumer-friendly rates from parsed rate sheet data.
  * Used by page.js (homepage) to display live rates in hero card, rates table, and ticker.
  *
  * Reference scenario: 760+ FICO, $400K loan, 75% LTV, rate/term refi
@@ -8,6 +8,7 @@
  */
 
 import { priceRates, calculatePI } from './engine';
+import { priceScenario } from './pricing';
 
 // ─── Reference Scenario ─────────────────────────────────────────
 // This scenario matches the homepage disclaimers:
@@ -142,68 +143,70 @@ export function computeHomepageRates(lenderData) {
   };
 }
 
-// ─── Main Computation (Parsed Rate Data) ─────────────────────────
+// ─── Main Computation (Parsed Rate Data + Full Pricing Engine) ───
 
 /**
- * Find the best par rate for a product type from parsed rate sheet data.
- * "Par" = lowest note rate where 30-day lock price is near 100 (0 points).
+ * Run the pricing engine for a specific loan type + term.
+ * Uses the same priceScenario() as the Rate Tool — includes LLPAs, broker comp, lender fees.
  *
- * @param {Array} products — All products from parsed-rates.json
- * @param {string} loanType — "conventional", "fha", "va"
- * @param {number} term — 30 or 15
- * @returns {{ rate: number, price: number } | null}
+ * @returns {{ rate, apr, payment, costDollars, totalPayment } | null}
  */
-function findParRate(products, loanType, term) {
-  const matches = products.filter(p =>
-    p.loanType === loanType &&
-    p.term === term &&
-    p.productType === 'fixed' &&
-    !p.isHighBalance &&
-    p.occupancy === 'primary' &&
-    !p.isStreamline
-  );
+function priceProduct(allPrograms, loanType, term) {
+  const scenario = {
+    loanAmount: REFERENCE_SCENARIO.loanAmount,
+    loanPurpose: 'refinance',
+    loanType,
+    category: 'agency',
+    creditScore: REFERENCE_SCENARIO.fico,
+    propertyValue: REFERENCE_SCENARIO.propertyValue,
+    propertyType: REFERENCE_SCENARIO.propertyType,
+    occupancy: 'primary',
+    term,
+    employmentType: 'w2',
+    subFinancing: false,
+    subFinancingBalance: 0,
+    includeBuydowns: false,
+    includeIO: false,
+  };
 
-  let best = null;
+  const options = { lockDays: 30, termFilter: term, productType: 'fixed' };
 
-  for (const p of matches) {
-    for (const r of p.rates) {
-      if (r.lockDays !== 30) continue;
-      // Near par (>= 99.5): pick lowest note rate
-      if (r.price >= 99.5 && r.price <= 101.5) {
-        if (!best || r.rate < best.rate || (r.rate === best.rate && r.price > best.price)) {
-          best = r;
-        }
-      }
-    }
+  try {
+    const result = priceScenario(scenario, allPrograms, options);
+    if (!result?.results?.length) return null;
+
+    // Find the PAR rate — tagged "PAR" by the pricing engine, or lowest costPoints
+    const parResult = result.results.find(r => r.tags?.includes('PAR'))
+      || result.results.reduce((best, r) =>
+        Math.abs(r.costPoints) < Math.abs(best.costPoints) ? r : best
+      );
+
+    if (!parResult) return null;
+
+    return {
+      rate: parResult.rate,
+      apr: parResult.apr,
+      payment: Math.round(parResult.monthlyPI),
+      totalPayment: Math.round(parResult.totalPayment),
+      costDollars: Math.round(parResult.costDollars),
+      costPoints: Math.round(parResult.costPoints * 1000) / 1000,
+    };
+  } catch {
+    return null;
   }
-
-  // Fallback: closest to 100
-  if (!best) {
-    for (const p of matches) {
-      for (const r of p.rates) {
-        if (r.lockDays !== 30) continue;
-        if (!best || Math.abs(r.price - 100) < Math.abs(best.price - 100)) {
-          best = r;
-        }
-      }
-    }
-  }
-
-  return best;
 }
 
 /**
- * Compute homepage display rates from parsed-rates.json.
- * Returns live data for all 4 hero card products.
+ * Compute homepage display rates from parsed-rates.json using the full pricing engine.
+ * Same LLPAs, broker comp, and lender fees as the Rate Tool.
  *
- * @param {Object} parsedData — The full parsed-rates.json object
+ * @param {Object} parsedData — parsed-rates.json ({ lenders: [{lenderId, programs, llpas}], date })
  * @returns {Object|null} { date, dateShort, conv30, conv15, fha30, va30 }
  */
 export function computeHomepageRatesFromParsed(parsedData) {
-  if (!parsedData?.products?.length) return null;
+  if (!parsedData?.lenders?.length) return null;
 
-  const { products, date } = parsedData;
-  const { loanAmount } = REFERENCE_SCENARIO;
+  const { lenders, date } = parsedData;
 
   // Format date: "2026-03-24" → "Mar 24, 2026"
   let dateShort = null;
@@ -214,29 +217,13 @@ export function computeHomepageRatesFromParsed(parsedData) {
     dateFull = `${MONTHS_FULL[m - 1]} ${d}, ${y}`;
   }
 
-  function buildProduct(loanType, term) {
-    const par = findParRate(products, loanType, term);
-    if (!par) return null;
-
-    const pointsCost = (100 - par.price) / 100 * loanAmount; // positive = cost to borrower
-    const payment = Math.round(calculatePI(par.rate, loanAmount, term));
-    const apr = calculateAPR(par.rate, loanAmount, Math.max(0, pointsCost), term);
-
-    return {
-      rate: par.rate,
-      apr,
-      payment,
-      points: Math.round((100 - par.price) * 1000) / 1000, // positive = cost, negative = credit
-    };
-  }
-
   return {
     date,
     dateFull,
     dateShort,
-    conv30: buildProduct('conventional', 30),
-    conv15: buildProduct('conventional', 15),
-    fha30: buildProduct('fha', 30),
-    va30: buildProduct('va', 30),
+    conv30: priceProduct(lenders, 'conventional', 30),
+    conv15: priceProduct(lenders, 'conventional', 15),
+    fha30: priceProduct(lenders, 'fha', 30),
+    va30: priceProduct(lenders, 'va', 30),
   };
 }
