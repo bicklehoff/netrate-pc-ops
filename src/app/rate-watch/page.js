@@ -6,6 +6,7 @@ import Sidebar from '@/components/RateWatch/Sidebar';
 // Commentary now embedded in HeroStrip
 import BelowFold from '@/components/RateWatch/BelowFold';
 import Predictions from '@/components/RateWatch/Predictions';
+import RateGrid from '@/components/RateWatch/RateGrid';
 import parsedRates from '@/data/parsed-rates.json';
 import { computeHomepageRatesFromParsed } from '@/lib/rates/homepage';
 
@@ -29,6 +30,20 @@ async function getRateHistory() {
   } catch (error) {
     console.error('Failed to fetch rate history:', error);
     return [];
+  }
+}
+
+async function getNationalRates() {
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL
+      || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+    const res = await fetch(`${baseUrl}/api/market/national-rates`, {
+      next: { revalidate: 300 },
+    });
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
   }
 }
 
@@ -95,12 +110,15 @@ const jsonLd = {
 };
 
 export default async function RateWatchPage() {
-  const [rateHistory, fredData] = await Promise.all([getRateHistory(), getFredData()]);
+  const [rateHistory, fredData, nationalData] = await Promise.all([
+    getRateHistory(), getFredData(), getNationalRates(),
+  ]);
 
-  // Compute today's real rate from pricing engine (same as homepage)
+  // Compute today's real rates from pricing engine (same as homepage)
+  let liveRates = null;
   let realRate = null;
   try {
-    const liveRates = computeHomepageRatesFromParsed(parsedRates);
+    liveRates = computeHomepageRatesFromParsed(parsedRates);
     realRate = liveRates?.conv30?.rate || null;
   } catch { /* fall through to DB rate */ }
 
@@ -150,6 +168,13 @@ export default async function RateWatchPage() {
         fredLatest={fredData.latest}
         todayRate={todayRate}
         rateHistory={rateHistory}
+      />
+
+      {/* Rate Comparison Grid */}
+      <RateGrid
+        netRates={liveRates}
+        nationalRates={nationalData?.rates || null}
+        date={nationalData?.date || null}
       />
 
       {/* Bento Dashboard */}
