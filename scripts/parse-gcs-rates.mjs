@@ -20,6 +20,7 @@
 import { SignJWT, importPKCS8 } from 'jose';
 import { readFileSync } from 'fs';
 import { createRequire } from 'module';
+import { writeRateHistory } from './write-rate-history.mjs';
 import dotenv from 'dotenv';
 
 dotenv.config({ path: new URL('../.env', import.meta.url).pathname.replace(/^\/([A-Z]:)/, '$1') });
@@ -321,6 +322,14 @@ async function main() {
   const { writeFileSync } = await import('fs');
   writeFileSync(localPath, JSON.stringify(combined, null, 2));
   console.log(`\n✓ Saved ${localPath} (${totalPrograms} products, ${results.length} lenders)`);
+
+  // Write today's par rates to rate_history DB
+  const rateDate = combined.date;
+  try {
+    await writeRateHistory(combined.lenders, rateDate);
+  } catch (err) {
+    console.error('Rate history write failed:', err.message);
+  }
 
   // Summary
   console.log('\n=== Summary ===');
