@@ -22,46 +22,30 @@ export const authOptions = {
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        try {
-          if (!credentials?.email || !credentials?.password) {
-            console.log('[AUTH] Missing credentials');
-            return null;
-          }
+        if (!credentials?.email || !credentials?.password) return null;
 
-          const email = credentials.email.toLowerCase();
-          console.log('[AUTH] Login attempt for:', email);
+        const email = credentials.email.toLowerCase();
 
-          const mlo = await prisma.mlo.findUnique({
-            where: { email },
-          });
+        const mlo = await prisma.mlo.findUnique({
+          where: { email },
+        });
 
-          if (!mlo) {
-            console.log('[AUTH] MLO not found for email:', email);
-            return null;
-          }
+        if (!mlo) return null;
 
-          console.log('[AUTH] MLO found:', mlo.email, 'hash prefix:', mlo.passwordHash?.substring(0, 10));
+        const passwordValid = await bcrypt.compare(
+          credentials.password,
+          mlo.passwordHash
+        );
 
-          const passwordValid = await bcrypt.compare(
-            credentials.password,
-            mlo.passwordHash
-          );
+        if (!passwordValid) return null;
 
-          console.log('[AUTH] Password valid:', passwordValid);
-
-          if (!passwordValid) return null;
-
-          return {
-            id: mlo.id,
-            email: mlo.email,
-            name: `${mlo.firstName} ${mlo.lastName}`,
-            role: mlo.role,
-            userType: 'mlo',
-          };
-        } catch (error) {
-          console.error('[AUTH] ERROR:', error.message, error.stack);
-          return null;
-        }
+        return {
+          id: mlo.id,
+          email: mlo.email,
+          name: `${mlo.firstName} ${mlo.lastName}`,
+          role: mlo.role,
+          userType: 'mlo',
+        };
       },
     }),
   ],

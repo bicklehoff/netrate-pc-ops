@@ -1,7 +1,7 @@
 # Twilio Integration — Status Tracker
 
-**Last Updated:** 2026-03-23
-**Status:** ACCOUNT REACTIVATED — Campaign needs resubmission
+**Last Updated:** 2026-03-24
+**Status:** A2P CAMPAIGN UNDER REVIEW — submitted 3/23, Twilio reviewing (may take several weeks)
 
 ---
 
