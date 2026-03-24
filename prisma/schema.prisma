@@ -664,9 +664,20 @@ model Lead {
   email           String
   phone           String?
   message         String?                         // Rate details, scenario info, free-text
-  source          String    @default("website")   // 'homepage_rate_table' | 'rate_tool' | 'contact_form' | 'website'
+  source          String    @default("website")   // 'homepage_rate_table' | 'rate_tool' | 'contact_form' | 'contact' | 'website'
   sourceDetail    String?   @map("source_detail") // Product clicked, scenario summary, etc.
-  status          String    @default("new")       // 'new' | 'contacted' | 'converted' | 'closed'
+  status          String    @default("new")       // 'new' | 'contacted' | 'qualified' | 'converted' | 'closed'
+
+  // Loan scenario
+  loanPurpose     String?   @map("loan_purpose")
+  loanAmount      Decimal?  @map("loan_amount") @db.Decimal(12,2)
+  propertyState   String?   @map("property_state")
+  creditScoreRange String?  @map("credit_score_range")
+  notes           String?
+  scenarioData    Json?     @map("scenario_data")
+
+  // Link to Contact
+  contactId       String?   @map("contact_id") @db.Uuid
 
   // UTM tracking
   utmSource       String?   @map("utm_source")
@@ -677,6 +688,7 @@ model Lead {
   zohoLeadId      String?   @map("zoho_lead_id")
 
   createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime? @updatedAt @map("updated_at")
 
   @@index([email])
   @@index([status])

@@ -11,6 +11,9 @@ export default function ContactsPage() {
   const [creating, setCreating] = useState(false);
   const [newContact, setNewContact] = useState({ firstName: '', lastName: '', email: '', phone: '', notes: '' });
   const [error, setError] = useState('');
+  const [leadModal, setLeadModal] = useState(null); // contact object when creating lead
+  const [leadForm, setLeadForm] = useState({ loanPurpose: '', propertyState: '', notes: '' });
+  const [creatingLead, setCreatingLead] = useState(false);
 
   const fetchContacts = useCallback(async () => {
     try {
@@ -53,6 +56,32 @@ export default function ContactsPage() {
       setError('Failed to create contact');
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleCreateLead = async (e) => {
+    e.preventDefault();
+    setCreatingLead(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/portal/mlo/contacts/${leadModal.id}/create-lead`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(leadForm),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'Failed to create lead');
+        return;
+      }
+      setLeadModal(null);
+      setLeadForm({ loanPurpose: '', propertyState: '', notes: '' });
+      // Redirect to leads page
+      window.location.href = '/portal/mlo/leads';
+    } catch {
+      setError('Failed to create lead');
+    } finally {
+      setCreatingLead(false);
     }
   };
 
@@ -228,12 +257,96 @@ export default function ContactsPage() {
                     </div>
                   )}
 
+                  {/* Create Lead button */}
+                  <button
+                    onClick={() => setLeadModal(contact)}
+                    className="text-xs font-medium text-brand hover:text-brand-dark border border-brand/30 hover:border-brand px-2.5 py-1 rounded-lg transition-colors"
+                  >
+                    + Lead
+                  </button>
+
                   {/* Source */}
                   <span className="text-[10px] text-gray-400 w-16 text-right">{contact.source}</span>
                 </div>
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Create Lead Modal */}
+      {leadModal && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setLeadModal(null)}>
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-bold text-gray-900 text-lg mb-1">Create Lead</h3>
+            <p className="text-sm text-gray-500 mb-5">
+              New lead for {leadModal.firstName} {leadModal.lastName}
+              {leadModal.email && <span className="text-gray-400"> — {leadModal.email}</span>}
+            </p>
+
+            <form onSubmit={handleCreateLead}>
+              <div className="space-y-4 mb-5">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Loan Purpose</label>
+                  <select
+                    value={leadForm.loanPurpose}
+                    onChange={(e) => setLeadForm({ ...leadForm, loanPurpose: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none"
+                  >
+                    <option value="">Select...</option>
+                    <option value="purchase">Purchase</option>
+                    <option value="refinance">Refinance</option>
+                    <option value="cashout">Cash-Out Refinance</option>
+                    <option value="heloc">HELOC / 2nd Lien</option>
+                    <option value="reverse">Reverse Mortgage</option>
+                    <option value="construction">Construction</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">State</label>
+                  <select
+                    value={leadForm.propertyState}
+                    onChange={(e) => setLeadForm({ ...leadForm, propertyState: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none"
+                  >
+                    <option value="">Select...</option>
+                    <option value="CO">Colorado</option>
+                    <option value="CA">California</option>
+                    <option value="TX">Texas</option>
+                    <option value="OR">Oregon</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Notes</label>
+                  <textarea
+                    value={leadForm.notes}
+                    onChange={(e) => setLeadForm({ ...leadForm, notes: e.target.value })}
+                    rows={3}
+                    placeholder="What did they call about? Any details..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  disabled={creatingLead}
+                  className="flex-1 bg-brand text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-brand-dark transition-colors disabled:opacity-50"
+                >
+                  {creatingLead ? 'Creating...' : 'Create Lead'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLeadModal(null)}
+                  className="px-4 py-2.5 rounded-lg text-sm text-gray-600 hover:bg-gray-100 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>
