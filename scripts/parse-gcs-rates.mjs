@@ -32,6 +32,7 @@ const keystoneParser = require('../src/lib/rates/parsers/keystone.js');
 const swmcParser = require('../src/lib/rates/parsers/swmc.js');
 const amwestParser = require('../src/lib/rates/parsers/amwest.js');
 const everstreamParser = require('../src/lib/rates/parsers/everstream.js');
+const windsorParser = require('../src/lib/rates/parsers/windsor.js');
 
 const BUCKET = process.env.GCS_BUCKET_NAME || 'netrate-rates';
 
@@ -39,6 +40,7 @@ const BUCKET = process.env.GCS_BUCKET_NAME || 'netrate-rates';
 const FILE_LENDER_MAP = {
   '47006': 'amwest',
   '61534': 'tls',
+  '65196': 'windsor',
   '80220': 'keystone',
   '96573': 'everstream',
   '96596': 'everstream',
@@ -233,12 +235,23 @@ async function parseEverStream(files) {
   };
 }
 
+async function parseWindsor(files) {
+  const xlsxFile = files.find(f => f.isXLSX);
+  if (!xlsxFile) throw new Error('Windsor: No XLSX file found');
+  console.log(`  Downloading ${xlsxFile.filename}...`);
+  const buf = await downloadBuffer(xlsxFile.path);
+  const result = windsorParser.parseRates(buf);
+  console.log(`  Parsed: ${result.programs.length} programs, date: ${result.sheetDate}`);
+  return { lenderId: 'windsor', sheetDate: result.sheetDate, programs: result.programs };
+}
+
 const PARSERS = {
   tls: parseTLS,
   keystone: parseKeystone,
   swmc: parseSWMC,
   amwest: parseAmWest,
   everstream: parseEverStream,
+  windsor: parseWindsor,
 };
 
 // ─── Main ─────────────────────────────────────────────────────────
@@ -290,11 +303,25 @@ async function main() {
   };
   await uploadJson('parsed/manifest.json', manifest);
 
+  // Save combined parsed-rates.json locally
+  const totalPrograms = results.reduce((sum, r) => sum + r.programs.length, 0);
+  const allProducts = results.flatMap(r => r.programs);
+  const combined = {
+    products: allProducts,
+    date: results[0]?.sheetDate || new Date().toISOString().slice(0, 10),
+    lenderCount: results.length,
+    lenders: results.map(r => r.lenderId),
+    generatedAt: new Date().toISOString(),
+  };
+  const localPath = new URL('../src/data/parsed-rates.json', import.meta.url).pathname.replace(/^\/([A-Z]:)/, '$1');
+  const { writeFileSync } = await import('fs');
+  writeFileSync(localPath, JSON.stringify(combined, null, 2));
+  console.log(`\n✓ Saved ${localPath} (${allProducts.length} products, ${results.length} lenders)`);
+
   // Summary
   console.log('\n=== Summary ===');
   console.log(`Parsed: ${results.length} lenders`);
   console.log(`Errors: ${errors.length}`);
-  const totalPrograms = results.reduce((sum, r) => sum + r.programs.length, 0);
   console.log(`Total programs: ${totalPrograms}`);
   if (errors.length > 0) {
     console.log('Failed:', errors.map(e => `${e.lender}: ${e.error}`).join(', '));
