@@ -6,6 +6,8 @@ import Sidebar from '@/components/RateWatch/Sidebar';
 // Commentary now embedded in HeroStrip
 import BelowFold from '@/components/RateWatch/BelowFold';
 import Predictions from '@/components/RateWatch/Predictions';
+import parsedRates from '@/data/parsed-rates.json';
+import { computeHomepageRatesFromParsed } from '@/lib/rates/homepage';
 
 export const revalidate = 300; // ISR: 5 minutes
 
@@ -95,11 +97,25 @@ const jsonLd = {
 export default async function RateWatchPage() {
   const [rateHistory, fredData] = await Promise.all([getRateHistory(), getFredData()]);
 
-  // Compute today's rate and change for 760+ tier
+  // Compute today's real rate from pricing engine (same as homepage)
+  let realRate = null;
+  try {
+    const liveRates = computeHomepageRatesFromParsed(parsedRates);
+    realRate = liveRates?.conv30?.rate || null;
+  } catch { /* fall through to DB rate */ }
+
+  // DB rate for historical chart
   const tier760 = rateHistory.filter((r) => r.credit_score_tier === '760+');
-  const todayRate = tier760.length > 0 ? parseFloat(tier760[tier760.length - 1].rate) : null;
-  const prevRate = tier760.length > 1 ? parseFloat(tier760[tier760.length - 2].rate) : null;
-  const rateChange = todayRate && prevRate ? Math.round((todayRate - prevRate) * 1000) / 1000 : 0;
+  const dbRate = tier760.length > 0 ? parseFloat(tier760[tier760.length - 1].rate) : null;
+
+  // Use real rate, fall back to DB rate
+  const todayRate = realRate || dbRate;
+
+  // Offset to shift historical chart data so it aligns with real pricing engine rate
+  const rateOffset = (realRate && dbRate) ? Math.round((realRate - dbRate) * 1000) / 1000 : 0;
+
+  const prevDbRate = tier760.length > 1 ? parseFloat(tier760[tier760.length - 2].rate) : null;
+  const rateChange = dbRate && prevDbRate ? Math.round((dbRate - prevDbRate) * 1000) / 1000 : 0;
 
   return (
     <div className="bg-deep text-slate-200 min-h-screen">
@@ -143,7 +159,7 @@ export default async function RateWatchPage() {
       <div className="px-5 py-6 grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4">
         {/* Chart Card */}
         <div className="bg-surface rounded-xl border border-white/10 p-5 overflow-hidden">
-          <RateChart rateHistory={rateHistory} fredData={fredData.series} />
+          <RateChart rateHistory={rateHistory} fredData={fredData.series} rateOffset={rateOffset} />
         </div>
 
         {/* Sidebar Card */}

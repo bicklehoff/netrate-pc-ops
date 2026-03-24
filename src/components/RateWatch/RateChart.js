@@ -351,7 +351,7 @@ const TIME_RANGES = [
   { label: 'All Time', days: 0 },
 ];
 
-export default function RateChart({ rateHistory, fredData: serverFredData }) {
+export default function RateChart({ rateHistory, fredData: serverFredData, rateOffset = 0 }) {
   const canvasRef = useRef(null);
   const chartRef = useRef(null);
   const [creditTier, setCreditTier] = useState('760');
@@ -385,12 +385,13 @@ export default function RateChart({ rateHistory, fredData: serverFredData }) {
     filtered.sort((a, b) => new Date(a.date) - new Date(b.date));
 
     const dates = filtered.map((r) => r.date);
-    const rawValues = filtered.map((r) => parseFloat(r.rate));
+    const rawValues = filtered.map((r) => parseFloat(r.rate) + rateOffset);
     const values = smoothData(rawValues);
 
-    // Interpolate Freddie Mac data
+    // Interpolate Freddie Mac data (offset applied to keep spread accurate)
     const fm30 = fredData?.MORTGAGE30US || [];
-    const fmValues = interpolateFreddieMac(fm30, dates);
+    const fmRaw = interpolateFreddieMac(fm30, dates);
+    const fmValues = fmRaw.map((v) => (v != null ? v + rateOffset : null));
 
     // Extend into future
     const xMax = getXMax(timeRange);
@@ -534,7 +535,7 @@ export default function RateChart({ rateHistory, fredData: serverFredData }) {
 
     if (chartRef.current) chartRef.current.destroy();
     chartRef.current = new Chart(canvasRef.current.getContext('2d'), config);
-  }, [rateHistory, fredData, creditTier, timeRange]);
+  }, [rateHistory, fredData, creditTier, timeRange, rateOffset]);
 
   useEffect(() => {
     buildChart();
