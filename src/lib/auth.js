@@ -22,20 +22,31 @@ export const authOptions = {
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+        if (!credentials?.email || !credentials?.password) {
+          console.log('[AUTH] Missing credentials');
+          return null;
+        }
 
         const email = credentials.email.toLowerCase();
+        console.log('[AUTH] Login attempt for:', email);
 
         const mlo = await prisma.mlo.findUnique({
           where: { email },
         });
 
-        if (!mlo) return null;
+        if (!mlo) {
+          console.log('[AUTH] MLO not found for email:', email);
+          return null;
+        }
+
+        console.log('[AUTH] MLO found:', mlo.email, 'hash prefix:', mlo.passwordHash?.substring(0, 10));
 
         const passwordValid = await bcrypt.compare(
           credentials.password,
           mlo.passwordHash
         );
+
+        console.log('[AUTH] Password valid:', passwordValid);
 
         if (!passwordValid) return null;
 
