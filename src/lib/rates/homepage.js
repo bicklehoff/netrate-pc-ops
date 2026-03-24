@@ -97,23 +97,11 @@ function calculateAPR(noteRate, loanAmount, financeCharges, termYears = 30) {
   return Math.round(((low + high) / 2) * 100) / 100;
 }
 
-// ─── Main Computation ────────────────────────────────────────────
+// ─── Main Computation (Legacy — GCS live/ format) ────────────────
 
 /**
- * Compute homepage display rates from raw lender data.
- *
- * @param {Object} lenderData — Raw GCS lender file (e.g., amwest.json)
- * @returns {Object|null} Structured rates for homepage display, or null if data is invalid
- *
- * Return shape:
- * {
- *   effectiveDate: "3/5/2026",
- *   effectiveDateFormatted: "March 5, 2026",
- *   effectiveDateShort: "Mar 5, 2026",
- *   effectiveTime: "8:00 AM PST",
- *   lenderFees: 1295,
- *   conv30: { rate, apr, payment, points, creditDollars, isPar: true },
- * }
+ * Compute homepage display rates from raw lender data (old Sunwest format).
+ * Kept for backward compatibility — new code should use computeHomepageRatesFromParsed().
  */
 export function computeHomepageRates(lenderData) {
   if (!lenderData?.rateTable30yr) return null;
@@ -124,7 +112,6 @@ export function computeHomepageRates(lenderData) {
 
   if (!rates.length) return null;
 
-  // Find par rate (adjPrice closest to 0)
   let parIdx = 0;
   let minAbsAdj = Infinity;
   rates.forEach((r, i) => {
@@ -136,22 +123,15 @@ export function computeHomepageRates(lenderData) {
 
   const parRate = rates[parIdx];
   const rawDate = lenderData.lender?.effectiveDate ?? null;
-
-  // APR for par rate
   const financeCharges = lenderFees + (parRate.adjPrice / 100) * scenario.loanAmount;
   const apr = calculateAPR(parRate.rate, scenario.loanAmount, financeCharges);
 
   return {
-    // Dates
     effectiveDate: rawDate,
     effectiveDateFormatted: formatEffectiveDate(rawDate),
     effectiveDateShort: formatEffectiveDateShort(rawDate),
     effectiveTime: lenderData.lender?.effectiveTime ?? null,
-
-    // Metadata
     lenderFees,
-
-    // Par rate for 30-year conventional (hero card + featured row)
     conv30: {
       rate: parRate.rate,
       apr,
@@ -159,5 +139,104 @@ export function computeHomepageRates(lenderData) {
       points: Math.round(parRate.adjPrice * 1000) / 1000,
       creditDollars: Math.round(parRate.creditDollars),
     },
+  };
+}
+
+// ─── Main Computation (Parsed Rate Data) ─────────────────────────
+
+/**
+ * Find the best par rate for a product type from parsed rate sheet data.
+ * "Par" = lowest note rate where 30-day lock price is near 100 (0 points).
+ *
+ * @param {Array} products — All products from parsed-rates.json
+ * @param {string} loanType — "conventional", "fha", "va"
+ * @param {number} term — 30 or 15
+ * @returns {{ rate: number, price: number } | null}
+ */
+function findParRate(products, loanType, term) {
+  const matches = products.filter(p =>
+    p.loanType === loanType &&
+    p.term === term &&
+    p.productType === 'fixed' &&
+    !p.isHighBalance &&
+    p.occupancy === 'primary' &&
+    !p.isStreamline
+  );
+
+  let best = null;
+
+  for (const p of matches) {
+    for (const r of p.rates) {
+      if (r.lockDays !== 30) continue;
+      // Near par (>= 99.5): pick lowest note rate
+      if (r.price >= 99.5 && r.price <= 101.5) {
+        if (!best || r.rate < best.rate || (r.rate === best.rate && r.price > best.price)) {
+          best = r;
+        }
+      }
+    }
+  }
+
+  // Fallback: closest to 100
+  if (!best) {
+    for (const p of matches) {
+      for (const r of p.rates) {
+        if (r.lockDays !== 30) continue;
+        if (!best || Math.abs(r.price - 100) < Math.abs(best.price - 100)) {
+          best = r;
+        }
+      }
+    }
+  }
+
+  return best;
+}
+
+/**
+ * Compute homepage display rates from parsed-rates.json.
+ * Returns live data for all 4 hero card products.
+ *
+ * @param {Object} parsedData — The full parsed-rates.json object
+ * @returns {Object|null} { date, dateShort, conv30, conv15, fha30, va30 }
+ */
+export function computeHomepageRatesFromParsed(parsedData) {
+  if (!parsedData?.products?.length) return null;
+
+  const { products, date } = parsedData;
+  const { loanAmount } = REFERENCE_SCENARIO;
+
+  // Format date: "2026-03-24" → "Mar 24, 2026"
+  let dateShort = null;
+  let dateFull = null;
+  if (date) {
+    const [y, m, d] = date.split('-').map(Number);
+    dateShort = `${MONTHS_SHORT[m - 1]} ${d}, ${y}`;
+    dateFull = `${MONTHS_FULL[m - 1]} ${d}, ${y}`;
+  }
+
+  function buildProduct(loanType, term) {
+    const par = findParRate(products, loanType, term);
+    if (!par) return null;
+
+    const pointsCost = (100 - par.price) / 100 * loanAmount; // positive = cost to borrower
+    const payment = Math.round(calculatePI(par.rate, loanAmount, term));
+    const apr = calculateAPR(par.rate, loanAmount, Math.max(0, pointsCost), term);
+
+    return {
+      rate: par.rate,
+      apr,
+      payment,
+      points: Math.round((100 - par.price) * 1000) / 1000, // positive = cost, negative = credit
+    };
+  }
+
+  return {
+    date,
+    dateFull,
+    dateShort,
+    conv30: buildProduct('conventional', 30),
+    conv15: buildProduct('conventional', 15),
+    fha30: buildProduct('fha', 30),
+    va30: buildProduct('va', 30),
   };
 }

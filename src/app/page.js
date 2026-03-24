@@ -1,63 +1,44 @@
 import Link from 'next/link';
 import TrustBar from '@/components/TrustBar';
 import StickyRateBar from '@/components/StickyRateBar';
-import { fetchGCSFile, isGCSConfigured } from '@/lib/gcs';
-import staticSunwest from '@/data/rates/sunwest.json';
-import { computeHomepageRates } from '@/lib/rates/homepage';
+import parsedRates from '@/data/parsed-rates.json';
+import { computeHomepageRatesFromParsed } from '@/lib/rates/homepage';
 
 // Revalidate every 5 minutes (ISR) — matches /api/rates and /rates page
 export const revalidate = 300;
 
-const GCS_BUCKET = process.env.GCS_BUCKET_NAME || 'netrate-rates';
-
-// Market data constants removed — fabricated data replaced with Rate Watch page
-
-/**
- * Fetch rate data for homepage display.
- * Tries GCS live data first, falls back to static bundled data.
- */
-async function getHomepageRateData() {
-  if (isGCSConfigured()) {
-    try {
-      const manifest = await fetchGCSFile(GCS_BUCKET, 'live/manifest.json');
-      const lenderData = await fetchGCSFile(GCS_BUCKET, `live/${manifest.lenders[0].file}`);
-      return lenderData;
-    } catch (err) {
-      console.error('Homepage GCS fetch failed, using static fallback:', err.message);
-    }
-  }
-  return staticSunwest;
-}
-
-// Market data fetch removed — replaced with Rate Watch page
-
 export default async function HomePage() {
-  // ─── Live Rate Data ─────────────────────────────────────────
-  const lenderData = await getHomepageRateData();
-  // market data removed — Rate Watch page handles market display
+  // ─── Live Rate Data (from parsed-rates.json — all lenders, all products) ───
   let liveRates = null;
   try {
-    liveRates = computeHomepageRates(lenderData);
+    liveRates = computeHomepageRatesFromParsed(parsedRates);
   } catch (err) {
     console.error('Homepage rate computation failed:', err.message);
   }
 
   // ─── Display Values (live → fallback) ──────────────────────
   const d = liveRates;
-  const conv30Rate = d ? `${d.conv30.rate.toFixed(3)}%` : '5.875%';
-  const conv30Apr = d ? `${d.conv30.apr.toFixed(2)}%` : '5.94%';
-  const conv30Payment = d ? `$${d.conv30.payment.toLocaleString()}` : '$2,366';
-  const effectiveDateShort = d?.effectiveDateShort || 'Mar 13, 2026';
-  const effectiveTime = d?.effectiveTime || '6:00 AM PST';
 
-  // Market data removed — Rate Watch page handles all market display
+  function fmtRate(product) {
+    return product ? `${product.rate.toFixed(3)}%` : null;
+  }
+  function fmtApr(product) {
+    return product ? `${product.apr.toFixed(2)}%` : null;
+  }
+  function fmtPayment(product) {
+    return product ? `$${product.payment.toLocaleString()}` : null;
+  }
 
-  // Hero card products (30-yr from live data, rest are estimates)
+  const conv30Rate = fmtRate(d?.conv30) || '5.875%';
+  const conv30Apr = fmtApr(d?.conv30) || '5.94%';
+  const conv30Payment = fmtPayment(d?.conv30) || '$2,366';
+  const effectiveDateShort = d?.dateShort || 'Mar 24, 2026';
+
   const heroProducts = [
     { product: '30-Yr Fixed', label: 'Conforming', rate: conv30Rate, apr: conv30Apr },
-    { product: '15-Yr Fixed', label: 'Conforming', rate: '5.250%', apr: '5.38%' },
-    { product: 'FHA 30-Yr', label: 'Government', rate: '5.500%', apr: '6.12%' },
-    { product: 'VA 30-Yr', label: 'Military', rate: '5.375%', apr: '5.52%' },
+    { product: '15-Yr Fixed', label: 'Conforming', rate: fmtRate(d?.conv15) || '5.250%', apr: fmtApr(d?.conv15) || '5.38%' },
+    { product: 'FHA 30-Yr', label: 'Government', rate: fmtRate(d?.fha30) || '5.500%', apr: fmtApr(d?.fha30) || '6.12%' },
+    { product: 'VA 30-Yr', label: 'Military', rate: fmtRate(d?.va30) || '5.375%', apr: fmtApr(d?.va30) || '5.52%' },
   ];
 
   return (
@@ -92,7 +73,7 @@ export default async function HomePage() {
                 </a>
               </div>
               <div className="w-px h-3.5 bg-gray-800" />
-              <span className="text-gray-600 text-[11px]">{effectiveDateShort} &middot; {effectiveTime}</span>
+              <span className="text-gray-600 text-[11px]">{effectiveDateShort}</span>
             </div>
           ))}
         </div>
