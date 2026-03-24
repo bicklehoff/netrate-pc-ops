@@ -23,28 +23,6 @@ function chgText(val) {
   return (val > 0 ? '+' : '') + val.toFixed(2) + '%';
 }
 
-/**
- * Convert a decimal rate difference to a fraction string.
- * e.g., 0.0625 → "1/16%", 0.125 → "1/8%", 0.5 → "1/2%"
- */
-function toFraction(decimal) {
-  if (decimal == null || decimal <= 0) return null;
-
-  // Common mortgage rate fractions (in sixteenths)
-  const sixteenths = Math.round(decimal / 0.0625);
-  if (sixteenths <= 0) return null;
-
-  // Simplify the fraction
-  const fractions = {
-    1: '1/16', 2: '1/8', 3: '3/16', 4: '1/4',
-    5: '5/16', 6: '3/8', 7: '7/16', 8: '1/2',
-    9: '9/16', 10: '5/8', 11: '11/16', 12: '3/4',
-    13: '13/16', 14: '7/8', 15: '15/16', 16: '1',
-  };
-
-  if (sixteenths > 16) return decimal.toFixed(2) + '%';
-  return (fractions[sixteenths] || sixteenths + '/16') + '%';
-}
 
 export default function RateGrid({ netRates, nationalRates, date }) {
   if (!netRates) return null;
@@ -106,9 +84,9 @@ export default function RateGrid({ netRates, nationalRates, date }) {
                       </span>
                     </td>
                     <td className="py-3 px-6 text-right">
-                      {hasSavings && toFraction(savings) ? (
-                        <span className="inline-flex items-center gap-1 text-sm font-bold text-green-400">
-                          {toFraction(savings)}
+                      {hasSavings ? (
+                        <span className="inline-flex items-center gap-1 text-sm font-bold text-green-400 tabular-nums">
+                          {savings.toFixed(3)}%
                         </span>
                       ) : (
                         <span className="text-xs text-slate-600">—</span>
