@@ -44,6 +44,26 @@ const ECONOMIC_EVENTS = [
   },
 ];
 
+// Estimate APR: rate + cost of ~$4,100 in fees ($999 lender + ~$3,100 third-party) on $400K / 30yr
+function estimateAPR(rate) {
+  if (!rate) return null;
+  const loanAmount = 400000;
+  const totalFees = 4100; // typical lender + third-party
+  const r = rate / 100 / 12;
+  const n = 360;
+  const payment = loanAmount * (r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+  const effectiveAmount = loanAmount - totalFees;
+  // Solve for APR iteratively
+  let aprGuess = rate / 100;
+  for (let i = 0; i < 20; i++) {
+    const rg = aprGuess / 12;
+    const pv = payment * (1 - Math.pow(1 + rg, -n)) / rg;
+    const deriv = payment * (n * Math.pow(1 + rg, -n - 1) / rg - (1 - Math.pow(1 + rg, -n)) / (rg * rg)) / 12;
+    aprGuess -= (pv - effectiveAmount) / deriv;
+  }
+  return aprGuess * 100;
+}
+
 function RateRow({ product, rate, change }) {
   const chgClass = change > 0 ? 'text-red-500' : change < 0 ? 'text-green-500' : 'text-slate-500';
   const chgText =
@@ -52,13 +72,22 @@ function RateRow({ product, rate, change }) {
       : change < 0
         ? change.toFixed(3)
         : 'unch';
+  const apr = estimateAPR(rate);
   return (
     <tr>
       <td className="py-2 text-slate-200 font-semibold text-[15px] border-t border-white/10">
         {product}
       </td>
-      <td className="py-2 text-right text-white font-bold text-[15px] border-t border-white/10">
-        {rate ? rate.toFixed(3) + '%' : '—'}{' '}
+      <td className="py-2 text-right border-t border-white/10">
+        <span className="text-white font-bold text-[15px]">
+          {rate ? rate.toFixed(3) + '%' : '—'}
+        </span>
+        {apr && (
+          <span className="text-slate-400 text-[11px] ml-1">
+            ({apr.toFixed(3)}% APR)
+          </span>
+        )}
+        {' '}
         <span className={`text-[13px] ${chgClass}`}>{chgText}</span>
       </td>
     </tr>
