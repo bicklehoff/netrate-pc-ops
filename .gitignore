@@ -40,3 +40,13 @@ yarn-error.log*
 next-env.d.ts
 
 /src/generated/prisma
+
+# Rate sheet working files (binary, large — never deploy)
+Work/Dev/Products/rate-sheets-analysis/
+Work/Dev/Products/rate-sheets-historical/
+*.xlsx
+*.xlsm
+*.zip
+
+# Raw data files (parsed versions in JS are what's used)
+src/data/fhfa-loan-limits-raw.csv
