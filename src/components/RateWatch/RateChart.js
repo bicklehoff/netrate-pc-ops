@@ -119,8 +119,8 @@ const spreadPlugin = {
     // 5. Arrow + savings pill
     const midY = (p0.y + p1.y) / 2;
     const midX = p0.x + 14;
-    const saveText = spread + '% lower rate';
-    ctx.font = 'bold 14px -apple-system, BlinkMacSystemFont, sans-serif';
+    const saveText = 'Save ' + spread + '% with NetRate';
+    ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, sans-serif';
     tw = ctx.measureText(saveText).width;
 
     ctx.beginPath();
