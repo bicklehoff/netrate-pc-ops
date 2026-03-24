@@ -2,7 +2,7 @@ import { PrismaClient } from '@/generated/prisma/client';
 import { PrismaNeon } from '@prisma/adapter-neon';
 import { neon } from '@neondatabase/serverless';
 
-export async function GET(request) {
+export async function GET() {
   const results = {};
 
   try {
