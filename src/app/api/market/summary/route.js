@@ -1,58 +1,92 @@
 // Market Summary API — Daily morning market updates for /rate-watch
 //
-// GET  /api/market/summary          → latest summary (or ?date=2026-03-20)
-// POST /api/market/summary          → create/update summary (agent use)
+// GET  /api/market/summary          → latest commentary (or ?date=2026-03-20)
+// POST /api/market/summary          → create/update commentary (auth required)
 //   Body: { date, headline, commentary, sentiment, treasury10yr, treasury10yrChg,
-//           mbs6Coupon, mbs6Change, upcomingEvents, createdBy }
+//           mbs6Coupon, mbs6Change, author, source }
 //
-// POST requires CLAW_API_KEY header for authentication.
+// Auth: CLAW_API_KEY header or NextAuth session with MLO role.
 // Cache: 5-min CDN, 1-min browser (summaries update once per morning)
+//
+// Reads from rate_watch_commentaries (primary), falls back to market_summaries (legacy).
 
 import { NextResponse } from 'next/server';
-import { neon } from '@neondatabase/serverless';
-
-function getSql() {
-  return neon(process.env.DATABASE_URL);
-}
+import prisma from '@/lib/prisma';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const dateParam = searchParams.get('date');
-    const sql = getSql();
 
-    let rows;
+    // Try RateWatchCommentary first
+    let record;
     if (dateParam) {
-      rows = await sql`
-        SELECT * FROM market_summaries
-        WHERE date = ${dateParam}::date
-        LIMIT 1
-      `;
+      record = await prisma.rateWatchCommentary.findUnique({
+        where: { date: new Date(dateParam) },
+      });
     } else {
-      rows = await sql`
-        SELECT * FROM market_summaries
-        ORDER BY date DESC
-        LIMIT 1
-      `;
+      record = await prisma.rateWatchCommentary.findFirst({
+        orderBy: { date: 'desc' },
+      });
     }
 
-    if (!rows.length) {
-      return NextResponse.json({ summary: null, source: 'none' });
+    // Fallback to legacy MarketSummary if no commentary found
+    if (!record) {
+      let legacy;
+      if (dateParam) {
+        legacy = await prisma.marketSummary.findUnique({
+          where: { date: new Date(dateParam) },
+        });
+      } else {
+        legacy = await prisma.marketSummary.findFirst({
+          orderBy: { date: 'desc' },
+        });
+      }
+
+      if (!legacy) {
+        return NextResponse.json({ summary: null, source: 'none' });
+      }
+
+      const summary = {
+        date: legacy.date instanceof Date
+          ? legacy.date.toISOString().split('T')[0]
+          : String(legacy.date).split('T')[0],
+        headline: legacy.headline,
+        commentary: legacy.commentary,
+        sentiment: legacy.sentiment,
+        treasury10yr: legacy.treasury10yr ? Number(legacy.treasury10yr) : null,
+        treasury10yrChg: legacy.treasury10yrChg ? Number(legacy.treasury10yrChg) : null,
+        mbs6Coupon: legacy.mbs6Coupon,
+        mbs6Change: legacy.mbs6Change ? Number(legacy.mbs6Change) : null,
+        upcomingEvents: legacy.upcomingEvents || null,
+        createdBy: legacy.createdBy,
+        updatedAt: legacy.updatedAt,
+      };
+
+      const response = NextResponse.json({ summary, source: 'legacy_db' });
+      response.headers.set(
+        'Cache-Control',
+        'public, s-maxage=300, max-age=60, stale-while-revalidate=120'
+      );
+      return response;
     }
 
-    const row = rows[0];
+    // Format RateWatchCommentary response
     const summary = {
-      date: row.date instanceof Date ? row.date.toISOString().split('T')[0] : String(row.date).split('T')[0],
-      headline: row.headline,
-      commentary: row.commentary,
-      sentiment: row.sentiment,
-      treasury10yr: row.treasury_10yr ? parseFloat(row.treasury_10yr) : null,
-      treasury10yrChg: row.treasury_10yr_chg ? parseFloat(row.treasury_10yr_chg) : null,
-      mbs6Coupon: row.mbs_6_coupon,
-      mbs6Change: row.mbs_6_change ? parseFloat(row.mbs_6_change) : null,
-      upcomingEvents: row.upcoming_events || null,
-      createdBy: row.created_by,
-      updatedAt: row.updated_at,
+      date: record.date instanceof Date
+        ? record.date.toISOString().split('T')[0]
+        : String(record.date).split('T')[0],
+      headline: record.headline,
+      commentary: record.commentary,
+      sentiment: record.sentiment,
+      treasury10yr: record.treasury10yr,
+      treasury10yrChg: record.treasury10yrChg,
+      mbs6Coupon: record.mbs6Coupon,
+      mbs6Change: record.mbs6Change,
+      author: record.author,
+      publishedAt: record.publishedAt,
     };
 
     const response = NextResponse.json({ summary, source: 'db' });
@@ -72,9 +106,18 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
-    // Authenticate — require CLAW_API_KEY
-    const apiKey = request.headers.get('x-api-key') || request.headers.get('authorization')?.replace('Bearer ', '');
-    if (!apiKey || apiKey !== process.env.CLAW_API_KEY) {
+    // Auth: CLAW_API_KEY header OR NextAuth MLO session
+    const apiKey = request.headers.get('x-api-key')
+      || request.headers.get('authorization')?.replace('Bearer ', '');
+    const hasApiKey = apiKey && apiKey === process.env.CLAW_API_KEY;
+
+    let hasMloSession = false;
+    if (!hasApiKey) {
+      const session = await getServerSession(authOptions);
+      hasMloSession = session?.user?.role === 'mlo';
+    }
+
+    if (!hasApiKey && !hasMloSession) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -82,7 +125,7 @@ export async function POST(request) {
     const {
       date, headline, commentary, sentiment,
       treasury10yr, treasury10yrChg, mbs6Coupon, mbs6Change,
-      upcomingEvents, createdBy,
+      author, source: inputSource,
     } = body;
 
     if (!date || !headline || !commentary) {
@@ -92,50 +135,45 @@ export async function POST(request) {
       );
     }
 
-    const sql = getSql();
-
-    // Upsert — if a summary for this date already exists, update it
-    const rows = await sql`
-      INSERT INTO market_summaries (
-        date, headline, commentary, sentiment,
-        treasury_10yr, treasury_10yr_chg, mbs_6_coupon, mbs_6_change,
-        upcoming_events, created_by, created_at, updated_at
-      ) VALUES (
-        ${date}::date,
-        ${headline},
-        ${commentary},
-        ${sentiment || 'neutral'},
-        ${treasury10yr || null},
-        ${treasury10yrChg || null},
-        ${mbs6Coupon || null},
-        ${mbs6Change || null},
-        ${upcomingEvents ? JSON.stringify(upcomingEvents) : null}::jsonb,
-        ${createdBy || 'claw'},
-        NOW(), NOW()
-      )
-      ON CONFLICT (date) DO UPDATE SET
-        headline = EXCLUDED.headline,
-        commentary = EXCLUDED.commentary,
-        sentiment = EXCLUDED.sentiment,
-        treasury_10yr = EXCLUDED.treasury_10yr,
-        treasury_10yr_chg = EXCLUDED.treasury_10yr_chg,
-        mbs_6_coupon = EXCLUDED.mbs_6_coupon,
-        mbs_6_change = EXCLUDED.mbs_6_change,
-        upcoming_events = EXCLUDED.upcoming_events,
-        created_by = EXCLUDED.created_by,
-        updated_at = NOW()
-      RETURNING id, date
-    `;
+    // Upsert into RateWatchCommentary
+    const record = await prisma.rateWatchCommentary.upsert({
+      where: { date: new Date(date) },
+      create: {
+        date: new Date(date),
+        headline,
+        commentary,
+        sentiment: sentiment || 'neutral',
+        treasury10yr: treasury10yr ?? null,
+        treasury10yrChg: treasury10yrChg ?? null,
+        mbs6Coupon: mbs6Coupon ?? null,
+        mbs6Change: mbs6Change ?? null,
+        author: author || 'David Burson',
+        source: inputSource || 'manual',
+        publishedAt: new Date(),
+      },
+      update: {
+        headline,
+        commentary,
+        sentiment: sentiment || 'neutral',
+        treasury10yr: treasury10yr ?? null,
+        treasury10yrChg: treasury10yrChg ?? null,
+        mbs6Coupon: mbs6Coupon ?? null,
+        mbs6Change: mbs6Change ?? null,
+        author: author || 'David Burson',
+        source: inputSource || 'manual',
+        publishedAt: new Date(),
+      },
+    });
 
     return NextResponse.json({
       ok: true,
-      id: rows[0]?.id,
-      date: rows[0]?.date,
+      id: record.id,
+      date: record.date,
     });
   } catch (error) {
     console.error('Market summary POST error:', error);
     return NextResponse.json(
-      { error: 'Failed to save market summary', detail: error.message },
+      { error: 'Failed to save commentary', detail: error.message },
       { status: 500 }
     );
   }

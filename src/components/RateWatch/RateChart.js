@@ -346,9 +346,9 @@ function buildAnnotations(days) {
 const CREDIT_MAP = { '760': '760+', '740': '740-759', '700': '700-719' };
 const CREDIT_TIERS = ['760', '740', '700'];
 const TIME_RANGES = [
-  { label: '1M', days: 30 },
-  { label: '3M', days: 90 },
-  { label: 'All', days: 0 },
+  { label: '1 Mo', days: 30 },
+  { label: '3 Mo', days: 90 },
+  { label: 'All Time', days: 0 },
 ];
 
 export default function RateChart({ rateHistory, fredData }) {

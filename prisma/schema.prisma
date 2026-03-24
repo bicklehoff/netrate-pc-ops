@@ -1469,3 +1469,33 @@ model RateAlert {
   @@index([type, status, loanType])
   @@map("rate_alerts")
 }
+
+// ═══════════════════════════════════════════════════════════════
+// RATE WATCH COMMENTARY — PC (Daily Market Commentary Pipeline)
+// Authority: PC. Written by Claw via relay, published to /rate-watch.
+// Separate from MarketSummary (which stores market data snapshots).
+// This model stores the full editorial commentary pipeline.
+// ═══════════════════════════════════════════════════════════════
+
+model RateWatchCommentary {
+  id              Int       @id @default(autoincrement())
+  date            DateTime  @unique @db.Date                    // One commentary per day
+  headline        String    @db.VarChar(300)                    // e.g. "Rates Ease on Iran Ceasefire Talks"
+  commentary      String    @db.Text                            // Full commentary text
+  sentiment       String    @default("neutral") @db.VarChar(20) // bullish, bearish, neutral
+
+  // Market data snapshot (optional — filled when available)
+  treasury10yr    Float?    @map("treasury_10yr")
+  treasury10yrChg Float?    @map("treasury_10yr_chg")
+  mbs6Coupon      String?   @map("mbs_6_coupon") @db.VarChar(20)
+  mbs6Change      Float?    @map("mbs_6_change")
+
+  // Metadata
+  author          String    @default("David Burson") @db.VarChar(100)
+  source          String    @db.VarChar(50)                     // "claw_relay" | "manual"
+  publishedAt     DateTime  @map("published_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  @@index([date])
+  @@map("rate_watch_commentaries")
+}
