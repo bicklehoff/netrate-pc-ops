@@ -23,6 +23,29 @@ function chgText(val) {
   return (val > 0 ? '+' : '') + val.toFixed(2) + '%';
 }
 
+/**
+ * Convert a decimal rate difference to a fraction string.
+ * e.g., 0.0625 → "1/16%", 0.125 → "1/8%", 0.5 → "1/2%"
+ */
+function toFraction(decimal) {
+  if (decimal == null || decimal <= 0) return null;
+
+  // Common mortgage rate fractions (in sixteenths)
+  const sixteenths = Math.round(decimal / 0.0625);
+  if (sixteenths <= 0) return null;
+
+  // Simplify the fraction
+  const fractions = {
+    1: '1/16', 2: '1/8', 3: '3/16', 4: '1/4',
+    5: '5/16', 6: '3/8', 7: '7/16', 8: '1/2',
+    9: '9/16', 10: '5/8', 11: '11/16', 12: '3/4',
+    13: '13/16', 14: '7/8', 15: '15/16', 16: '1',
+  };
+
+  if (sixteenths > 16) return decimal.toFixed(2) + '%';
+  return (fractions[sixteenths] || sixteenths + '/16') + '%';
+}
+
 export default function RateGrid({ netRates, nationalRates, date }) {
   if (!netRates) return null;
 
@@ -34,7 +57,7 @@ export default function RateGrid({ netRates, nationalRates, date }) {
           <div>
             <h2 className="text-white text-base font-bold">NetRate vs National Average</h2>
             <p className="text-slate-500 text-xs mt-0.5">
-              Wholesale par rate (0 pts) vs Mortgage News Daily index
+              Wholesale rate vs Mortgage News Daily national average
             </p>
           </div>
           {date && (
@@ -83,12 +106,10 @@ export default function RateGrid({ netRates, nationalRates, date }) {
                       </span>
                     </td>
                     <td className="py-3 px-6 text-right">
-                      {hasSavings ? (
-                        <span className="inline-flex items-center gap-1 text-sm font-bold text-green-400 tabular-nums">
-                          {savings.toFixed(2)}%
+                      {hasSavings && toFraction(savings) ? (
+                        <span className="inline-flex items-center gap-1 text-sm font-bold text-green-400">
+                          {toFraction(savings)}
                         </span>
-                      ) : savings != null && savings <= 0 ? (
-                        <span className="text-xs text-slate-600">—</span>
                       ) : (
                         <span className="text-xs text-slate-600">—</span>
                       )}
@@ -103,7 +124,7 @@ export default function RateGrid({ netRates, nationalRates, date }) {
         {/* Footnote */}
         <div className="px-6 py-3 border-t border-white/[0.06]">
           <p className="text-[10px] text-slate-600 leading-relaxed">
-            NetRate: wholesale par rate (0 pts) · 760+ FICO · 75% LTV · Purchase
+            NetRate: wholesale rate · 760+ FICO · 75% LTV · Purchase
             {' | '}Nat&apos;l Avg: Mortgage News Daily index · 780 FICO · adjusted for points
             {' | '}Source: <a href="https://www.mortgagenewsdaily.com/mortgage-rates" target="_blank" rel="noopener noreferrer" className="text-slate-500 hover:text-brand transition-colors">mortgagenewsdaily.com</a>
           </p>

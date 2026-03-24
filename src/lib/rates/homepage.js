@@ -143,13 +143,16 @@ export function computeHomepageRates(lenderData) {
 
 // ─── Main Computation (Parsed Rate Data + Full Pricing Engine) ───
 
+// MND adjusts their published rates for ~0.5 points of cost. To compare apples-to-apples,
+// we find the lowest rate where cost (ex-lender fee) is between 0.3 and 0.7 points.
+// This matches the industry standard "rate with typical points" that MND/Freddie publish.
+const MND_POINTS_TARGET = 0.5;
+const MND_POINTS_MIN = 0.3;
+const MND_POINTS_MAX = 0.7;
+
 /**
  * Run the pricing engine for a specific loan type + term.
- * Uses the same priceScenario() as the Rate Tool — includes LLPAs and broker comp.
- *
- * Par is found using costBeforeFees (excludes lender fee) to match how MND/Freddie
- * report rates. This gives an apples-to-apples comparison with national averages.
- * Lender fee is tracked separately for the detailed Rate Tool display.
+ * Finds the best rate at ~0.5 points cost (ex-lender fee) to match how MND reports.
  *
  * @returns {{ rate, apr, payment, lenderFee, ... } | null}
  */
@@ -177,37 +180,43 @@ function priceProduct(allPrograms, loanType, term) {
     const result = priceScenario(scenario, allPrograms, options);
     if (!result?.results?.length) return null;
 
-    // Find PAR using costPoints (fees in) — this gives the true best rate.
-    // Then report the cost WITHOUT lender fee for display (matching MND/Freddie).
-    const parResult = result.results.reduce((best, r) =>
-      Math.abs(r.costPoints) < Math.abs(best.costPoints) ? r : best
+    // Find lowest rate where costBeforeFees (ex-lender fee) is ~0.5 points.
+    // This matches MND's "adjusted for points" methodology.
+    const candidates = result.results.filter(r =>
+      r.costBeforeFees >= MND_POINTS_MIN && r.costBeforeFees <= MND_POINTS_MAX
     );
 
-    if (!parResult) return null;
+    let best;
+    if (candidates.length > 0) {
+      // Among candidates in the 0.3-0.7 range, pick lowest rate
+      best = candidates.reduce((b, r) => r.rate < b.rate ? r : b);
+    } else {
+      // Fallback: closest to 0.5 points
+      best = result.results.reduce((b, r) =>
+        Math.abs(r.costBeforeFees - MND_POINTS_TARGET) < Math.abs(b.costBeforeFees - MND_POINTS_TARGET) ? r : b
+      );
+    }
 
-    // Display cost excludes lender fee (apples-to-apples with national avg)
-    const displayCostPts = parResult.costBeforeFees;
+    if (!best) return null;
+
+    const displayCostPts = best.costBeforeFees;
     const displayCostDollars = (displayCostPts / 100) * REFERENCE_SCENARIO.loanAmount;
 
-    // APR excludes lender fee (matching display rate basis)
-    const financeCharges = Math.max(0, displayCostDollars + (parResult.upfrontMI || 0));
-    const apr = calculateAPR(parResult.rate, REFERENCE_SCENARIO.loanAmount, financeCharges, term);
+    const financeCharges = Math.max(0, displayCostDollars + (best.upfrontMI || 0));
+    const apr = calculateAPR(best.rate, REFERENCE_SCENARIO.loanAmount, financeCharges, term);
 
     return {
-      rate: parResult.rate,
+      rate: best.rate,
       apr,
-      payment: Math.round(parResult.monthlyPI),
-      totalPayment: Math.round(parResult.totalPayment),
-      // Display cost (ex-lender fee — apples-to-apples with national avg)
+      payment: Math.round(best.monthlyPI),
+      totalPayment: Math.round(best.totalPayment),
       costPoints: Math.round(displayCostPts * 1000) / 1000,
       costDollars: Math.round(displayCostDollars),
-      // Lender fee tracked separately for transparency
-      lenderFee: parResult.lenderFee,
-      lenderFeePoints: parResult.lenderFeePoints,
-      // Full cost (fees in) for detailed views
-      costPointsFeesIn: parResult.costPoints,
-      costDollarsFeesIn: parResult.costDollars,
-      lender: parResult.lender,
+      lenderFee: best.lenderFee,
+      lenderFeePoints: best.lenderFeePoints,
+      costPointsFeesIn: best.costPoints,
+      costDollarsFeesIn: best.costDollars,
+      lender: best.lender,
     };
   } catch {
     return null;
