@@ -153,6 +153,7 @@ export default async function RateWatchPage() {
         fredLatest={fredData.latest}
         todayRate={todayRate}
         rateHistory={rateHistory}
+        rateOffset={rateOffset}
       />
 
       {/* Bento Dashboard */}

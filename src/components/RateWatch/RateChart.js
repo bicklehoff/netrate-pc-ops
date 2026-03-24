@@ -388,10 +388,9 @@ export default function RateChart({ rateHistory, fredData: serverFredData, rateO
     const rawValues = filtered.map((r) => parseFloat(r.rate) + rateOffset);
     const values = smoothData(rawValues);
 
-    // Interpolate Freddie Mac data (offset applied to keep spread accurate)
+    // Interpolate Freddie Mac data (no offset — FRED data is already accurate)
     const fm30 = fredData?.MORTGAGE30US || [];
-    const fmRaw = interpolateFreddieMac(fm30, dates);
-    const fmValues = fmRaw.map((v) => (v != null ? v + rateOffset : null));
+    const fmValues = interpolateFreddieMac(fm30, dates);
 
     // Extend into future
     const xMax = getXMax(timeRange);
