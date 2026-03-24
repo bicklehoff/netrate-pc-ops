@@ -2,6 +2,25 @@
 
 import { useState, useEffect } from 'react';
 
+// Estimate APR: rate + cost of ~$4,100 in fees on $400K / 30yr
+function estimateAPR(rate) {
+  if (!rate) return null;
+  const loanAmount = 400000;
+  const totalFees = 4100;
+  const r = rate / 100 / 12;
+  const n = 360;
+  const payment = loanAmount * (r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+  const effectiveAmount = loanAmount - totalFees;
+  let aprGuess = rate / 100;
+  for (let i = 0; i < 20; i++) {
+    const rg = aprGuess / 12;
+    const pv = payment * (1 - Math.pow(1 + rg, -n)) / rg;
+    const deriv = payment * (n * Math.pow(1 + rg, -n - 1) / rg - (1 - Math.pow(1 + rg, -n)) / (rg * rg)) / 12;
+    aprGuess -= (pv - effectiveAmount) / deriv;
+  }
+  return aprGuess * 100;
+}
+
 export default function HeroStrip({ todayRate, rateChange, fredLatest }) {
   const [commentary, setCommentary] = useState(null);
 
@@ -93,7 +112,12 @@ export default function HeroStrip({ todayRate, rateChange, fredLatest }) {
           <div className="text-white text-[44px] font-extrabold leading-none tabular-nums">
             {todayRate ? todayRate.toFixed(3) + '%' : '—'}
           </div>
-          <div className={`text-sm font-semibold mt-1.5 tabular-nums ${changeClass}`}>{changeText}</div>
+          {todayRate && (
+            <div className="text-slate-400 text-xs mt-1 tabular-nums">
+              {estimateAPR(todayRate).toFixed(3)}% APR
+            </div>
+          )}
+          <div className={`text-sm font-semibold mt-1 tabular-nums ${changeClass}`}>{changeText}</div>
         </div>
         <div className="bg-surface rounded-xl px-6 py-5 text-center border border-white/10">
           <div className="text-slate-400 text-xs uppercase tracking-wide mb-2">
