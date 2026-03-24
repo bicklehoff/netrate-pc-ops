@@ -175,11 +175,10 @@ function priceProduct(allPrograms, loanType, term) {
     const result = priceScenario(scenario, allPrograms, options);
     if (!result?.results?.length) return null;
 
-    // Find the PAR rate — tagged "PAR" by the pricing engine, or lowest costPoints
-    const parResult = result.results.find(r => r.tags?.includes('PAR'))
-      || result.results.reduce((best, r) =>
-        Math.abs(r.costPoints) < Math.abs(best.costPoints) ? r : best
-      );
+    // Find the true PAR rate — lowest absolute costPoints across all results
+    const parResult = result.results.reduce((best, r) =>
+      Math.abs(r.costPoints) < Math.abs(best.costPoints) ? r : best
+    );
 
     if (!parResult) return null;
 
