@@ -50,7 +50,7 @@ export async function POST(request, { params }) {
       scenario.ltv = (scenario.loanAmount / scenario.propertyValue) * 100;
     }
 
-    // Load rate data from GCS
+    // Load rate data — try GCS first, fall back to local parsed JSON
     let ratePrograms = [];
     try {
       if (isGCSConfigured()) {
@@ -66,6 +66,19 @@ export async function POST(request, { params }) {
       }
     } catch (gcsError) {
       console.error('GCS rate data load error:', gcsError?.message);
+    }
+
+    // Fallback: load from local parsed rates file
+    if (ratePrograms.length === 0) {
+      try {
+        const { readFileSync } = await import('fs');
+        const { join } = await import('path');
+        const filePath = join(process.cwd(), 'src/data/parsed-rates.json');
+        const data = JSON.parse(readFileSync(filePath, 'utf8'));
+        ratePrograms = data.products || [];
+      } catch (localError) {
+        console.error('Local rate data load error:', localError?.message);
+      }
     }
 
     if (ratePrograms.length === 0) {
