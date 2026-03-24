@@ -45,9 +45,16 @@ async function loadRateData() {
     return rateCache.data;
   }
 
-  // For now, load from GCS manifest + per-lender parsed files
-  // The pipeline will be: OC uploads raw → PC parses → writes parsed JSON to GCS
-  // Until pipeline is live, we serve from static data
+  // Primary: local parsed-rates.json (includes LLPAs, adjustments, spec payups)
+  try {
+    const { default: parsedRates } = await import('@/data/parsed-rates.json');
+    if (parsedRates?.lenders?.length) {
+      rateCache = { data: parsedRates.lenders, fetchedAt: now };
+      return parsedRates.lenders;
+    }
+  } catch { /* ignore */ }
+
+  // Fallback: GCS (legacy — doesn't include lender-specific adjustments yet)
   if (isGCSConfigured()) {
     try {
       const manifest = await fetchGCSFile(GCS_BUCKET, 'parsed/manifest.json');
@@ -61,12 +68,9 @@ async function loadRateData() {
       return lenders;
     } catch (err) {
       console.error('GCS parsed rate fetch failed:', err.message);
-      // Fall through to static
     }
   }
 
-  // Static fallback — return empty for now
-  // TODO: bundle sample parsed data as static fallback
   return [];
 }
 

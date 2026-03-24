@@ -510,8 +510,8 @@ export function priceScenario(scenario, allPrograms, options = {}) {
   const lockDays = options.lockDays || 30;
   const termFilter = options.termFilter || term;
 
-  // Derived values
-  const ltv = propertyValue ? (loanAmount / propertyValue) * 100 : 80;
+  // Derived values — round to 2 decimal places to avoid floating-point band boundary issues
+  const ltv = propertyValue ? Math.round((loanAmount / propertyValue) * 10000) / 100 : 80;
 
   // CLTV — if sub financing exists, combined LTV drives certain LLPA lookups
   const cltv = (propertyValue && subFinancing && subFinancingBalance > 0)
@@ -531,9 +531,9 @@ export function priceScenario(scenario, allPrograms, options = {}) {
     loanCategory = loanAmount > 1149825 ? 'jumbo' : 'highBalance';
   }
 
-  // Broker comp
-  const compAmount = calculateComp(loanAmount, loanPurpose);
-  const compPoints = (compAmount / loanAmount) * 100; // Convert to points for pricing math
+  // Default broker comp (may be overridden per-lender below)
+  const defaultCompAmount = calculateComp(loanAmount, loanPurpose);
+  const defaultCompPoints = (defaultCompAmount / loanAmount) * 100;
 
   const enrichedScenario = {
     ...scenario,
@@ -547,15 +547,30 @@ export function priceScenario(scenario, allPrograms, options = {}) {
     subFinancing,
     propertyType,
     occupancy,
-    compAmount,
-    compPoints,
+    compAmount: defaultCompAmount,
+    compPoints: defaultCompPoints,
   };
 
   const results = [];
 
   for (const lenderData of allPrograms) {
     const lenderId = lenderData.lenderId;
-    const lenderFee = LENDER_FEES[lenderId] || 1000;
+
+    // Use lender-specific fee from parsed data, fall back to hardcoded
+    const lenderFee = lenderData.lenderFee || LENDER_FEES[lenderId] || 1000;
+
+    // Use lender-specific comp cap if available
+    let compAmount = defaultCompAmount;
+    let compPoints = defaultCompPoints;
+    if (lenderData.compCap) {
+      const cap = loanPurpose === 'purchase'
+        ? (lenderData.compCap.purchase || lenderData.compCap.refinance)
+        : (lenderData.compCap.refinance || lenderData.compCap.purchase);
+      if (cap) {
+        compAmount = Math.min(loanAmount * BROKER_COMP.rate, cap);
+        compPoints = (compAmount / loanAmount) * 100;
+      }
+    }
 
     for (const program of lenderData.programs) {
       // Term filter
@@ -578,14 +593,28 @@ export function priceScenario(scenario, allPrograms, options = {}) {
       program._llpaMode = llpaMode;
 
       // Load lender-specific LLPA data if available
+      // Priority: 1) lender-llpas.js (pre-baked), 2) parsed from rate sheet, 3) GSE defaults
       const lenderLlpaData = loadLenderLLPAs(lenderId);
-      const lenderLlpas = lenderLlpaData ? {
-        purchaseLlpa: lenderLlpaData.ficoLtvGrids?.purchase || null,
-        refiLlpa: lenderLlpaData.ficoLtvGrids?.refinance || null,
-        cashoutLlpa: lenderLlpaData.ficoLtvGrids?.cashout || null,
-        additionalLlpa: lenderLlpaData.additionalAdjustments || null,
-        loanAmtAdj: lenderLlpaData.loanAmountAdj || [],
-      } : (lenderData.llpas || null);
+      let lenderLlpas = null;
+      if (lenderLlpaData) {
+        lenderLlpas = {
+          purchaseLlpa: lenderLlpaData.ficoLtvGrids?.purchase || null,
+          refiLlpa: lenderLlpaData.ficoLtvGrids?.refinance || null,
+          cashoutLlpa: lenderLlpaData.ficoLtvGrids?.cashout || null,
+          additionalLlpa: lenderLlpaData.additionalAdjustments || null,
+          loanAmtAdj: lenderLlpaData.loanAmountAdj || [],
+        };
+      } else if (lenderData.llpas) {
+        // Use LLPA grids parsed from the rate sheet (Keystone format)
+        lenderLlpas = {
+          purchaseLlpa: lenderData.llpas.purchase || null,
+          refiLlpa: lenderData.llpas.refinance || null,
+          cashoutLlpa: lenderData.llpas.cashout || null,
+          additionalLlpa: null,
+          loanAmtAdj: [],
+          ltvBands: lenderData.llpas.ltvBands || null,
+        };
+      }
 
       const llpa = calculateLLPAForScenario(enrichedScenario, lenderLlpas, program);
 
@@ -639,12 +668,68 @@ export function priceScenario(scenario, allPrograms, options = {}) {
         }
       }
 
+      // ─── Parsed lender-specific adjustments (from rate sheet) ──────
+      // These are applied to the LLPA total (same sign convention: positive = cost)
+
+      // Loan amount adjustment (e.g., +0.075 for $400K-$548K)
+      if (lenderData.loanAmountAdj?.length) {
+        const termKey = program.term > 15 ? 'adj30yr' : 'adj15yr';
+        const loanAmtTier = lenderData.loanAmountAdj.find(
+          t => loanAmount >= t.min && loanAmount <= t.max
+        );
+        if (loanAmtTier) {
+          const adj = loanAmtTier[termKey] || 0;
+          if (adj !== 0) {
+            // Loan amount adj is a CREDIT (positive = price improvement), so SUBTRACT from cost
+            llpa.total -= adj;
+            llpa.breakdown.push({ label: `Loan amt (${(loanAmtTier.min/1000).toFixed(0)}K-${(loanAmtTier.max/1000).toFixed(0)}K)`, value: -adj });
+          }
+        }
+      }
+
+      // State adjustment (e.g., CO = +0.050)
+      if (lenderData.stateAdj && state) {
+        const stAdj = lenderData.stateAdj[state];
+        if (stAdj) {
+          const termKey = program.term > 15 ? 'adj30yr' : 'adj15yr';
+          const adj = stAdj[termKey] || 0;
+          if (adj !== 0) {
+            // State adj: positive = price improvement, so SUBTRACT from cost
+            llpa.total -= adj;
+            llpa.breakdown.push({ label: `State (${state})`, value: -adj });
+          }
+        }
+      }
+
       for (const rateEntry of lockRates) {
         // Normalize price to discount format
         const rawDiscount = toDiscountFormat(rateEntry.price, program.priceFormat || 'discount');
 
+        // Apply spec payups (rate × loan amount matrix — price IMPROVEMENT)
+        let specPayup = 0;
+        if (lenderData.specPayups) {
+          // Determine which product key to use
+          const spKey = program.loanType === 'fha' ? 'fha30'
+            : program.loanType === 'va' ? 'va30'
+            : program.term === 30 ? 'conv30' : null;
+          const spGrid = spKey ? lenderData.specPayups[spKey] : null;
+          if (spGrid?.byRate && spGrid?.loanAmtBuckets) {
+            const rateKey = String(rateEntry.rate);
+            const ratePayups = spGrid.byRate[rateKey];
+            if (ratePayups) {
+              const bucketIdx = spGrid.loanAmtBuckets.findIndex(
+                b => loanAmount >= b.min && loanAmount <= b.max
+              );
+              if (bucketIdx !== -1 && typeof ratePayups[bucketIdx] === 'number') {
+                specPayup = ratePayups[bucketIdx];
+              }
+            }
+          }
+        }
+
         // Apply LLPA adjustments (increases cost — worse FICO/LTV = higher adjustment)
-        const afterLlpa = rawDiscount + llpa.total;
+        // Spec payup is subtracted (it's a price improvement / credit)
+        const afterLlpa = rawDiscount + llpa.total - specPayup;
 
         // Add broker comp (lender-paid = increases cost to borrower)
         const afterComp = afterLlpa + compPoints;
@@ -780,8 +865,8 @@ export function priceScenario(scenario, allPrograms, options = {}) {
       loanCategory,
       employmentType,
       subFinancing,
-      compAmount: Math.round(compAmount),
-      compPoints: Math.round(compPoints * 1000) / 1000,
+      compAmount: Math.round(defaultCompAmount),
+      compPoints: Math.round(defaultCompPoints * 1000) / 1000,
     },
     closingCosts: {
       // "Fees In" pricing — lender fee and broker comp are baked into rate pricing.

@@ -143,16 +143,10 @@ export function computeHomepageRates(lenderData) {
 
 // ─── Main Computation (Parsed Rate Data + Full Pricing Engine) ───
 
-// MND adjusts their published rates for ~0.5 points of cost. To compare apples-to-apples,
-// we find the lowest rate where cost (ex-lender fee) is between 0.3 and 0.7 points.
-// This matches the industry standard "rate with typical points" that MND/Freddie publish.
-const MND_POINTS_TARGET = 0.5;
-const MND_POINTS_MIN = 0.3;
-const MND_POINTS_MAX = 0.7;
-
 /**
  * Run the pricing engine for a specific loan type + term.
- * Finds the best rate at ~0.5 points cost (ex-lender fee) to match how MND reports.
+ * Finds the true par rate (lowest cost, fees in) — zero points to the borrower.
+ * Lender fee excluded from display cost/APR to match national avg reporting.
  *
  * @returns {{ rate, apr, payment, lenderFee, ... } | null}
  */
@@ -167,6 +161,7 @@ function priceProduct(allPrograms, loanType, term) {
     propertyType: REFERENCE_SCENARIO.propertyType,
     occupancy: 'primary',
     term,
+    state: 'CO',
     employmentType: 'w2',
     subFinancing: false,
     subFinancingBalance: 0,
@@ -180,25 +175,27 @@ function priceProduct(allPrograms, loanType, term) {
     const result = priceScenario(scenario, allPrograms, options);
     if (!result?.results?.length) return null;
 
-    // Find lowest rate where costBeforeFees (ex-lender fee) is ~0.5 points.
-    // This matches MND's "adjusted for points" methodology.
-    const candidates = result.results.filter(r =>
-      r.costBeforeFees >= MND_POINTS_MIN && r.costBeforeFees <= MND_POINTS_MAX
-    );
-
-    let best;
-    if (candidates.length > 0) {
-      // Among candidates in the 0.3-0.7 range, pick lowest rate
-      best = candidates.reduce((b, r) => r.rate < b.rate ? r : b);
-    } else {
-      // Fallback: closest to 0.5 points
-      best = result.results.reduce((b, r) =>
-        Math.abs(r.costBeforeFees - MND_POINTS_TARGET) < Math.abs(b.costBeforeFees - MND_POINTS_TARGET) ? r : b
-      );
+    // FEES OUT par: find par per lender (costBeforeFees ≈ 0), then pick best lender.
+    // costBeforeFees = borrower cost EXCLUDING lender fee (industry standard display).
+    // Negative = borrower credit, positive = borrower cost.
+    // This matches how MND, Freddie Mac, and wholesale rate sheets report rates.
+    // Only consider results within ±2 points of par (filters out lenders without competitive pricing).
+    const viable = result.results.filter(r => Math.abs(r.costBeforeFees) <= 2);
+    const byLender = {};
+    for (const r of viable) {
+      const lid = r.lender;
+      if (!byLender[lid] || Math.abs(r.costBeforeFees) < Math.abs(byLender[lid].costBeforeFees)) {
+        byLender[lid] = r;
+      }
     }
+    // Pick the lender whose fees-out par gives the lowest rate
+    const lenderPars = Object.values(byLender);
+    if (!lenderPars.length) return null;
+    const best = lenderPars.reduce((b, r) => r.rate < b.rate ? r : b);
 
     if (!best) return null;
 
+    // Display cost is fees-out (excludes lender fee)
     const displayCostPts = best.costBeforeFees;
     const displayCostDollars = (displayCostPts / 100) * REFERENCE_SCENARIO.loanAmount;
 

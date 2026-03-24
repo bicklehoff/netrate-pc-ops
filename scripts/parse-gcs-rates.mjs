@@ -188,7 +188,18 @@ async function parseKeystone(files) {
   const buf = await downloadBuffer(xlsxFile.path);
   const result = keystoneParser.parseRates(buf);
   console.log(`  Parsed: ${result.programs.length} programs`);
-  return { lenderId: 'keystone', sheetDate: result.sheetDate, programs: result.programs };
+  return {
+    lenderId: 'keystone',
+    sheetDate: result.sheetDate,
+    programs: result.programs,
+    llpas: result.llpas || null,
+    loanAmountAdj: result.loanAmountAdj || null,
+    stateAdj: result.stateAdj || null,
+    specPayups: result.specPayups || null,
+    pricingSpecials: result.pricingSpecials || null,
+    occupancyAdj: result.occupancyAdj || null,
+    lenderFee: result.lenderFee || null,
+  };
 }
 
 async function parseSWMC(files) {
