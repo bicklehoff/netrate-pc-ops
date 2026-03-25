@@ -129,27 +129,28 @@ export async function createSigningRequest({
   }
 
   // Step 2: Add signature field and submit
-  // Zoho Sign API requires only these fields for signature placement
+  // Zoho Sign API uses percentage-based coordinates and flat fields array
   const submitData = {
     requests: {
       actions: [
         {
           action_id: actionId,
-          fields: {
-            signature: [
-              {
-                field_name: 'Signature',
-                field_label: 'Signature',
-                document_id: documentId,
-                is_mandatory: true,
-                page_no: 0,
-                x_coord: 50,
-                y_coord: 680,
-                abs_width: 150,
-                abs_height: 30,
-              },
-            ],
-          },
+          fields: [
+            {
+              field_type_name: 'Signature',
+              field_name: 'Signature',
+              field_label: 'Signature',
+              field_category: 'image',
+              action_id: actionId,
+              document_id: documentId,
+              is_mandatory: true,
+              page_no: 0,
+              x_value: 7,       // ~7% from left (signature block area)
+              y_value: 78,      // ~78% down page (above MLO name)
+              width: 22,        // ~22% of page width
+              height: 3,        // ~3% of page height
+            },
+          ],
         },
       ],
     },
