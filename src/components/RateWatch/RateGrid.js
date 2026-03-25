@@ -102,7 +102,7 @@ export default function RateGrid({ netRates, nationalRates, date }) {
         {/* Footnote */}
         <div className="px-6 py-3 border-t border-white/[0.06]">
           <p className="text-[10px] text-slate-600 leading-relaxed">
-            NetRate: wholesale rate · 780+ FICO · 75% LTV · Purchase
+            NetRate: wholesale rate · 780+ FICO · 80% LTV · Purchase
             {' | '}Nat&apos;l Avg: Mortgage News Daily index · 780 FICO · adjusted for points
             {' | '}Source: <a href="https://www.mortgagenewsdaily.com/mortgage-rates" target="_blank" rel="noopener noreferrer" className="text-slate-500 hover:text-brand transition-colors">mortgagenewsdaily.com</a>
           </p>

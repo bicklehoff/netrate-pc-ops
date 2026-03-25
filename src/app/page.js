@@ -88,7 +88,7 @@ export default async function HomePage() {
               <div className="w-px h-3.5 bg-gray-800" />
               <div className="flex items-center gap-1.5">
                 <span className="text-gray-400">Scenario</span>
-                <span className="text-gray-300">780+ FICO &middot; 75% LTV &middot; Purchase</span>
+                <span className="text-gray-300">780+ FICO &middot; 80% LTV &middot; Purchase</span>
               </div>
               <div className="w-px h-3.5 bg-gray-800" />
               <div className="flex items-center gap-1.5">
