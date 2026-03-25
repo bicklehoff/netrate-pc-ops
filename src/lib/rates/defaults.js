@@ -12,7 +12,7 @@ export const DEFAULT_SCENARIO = {
   loanAmount: 400000,
   ltv: 75,
   downPaymentPct: 25,    // 100 - ltv
-  propertyValue: 533333, // loanAmount / (ltv / 100)
+  propertyValue: 533334, // loanAmount / (ltv / 100) — rounded up to stay in 70.01-75 LTV band
   loanPurpose: 'purchase',
   propertyType: 'sfr',
   term: 30,
