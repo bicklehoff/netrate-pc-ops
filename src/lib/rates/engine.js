@@ -107,6 +107,6 @@ export function priceRates(scenario, rateData, lockPeriod = "30day") {
     // APR: net finance charges = lender fees minus any lender credit
     const netCharges = Math.max(0, lenderFees - creditDollars);
     const apr = calculateAPR(rate, scenario.loanAmount, netCharges);
-    return { rate, basePrice, adjPrice, creditDollars, monthlyPI, apr };
+    return { rate, basePrice, adjPrice, creditDollars, monthlyPI, apr, lender: rateData.lender?.name || rateData.lender?.id || null };
   }).filter(r => r.adjPrice > -6 && r.adjPrice < 5);
 }

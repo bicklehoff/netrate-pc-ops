@@ -124,6 +124,7 @@ export default function RateResults({ scenario, rateData, compareRates = [], onT
           <thead>
             <tr className="border-b border-gray-200 text-xs text-gray-500 uppercase tracking-wider">
               <th className="text-left px-3 py-3">Rate</th>
+              <th className="text-left px-2 py-3">Lender</th>
               <th className="text-right px-2 py-3">APR</th>
               <th className="text-right px-2 py-3">Monthly P&I</th>
               {currentPI && <th className="text-right px-2 py-3">Savings</th>}
@@ -144,6 +145,7 @@ export default function RateResults({ scenario, rateData, compareRates = [], onT
                 <tr key={r.rate}
                   className={`border-b border-gray-100 ${isPar ? "bg-cyan-50" : i % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-cyan-50 transition-colors`}>
                   <td className="px-3 py-3 font-semibold text-gray-800">{r.rate.toFixed(3)}%</td>
+                  <td className="px-2 py-3 text-xs text-gray-400">{r.lender || ''}</td>
                   <td className="text-right px-2 py-3 font-mono text-gray-500">{r.apr ? r.apr.toFixed(3) + '%' : '—'}</td>
                   <td className="text-right px-2 py-3 font-mono text-gray-700">
                     ${r.monthlyPI.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
