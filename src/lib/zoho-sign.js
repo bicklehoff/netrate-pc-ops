@@ -128,28 +128,23 @@ export async function createSigningRequest({
     throw new Error('Zoho Sign: missing document_id or action_id in draft response');
   }
 
-  // Step 2: Submit with signature field placed at bottom of page 1
-  // Signature field positioned in the signature block area (bottom-left)
+  // Step 2: Add signature field and submit
+  // Zoho Sign API requires only these fields for signature placement
   const submitData = {
     requests: {
       actions: [
         {
           action_id: actionId,
-          action_type: 'SIGN',
-          recipient_email: signerEmail,
-          recipient_name: signerName,
-          signing_order: 0,
           fields: {
             signature: [
               {
                 field_name: 'Signature',
                 field_label: 'Signature',
-                field_type_name: 'Signature',
                 document_id: documentId,
                 is_mandatory: true,
-                page_no: 0,      // First page (0-indexed)
-                x_coord: 50,     // Left side — signature block area
-                y_coord: 680,    // Near bottom — "Sincerely," area
+                page_no: 0,
+                x_coord: 50,
+                y_coord: 680,
                 abs_width: 150,
                 abs_height: 30,
               },
@@ -176,9 +171,40 @@ export async function createSigningRequest({
 
   const submitResult = await submitRes.json();
 
+  // Get the embedded signing URL so the MLO can sign in-browser
+  const signAction = submitResult.requests?.actions?.[0];
+  let signUrl = null;
+  if (signAction?.verify_recipient === false || signAction?.signing_url) {
+    signUrl = signAction.signing_url;
+  }
+
+  // If no embedded URL, fetch it via the action endpoint
+  if (!signUrl) {
+    try {
+      const actionRes = await fetch(
+        `${SIGN_BASE}/requests/${requestId}/actions/${actionId}/embedtoken`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Zoho-oauthtoken ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ host: 'https://www.netratemortgage.com' }),
+        }
+      );
+      if (actionRes.ok) {
+        const actionData = await actionRes.json();
+        signUrl = actionData.sign_url || actionData.signing_url || null;
+      }
+    } finally {
+      // If embed fails, fall back to email-based signing
+    }
+  }
+
   return {
     requestId,
     requestStatus: submitResult.requests?.request_status || 'submitted',
     signerEmail,
+    signUrl,
   };
 }

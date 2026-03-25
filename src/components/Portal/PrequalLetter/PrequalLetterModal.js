@@ -256,22 +256,17 @@ export default function PrequalLetterModal({ loan, session, onClose }) {
     }
   };
 
-  // Sign via Zoho Sign and send
+  // Sign via Zoho Sign — opens signing page in new tab
   const handleSignAndSend = async () => {
     setSignBusy(true);
     setError(null);
     setSignSuccess(false);
     try {
-      const [{ pdf }, { default: PrequalLetterPDF }] = await Promise.all([
-        import('@react-pdf/renderer'),
-        import('./PrequalLetterPDF'),
-      ]);
-      const blob = await pdf(<PrequalLetterPDF data={buildPdfData()} />).toBlob();
+      const blob = await generatePdfBlob();
 
       // Upload to API for Zoho Sign
       const formData = new FormData();
-      const safeName = form.borrowerNames.replace(/[^a-zA-Z0-9]/g, '-') || 'Borrower';
-      formData.append('file', blob, `NetRate-PreQual-${safeName}.pdf`);
+      formData.append('file', blob, pdfFileName());
       formData.append('mloName', form.mloName);
       formData.append('mloEmail', form.mloEmail);
       formData.append('borrowerNames', form.borrowerNames);
@@ -285,6 +280,13 @@ export default function PrequalLetterModal({ loan, session, onClose }) {
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || 'Failed to send for signature');
+      }
+
+      const result = await res.json();
+
+      // Open signing page directly if available, otherwise fall back to email
+      if (result.signUrl) {
+        window.open(result.signUrl, '_blank');
       }
 
       setSignSuccess(true);
@@ -485,7 +487,7 @@ export default function PrequalLetterModal({ loan, session, onClose }) {
           {/* Success */}
           {signSuccess && (
             <div className="rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700">
-              Sent to Zoho Sign for e-signature. Check your email to sign the letter.
+              Signing request created. Check the new tab to sign, or check your email.
             </div>
           )}
           {saveFolderSuccess && (

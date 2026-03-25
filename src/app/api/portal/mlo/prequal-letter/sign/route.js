@@ -48,7 +48,10 @@ export async function POST(request) {
       success: true,
       requestId: result.requestId,
       status: result.requestStatus,
-      message: `Signing request sent to ${mloEmail}`,
+      signUrl: result.signUrl || null,
+      message: result.signUrl
+        ? 'Ready to sign'
+        : `Signing request sent to ${mloEmail}`,
     });
   } catch (err) {
     console.error('Prequal letter sign error:', err);
