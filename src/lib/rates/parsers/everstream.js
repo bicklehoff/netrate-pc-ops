@@ -360,6 +360,7 @@ function parseRates(csvContent) {
       ficoFilter: parsed.ficoFilter,
       isStreamline: parsed.isStreamline || false,
       stateFilter: parsed.stateFilter,
+      priceFormat: '100-based',
       rates,
       lockDays,
     });
@@ -1249,6 +1250,91 @@ function parseLLPAs(xlsxBuffer) {
 }
 
 /**
+ * Convert a parsed FICO/LTV section into the standard engine format.
+ * Input: { ficoLtv: [{ ficoMin, ficoMax, ltvBands: { "0-30": 0.25, ... } }], attributes: [...] }
+ * Output: { matrix: { ">=780": [vals...], ... }, ltvBands: [...] }
+ */
+function convertFicoLtvToStandard(section) {
+  if (!section?.ficoLtv?.length) return null;
+
+  const rawLtvBands = Object.keys(section.ficoLtv[0].ltvBands);
+  // Normalize LTV band labels: "≤30" → "<=30"
+  const ltvBands = rawLtvBands.map(b => b.replace(/≤/g, '<=').replace(/≥/g, '>='));
+  const matrix = {};
+
+  for (const row of section.ficoLtv) {
+    let ficoKey;
+    if (row.ficoMax >= 999 || row.ficoMax >= 850) {
+      ficoKey = `>=${row.ficoMin}`;
+    } else {
+      ficoKey = `${row.ficoMin}-${row.ficoMax}`;
+    }
+    // Negate: EverStream sheet uses negative = cost, engine expects positive = cost
+    matrix[ficoKey] = rawLtvBands.map(band => {
+      const v = row.ltvBands[band];
+      return v === null || v === undefined ? null : (v === 0 ? 0 : -v);
+    });
+  }
+
+  // Convert attributes to standard format (also negate)
+  const additional = {};
+  if (section.attributes) {
+    for (const attr of section.attributes) {
+      const key = attr.name.toLowerCase();
+      const values = rawLtvBands.map(band => {
+        const v = attr.ltvBands[band];
+        return v === null || v === undefined ? null : (v === 0 ? 0 : -v);
+      });
+      if (/arm/i.test(key)) additional.arm = values;
+      else if (/condo/i.test(key)) additional.condo = values;
+      else if (/2\s*unit/i.test(key)) additional['2unit'] = values;
+      else if (/3.*4\s*unit/i.test(key)) additional['3to4unit'] = values;
+      else if (/investment/i.test(key)) additional.investment = values;
+      else if (/second\s*home/i.test(key)) additional.secondHome = values;
+      else if (/secondary\s*fin|subordinate/i.test(key)) additional.subFinancing = values;
+      else if (/highbal.*frm|highbal.*fixed/i.test(key)) additional.highBalFixed = values;
+      else if (/highbal.*arm/i.test(key)) additional.highBalArm = values;
+      else if (/manufactured/i.test(key)) additional.manufactured = values;
+    }
+  }
+
+  return { matrix, ltvBands, additional };
+}
+
+/**
+ * Convert parsed LLPAs into the standard format for the pricing engine.
+ * Uses Elite FNMA as the primary source (most common products).
+ */
+function convertLlpasToStandard(llpas) {
+  if (!llpas?.elite?.fnma) return { llpas: null, additionalAdjustments: null };
+
+  const fnma = llpas.elite.fnma;
+  const result = { purchase: {}, refinance: {}, cashout: {}, ltvBands: [] };
+  const additional = { purchase: {}, refinance: {}, cashout: {} };
+
+  const purchaseData = convertFicoLtvToStandard(fnma.purchase?.longTerm);
+  if (purchaseData) {
+    result.purchase = purchaseData.matrix;
+    result.ltvBands = purchaseData.ltvBands;
+    additional.purchase = purchaseData.additional;
+  }
+
+  const refiData = convertFicoLtvToStandard(fnma.rateTerm?.longTerm);
+  if (refiData) {
+    result.refinance = refiData.matrix;
+    additional.refinance = refiData.additional;
+  }
+
+  const cashoutData = convertFicoLtvToStandard(fnma.cashout?.longTerm);
+  if (cashoutData) {
+    result.cashout = cashoutData.matrix;
+    additional.cashout = cashoutData.additional;
+  }
+
+  return { llpas: result, additionalAdjustments: additional };
+}
+
+/**
  * Combined parser — takes CSV content and XLSX buffer, returns normalized output.
  * @param {string} csvContent
  * @param {Buffer} xlsxBuffer
@@ -1256,15 +1342,26 @@ function parseLLPAs(xlsxBuffer) {
  */
 function parse(csvContent, xlsxBuffer) {
   const { sheetDate, programs } = parseRates(csvContent);
-  const llpas = parseLLPAs(xlsxBuffer);
+  const rawLlpas = xlsxBuffer ? parseLLPAs(xlsxBuffer) : null;
+
+  // Convert to standard format
+  const { llpas, additionalAdjustments } = rawLlpas ? convertLlpasToStandard(rawLlpas) : { llpas: null, additionalAdjustments: null };
 
   return {
-    lender: 'EverStream',
     lenderId,
     sheetDate,
-    parsedAt: new Date().toISOString(),
     programs,
     llpas,
+    loanAmountAdj: [],
+    stateAdj: { MI: { adj30yr: 0.1, adj15yr: 0.1 } },
+    specPayups: {},
+    pricingSpecials: null,
+    occupancyAdj: null,
+    lenderFee: 999,
+    compCap: { purchase: 4595, refinance: 3595 },
+    // EverStream-specific
+    agencyLlpas: additionalAdjustments,
+    rawLlpas,
   };
 }
 

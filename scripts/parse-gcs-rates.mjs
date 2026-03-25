@@ -260,22 +260,30 @@ async function parseEverStream(files) {
   if (!csvFile) throw new Error('EverStream: No CSV file found');
   console.log(`  Downloading ${csvFile.filename}...`);
   const csv = await downloadText(csvFile.path);
-  const rateResult = everstreamParser.parseRates(csv);
-  console.log(`  Parsed rates: ${rateResult.programs.length} programs, date: ${rateResult.sheetDate}`);
 
-  let llpas = null;
+  let xlsxBuf = null;
   if (xlsxFile) {
     console.log(`  Downloading ${xlsxFile.filename} (LLPAs)...`);
-    const buf = await downloadBuffer(xlsxFile.path);
-    llpas = everstreamParser.parseLLPAs(buf);
-    console.log(`  Parsed LLPAs: ${Object.keys(llpas).length} sheets`);
+    xlsxBuf = await downloadBuffer(xlsxFile.path);
   }
+
+  // Use combined parser for standard output format
+  const result = everstreamParser.parse(csv, xlsxBuf);
+  console.log(`  Parsed: ${result.programs.length} programs, date: ${result.sheetDate}`);
 
   return {
     lenderId: 'everstream',
-    sheetDate: rateResult.sheetDate,
-    programs: rateResult.programs,
-    llpas,
+    sheetDate: result.sheetDate,
+    programs: result.programs,
+    llpas: result.llpas,
+    loanAmountAdj: result.loanAmountAdj,
+    stateAdj: result.stateAdj,
+    specPayups: result.specPayups,
+    pricingSpecials: result.pricingSpecials,
+    occupancyAdj: result.occupancyAdj,
+    lenderFee: result.lenderFee,
+    compCap: result.compCap,
+    agencyLlpas: result.agencyLlpas,
   };
 }
 
