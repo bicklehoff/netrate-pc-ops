@@ -80,7 +80,7 @@ export function compareSubFinancingOptions(params) {
     secondLienPayment = 0,
     secondLienRate = 0,
     propertyValue,
-    creditScore = 740,
+    creditScore = 780,
     currentFirstRate,
     term = 30,
     lenderFee = 1195,

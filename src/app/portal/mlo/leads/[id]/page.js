@@ -205,7 +205,7 @@ export default function LeadDetailPage() {
               </Field>
 
               <Field label="Credit Score">
-                <input type="number" value={lead.creditScore || ''} onChange={e => updateField('creditScore', parseInt(e.target.value) || '')} className="input-field" placeholder="740" />
+                <input type="number" value={lead.creditScore || ''} onChange={e => updateField('creditScore', parseInt(e.target.value) || '')} className="input-field" placeholder="780" />
               </Field>
 
               <div className="grid grid-cols-2 gap-3">

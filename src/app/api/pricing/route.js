@@ -11,7 +11,7 @@
  *   category: null,              // null (all) | "agency" | "nonqm" | "other"
  *   state: "CO",                 // optional — enables county limits + closing cost estimate
  *   county: "Boulder",           // optional — enables precise loan limit classification
- *   creditScore: 740,            // optional (default: 740)
+ *   creditScore: 780,            // optional (default: from DEFAULT_SCENARIO)
  *   propertyValue: 500000,       // optional — if provided, LTV is calculated
  *   term: 30,                    // optional (default: 30)
  *   lockDays: 30,                // optional (default: 30)
@@ -28,6 +28,7 @@
 import { NextResponse } from 'next/server';
 import { priceScenario } from '@/lib/rates/pricing';
 import { fetchGCSFile, isGCSConfigured } from '@/lib/gcs';
+import { DEFAULT_SCENARIO } from '@/lib/rates/defaults';
 
 const GCS_BUCKET = process.env.GCS_BUCKET_NAME || 'netrate-rates';
 const CACHE_TTL_MS = 2 * 60 * 1000;
@@ -93,7 +94,7 @@ export async function POST(request) {
       category: body.category || null,
       state: body.state || null,
       county: body.county || null,
-      creditScore: body.creditScore || 740,
+      creditScore: body.creditScore || DEFAULT_SCENARIO.fico,
       propertyValue: body.propertyValue ? Number(body.propertyValue) : null,
       propertyType: body.propertyType || 'sfr',
       occupancy: body.occupancy || 'primary',

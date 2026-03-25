@@ -101,7 +101,7 @@ export default function Sidebar({ fredLatest, todayRate, rateChange }) {
       <div className="px-6 py-5 border-b border-white/10">
         <h3 className="text-slate-300 text-[13px] font-bold uppercase tracking-wide mb-3.5 flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-green-500" />
-          Today&apos;s Rates (760+ credit)
+          Today&apos;s Rates (780+ credit)
         </h3>
         <table className="w-full">
           <thead>

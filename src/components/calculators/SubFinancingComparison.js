@@ -28,7 +28,7 @@ export default function SubFinancingComparison() {
     secondLienPayment: 375,
     secondLienRate: 8.5,
     propertyValue: 500000,
-    creditScore: 740,
+    creditScore: 780,
   });
 
   const update = (field, value) => {

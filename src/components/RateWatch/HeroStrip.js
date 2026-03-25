@@ -107,7 +107,7 @@ export default function HeroStrip({ todayRate, rateChange, fredLatest }) {
       <div className="flex flex-col gap-4">
         <div className="bg-surface rounded-xl px-6 py-5 text-center">
           <div className="text-slate-400 text-xs uppercase tracking-wide mb-1.5">
-            Today&apos;s 30yr Fixed (760+)
+            Today&apos;s 30yr Fixed (780+)
           </div>
           <div className="text-white text-[44px] font-extrabold leading-none tabular-nums">
             {todayRate ? todayRate.toFixed(3) + '%' : '—'}

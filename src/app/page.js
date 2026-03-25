@@ -88,7 +88,7 @@ export default async function HomePage() {
               <div className="w-px h-3.5 bg-gray-800" />
               <div className="flex items-center gap-1.5">
                 <span className="text-gray-400">Scenario</span>
-                <span className="text-gray-300">760+ FICO &middot; 75% LTV &middot; Purchase</span>
+                <span className="text-gray-300">780+ FICO &middot; 75% LTV &middot; Purchase</span>
               </div>
               <div className="w-px h-3.5 bg-gray-800" />
               <div className="flex items-center gap-1.5">
@@ -233,7 +233,7 @@ export default async function HomePage() {
               </Link>
             </div>
             <div className="px-6 pb-4">
-              <p className="text-[11px] text-gray-500 text-center">760+ FICO &middot; $400K &middot; Purchase &middot; {effectiveDateShort}</p>
+              <p className="text-[11px] text-gray-500 text-center">780+ FICO &middot; $400K &middot; Purchase &middot; {effectiveDateShort}</p>
             </div>
           </div>
         </div>

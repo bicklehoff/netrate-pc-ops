@@ -15,6 +15,7 @@
 import { calculatePI, calculateAPR, getFicoBand, getLtvBandIndex } from './engine';
 import { getLoanLimits, classifyLoan } from '@/data/county-loan-limits';
 import { getLenderLLPAs as loadLenderLLPAs } from '@/data/lender-llpas';
+import { DEFAULT_SCENARIO } from './defaults';
 
 // ─── Broker Compensation ──────────────────────────────────────────
 // Lender-paid: comp is deducted from lender credit (increases effective cost at each rate)
@@ -493,7 +494,7 @@ export function priceScenario(scenario, allPrograms, options = {}) {
     category = null,       // null = show all categories
     state = null,
     county = null,
-    creditScore = 740,
+    creditScore = DEFAULT_SCENARIO.fico,
     propertyValue = null,
     term = 30,
     employmentType = 'w2',         // 'w2' | 'selfEmployed' — defaults to W-2

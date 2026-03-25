@@ -31,7 +31,7 @@ export async function GET(request) {
 
     // Parse query params
     const loanType = searchParams.get('loan_type') || '30yr_fixed';
-    const creditScoreParam = searchParams.get('credit_score') || '760';
+    const creditScoreParam = searchParams.get('credit_score') || '780';
     const daysParam = searchParams.get('days');
     const periodParam = searchParams.get('period');
 

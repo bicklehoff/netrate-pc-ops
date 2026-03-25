@@ -3,24 +3,22 @@
  * Server-side only — computes consumer-friendly rates from parsed rate sheet data.
  * Used by page.js (homepage) to display live rates in hero card, rates table, and ticker.
  *
- * Reference scenario: 760+ FICO, $400K loan, 75% LTV, rate/term refi
- * (matches the homepage disclaimer text)
+ * Reference scenario defined in defaults.js (matches MND assumptions).
  */
 
 import { priceRates, calculatePI } from './engine';
 import { priceScenario } from './pricing';
+import { DEFAULT_SCENARIO } from './defaults';
 
 // ─── Reference Scenario ─────────────────────────────────────────
-// This scenario matches the homepage disclaimers:
-//   "760+ FICO · $400K · Purchase · 75% LTV"
 
 const REFERENCE_SCENARIO = {
-  purpose: 'purchase',
-  propertyType: 'sfr',
-  fico: 760,
-  loanAmount: 400000,
-  ltv: 75,
-  propertyValue: 533333, // $400K / 75% LTV
+  purpose: DEFAULT_SCENARIO.loanPurpose,
+  propertyType: DEFAULT_SCENARIO.propertyType,
+  fico: DEFAULT_SCENARIO.fico,
+  loanAmount: DEFAULT_SCENARIO.loanAmount,
+  ltv: DEFAULT_SCENARIO.ltv,
+  propertyValue: DEFAULT_SCENARIO.propertyValue,
 };
 
 // ─── Date Formatting ─────────────────────────────────────────────
