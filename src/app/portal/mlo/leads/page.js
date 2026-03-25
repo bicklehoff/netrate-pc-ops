@@ -6,7 +6,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import LeadsTable from '@/components/Portal/LeadsTable';
 
 const STATUS_FILTERS = [
