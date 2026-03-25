@@ -232,6 +232,17 @@ For the lender you updated, check:
 - `compDollars` should match OC's "LO Comp" column
 - `lenderFee` should match OC's "Lender Fees" column
 
+**All 6 core parsers are complete** and output the standard format. Summary:
+
+| Lender | LLPA Source | Sign Convention | Fee | Comp Cap (P/R) |
+|--------|------------|-----------------|-----|----------------|
+| Keystone | Parser (FICO/LTV grids + spec payups) | Negate (sheet neg=cost) | $1,125 | $3,595/$3,595 |
+| AmWest | Parser (FT + Agency grids, Gov FICO, Jumbo) | None (sheet pos=cost) | $1,295 | $4,595/$3,595 |
+| Windsor | Parser (Conv + Gov + Jumbo 4 grids) | Negate (sheet neg=cost) | $1,295 | $4,595/$3,595 |
+| SWMC | Parser (Agency grids, Gov FICO/state) | None (sheet pos=cost) | $1,195 | $4,595/$3,595 |
+| EverStream | Parser (19 LLPA sheets converted) | Negate (sheet neg=cost) | $999 | $4,595/$3,595 |
+| TLS | GSE defaults (no LLPA sheets) | N/A | $1,281 | $4,595/$3,595 |
+
 **Template parser (reference):** `src/lib/rates/parsers/keystone.js` — uses dynamic header search, extracts ALL sections, negates LLPAs to positive=cost convention.
 
 **Task specs:** See `Work/Dev/PARSER-REWRITE-TASKS.md` for per-lender section maps with exact row locations.
