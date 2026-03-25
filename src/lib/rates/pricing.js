@@ -17,6 +17,21 @@ import { getLoanLimits, classifyLoan } from '@/data/county-loan-limits';
 import { getLenderLLPAs as loadLenderLLPAs } from '@/data/lender-llpas';
 import { DEFAULT_SCENARIO } from './defaults';
 
+// Static LLPA configs (rarely change — updated only when lenders send bulletins)
+import everstreamConfig from '@/data/lender-llpas/everstream-complete.json';
+import keystoneConfig from '@/data/lender-llpas/keystone-complete.json';
+import amwestConfig from '@/data/lender-llpas/amwest-complete.json';
+import windsorConfig from '@/data/lender-llpas/windsor-complete.json';
+import swmcConfig from '@/data/lender-llpas/swmc-complete.json';
+
+const STATIC_CONFIGS = {
+  everstream: everstreamConfig,
+  keystone: keystoneConfig,
+  amwest: amwestConfig,
+  windsor: windsorConfig,
+  swmc: swmcConfig,
+};
+
 // ─── Broker Compensation ──────────────────────────────────────────
 // Lender-paid: comp is deducted from lender credit (increases effective cost at each rate)
 
@@ -476,6 +491,169 @@ function checkEligibility(program, scenario) {
   return { eligible: true };
 }
 
+// ─── Static Config Adjustments ────────────────────────────────────
+// These come from the *-complete.json files and apply SRP, loan amount,
+// FNMA/FHLMC-specific, purchase/purpose, and risk-based adjustments.
+// Applied as a price IMPROVEMENT (positive = better price = less cost).
+
+/**
+ * Calculate static adjustments from lender config.
+ * Returns total adjustment in POINTS to ADD to the 100-based price.
+ * (Or equivalently, SUBTRACT from discount.)
+ */
+function getStaticAdjustments(lenderId, scenario, program) {
+  const cfg = STATIC_CONFIGS[lenderId];
+  if (!cfg) return { total: 0, breakdown: [] };
+
+  const { creditScore, ltv, loanAmount, loanPurpose, state } = scenario;
+  const term = program.term || 30;
+  const productType = program.productType || 'fixed';
+  const investor = program.investor || (program.name?.includes('FHLMC') || program.name?.includes('freddie') ? 'fhlmc' : 'fnma');
+  const isArm = productType === 'arm';
+  const breakdown = [];
+  let total = 0;
+
+  // ─── EverStream ────────────────────────────────────────────────
+  if (lenderId === 'everstream') {
+    const tier = program.tier || (program.name?.toLowerCase().includes('core') ? 'core' : 'elite');
+
+    // 1. SRP (Servicing Released Premium) — state × product type
+    if (tier === 'core' && cfg.core?.convSRP) {
+      const escrowKey = 'withImpounds'; // default assumption
+      const srpTable = cfg.core.convSRP[escrowKey];
+      if (srpTable?.[state]) {
+        const productKey = isArm ? 'ARMs' : (term <= 15 ? 'Fixed 10/15 Yr' : 'Fixed 20/25/30 Yr');
+        const srp = srpTable[state][productKey];
+        if (typeof srp === 'number' && srp !== 0) {
+          total -= srp; // SRP is a credit — reduces discount (subtract from cost)
+          breakdown.push({ label: `SRP (${state}, ${productKey})`, value: -srp });
+        }
+      }
+    } else if (tier === 'elite' && cfg.elite) {
+      // Elite SRP — has loan amount buckets
+      const srpSheet = cfg.elite.convSRP_withEscrows;
+      if (srpSheet?.[state]) {
+        const stateRow = srpSheet[state];
+        // Find the right loan amount bucket
+        const bucketKeys = Object.keys(stateRow).filter(k => k !== 'state');
+        // Match loan amount to bucket (keys like "300,001-400,000")
+        for (const key of bucketKeys) {
+          const match = key.match(/([\d,]+)\s*[-–]\s*([\d,]+)/);
+          if (match) {
+            const min = parseInt(match[1].replace(/,/g, ''), 10);
+            const max = parseInt(match[2].replace(/,/g, ''), 10);
+            if (loanAmount >= min && loanAmount <= max) {
+              const srp = stateRow[key];
+              if (typeof srp === 'number' && srp !== 0) {
+                total -= srp;
+                breakdown.push({ label: `SRP (${state}, ${key})`, value: -srp });
+              }
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    // 2. Risk-Based Price Adjustments (Core Conv LLPA)
+    const riskGrid = cfg.core?.convLLPA?.riskBasedPriceAdj;
+    if (riskGrid) {
+      let ficoBand = null;
+      if (creditScore >= 800) ficoBand = '>= 800';
+      else if (creditScore >= 780) ficoBand = '780 - 799';
+      else if (creditScore >= 760) ficoBand = '760 - 779';
+      else if (creditScore >= 740) ficoBand = '740 - 759';
+      else if (creditScore >= 720) ficoBand = '720 - 739';
+      else if (creditScore >= 700) ficoBand = '700 - 719';
+      else if (creditScore >= 680) ficoBand = '680 - 699';
+      else if (creditScore >= 660) ficoBand = '660 - 679';
+      else if (creditScore >= 640) ficoBand = '640 - 659';
+      else if (creditScore >= 620) ficoBand = '620 - 639';
+      else ficoBand = '< 620(1)';
+
+      const ficoRow = riskGrid[ficoBand];
+      if (ficoRow) {
+        const ltvBandKey = ltv <= 40 ? '<= 40.00%' : ltv <= 50 ? '40.01 - 50.00%' : ltv <= 60 ? '50.01 - 60.00%'
+          : ltv <= 70 ? '60.01 - 70.00%' : ltv <= 75 ? '70.01 - 75.00%' : ltv <= 80 ? '75.01 - 80.00%'
+          : ltv <= 85 ? '80.01 - 85.00%' : ltv <= 90 ? '85.01 - 90.00%' : ltv <= 95 ? '90.01 - 95.00%' : '95.01 - 97.00%';
+        const riskAdj = ficoRow[ltvBandKey];
+        if (typeof riskAdj === 'number' && riskAdj !== 0) {
+          total -= riskAdj;
+          breakdown.push({ label: `Risk-based (${ficoBand})`, value: -riskAdj });
+        }
+      }
+    }
+
+    // 3. Loan Amount Adjustment (Core Conv LLPA — flat object keyed by range)
+    const laAdj = cfg.core?.convLLPA?.loanAmountAdj;
+    if (laAdj && typeof laAdj === 'object') {
+      for (const [range, adj] of Object.entries(laAdj)) {
+        const match = range.match(/>([\d]+)<=([\d]+)/);
+        if (match) {
+          const min = parseInt(match[1], 10);
+          const max = parseInt(match[2], 10);
+          if (loanAmount > min && loanAmount <= max && typeof adj === 'number' && adj !== 0) {
+            total -= adj;
+            breakdown.push({ label: `Loan amt (${range})`, value: -adj });
+            break;
+          }
+        }
+        // Handle "<= X" format
+        const leMatch = range.match(/<=\s*([\d]+)/);
+        if (leMatch && !range.includes('>')) {
+          const max2 = parseInt(leMatch[1], 10);
+          if (loanAmount <= max2 && typeof adj === 'number' && adj !== 0) {
+            total -= adj;
+            breakdown.push({ label: `Loan amt (${range})`, value: -adj });
+            break;
+          }
+        }
+      }
+    }
+
+    // 4. FNMA/FHLMC-specific adjustment
+    // Config has flat structure but the sheet has term-specific columns.
+    // 21-30yr Primary: -0.220 (FNMA) / -0.150 (FHLMC)
+    // 20/15/10yr Primary: -0.140 (FNMA) / 0.000 (FHLMC)
+    // ARMs: -0.220 (FNMA) / -0.150 (FHLMC)
+    if (tier === 'core' && program.loanType === 'conventional') {
+      let investorSpecificAdj = 0;
+      if (investor === 'fnma') {
+        investorSpecificAdj = (term > 15 || isArm) ? -0.220 : -0.140;
+      } else if (investor === 'fhlmc') {
+        investorSpecificAdj = (term > 15 || isArm) ? -0.150 : 0;
+      }
+      if (investorSpecificAdj !== 0) {
+        total -= investorSpecificAdj;
+        breakdown.push({ label: `${investor.toUpperCase()} adj`, value: -investorSpecificAdj });
+      }
+    }
+
+    // 5. Purchase/Purpose adjustment (from Product Loan Amount LLPAs)
+    const plalProducts = cfg.productLoanAmountLLPAs?.products;
+    if (plalProducts) {
+      const investorUpper = investor === 'fhlmc' ? 'FHLMC' : 'FNMA';
+      const tierLabel = tier === 'core' ? 'Core' : 'Elite';
+      const productKey = `${investorUpper} ${tierLabel} FRM`;
+      const product = plalProducts[productKey];
+      if (product?.terms) {
+        const termKey = term <= 15 ? `${term}Yr` : '30Yr';
+        const termData = product.terms[termKey];
+        if (termData?.loanPurpose) {
+          const purposeKey2 = loanPurpose === 'cashout' ? 'cashOut' : loanPurpose === 'purchase' ? 'purchase' : 'rateTermRefi';
+          const adj = termData.loanPurpose[purposeKey2];
+          if (typeof adj === 'number' && adj !== 0) {
+            total -= adj;
+            breakdown.push({ label: `Purchase adj`, value: -adj });
+          }
+        }
+      }
+    }
+  }
+
+  return { total, breakdown };
+}
+
 // ─── Main Pricing Function ────────────────────────────────────────
 
 /**
@@ -708,6 +886,9 @@ export function priceScenario(scenario, allPrograms, options = {}) {
         }
       }
 
+      // Static config adjustments (SRP, loan amt, FNMA-specific, purchase, risk-based)
+      const staticAdj = getStaticAdjustments(lenderId, enrichedScenario, program);
+
       for (const rateEntry of lockRates) {
         // Normalize price to discount format
         const rawDiscount = toDiscountFormat(rateEntry.price, program.priceFormat || 'discount');
@@ -736,7 +917,8 @@ export function priceScenario(scenario, allPrograms, options = {}) {
 
         // Apply LLPA adjustments (increases cost — worse FICO/LTV = higher adjustment)
         // Spec payup is subtracted (it's a price improvement / credit)
-        const afterLlpa = rawDiscount + llpa.total - specPayup;
+        // Static adjustments already in discount terms (negative = reduces cost)
+        const afterLlpa = rawDiscount + llpa.total - specPayup + staticAdj.total;
 
         // Add broker comp (lender-paid = increases cost to borrower)
         const afterComp = afterLlpa + compPoints;
@@ -816,7 +998,7 @@ export function priceScenario(scenario, allPrograms, options = {}) {
           rawPrice: rateEntry.price,
           priceFormat: program.priceFormat || 'discount',
           llpaPoints: Math.round(llpa.total * 1000) / 1000,
-          llpaBreakdown: llpa.breakdown,
+          llpaBreakdown: [...llpa.breakdown, ...staticAdj.breakdown],
           compPoints: Math.round(compPoints * 1000) / 1000,
           compDollars: Math.round(compAmount),
           costPoints: Math.round(feesIn * 1000) / 1000,     // "Fees In" — includes lender fee
