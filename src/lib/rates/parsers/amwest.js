@@ -78,20 +78,6 @@ function parseLlpa(val) {
   return null;
 }
 
-/** Parse a loan amount range string like "$900,001-$1,000,000" */
-function parseLoanRange(str) {
-  if (str === null || str === undefined) return null;
-  const s = String(str).replace(/[$,]/g, '');
-  // Handle "<=X" or "<X"
-  const leMatch = s.match(/^[<≤]=?\s*(\d+)$/);
-  if (leMatch) return { min: 0, max: parseInt(leMatch[1], 10) };
-  const parts = s.split(/\s*[-–]\s*/);
-  if (parts.length !== 2) return null;
-  const min = parseInt(parts[0].trim(), 10);
-  const max = parseInt(parts[1].trim(), 10);
-  if (isNaN(min) || isNaN(max)) return null;
-  return { min, max };
-}
 
 // ---------------------------------------------------------------------------
 // Rate extraction (unchanged from original)
