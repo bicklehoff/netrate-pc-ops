@@ -40,7 +40,7 @@ export default function RateTool({ initialRateData, defaultState }) {
     downPaymentPct: 20,
     currentPayoff: 400000,
     currentRate: 7.125,
-    fico: 760,
+    fico: 780,
     loanAmount: 0,
     ltv: 0,
     state: initialState,

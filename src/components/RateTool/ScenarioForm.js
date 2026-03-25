@@ -72,19 +72,12 @@ export default function ScenarioForm({ scenario, onChange }) {
         )}
         <div>
           <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Credit Score</label>
-          <select value={scenario.fico} onChange={e => update("fico", Number(e.target.value))}
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white">
-            <option value={800}>800+</option>
-            <option value={780}>780 - 799</option>
-            <option value={760}>760 - 779</option>
-            <option value={740}>740 - 759</option>
-            <option value={720}>720 - 739</option>
-            <option value={700}>700 - 719</option>
-            <option value={680}>680 - 699</option>
-            <option value={660}>660 - 679</option>
-            <option value={640}>640 - 659</option>
-            <option value={620}>620 - 639</option>
-          </select>
+          <input type="number" min={500} max={850} step={1} value={scenario.fico || ""}
+            onChange={e => {
+              const v = parseInt(e.target.value, 10);
+              if (!isNaN(v)) update("fico", Math.min(850, Math.max(500, v)));
+            }}
+            className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
         </div>
         {scenario.purpose !== "purchase" && (
           <div>
