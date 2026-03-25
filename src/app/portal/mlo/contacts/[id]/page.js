@@ -165,7 +165,7 @@ export default function ContactDetailPage() {
 
   const activeLead = contact.leads?.find(l => ['new', 'contacted', 'qualified', 'quoted'].includes(l.status));
   const loans = contact.borrower?.loans || [];
-  const hasBorrower = !!contact.borrower;
+
 
   // Build merged timeline
   const timeline = [
