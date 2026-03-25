@@ -36,7 +36,7 @@ export default function RateTool({ initialRateData, defaultState }) {
   const [scenario, setScenario] = useState({
     purpose: "refi",
     propertyType: "sfr",
-    propertyValue: 500000,
+    propertyValue: 533333,
     downPaymentPct: 20,
     currentPayoff: 400000,
     currentRate: 7.125,
