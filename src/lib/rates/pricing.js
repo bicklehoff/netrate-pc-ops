@@ -38,7 +38,7 @@ const STATIC_CONFIGS = {
 const BROKER_COMP = {
   rate: 0.02,         // 2% of loan amount
   capRefi: 3595,      // Max comp on refinances
-  capPurchase: 4595,  // Max comp on purchases
+  capPurchase: 3595,  // Max comp on purchases (matches LoanSifter setting)
 };
 
 function calculateComp(loanAmount, loanPurpose) {
@@ -804,8 +804,8 @@ export function priceScenario(scenario, allPrograms, options = {}) {
       const llpa = calculateLLPAForScenario(enrichedScenario, lenderLlpas, program);
 
       // Apply lender-specific additional adjustments (FICO tier, purpose, state, LTV specials)
-      // These are ON TOP of the FICO×LTV base grid
-      if (lenderLlpaData) {
+      // Skip if lender has a static config — static config handles all adjustments
+      if (lenderLlpaData && !STATIC_CONFIGS[lenderId]) {
         // FICO tier adjustment (separate from FICO×LTV grid)
         if (lenderLlpaData.ficoTierAdj) {
           let ficoAdj = 0;
