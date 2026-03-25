@@ -46,7 +46,7 @@ const BIC_LABELS = {
   none: { label: '—', color: 'text-gray-400 bg-gray-50' },
 };
 
-export default function StatusHeader({ loan, onStatusChange }) {
+export default function StatusHeader({ loan, onStatusChange, onPrequalLetter }) {
   const [statusDropdown, setStatusDropdown] = useState(false);
   const [statusLoading, setStatusLoading] = useState(false);
 
@@ -155,6 +155,15 @@ export default function StatusHeader({ loan, onStatusChange }) {
             📁 Folder
           </a>
         )}
+
+        {/* Pre-Qual Letter */}
+        <button
+          onClick={onPrequalLetter}
+          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-brand bg-brand/10 rounded-lg hover:bg-brand/20 transition-colors border border-brand/20"
+          title="Generate Pre-Qualification Letter"
+        >
+          📄 Pre-Qual
+        </button>
 
         {/* XML export */}
         <button

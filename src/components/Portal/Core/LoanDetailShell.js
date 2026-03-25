@@ -18,12 +18,14 @@ import BorrowerSection from './sections/BorrowerSection';
 import ProcessingSection from './sections/ProcessingSection';
 import DocumentsSection from './sections/DocumentsSection';
 import NotesActivitySection from './sections/NotesActivitySection';
+import PrequalLetterModal from '../PrequalLetter/PrequalLetterModal';
 
 export default function LoanDetailShell({ loan, onRefresh }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeSection = searchParams.get('section') || 'overview';
   const [actionError, setActionError] = useState('');
+  const [showPrequal, setShowPrequal] = useState(false);
 
   // ─── Shared update handler for inline field edits ───
   const updateLoanField = useCallback(async (updates) => {
@@ -153,6 +155,7 @@ export default function LoanDetailShell({ loan, onRefresh }) {
         <StatusHeader
           loan={loan}
           onStatusChange={handleStatusChange}
+          onPrequalLetter={() => setShowPrequal(true)}
         />
 
         {/* Error banner */}
@@ -175,6 +178,14 @@ export default function LoanDetailShell({ loan, onRefresh }) {
           </div>
         </div>
       </div>
+
+      {/* Pre-Qual Letter Modal */}
+      {showPrequal && (
+        <PrequalLetterModal
+          loan={loan}
+          onClose={() => setShowPrequal(false)}
+        />
+      )}
     </div>
   );
 }

@@ -28,7 +28,7 @@ const EDITABLE_FIELDS = [
   // Loan terms
   'loanType', 'loanAmount', 'interestRate', 'loanTerm', 'lienStatus', 'numBorrowers',
   // Property
-  'propertyType', 'numUnits', 'purchasePrice', 'downPayment', 'estimatedValue', 'currentBalance',
+  'propertyAddress', 'propertyType', 'numUnits', 'purchasePrice', 'downPayment', 'estimatedValue', 'currentBalance',
   // Purpose
   'purpose', 'occupancy', 'refiPurpose', 'cashOutAmount',
   // Lender
@@ -286,6 +286,17 @@ export async function PATCH(request, { params }) {
           if (isNaN(value)) value = null;
         } else if (field === 'actionTakenDate') {
           value = value ? new Date(value) : null;
+        } else if (field === 'propertyAddress') {
+          // Accept JSON object or comma-separated string
+          if (typeof value === 'string') {
+            const parts = value.split(',').map((s) => s.trim());
+            value = {
+              street: parts[0] || '',
+              city: parts[1] || '',
+              state: parts[2] || '',
+              zip: parts[3] || '',
+            };
+          }
         }
 
         fieldUpdates[field] = value;

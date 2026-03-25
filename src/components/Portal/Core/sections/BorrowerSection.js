@@ -33,7 +33,9 @@ export default function BorrowerSection({ loan, updateLoanField }) {
   const [activeBorrowerTab, setActiveBorrowerTab] = useState(0);
 
   const borrower = loan.borrower;
-  const loanBorrowers = loan.loanBorrowers || [];
+  const loanBorrowers = (loan.loanBorrowers || []).filter(
+    (lb) => lb.borrowerType !== 'primary'
+  );
 
   if (!borrower) return null;
 

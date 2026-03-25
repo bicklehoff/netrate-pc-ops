@@ -116,7 +116,9 @@ export default function LoanInfoSection({ loan, updateLoanField }) {
           <EditableField
             label="Property Address"
             value={formatAddress(loan.propertyAddress)}
-            readOnly
+            type="text"
+            placeholder="Street, City, State, Zip"
+            onSave={save('propertyAddress')}
             className="col-span-2"
           />
           <EditableField
