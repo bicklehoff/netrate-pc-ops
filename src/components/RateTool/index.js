@@ -34,7 +34,7 @@ export default function RateTool({ initialRateData, defaultState }) {
   }, []);
 
   const [scenario, setScenario] = useState({
-    purpose: "refi",
+    purpose: "purchase",
     propertyType: "sfr",
     propertyValue: 533333,
     downPaymentPct: 20,
