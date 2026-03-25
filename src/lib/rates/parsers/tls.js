@@ -445,7 +445,20 @@ function parseRates(csvContent) {
  * LLPAs are baked into the product-level pricing (different product codes per tier).
  */
 function parse({ ratesCsv }) {
-  return parseRates(ratesCsv);
+  const { sheetDate, programs } = parseRates(ratesCsv);
+
+  return {
+    sheetDate,
+    programs,
+    llpas: null,             // No LLPA sheets — tier-encoded in product codes, uses GSE defaults
+    loanAmountAdj: [],
+    stateAdj: {},
+    specPayups: {},
+    pricingSpecials: null,
+    occupancyAdj: null,
+    lenderFee: 1281,
+    compCap: { purchase: 4595, refinance: 3595 },
+  };
 }
 
 module.exports = { parseRates, parse, lenderId, decodeProductCode };

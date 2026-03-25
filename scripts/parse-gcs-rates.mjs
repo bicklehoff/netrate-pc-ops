@@ -178,7 +178,21 @@ async function parseTLS(files) {
   const csv = await downloadText(csvFile.path);
   const result = tlsParser.parseRates(csv);
   console.log(`  Parsed: ${result.programs.length} programs, date: ${result.sheetDate}`);
-  return { lenderId: 'tls', sheetDate: result.sheetDate, programs: result.programs };
+  // Use full parse for standard output format
+  const full = tlsParser.parse({ ratesCsv: csv });
+  return {
+    lenderId: 'tls',
+    sheetDate: full.sheetDate,
+    programs: full.programs,
+    llpas: full.llpas,
+    loanAmountAdj: full.loanAmountAdj,
+    stateAdj: full.stateAdj,
+    specPayups: full.specPayups,
+    pricingSpecials: full.pricingSpecials,
+    occupancyAdj: full.occupancyAdj,
+    lenderFee: full.lenderFee,
+    compCap: full.compCap,
+  };
 }
 
 async function parseKeystone(files) {
