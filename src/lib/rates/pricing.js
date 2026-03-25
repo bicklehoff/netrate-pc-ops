@@ -512,6 +512,10 @@ function checkEligibility(program, scenario) {
  * (Or equivalently, SUBTRACT from discount.)
  */
 function getStaticAdjustments(lenderId, scenario, program) {
+  // TODO: Static configs disabled until all lenders are properly wired.
+  // EverStream was producing impossible numbers (e.g., $9,678 credit at 5.624%).
+  // Need to filter by product tier/type before applying SRP.
+  return { total: 0, breakdown: [] };
   const cfg = STATIC_CONFIGS[lenderId];
   if (!cfg) return { total: 0, breakdown: [] };
 
