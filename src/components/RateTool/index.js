@@ -8,6 +8,7 @@ import RateEducation from './RateEducation';
 import LeadCapture from './LeadCapture';
 import ComparisonReport from './ComparisonReport';
 import { LO_CONFIG } from '@/lib/rates/config';
+import { DEFAULT_SCENARIO } from '@/lib/rates/defaults';
 import { trackRateToolInteraction, startEngagementTimer } from '@/lib/analytics';
 import { getThirdPartyCosts } from '@/lib/rates/closing-costs';
 
@@ -34,13 +35,13 @@ export default function RateTool({ initialRateData, defaultState }) {
   }, []);
 
   const [scenario, setScenario] = useState({
-    purpose: "purchase",
-    propertyType: "sfr",
-    propertyValue: 533333,
-    downPaymentPct: 20,
-    currentPayoff: 400000,
-    currentRate: 7.125,
-    fico: 780,
+    purpose: DEFAULT_SCENARIO.loanPurpose,
+    propertyType: DEFAULT_SCENARIO.propertyType,
+    propertyValue: DEFAULT_SCENARIO.propertyValue,
+    downPaymentPct: DEFAULT_SCENARIO.downPaymentPct,
+    currentPayoff: DEFAULT_SCENARIO.currentPayoff,
+    currentRate: DEFAULT_SCENARIO.currentRate,
+    fico: DEFAULT_SCENARIO.fico,
     loanAmount: 0,
     ltv: 0,
     state: initialState,

@@ -11,10 +11,13 @@ export const DEFAULT_SCENARIO = {
   fico: 780,
   loanAmount: 400000,
   ltv: 75,
+  downPaymentPct: 25,    // 100 - ltv
   propertyValue: 533333, // loanAmount / (ltv / 100)
   loanPurpose: 'purchase',
   propertyType: 'sfr',
   term: 30,
   lockDays: 30,
   state: 'CO',
+  currentPayoff: 400000, // for refi scenarios
+  currentRate: 7.125,    // for refi scenarios
 };
