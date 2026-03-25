@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { calculatePI, calculateAPR } from '@/lib/rates/engine';
+import { calculatePI } from '@/lib/rates/engine';
 
 /**
  * Hook that calls the pricing API and returns best-rate-per-tier results.
