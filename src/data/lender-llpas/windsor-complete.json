@@ -1,0 +1,1663 @@
+{
+  "_meta": {
+    "lender": "windsor",
+    "lenderName": "Windsor Mortgage / Plains Commerce",
+    "source": "65196_03242026_1115254063.xlsx",
+    "sheetDate": "2026-03-24",
+    "generatedAt": "2026-03-25T19:48:03.326Z",
+    "sheets": [
+      "Conventional and Government",
+      "Conv LLPA",
+      "LPMI",
+      "Gov LLPA",
+      "Gov ARM",
+      "Jumbo 1",
+      "Jumbo 1 AUS",
+      "Jumbo 1 15YR",
+      "Jumbo 1 ARM",
+      "Jumbo 2",
+      "Jumbo 2 AUS",
+      "Jumbo 3 AUS",
+      "Jumbo 4",
+      "Jumbo 4 ARM",
+      "Jumbo 4 LLPA",
+      "FHA Flex"
+    ],
+    "description": "Complete static LLPA config extracted from Windsor XLSX. All adjustments for pricing engine.",
+    "signConvention": "positive = cost to borrower (engine convention). Sheet uses negative = cost; values are negated during extraction."
+  },
+  "convLlpas": {
+    "ficoLtvGrids": {
+      "purchase": {
+        ">=780": [
+          0,
+          0,
+          0,
+          0,
+          0.375,
+          0.375,
+          0.25,
+          0.25,
+          0.125
+        ],
+        "760-779": [
+          0,
+          0,
+          0,
+          0.25,
+          0.625,
+          0.625,
+          0.5,
+          0.5,
+          0.25
+        ],
+        "740-759": [
+          0,
+          0,
+          0.125,
+          0.375,
+          0.875,
+          1,
+          0.75,
+          0.625,
+          0.5
+        ],
+        "720-739": [
+          0,
+          0,
+          0.25,
+          0.75,
+          1.25,
+          1.25,
+          1,
+          0.875,
+          0.75
+        ],
+        "700-719": [
+          0,
+          0,
+          0.375,
+          0.875,
+          1.375,
+          1.5,
+          1.25,
+          1.125,
+          0.875
+        ],
+        "680-699": [
+          0,
+          0,
+          0.625,
+          1.125,
+          1.75,
+          1.875,
+          1.5,
+          1.375,
+          1.125
+        ],
+        "660-679": [
+          0,
+          0,
+          0.75,
+          1.375,
+          1.875,
+          2.125,
+          1.75,
+          1.625,
+          1.25
+        ],
+        "640-659": [
+          0,
+          0,
+          1.125,
+          1.5,
+          2.25,
+          2.5,
+          2,
+          1.875,
+          1.5
+        ],
+        "620-639": [
+          0,
+          0.125,
+          1.5,
+          2.125,
+          2.75,
+          2.875,
+          2.625,
+          2.25,
+          1.75
+        ],
+        "< 620(1)": [
+          0,
+          0.125,
+          1.5,
+          2.125,
+          2.75,
+          2.875,
+          2.625,
+          2.25,
+          1.75
+        ]
+      },
+      "refinance": {
+        ">=780": [
+          0.375,
+          0.375,
+          0.625,
+          0.875,
+          1.375,
+          null,
+          null,
+          null,
+          null
+        ],
+        "760-779": [
+          0,
+          0,
+          0.125,
+          0.375,
+          0.875,
+          1,
+          0.75,
+          0.625,
+          0.625
+        ],
+        "740-759": [
+          0,
+          0,
+          0.25,
+          0.75,
+          1.125,
+          1.375,
+          1.125,
+          1,
+          1
+        ],
+        "720-739": [
+          0,
+          0,
+          0.5,
+          1,
+          1.625,
+          1.75,
+          1.5,
+          1.25,
+          1.25
+        ],
+        "700-719": [
+          0,
+          0,
+          0.625,
+          1.25,
+          1.875,
+          2.125,
+          1.75,
+          1.625,
+          1.625
+        ],
+        "680-699": [
+          0,
+          0,
+          0.875,
+          1.625,
+          2.25,
+          2.5,
+          2.125,
+          1.75,
+          1.75
+        ],
+        "660-679": [
+          0,
+          0.125,
+          1.125,
+          1.875,
+          2.5,
+          3,
+          2.375,
+          2.125,
+          2.125
+        ],
+        "640-659": [
+          0,
+          0.25,
+          1.375,
+          2.125,
+          2.875,
+          3.375,
+          2.875,
+          2.5,
+          2.5
+        ],
+        "620-639": [
+          0,
+          0.375,
+          1.75,
+          2.5,
+          3.5,
+          3.875,
+          3.625,
+          2.5,
+          2.5
+        ],
+        "< 620(1)": [
+          0,
+          0.375,
+          1.75,
+          2.5,
+          3.5,
+          3.875,
+          3.625,
+          2.5,
+          2.5
+        ]
+      },
+      "cashout": {
+        ">=780": [
+          0.375,
+          0.375,
+          0.625,
+          0.875,
+          1.375,
+          null,
+          null,
+          null,
+          null
+        ],
+        "760-779": [
+          0.375,
+          0.375,
+          0.875,
+          1.25,
+          1.875,
+          null,
+          null,
+          null,
+          null
+        ],
+        "740-759": [
+          0.375,
+          0.375,
+          1,
+          1.625,
+          2.375,
+          null,
+          null,
+          null,
+          null
+        ],
+        "720-739": [
+          0.375,
+          0.5,
+          1.375,
+          2,
+          2.75,
+          null,
+          null,
+          null,
+          null
+        ],
+        "700-719": [
+          0.375,
+          0.5,
+          1.625,
+          2.625,
+          3.25,
+          null,
+          null,
+          null,
+          null
+        ],
+        "680-699": [
+          0.375,
+          0.625,
+          2,
+          2.875,
+          3.75,
+          null,
+          null,
+          null,
+          null
+        ],
+        "660-679": [
+          0.375,
+          0.875,
+          2.75,
+          4,
+          4.75,
+          null,
+          null,
+          null,
+          null
+        ],
+        "640-659": [
+          0.375,
+          1.375,
+          3.125,
+          4.625,
+          5.125,
+          null,
+          null,
+          null,
+          null
+        ],
+        "620-639": [
+          0.375,
+          1.375,
+          3.375,
+          4.875,
+          5.125,
+          null,
+          null,
+          null,
+          null
+        ],
+        "< 620(1)": [
+          0.375,
+          1.375,
+          3.375,
+          4.875,
+          5.125,
+          null,
+          null,
+          null,
+          null
+        ]
+      }
+    },
+    "productFeatures": {
+      "purchase": {
+        "ltvBands": [
+          "<=30",
+          "30.01-60",
+          "60.01-70",
+          "70.01-75",
+          "75.01-80",
+          "80.01-85",
+          "85.01-90",
+          "90.01-95",
+          "95.01-97"
+        ],
+        "features": {
+          "arm": {
+            "label": "ARM",
+            "values": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0.25,
+              0.25
+            ]
+          },
+          "condo": {
+            "label": "Condo (2)",
+            "values": [
+              0,
+              0,
+              0.125,
+              0.125,
+              0.75,
+              0.75,
+              0.75,
+              0.75,
+              0.75
+            ]
+          },
+          "investment": {
+            "label": "Investment Property",
+            "values": [
+              1.125,
+              1.125,
+              1.625,
+              2.125,
+              3.375,
+              4.125,
+              4.125,
+              4.125,
+              4.125
+            ]
+          },
+          "secondHome": {
+            "label": "Second Home",
+            "values": [
+              1.125,
+              1.125,
+              1.625,
+              2.125,
+              3.375,
+              4.125,
+              4.125,
+              4.125,
+              4.125
+            ]
+          },
+          "manufactured": {
+            "label": "Manufactured Home(3)",
+            "values": [
+              0.75,
+              0.75,
+              0.75,
+              0.75,
+              0.75,
+              0.75,
+              0.75,
+              0.75,
+              0.75
+            ]
+          },
+          "2to4unit": {
+            "label": "2-4 Unit Property",
+            "values": [
+              0,
+              0,
+              0.375,
+              0.375,
+              0.625,
+              0.625,
+              0.625,
+              0.625,
+              0.625
+            ]
+          },
+          "highBalFixed": {
+            "label": "High Balance - Fixed Rate",
+            "values": [
+              0.5,
+              0.5,
+              0.75,
+              0.75,
+              1,
+              1,
+              1,
+              1,
+              1
+            ]
+          },
+          "highBalArm": {
+            "label": "High Balance - ARM",
+            "values": [
+              1.25,
+              1.25,
+              1.5,
+              1.5,
+              2.5,
+              2.5,
+              2.5,
+              2.75,
+              2.75
+            ]
+          },
+          "subFinancing": {
+            "label": "Secondary Financing(4)",
+            "values": [
+              0.625,
+              0.625,
+              0.625,
+              0.875,
+              1.125,
+              1.125,
+              1.125,
+              1.875,
+              1.875
+            ]
+          },
+          "dtiOver40": {
+            "label": "DTI > 40%",
+            "values": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          }
+        }
+      },
+      "refinance": {
+        "ltvBands": [
+          "<=30",
+          "30.01-60",
+          "60.01-70",
+          "70.01-75",
+          "75.01-80",
+          "80.01-85",
+          "85.01-90",
+          "90.01-95",
+          "95.01-97"
+        ],
+        "features": {
+          "arm": {
+            "label": "ARM",
+            "values": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0.25,
+              0.25
+            ]
+          },
+          "condo": {
+            "label": "Condo (2)",
+            "values": [
+              0,
+              0,
+              0.125,
+              0.125,
+              0.75,
+              0.75,
+              0.75,
+              0.75,
+              0.75
+            ]
+          },
+          "investment": {
+            "label": "Investment Property",
+            "values": [
+              1.125,
+              1.125,
+              1.625,
+              2.125,
+              3.375,
+              4.125,
+              4.125,
+              4.125,
+              4.125
+            ]
+          },
+          "secondHome": {
+            "label": "Second Home",
+            "values": [
+              1.125,
+              1.125,
+              1.625,
+              2.125,
+              3.375,
+              4.125,
+              4.125,
+              4.125,
+              4.125
+            ]
+          },
+          "manufactured": {
+            "label": "Manufactured Home(3)",
+            "values": [
+              0.75,
+              0.75,
+              0.75,
+              0.75,
+              0.75,
+              0.75,
+              0.75,
+              0.75,
+              0.75
+            ]
+          },
+          "2to4unit": {
+            "label": "2-4 Unit Property",
+            "values": [
+              0,
+              0,
+              0.375,
+              0.375,
+              0.625,
+              0.625,
+              0.625,
+              0.625,
+              0.625
+            ]
+          },
+          "highBalFixed": {
+            "label": "High Balance - Fixed Rate",
+            "values": [
+              0.5,
+              0.5,
+              0.75,
+              0.75,
+              1,
+              1,
+              1,
+              1,
+              1
+            ]
+          },
+          "highBalArm": {
+            "label": "High Balance - ARM",
+            "values": [
+              1.25,
+              1.25,
+              1.5,
+              1.5,
+              2.5,
+              2.5,
+              2.5,
+              2.75,
+              2.75
+            ]
+          },
+          "subFinancing": {
+            "label": "Secondary Financing(4)",
+            "values": [
+              0.625,
+              0.625,
+              0.625,
+              0.875,
+              1.125,
+              1.125,
+              1.125,
+              1.875,
+              1.875
+            ]
+          },
+          "dtiOver40": {
+            "label": "DTI > 40%",
+            "values": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          }
+        }
+      },
+      "cashout": {
+        "ltvBands": [
+          "<=30",
+          "30.01-60",
+          "60.01-70",
+          "70.01-75",
+          "75.01-80",
+          "80.01-85",
+          "85.01-90",
+          "90.01-95",
+          "95.01-97"
+        ],
+        "features": {
+          "arm": {
+            "label": "ARM",
+            "values": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              null,
+              null,
+              null,
+              null
+            ]
+          },
+          "condo": {
+            "label": "Condo (2)",
+            "values": [
+              0,
+              0,
+              0.125,
+              0.125,
+              0.75,
+              null,
+              null,
+              null,
+              null
+            ]
+          },
+          "investment": {
+            "label": "Investment Property",
+            "values": [
+              1.125,
+              1.125,
+              1.625,
+              2.125,
+              3.375,
+              null,
+              null,
+              null,
+              null
+            ]
+          },
+          "secondHome": {
+            "label": "Second Home",
+            "values": [
+              1.125,
+              1.125,
+              1.625,
+              2.125,
+              3.375,
+              null,
+              null,
+              null,
+              null
+            ]
+          },
+          "manufactured": {
+            "label": "Manufactured Home(3)",
+            "values": [
+              0.75,
+              0.75,
+              0.75,
+              0.75,
+              0.75,
+              null,
+              null,
+              null,
+              null
+            ]
+          },
+          "2to4unit": {
+            "label": "2-4 Unit Property",
+            "values": [
+              0,
+              0,
+              0.375,
+              0.375,
+              0.625,
+              null,
+              null,
+              null,
+              null
+            ]
+          },
+          "highBalFixed": {
+            "label": "High Balance - Fixed Rate",
+            "values": [
+              1.25,
+              1.25,
+              1.5,
+              1.5,
+              1.75,
+              null,
+              null,
+              null,
+              null
+            ]
+          },
+          "highBalArm": {
+            "label": "High Balance - ARM",
+            "values": [
+              2,
+              2,
+              2.25,
+              2.25,
+              3.25,
+              null,
+              null,
+              null,
+              null
+            ]
+          },
+          "subFinancing": {
+            "label": "Secondary Financing(4)",
+            "values": [
+              0.625,
+              0.625,
+              0.625,
+              0.875,
+              1.125,
+              null,
+              null,
+              null,
+              null
+            ]
+          },
+          "dtiOver40": {
+            "label": "DTI > 40%",
+            "values": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              null,
+              null,
+              null,
+              null
+            ]
+          }
+        }
+      }
+    },
+    "ltvBands": {
+      "purchaseRefi": [
+        "<=30",
+        "30.01-60",
+        "60.01-70",
+        "70.01-75",
+        "75.01-80",
+        "80.01-85",
+        "85.01-90",
+        "90.01-95",
+        "95.01-97"
+      ],
+      "cashout": [
+        "<=30",
+        "30.01-60",
+        "60.01-70",
+        "70.01-75",
+        "75.01-80",
+        "80.01-85",
+        "85.01-90",
+        "90.01-95",
+        "95.01-97"
+      ]
+    },
+    "otherAdjustments": {
+      "lock90day": -0.45,
+      "extensionFee": "-0.020 / day",
+      "relockFee": -0.25,
+      "escrowWaiver": -0.15,
+      "lenderPaidTempBuydown": -0.875,
+      "tempBuydown": -0.125,
+      "texasCashout": -0.125,
+      "loanTermAdjusters": {
+        "20 Year": -0.25,
+        "25 Year": -0.1
+      }
+    },
+    "llpaCaps": {
+      "homeready_/home_possible": 0,
+      "350k__680_fico": 0.15
+    },
+    "stateTiers": {
+      "CA": -0.15,
+      "MA": -0.15,
+      "NY": -0.15,
+      "IL": -0.05,
+      "MD": -0.05,
+      "WA": -0.05,
+      "AK": 0,
+      "AL": 0,
+      "AR": 0,
+      "AZ": 0,
+      "CO": 0,
+      "CT": 0,
+      "DC": 0,
+      "DE": 0,
+      "GA": 0,
+      "HI": 0,
+      "IA": 0,
+      "ID": 0,
+      "IN": 0,
+      "KS": 0,
+      "KY": 0,
+      "LA": 0,
+      "ME": 0,
+      "MN": 0,
+      "MO": 0,
+      "MS": 0,
+      "MT": 0,
+      "NC": 0,
+      "ND": 0,
+      "NE": 0,
+      "NH": 0,
+      "NJ": 0,
+      "NM": 0,
+      "NV": 0,
+      "OH": 0,
+      "OK": 0,
+      "OR": 0,
+      "PA": 0,
+      "RI": 0,
+      "SC": 0,
+      "SD": 0,
+      "TN": 0,
+      "UT": 0,
+      "VA": 0,
+      "VT": 0,
+      "WI": 0,
+      "WV": 0,
+      "WY": 0,
+      "FL": 0.05,
+      "MI": 0.05,
+      "TX": 0.1
+    },
+    "lenderFee": 1295,
+    "special": {
+      "label": "Conforming Conventional Special (7)",
+      "value": 0.15
+    }
+  },
+  "govLlpas": {
+    "ficoAdj": {
+      "conforming": {
+        ">=780": -0.25,
+        "760-779": -0.25,
+        "740-759": -0.25,
+        "720-739": -0.125,
+        "700-719": -0.125,
+        "680-699": -0.125,
+        "660-679": 0.125,
+        "640-659": 0.125,
+        "620-639": 0.875,
+        "600-619": 2
+      },
+      "highBalance": {
+        ">=780": 0,
+        "760-779": 0,
+        "740-759": 0,
+        "720-739": 0,
+        "700-719": 0,
+        "680-699": 0,
+        "660-679": 0.5,
+        "640-659": 1.75,
+        "620-639": 2.25
+      }
+    },
+    "vaAdj": {
+      "va_high_balance": {
+        "label": "VA High Balance",
+        "value": 0
+      },
+      "va_full_doc_ltv_900195_and_fico_680": {
+        "label": "VA Full Doc LTV 90.01-95 and Fico <680",
+        "value": 0.125
+      },
+      "va_full_doc_ltv_95_and_fico_680": {
+        "label": "VA Full Doc LTV >95 and Fico <680",
+        "value": 0.25
+      },
+      "va_manual_uw__fico_640": {
+        "label": "VA Manual U/W & FICO <640",
+        "value": 0.5
+      },
+      "va_loan_amounts__1mm15mm": {
+        "label": "VA Loan Amounts > 1MM<=1.5MM",
+        "value": 0.25
+      },
+      "va_loan_amounts__15mm": {
+        "label": "VA Loan Amounts > 1.5MM",
+        "value": 0.5
+      }
+    },
+    "fhaAdj": {
+      "investmentsecond_home": {
+        "label": "Investment/Second Home",
+        "value": 0.5
+      },
+      "fha_cash_out": {
+        "label": "FHA Cash Out",
+        "value": 0.25
+      },
+      "fha_manual_uw__fico_640": {
+        "label": "FHA Manual U/W & FICO <640",
+        "value": 0.5
+      },
+      "fha_zero_fico": {
+        "label": "FHA Zero FICO",
+        "value": 3.25
+      },
+      "fha_streamline__620": {
+        "label": "FHA Streamline >= 620",
+        "value": 0
+      },
+      "fha_streamline_600619": {
+        "label": "FHA Streamline 600-619",
+        "value": 0.55
+      },
+      "fha_streamline_600": {
+        "label": "FHA Streamline <600",
+        "value": 0.85
+      }
+    },
+    "usdaAdj": {
+      "usda_zero_fico": {
+        "label": "USDA Zero FICO",
+        "value": 5
+      },
+      "usda_streamlinedassist": {
+        "label": "USDA Streamlined-Assist",
+        "value": 0.375
+      }
+    },
+    "vaIrrrl": {
+      "fico_640679__ltv_95": {
+        "label": "FICO 640-679 & LTV >95",
+        "value": 0.75
+      },
+      "fico_580639__ltv_95": {
+        "label": "FICO 580-639 & LTV >95",
+        "value": 1.5
+      }
+    },
+    "vaIrrrlInvestment": {
+      "fico_680719__ltv_95": {
+        "label": "FICO 680-719 & LTV >95",
+        "value": 0.25
+      },
+      "fico_580679__ltv_95": {
+        "label": "FICO 580-679 & LTV >95",
+        "value": 1.75
+      }
+    },
+    "vaRateTerm": {
+      "fico_620": {
+        "label": "FICO <620",
+        "value": 1
+      },
+      "fico_620__639": {
+        "label": "FICO 620 - 639",
+        "value": 0.25
+      },
+      "90_ltv": {
+        "label": ">90% LTV",
+        "value": 2.5
+      }
+    },
+    "stateAdj": {
+      "CA": -0.1,
+      "MA": -0.1,
+      "NY": -0.1,
+      "IL": -0.05,
+      "MD": -0.05,
+      "WA": -0.05,
+      "AK": 0,
+      "AL": 0,
+      "AR": 0,
+      "AZ": 0,
+      "CO": 0,
+      "CT": 0,
+      "DC": 0,
+      "DE": 0,
+      "FL": 0,
+      "GA": 0,
+      "HI": 0,
+      "IA": 0,
+      "ID": 0,
+      "IN": 0,
+      "KS": 0,
+      "KY": 0,
+      "LA": 0,
+      "ME": 0,
+      "MN": 0,
+      "MO": 0,
+      "MS": 0,
+      "MT": 0,
+      "NC": 0,
+      "ND": 0,
+      "NE": 0,
+      "NH": 0,
+      "NJ": 0,
+      "NM": 0,
+      "NV": 0,
+      "OH": 0,
+      "OK": 0,
+      "OR": 0,
+      "PA": 0,
+      "RI": 0,
+      "SC": 0,
+      "SD": 0,
+      "TN": 0,
+      "UT": 0,
+      "VA": 0,
+      "VT": 0,
+      "WI": 0,
+      "WV": 0,
+      "WY": 0,
+      "MI": 0.05,
+      "TX": 0.15
+    },
+    "lenderFees": {
+      "standard": 1295,
+      "streamline": 659,
+      "irrrl": 595
+    },
+    "manufacturedAdj": 1.25,
+    "otherAdj": {
+      "90_day_locks_adjustment_based_on_60_day_pricing": {
+        "label": "90 day locks (adjustment based on 60 day pricing)",
+        "value": -0.45
+      },
+      "extension_fees": {
+        "label": "Extension Fees",
+        "value": -0.02
+      },
+      "relock_fee": {
+        "label": "Relock Fee",
+        "value": -0.25
+      },
+      "loan_term_20_year": {
+        "label": "Loan Term 20 Year",
+        "value": -1.25
+      },
+      "loan_term_25_year": {
+        "label": "Loan Term 25 Year",
+        "value": -0.125
+      },
+      "tempBuydown": {
+        "label": "Temporary Buydown",
+        "value": -0.125
+      }
+    }
+  },
+  "jumbo4Llpas": {
+    "ficoLtvGrid": {
+      ">=800": [
+        -0.5,
+        -0.5,
+        -0.5,
+        -0.5,
+        -0.25,
+        0,
+        0
+      ],
+      "780-799": [
+        -0.5,
+        -0.5,
+        -0.5,
+        -0.5,
+        -0.25,
+        0,
+        0
+      ],
+      "760-779": [
+        -0.25,
+        -0.25,
+        -0.25,
+        -0.25,
+        0,
+        0,
+        0
+      ],
+      "740-759": [
+        -0.25,
+        -0.25,
+        -0.25,
+        -0.25,
+        0,
+        0,
+        0
+      ],
+      "720-739": [
+        -0.25,
+        -0.25,
+        -0.25,
+        -0.25,
+        0,
+        0,
+        0
+      ]
+    },
+    "ltvBands": [
+      "0-50",
+      "50.01-55",
+      "55.01-60",
+      "60.01-65",
+      "65.01-70",
+      "70.01-75",
+      "75.01-80"
+    ],
+    "miscAdj": {
+      "purchase": {
+        "label": "Purchase",
+        "value": 0
+      },
+      "cashout": {
+        "label": "Cashout",
+        "value": 0.25
+      },
+      "investment": {
+        "label": "Investment",
+        "value": 0.25
+      },
+      "escrow_waiver": {
+        "label": "Escrow Waiver",
+        "value": 0.125
+      },
+      "condo_65": {
+        "label": "Condo >65%",
+        "value": 0.125
+      },
+      "second_home": {
+        "label": "Second Home",
+        "value": 0.125
+      },
+      "24_units__65ltv": {
+        "label": "2-4 units <= 65%LTV",
+        "value": 0.125
+      },
+      "24_units_65ltv": {
+        "label": "2-4 units >65%LTV",
+        "value": 0.25
+      },
+      "self_employed": {
+        "label": "Self Employed",
+        "value": 0
+      },
+      "loan_amount__2mm": {
+        "label": "Loan Amount > $2MM",
+        "value": 0.125
+      }
+    },
+    "stateAdj": {
+      "AK": {
+        "fixed": -0.25,
+        "arm": -0.25
+      },
+      "MS": {
+        "fixed": -0.25,
+        "arm": -0.25
+      },
+      "AL": {
+        "fixed": -0.25,
+        "arm": -0.25
+      },
+      "MT": {
+        "fixed": -0.25,
+        "arm": -0.25
+      },
+      "AR": {
+        "fixed": -0.25,
+        "arm": -0.25
+      },
+      "NC": {
+        "fixed": -0.25,
+        "arm": -0.25
+      },
+      "AZ": {
+        "fixed": -0.25,
+        "arm": -0.25
+      },
+      "ND": {
+        "fixed": -0.25,
+        "arm": -0.25
+      },
+      "CA": {
+        "fixed": 0,
+        "arm": 0
+      },
+      "NE": {
+        "fixed": -0.25,
+        "arm": -0.25
+      },
+      "CO": {
+        "fixed": -0.25,
+        "arm": -0.25
+      },
+      "NH": {
+        "fixed": -0.25,
+        "arm": -0.25
+      },
+      "CT": {
+        "fixed": 0,
+        "arm": 0
+      },
+      "NJ": {
+        "fixed": 0,
+        "arm": 0
+      },
+      "DC": {
+        "fixed": 0,
+        "arm": 0
+      },
+      "NM": {
+        "fixed": -0.25,
+        "arm": -0.25
+      },
+      "DE": {
+        "fixed": -0.25,
+        "arm": -0.25
+      },
+      "NV": {
+        "fixed": 0,
+        "arm": 0
+      },
+      "FL": {
+        "fixed": 0,
+        "arm": 0
+      },
+      "NY": {
+        "fixed": 0,
+        "arm": 0
+      },
+      "GA": {
+        "fixed": -0.25,
+        "arm": -0.25
+      },
+      "OH": {
+        "fixed": -0.25,
+        "arm": -0.25
+      },
+      "HI": {
+        "fixed": -0.25,
+        "arm": -0.25
+      },
+      "OK": {
+        "fixed": -0.25,
+        "arm": -0.25
+      },
+      "IA": {
+        "fixed": -0.25,
+        "arm": -0.25
+      },
+      "OR": {
+        "fixed": -0.25,
+        "arm": -0.25
+      },
+      "ID": {
+        "fixed": -0.25,
+        "arm": -0.25
+      },
+      "PA": {
+        "fixed": -0.25,
+        "arm": -0.25
+      },
+      "IL": {
+        "fixed": 0,
+        "arm": 0
+      },
+      "RI": {
+        "fixed": -0.25,
+        "arm": -0.25
+      },
+      "IN": {
+        "fixed": -0.25,
+        "arm": -0.25
+      },
+      "SC": {
+        "fixed": -0.25,
+        "arm": -0.25
+      },
+      "KS": {
+        "fixed": -0.25,
+        "arm": -0.25
+      },
+      "SD": {
+        "fixed": -0.25,
+        "arm": -0.25
+      },
+      "KY": {
+        "fixed": -0.25,
+        "arm": -0.25
+      },
+      "TN": {
+        "fixed": -0.25,
+        "arm": -0.25
+      },
+      "LA": {
+        "fixed": -0.25,
+        "arm": -0.25
+      },
+      "TX": {
+        "fixed": -0.25,
+        "arm": -0.25
+      },
+      "MA": {
+        "fixed": -0.25,
+        "arm": -0.25
+      },
+      "UT": {
+        "fixed": -0.25,
+        "arm": -0.25
+      },
+      "MD": {
+        "fixed": 0,
+        "arm": 0
+      },
+      "VA": {
+        "fixed": 0,
+        "arm": 0
+      },
+      "ME": {
+        "fixed": -0.25,
+        "arm": -0.25
+      },
+      "VT": {
+        "fixed": -0.25,
+        "arm": -0.25
+      },
+      "MI": {
+        "fixed": -0.25,
+        "arm": -0.25
+      },
+      "WA": {
+        "fixed": -0.25,
+        "arm": -0.25
+      },
+      "MN": {
+        "fixed": -0.25,
+        "arm": -0.25
+      },
+      "WI": {
+        "fixed": -0.25,
+        "arm": -0.25
+      },
+      "MO": {
+        "fixed": -0.25,
+        "arm": -0.25
+      },
+      "WV": {
+        "fixed": -0.25,
+        "arm": -0.25
+      },
+      "WY": {
+        "fixed": -0.25,
+        "arm": -0.25
+      }
+    },
+    "lenderFee": 1295,
+    "maxNetPrice": {
+      "fixed": 104,
+      "arm": 104
+    },
+    "armInfo": [
+      {
+        "product": "5/6",
+        "margin": 2.75,
+        "caps": "2/1/5"
+      },
+      {
+        "product": "7/6",
+        "margin": 2.75,
+        "caps": "5/1/5"
+      },
+      {
+        "product": "10/6",
+        "margin": 2.75,
+        "caps": "5/1/5"
+      }
+    ]
+  },
+  "lpmi": {
+    "grids": {
+      "ltv": {
+        "headers": [
+          "LTV",
+          "≥760",
+          "740-759",
+          "720-739",
+          "700-719",
+          "680-699",
+          "660-679",
+          "640-659",
+          "620-639"
+        ],
+        "data": {
+          "95.01-97": [
+            95.01,
+            -1.61,
+            -2.37,
+            -3.03,
+            -3.49,
+            -4.41,
+            -5.88,
+            -6.5,
+            -7.21
+          ],
+          "90.01-95": [
+            90.01,
+            -1.45,
+            -2.12,
+            -2.68,
+            -3.09,
+            -3.9,
+            -5.12,
+            -5.63,
+            -6.24
+          ],
+          "85.01-90": [
+            85.01,
+            -0.79,
+            -1.04,
+            -1.3,
+            -1.45,
+            -1.76,
+            -2.31,
+            -2.52,
+            -2.77
+          ],
+          "85% and below": [
+            85,
+            -0.55,
+            -0.55,
+            -0.55,
+            -0.55,
+            -0.59,
+            -0.73,
+            -0.78,
+            -0.89
+          ],
+          "Product Feature": [
+            null,
+            null,
+            740,
+            720,
+            700,
+            680,
+            660,
+            640,
+            620
+          ],
+          "Rate and Term Refinance": [
+            null,
+            0,
+            0,
+            0,
+            -0.53,
+            -0.53,
+            -1.05,
+            -1.05,
+            -1.05
+          ],
+          "Second Homes": [
+            null,
+            -0.25,
+            -0.25,
+            -0.49,
+            -0.7,
+            -0.7,
+            -1.23,
+            -1.23,
+            -1.23
+          ],
+          "Manufactured Homes": [
+            null,
+            -0.5,
+            -0.5,
+            -0.7,
+            -1,
+            -1,
+            -1.3,
+            -1.3,
+            -1.3
+          ],
+          "3- 4 Unit Property": [
+            3,
+            -1.19,
+            -1.19,
+            -1.33,
+            -1.75,
+            -1.75,
+            -2.63,
+            -2.63,
+            -2.63
+          ],
+          ">45%DTI": [
+            null,
+            -0.38,
+            -0.62,
+            -0.76,
+            -1.06,
+            -1.24,
+            -1.42,
+            -1.6,
+            -1.82
+          ]
+        }
+      },
+      "rate_and_term_refinance": {
+        "headers": [
+          "Rate and Term Refinance",
+          "0",
+          "0",
+          "0",
+          "-0.53",
+          "-0.53",
+          "-1.05",
+          "-1.05",
+          "-1.05"
+        ],
+        "data": {
+          "Second Homes": [
+            null,
+            -0.25,
+            -0.25,
+            -0.49,
+            -0.7,
+            -0.7,
+            -1.23,
+            -1.23,
+            -1.23
+          ],
+          "Manufactured Homes": [
+            null,
+            -0.5,
+            -0.5,
+            -0.7,
+            -1,
+            -1,
+            -1.3,
+            -1.3,
+            -1.3
+          ],
+          "3- 4 Unit Property": [
+            3,
+            -1.19,
+            -1.19,
+            -1.33,
+            -1.75,
+            -1.75,
+            -2.63,
+            -2.63,
+            -2.63
+          ],
+          ">45%DTI": [
+            null,
+            -0.38,
+            -0.62,
+            -0.76,
+            -1.06,
+            -1.24,
+            -1.42,
+            -1.6,
+            -1.82
+          ]
+        }
+      }
+    }
+  }
+}
