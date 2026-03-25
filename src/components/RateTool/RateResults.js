@@ -44,8 +44,11 @@ export default function RateResults({ scenario, rateData, apiResults, loading, c
 
   const showStart = Math.max(0, parIdx - 5);
   const showEnd = Math.min(rates.length, parIdx + 6);
-  // Reverse so table displays lowest rate first (ascending)
-  const visibleRates = rates.slice(showStart, showEnd).reverse();
+  // Display lowest rate first (ascending)
+  const sliced = rates.slice(showStart, showEnd);
+  // API results are already ascending; old engine results were descending
+  const isAscending = sliced.length >= 2 && sliced[0].rate <= sliced[sliced.length - 1].rate;
+  const visibleRates = isAscending ? sliced : sliced.reverse();
 
   // Compute badge thresholds
   const lenderFees = rateData.lender.lenderFees;
