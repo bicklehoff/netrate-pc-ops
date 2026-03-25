@@ -114,6 +114,7 @@ export async function createSigningRequest({
   }
 
   const createData = await createRes.json();
+  console.log('Zoho Sign create response:', JSON.stringify(createData, null, 2));
   const request = createData.requests;
 
   if (!request || !request.request_id) {
@@ -128,13 +129,34 @@ export async function createSigningRequest({
     throw new Error('Zoho Sign: missing document_id or action_id in draft response');
   }
 
-  // Step 2: Submit the request for signing
-  // Let Zoho auto-detect signature placement (uses "Sincerely," area)
+  // Step 2: Submit with signature field
+  // Zoho requires fields under "image_fields" (not "signature"), percentage coords
   const submitData = {
     requests: {
       actions: [
         {
           action_id: actionId,
+          action_type: 'SIGN',
+          recipient_name: signerName,
+          recipient_email: signerEmail,
+          signing_order: 0,
+          fields: {
+            image_fields: [
+              {
+                field_name: 'Signature',
+                field_label: 'Signature',
+                field_type_name: 'Signature',
+                field_category: 'image',
+                document_id: documentId,
+                is_mandatory: true,
+                page_no: 0,
+                x_value: 10,
+                y_value: 80,
+                width: 20,
+                height: 4,
+              },
+            ],
+          },
         },
       ],
     },
@@ -149,12 +171,14 @@ export async function createSigningRequest({
     body: JSON.stringify(submitData),
   });
 
+  const submitText = await submitRes.text();
+  console.log('Zoho Sign submit response:', submitRes.status, submitText);
+
   if (!submitRes.ok) {
-    const errText = await submitRes.text();
-    throw new Error(`Zoho Sign submit failed (${submitRes.status}): ${errText}`);
+    throw new Error(`Zoho Sign submit failed (${submitRes.status}): ${submitText}`);
   }
 
-  const submitResult = await submitRes.json();
+  const submitResult = JSON.parse(submitText);
 
   // Get the embedded signing URL so the MLO can sign in-browser
   const signAction = submitResult.requests?.actions?.[0];
