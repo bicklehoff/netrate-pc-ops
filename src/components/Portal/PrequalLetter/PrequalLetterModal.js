@@ -71,8 +71,10 @@ export default function PrequalLetterModal({ loan, session, onClose }) {
 
   const [pdfBusy, setPdfBusy] = useState(false);
   const [signBusy, setSignBusy] = useState(false);
+  const [saveFolderBusy, setSaveFolderBusy] = useState(false);
   const [error, setError] = useState(null);
   const [signSuccess, setSignSuccess] = useState(false);
+  const [saveFolderSuccess, setSaveFolderSuccess] = useState(false);
   const [saving, setSaving] = useState(false);
   const initialized = useRef(false);
   const saveTimer = useRef(null);
@@ -187,21 +189,30 @@ export default function PrequalLetterModal({ loan, session, onClose }) {
     mloEmail: form.mloEmail,
   });
 
+  // Generate PDF blob (shared)
+  const generatePdfBlob = async () => {
+    const [{ pdf }, { default: PrequalLetterPDF }] = await Promise.all([
+      import('@react-pdf/renderer'),
+      import('./PrequalLetterPDF'),
+    ]);
+    return pdf(<PrequalLetterPDF data={buildPdfData()} />).toBlob();
+  };
+
+  const pdfFileName = () => {
+    const safeName = form.borrowerNames.replace(/[^a-zA-Z0-9]/g, '-') || 'Borrower';
+    return `NetRate-PreQual-${safeName}-${form.letterDate}.pdf`;
+  };
+
   // Generate and download PDF
   const handleDownload = async () => {
     setPdfBusy(true);
     setError(null);
     try {
-      const [{ pdf }, { default: PrequalLetterPDF }] = await Promise.all([
-        import('@react-pdf/renderer'),
-        import('./PrequalLetterPDF'),
-      ]);
-      const blob = await pdf(<PrequalLetterPDF data={buildPdfData()} />).toBlob();
+      const blob = await generatePdfBlob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      const safeName = form.borrowerNames.replace(/[^a-zA-Z0-9]/g, '-') || 'Borrower';
-      a.download = `NetRate-PreQual-${safeName}-${form.letterDate}.pdf`;
+      a.download = pdfFileName();
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -211,6 +222,37 @@ export default function PrequalLetterModal({ loan, session, onClose }) {
       setError('Failed to generate PDF. Please try again.');
     } finally {
       setPdfBusy(false);
+    }
+  };
+
+  // Save PDF to loan's WorkDrive folder
+  const handleSaveToFolder = async () => {
+    setSaveFolderBusy(true);
+    setError(null);
+    setSaveFolderSuccess(false);
+    try {
+      const blob = await generatePdfBlob();
+      const formData = new FormData();
+      formData.append('file', blob, pdfFileName());
+      formData.append('folder', 'SUBMITTED');
+      formData.append('docType', 'prequal_letter');
+
+      const res = await fetch(`/api/portal/mlo/loans/${loan.id}/files`, {
+        method: 'PUT',
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to save to folder');
+      }
+
+      setSaveFolderSuccess(true);
+    } catch (err) {
+      console.error('Save to folder failed:', err);
+      setError(err.message || 'Failed to save to folder. Does this loan have a WorkDrive folder?');
+    } finally {
+      setSaveFolderBusy(false);
     }
   };
 
@@ -446,6 +488,11 @@ export default function PrequalLetterModal({ loan, session, onClose }) {
               Sent to Zoho Sign for e-signature. Check your email to sign the letter.
             </div>
           )}
+          {saveFolderSuccess && (
+            <div className="rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700">
+              Pre-qual letter saved to loan folder (Submitted).
+            </div>
+          )}
         </div>
 
         {/* Footer Actions */}
@@ -467,6 +514,15 @@ export default function PrequalLetterModal({ loan, session, onClose }) {
           >
             {pdfBusy ? 'Generating...' : 'Download PDF'}
           </button>
+          {loan?.workDriveFolderId && (
+            <button
+              onClick={handleSaveToFolder}
+              disabled={saveFolderBusy || !form.borrowerNames}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+            >
+              {saveFolderBusy ? 'Saving...' : '📁 Save to Folder'}
+            </button>
+          )}
           <button
             onClick={handleSignAndSend}
             disabled={signBusy || !form.borrowerNames}
