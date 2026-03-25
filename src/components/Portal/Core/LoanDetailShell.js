@@ -26,6 +26,7 @@ export default function LoanDetailShell({ loan, onRefresh }) {
   const activeSection = searchParams.get('section') || 'overview';
   const [actionError, setActionError] = useState('');
   const [showPrequal, setShowPrequal] = useState(false);
+  const [prequelEverOpened, setPrequalEverOpened] = useState(false);
 
   // ─── Shared update handler for inline field edits ───
   const updateLoanField = useCallback(async (updates) => {
@@ -155,7 +156,7 @@ export default function LoanDetailShell({ loan, onRefresh }) {
         <StatusHeader
           loan={loan}
           onStatusChange={handleStatusChange}
-          onPrequalLetter={() => setShowPrequal(true)}
+          onPrequalLetter={() => { setShowPrequal(true); setPrequalEverOpened(true); }}
         />
 
         {/* Error banner */}
@@ -179,12 +180,14 @@ export default function LoanDetailShell({ loan, onRefresh }) {
         </div>
       </div>
 
-      {/* Pre-Qual Letter Modal */}
-      {showPrequal && (
-        <PrequalLetterModal
-          loan={loan}
-          onClose={() => setShowPrequal(false)}
-        />
+      {/* Pre-Qual Letter Modal — stays mounted after first open so form data persists */}
+      {prequelEverOpened && (
+        <div className={showPrequal ? '' : 'hidden'}>
+          <PrequalLetterModal
+            loan={loan}
+            onClose={() => setShowPrequal(false)}
+          />
+        </div>
       )}
     </div>
   );
