@@ -200,7 +200,14 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  sincerely: { fontSize: 10, color: GRAY_600, marginBottom: 10 },
+  sincerely: { fontSize: 10, color: GRAY_600, marginBottom: 4 },
+  signatureLine: {
+    width: 180,
+    borderBottomWidth: 1,
+    borderBottomColor: GRAY_800,
+    marginBottom: 4,
+    marginTop: 20,
+  },
   signatureName: { fontSize: 12, fontFamily: 'Helvetica-Bold', color: GRAY_800 },
   signatureDetail: { fontSize: 10, color: GRAY_500, marginTop: 1 },
   companyBlock: { fontSize: 10, color: GRAY_700, fontFamily: 'Helvetica-Bold' },
@@ -443,6 +450,7 @@ export default function PrequalLetterPDF({ data }) {
         <View style={s.signatureBlock}>
           <View>
             <Text style={s.sincerely}>Sincerely,</Text>
+            <View style={s.signatureLine} />
             <Text style={s.signatureName}>{mloName}</Text>
             <Text style={s.signatureDetail}>NMLS #{mloNmls}</Text>
             <Text style={s.signatureDetail}>{mloPhone} | {mloEmail}</Text>

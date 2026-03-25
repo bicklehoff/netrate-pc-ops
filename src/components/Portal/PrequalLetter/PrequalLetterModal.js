@@ -49,6 +49,7 @@ export default function PrequalLetterModal({ loan, session, onClose }) {
     borrowerNames: '',
     propertyAddress: '',
     purchasePrice: '',
+    downPayment: '',
     loanAmount: '',
     ltv: '',
     loanType: '',
@@ -92,6 +93,7 @@ export default function PrequalLetterModal({ loan, session, onClose }) {
         borrowerNames: buildBorrowerNames(loan),
         propertyAddress: formatAddress(loan.propertyAddress),
         purchasePrice: loan.purchasePrice || '',
+        downPayment: loan.downPayment || '',
         loanAmount: loan.loanAmount || '',
         ltv: computeLTV(loan.loanAmount, loan.purchasePrice),
         loanType: loan.loanType || '',
@@ -132,13 +134,31 @@ export default function PrequalLetterModal({ loan, session, onClose }) {
   const updateField = useCallback((field, value) => {
     setForm((prev) => {
       const next = { ...prev, [field]: value };
-      // Auto-calc LTV when purchase price or loan amount changes
-      if (field === 'loanAmount' || field === 'purchasePrice') {
-        next.ltv = computeLTV(
-          field === 'loanAmount' ? value : prev.loanAmount,
-          field === 'purchasePrice' ? value : prev.purchasePrice
-        );
+      const pp = Number(field === 'purchasePrice' ? value : prev.purchasePrice) || 0;
+      const la = Number(field === 'loanAmount' ? value : prev.loanAmount) || 0;
+      const dp = Number(field === 'downPayment' ? value : prev.downPayment) || 0;
+
+      // Interlinked: change one, derive the others
+      if (field === 'purchasePrice' && pp > 0) {
+        if (la > 0) {
+          next.downPayment = pp - la;
+          next.ltv = computeLTV(la, pp);
+        } else if (dp > 0) {
+          next.loanAmount = pp - dp;
+          next.ltv = computeLTV(pp - dp, pp);
+        }
+      } else if (field === 'loanAmount' && la > 0) {
+        if (pp > 0) {
+          next.downPayment = pp - la;
+          next.ltv = computeLTV(la, pp);
+        }
+      } else if (field === 'downPayment' && dp >= 0) {
+        if (pp > 0) {
+          next.loanAmount = pp - dp;
+          next.ltv = computeLTV(pp - dp, pp);
+        }
       }
+
       return next;
     });
   }, []);
@@ -288,6 +308,13 @@ export default function PrequalLetterModal({ loan, session, onClose }) {
                 label="Purchase Price"
                 value={form.purchasePrice}
                 onChange={(v) => updateField('purchasePrice', v)}
+                type="number"
+                prefix="$"
+              />
+              <Field
+                label="Down Payment"
+                value={form.downPayment}
+                onChange={(v) => updateField('downPayment', v)}
                 type="number"
                 prefix="$"
               />
