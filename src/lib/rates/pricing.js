@@ -440,6 +440,16 @@ function checkEligibility(program, scenario) {
     return { eligible: false, reason: 'conforming_loan_no_hb_needed' };
   }
 
+  // Loan amount range filter (EverStream has per-tier products like ">375K <= 400K")
+  // Product names use ">" for min (exclusive) and "<=" for max (inclusive)
+  // So ">375K <= 400K" means min=375000 (loan must be > 375K) and max=400000 (loan must be <= 400K)
+  if (program.loanAmountRange) {
+    const { min, max } = program.loanAmountRange;
+    const loan = scenario.loanAmount;
+    if (min != null && loan <= min) return { eligible: false, reason: 'loan_below_product_min' };
+    if (max != null && loan > max) return { eligible: false, reason: 'loan_above_product_max' };
+  }
+
   // Exclude "Same Servicer" products — David never uses these
   if (program.name && /same\s*servicer/i.test(program.name)) {
     return { eligible: false, reason: 'same_servicer_excluded' };
