@@ -41,6 +41,8 @@ const EDITABLE_FIELDS = [
   'actionTaken', 'actionTakenDate', 'applicationMethod',
   // CRM
   'referralSource', 'leadSource', 'applicationChannel',
+  // Pre-qual letter
+  'prequalLetterData',
 ];
 
 // Fields that need Decimal conversion

@@ -67,6 +67,7 @@ model Mlo {
 
   loans           Loan[]
   requestedDocs   Document[] @relation("RequestedBy")
+  assignedContacts Contact[] @relation("assignedContacts")
   callLogs        CallLog[]
   callNotes       CallNote[]
   smsMessages     SmsMessage[]
@@ -147,6 +148,9 @@ model Loan {
   referralSource      String?   @map("referral_source")        // Free text referral info
   leadSource          String?   @map("lead_source")            // 'homepage_rate_table' | 'rate_tool' | 'referral' | 'direct' | etc.
   applicationChannel  String?   @map("application_channel")    // 'online' | 'branch' | 'phone'
+
+  // Pre-qualification letter (saved form state)
+  prequalLetterData   Json?     @map("prequal_letter_data") @db.JsonB
 
   // LDox integration
   ldoxLoanId      String?   @unique @map("ldox_loan_id") @db.Uuid  // LDox UUID — primary merge key
@@ -262,20 +266,137 @@ model Contact {
   tags            String[]  @default([])       // Flexible tagging: 'borrower', 'realtor', 'lender', etc.
   notes           String?                       // General notes about this contact
 
+  // Lifecycle
+  status          String    @default("subscriber") // subscriber|lead|applicant|in_process|funded|past_client|partner|archived
+  contactType     String?   @map("contact_type")   // borrower|realtor|title|insurance|lender|attorney|appraiser|other
+
+  // Marketing
+  newsletterOptIn   Boolean   @default(false) @map("newsletter_opt_in")
+  strikeRateOptIn   Boolean   @default(false) @map("strike_rate_opt_in")
+  emailOptOut       Boolean   @default(false) @map("email_opt_out")
+  smsOptOut         Boolean   @default(false) @map("sms_opt_out")
+  lastCampaign      String?   @map("last_campaign")
+  lastCampaignDate  DateTime? @map("last_campaign_date")
+
+  // Pipeline / CRM
+  leadScore         Int?      @map("lead_score")
+  lastContactedAt   DateTime? @map("last_contacted_at")
+  nextFollowUp      DateTime? @map("next_follow_up")
+  assignedMloId     String?   @map("assigned_mlo_id") @db.Uuid
+
+  // Property (from MyHomeIQ / loan history)
+  propertyAddress     String?   @map("property_address")
+  currentLoanAmount   Decimal?  @map("current_loan_amount") @db.Decimal(12,2)
+  currentRate         Decimal?  @map("current_rate") @db.Decimal(5,3)
+  currentLoanTerm     Int?      @map("current_loan_term")
+  currentLoanDate     DateTime? @map("current_loan_date")
+  homeValue           Decimal?  @map("home_value") @db.Decimal(12,2)
+
+  // Post-close
+  fundedDate        DateTime? @map("funded_date")
+  surveySentAt      DateTime? @map("survey_sent_at")
+  reviewRequested   Boolean   @default(false) @map("review_requested")
+  anniversaryDate   DateTime? @map("anniversary_date")
+
+  // Co-borrower
+  coBorrowerName    String?   @map("co_borrower_name")
+  coBorrowerEmail   String?   @map("co_borrower_email")
+  coBorrowerPhone   String?   @map("co_borrower_phone")
+  linkedContactId   String?   @map("linked_contact_id") @db.Uuid
+
+  // Personal / Address
+  dateOfBirth       DateTime? @map("date_of_birth")
+  mailingAddress    String?   @map("mailing_address")
+  city              String?
+  state             String?
+  zipCode           String?   @map("zip_code")
+
   // Link to existing records (optional)
   borrowerId      String?   @unique @map("borrower_id") @db.Uuid
   zohoLeadId      String?   @map("zoho_lead_id")
+
+  // Import tracking
+  zohoContactId   String?   @map("zoho_contact_id")
+  zohoAccountId   String?   @map("zoho_account_id")
+  homeiqImported  Boolean   @default(false) @map("homeiq_imported")
+  originalSource  String?   @map("original_source")
 
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
   borrower        Borrower? @relation(fields: [borrowerId], references: [id])
+  assignedMlo     Mlo?      @relation("assignedContacts", fields: [assignedMloId], references: [id])
+  leads           Lead[]
+  contactNotes    ContactNote[]
   callLogs        CallLog[]
   smsMessages     SmsMessage[]
 
   @@index([phone])
   @@index([email])
+  @@index([status])
+  @@index([contactType])
+  @@index([assignedMloId])
   @@map("contacts")
+}
+
+model ContactNote {
+  id          String   @id @default(uuid()) @db.Uuid
+  contactId   String   @map("contact_id") @db.Uuid
+  content     String
+  title       String?
+  authorType  String   @map("author_type")  // 'mlo' | 'system' | 'import'
+  authorId    String?  @map("author_id") @db.Uuid
+  source      String?  // 'manual' | 'zoho_import' | 'call' | 'system'
+  zohoNoteId  String?  @map("zoho_note_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  contact     Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@index([contactId])
+  @@map("contact_notes")
+}
+
+model Account {
+  id              String    @id @default(uuid()) @db.Uuid
+  name            String
+  phone           String?
+  website         String?
+  industry        String?   // 'title' | 'insurance' | 'realtor' | 'lender' | 'appraiser' | 'attorney' | 'other'
+  address         String?
+  city            String?
+  state           String?
+  zipCode         String?   @map("zip_code")
+  notes           String?
+  zohoAccountId   String?   @map("zoho_account_id")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  accountContacts AccountContact[]
+
+  @@index([industry])
+  @@map("accounts")
+}
+
+model AccountContact {
+  id              String    @id @default(uuid()) @db.Uuid
+  accountId       String    @map("account_id") @db.Uuid
+  firstName       String    @map("first_name")
+  lastName        String    @map("last_name")
+  email           String?
+  phone           String?
+  role            String?   // 'account_exec' | 'processor' | 'closer' | 'agent' | 'manager' | 'other'
+  title           String?
+  isPrimary       Boolean   @default(false) @map("is_primary")
+  notes           String?
+  zohoContactId   String?   @map("zoho_contact_id")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  account         Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+  @@index([email])
+  @@map("account_contacts")
 }
 
 model CallLog {
@@ -529,7 +650,7 @@ model RateHistory {
   date            DateTime  @db.Date
   loanType        String    @map("loan_type") @db.VarChar(20)
   // '30yr_fixed', '15yr_fixed', 'arm_5_1', etc.
-  term            Int       // 360, 180, etc.
+  term            Int?      // 360, 180, etc.
   creditScoreTier String    @map("credit_score_tier") @db.VarChar(10)
   // '760+', '740-759', '720-739', '700-719', '680-699'
   rate            Decimal   @db.Decimal(5, 3) // e.g. 5.625
@@ -699,6 +820,10 @@ model Lead {
 
   // Link to Contact
   contactId       String?   @map("contact_id") @db.Uuid
+  contact         Contact?  @relation(fields: [contactId], references: [id])
+
+  // MLO assignment
+  mloId           String?   @map("mlo_id") @db.Uuid
 
   // UTM tracking
   utmSource       String?   @map("utm_source")

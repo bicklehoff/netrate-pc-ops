@@ -3,7 +3,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { LOAN_TYPE_LABELS, LOAN_TERM_LABELS } from '@/lib/constants/loan-types';
 
 // Format address JSON to string
@@ -72,29 +72,62 @@ export default function PrequalLetterModal({ loan, session, onClose }) {
   const [signBusy, setSignBusy] = useState(false);
   const [error, setError] = useState(null);
   const [signSuccess, setSignSuccess] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const initialized = useRef(false);
+  const saveTimer = useRef(null);
 
-  // Pre-fill from loan data on mount
+  // Pre-fill: load saved data first, fall back to loan fields
   useEffect(() => {
-    if (!loan) return;
-    setForm((prev) => ({
-      ...prev,
-      borrowerNames: buildBorrowerNames(loan),
-      propertyAddress: formatAddress(loan.propertyAddress),
-      purchasePrice: loan.purchasePrice || '',
-      loanAmount: loan.loanAmount || '',
-      ltv: computeLTV(loan.loanAmount, loan.purchasePrice),
-      loanType: loan.loanType || '',
-      loanTerm: loan.loanTerm || 360,
-      interestRate: loan.interestRate || '',
-      referenceNumber: loan.loanNumber || loan.id?.slice(0, 8) || '',
-      mloName: loan.mlo?.firstName
-        ? `${loan.mlo.firstName} ${loan.mlo.lastName || ''}`.trim()
-        : session?.user?.name || 'David Burson',
-      mloNmls: loan.mlo?.nmls || '641790',
-      mloPhone: '303-444-5251',
-      mloEmail: loan.mlo?.email || session?.user?.email || 'david@netratemortgage.com',
-    }));
+    if (!loan || initialized.current) return;
+    initialized.current = true;
+
+    const saved = loan.prequalLetterData;
+    if (saved && typeof saved === 'object') {
+      // Restore saved form state
+      setForm((prev) => ({ ...prev, ...saved }));
+    } else {
+      // First time — pre-fill from loan data
+      setForm((prev) => ({
+        ...prev,
+        borrowerNames: buildBorrowerNames(loan),
+        propertyAddress: formatAddress(loan.propertyAddress),
+        purchasePrice: loan.purchasePrice || '',
+        loanAmount: loan.loanAmount || '',
+        ltv: computeLTV(loan.loanAmount, loan.purchasePrice),
+        loanType: loan.loanType || '',
+        loanTerm: loan.loanTerm || 360,
+        interestRate: loan.interestRate || '',
+        referenceNumber: loan.loanNumber || loan.id?.slice(0, 8) || '',
+        mloName: loan.mlo?.firstName
+          ? `${loan.mlo.firstName} ${loan.mlo.lastName || ''}`.trim()
+          : session?.user?.name || 'David Burson',
+        mloNmls: loan.mlo?.nmls || '641790',
+        mloPhone: '303-444-5251',
+        mloEmail: loan.mlo?.email || session?.user?.email || 'david@netratemortgage.com',
+      }));
+    }
   }, [loan, session]);
+
+  // Auto-save form to DB (debounced 2s after last change)
+  useEffect(() => {
+    if (!loan?.id || !initialized.current) return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async () => {
+      setSaving(true);
+      try {
+        await fetch(`/api/portal/mlo/loans/${loan.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prequalLetterData: form }),
+        });
+      } catch (e) {
+        // Silent fail — not critical
+      } finally {
+        setSaving(false);
+      }
+    }, 2000);
+    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
+  }, [form, loan?.id]);
 
   const updateField = useCallback((field, value) => {
     setForm((prev) => {
@@ -391,12 +424,16 @@ export default function PrequalLetterModal({ loan, session, onClose }) {
         </div>
 
         {/* Footer Actions */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl">
+        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl">
+          <span className="text-xs text-gray-400">
+            {saving ? 'Saving...' : 'Auto-saved'}
+          </span>
+          <div className="flex items-center gap-3">
           <button
             onClick={onClose}
             className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900"
           >
-            Cancel
+            Close
           </button>
           <button
             onClick={handleDownload}
@@ -412,6 +449,7 @@ export default function PrequalLetterModal({ loan, session, onClose }) {
           >
             {signBusy ? 'Sending...' : 'Sign & Send'}
           </button>
+          </div>
         </div>
       </div>
     </div>
