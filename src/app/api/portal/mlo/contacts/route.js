@@ -17,6 +17,10 @@ export async function GET(req) {
     const { searchParams } = new URL(req.url);
     const q = searchParams.get('q') || '';
     const tag = searchParams.get('tag');
+    const status = searchParams.get('status');
+    const mloId = searchParams.get('mloId');
+    const sort = searchParams.get('sort') || 'updatedAt';
+    const order = searchParams.get('order') || 'desc';
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limit = parseInt(searchParams.get('limit') || '50', 10);
     const skip = (page - 1) * limit;
@@ -32,17 +36,31 @@ export async function GET(req) {
       ];
     }
 
-    if (tag) {
-      where.tags = { has: tag };
-    }
+    if (tag) where.tags = { has: tag };
+    if (status) where.status = status;
+    if (mloId) where.assignedMloId = mloId;
 
-    const [contacts, total] = await Promise.all([
+    // Valid sort fields
+    const sortMap = {
+      name: { lastName: order },
+      updatedAt: { updatedAt: order },
+      createdAt: { createdAt: order },
+      lastContactedAt: { lastContactedAt: order },
+      fundedDate: { fundedDate: order },
+      status: { status: order },
+    };
+    const orderBy = sortMap[sort] || { updatedAt: 'desc' };
+
+    const [contacts, total, statusCounts] = await Promise.all([
       prisma.contact.findMany({
         where,
-        orderBy: { updatedAt: 'desc' },
+        orderBy,
         skip,
         take: limit,
         include: {
+          assignedMlo: {
+            select: { id: true, firstName: true, lastName: true },
+          },
           borrower: {
             select: {
               id: true,
@@ -53,14 +71,22 @@ export async function GET(req) {
               },
             },
           },
+          _count: { select: { contactNotes: true, leads: true } },
         },
       }),
       prisma.contact.count({ where }),
+      // Status counts for filter badges (unfiltered by status)
+      prisma.contact.groupBy({
+        by: ['status'],
+        _count: true,
+        where: { ...where, status: undefined },
+      }),
     ]);
 
     return Response.json({
       contacts,
       pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+      statusCounts: statusCounts.reduce((acc, s) => ({ ...acc, [s.status]: s._count }), {}),
     });
   } catch (error) {
     console.error('Contacts list error:', error?.message);

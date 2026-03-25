@@ -12,6 +12,7 @@ import prisma from '@/lib/prisma';
 import { getBallInCourt, EMAIL_TRIGGERS } from '@/lib/loan-states';
 import { sendEmail } from '@/lib/resend';
 import { statusChangeTemplate } from '@/lib/email-templates/borrower';
+import { updateContactFromLoanStatus } from '@/lib/contact-status';
 
 // Status → LoanDates field mapping for MCR-aware auto-date capture
 const STATUS_DATE_MAP = {
@@ -228,6 +229,9 @@ export async function PATCH(request, { params }) {
           }
         }
       }
+
+      // Update contact lifecycle status (non-blocking)
+      updateContactFromLoanStatus(loan.id, body.status).catch(() => {});
 
       return NextResponse.json({ loan: updated });
     }

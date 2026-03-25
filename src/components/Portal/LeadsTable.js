@@ -30,8 +30,17 @@ const NEXT_STATUS = {
 const SOURCE_LABELS = {
   homepage_rate_table: 'Homepage',
   rate_tool: 'Rate Tool',
-  contact_form: 'Contact',
+  contact_form: 'Contact Form',
+  contact: 'From Contact',
   website: 'Website',
+  zoho: 'Zoho Import',
+  icanbuy: 'ICanBuy',
+  mcr: 'MCR',
+  rate_update: 'Rate Update',
+  referral: 'Referral',
+  realtor_referral: 'Realtor',
+  qed: 'QED',
+  chat: 'Chat',
 };
 
 function timeAgo(dateStr) {
@@ -159,9 +168,24 @@ export default function LeadsTable({ leads, onStatusChange }) {
                   )}
                 </td>
                 <td className="px-4 py-3">
-                  <span className="text-gray-600 text-sm">
-                    {SOURCE_LABELS[lead.source] || lead.source}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {lead.isWarm && (
+                      <span className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700">Warm</span>
+                    )}
+                    <span className="text-gray-600 text-sm">
+                      {SOURCE_LABELS[lead.source] || lead.source}
+                    </span>
+                  </div>
+                  {lead.contact && (
+                    <a
+                      href={`/portal/mlo/contacts/${lead.contact.id}`}
+                      className="text-[11px] text-brand hover:underline mt-0.5 block"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {lead.contact.firstName} {lead.contact.lastName}
+                      {lead.contact.status === 'past_client' && ' (returning)'}
+                    </a>
+                  )}
                 </td>
                 <td className="px-4 py-3">
                   <span
@@ -177,6 +201,16 @@ export default function LeadsTable({ leads, onStatusChange }) {
                 </td>
                 <td className="px-4 py-3 text-right">
                   <div className="flex items-center justify-end gap-1.5">
+                    {lead.status !== 'converted' && lead.status !== 'closed' && (
+                      <a
+                        href={`/portal/mlo/leads/${lead.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-xs font-medium text-purple-600 hover:text-purple-800 border border-purple-200 hover:border-purple-300 px-2 py-0.5 rounded transition-colors"
+                        title="Convert to Loan"
+                      >
+                        Convert
+                      </a>
+                    )}
                     {NEXT_STATUS[lead.status] && (
                       <button
                         onClick={(e) => handleStatusClick(e, lead)}
@@ -189,7 +223,7 @@ export default function LeadsTable({ leads, onStatusChange }) {
                     {lead.status !== 'closed' && lead.status !== 'converted' && (
                       <button
                         onClick={(e) => handleClose(e, lead)}
-                        className="text-xs text-gray-400 hover:text-red-600 transition-colors ml-2"
+                        className="text-xs text-gray-400 hover:text-red-600 transition-colors ml-1"
                         title="Close lead"
                       >
                         &times;

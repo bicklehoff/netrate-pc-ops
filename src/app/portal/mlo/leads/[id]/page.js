@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 const PURPOSES = [
@@ -35,12 +35,27 @@ const STATES = [
 
 export default function LeadDetailPage() {
   const { id } = useParams();
+  const router = useRouter();
   const [lead, setLead] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [quoting, setQuoting] = useState(false);
+  const [converting, setConverting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  const handleConvert = async () => {
+    if (!confirm('Convert this lead to a draft loan? This will create a contact (if needed), borrower, and loan record.')) return;
+    setConverting(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/portal/mlo/leads/${id}/convert`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || 'Conversion failed'); return; }
+      router.push(`/portal/mlo/loans/${data.loanId}`);
+    } catch { setError('Failed to convert lead'); }
+    finally { setConverting(false); }
+  };
 
   useEffect(() => {
     fetch(`/api/portal/mlo/leads/${id}`)
@@ -106,23 +121,28 @@ export default function LeadDetailPage() {
     }
   };
 
-  if (loading) return <div className="max-w-4xl mx-auto py-12 text-center text-gray-400">Loading...</div>;
-  if (!lead) return <div className="max-w-4xl mx-auto py-12 text-center text-red-500">Lead not found</div>;
+  if (loading) return <div className="w-full py-12 text-center text-gray-400">Loading...</div>;
+  if (!lead) return <div className="w-full py-12 text-center text-red-500">Lead not found</div>;
 
   const isPurchase = lead.loanPurpose === 'purchase';
   const isRefi = ['refinance', 'cashout'].includes(lead.loanPurpose);
 
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4">
+    <div className="w-full">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <Link href="/portal/mlo/leads" className="text-xs text-gray-400 hover:text-brand mb-1 block">← Back to Leads</Link>
-          <h1 className="text-2xl font-bold text-gray-900">{lead.name}</h1>
+          <h1 className="text-xl font-bold text-gray-900">{lead.name}</h1>
           <div className="flex items-center gap-3 mt-1 text-sm text-gray-500">
             {lead.email && <span>{lead.email}</span>}
             {lead.phone && <span>{lead.phone}</span>}
             <span className="text-xs bg-gray-100 px-2 py-0.5 rounded">{lead.status}</span>
+            {lead.contact && (
+              <Link href={`/portal/mlo/contacts/${lead.contact?.id || lead.contactId}`} className="text-xs text-brand hover:underline">
+                View Contact
+              </Link>
+            )}
           </div>
         </div>
         <div className="flex gap-2">
@@ -138,8 +158,17 @@ export default function LeadDetailPage() {
             disabled={quoting}
             className="px-4 py-2 text-sm font-medium bg-brand text-white rounded-lg hover:bg-brand-dark transition-colors disabled:opacity-50"
           >
-            {quoting ? 'Running...' : '⚡ Run Quote'}
+            {quoting ? 'Running...' : 'Run Quote'}
           </button>
+          {lead.status !== 'converted' && lead.status !== 'closed' && (
+            <button
+              onClick={handleConvert}
+              disabled={converting}
+              className="px-4 py-2 text-sm font-medium bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
+            >
+              {converting ? 'Converting...' : 'Convert to Loan'}
+            </button>
+          )}
         </div>
       </div>
 

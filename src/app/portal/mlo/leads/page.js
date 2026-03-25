@@ -1,6 +1,5 @@
 // MLO Leads — Lead Management View
-// Auth required (MLO or Admin role via NextAuth)
-// Shows all incoming leads with status filters and quick actions.
+// Full-width, with source badges (warm/cold), contact links, search, MLO filter
 
 'use client';
 
@@ -15,9 +14,12 @@ const STATUS_FILTERS = [
   { value: 'new', label: 'New' },
   { value: 'contacted', label: 'Contacted' },
   { value: 'qualified', label: 'Qualified' },
+  { value: 'quoted', label: 'Quoted' },
   { value: 'converted', label: 'Converted' },
   { value: 'closed', label: 'Closed' },
 ];
+
+const WARM_SOURCES = ['contact', 'referral', 'past_client', 'realtor_referral'];
 
 export default function MloLeadsPage() {
   const { status: authStatus } = useSession();
@@ -26,6 +28,7 @@ export default function MloLeadsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState('all');
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     if (authStatus === 'unauthenticated') {
@@ -35,7 +38,9 @@ export default function MloLeadsPage() {
 
   const fetchLeads = useCallback(async () => {
     try {
-      const res = await fetch('/api/portal/mlo/leads');
+      const params = new URLSearchParams();
+      if (search) params.set('q', search);
+      const res = await fetch(`/api/portal/mlo/leads?${params}`);
       if (!res.ok) throw new Error('Failed to load');
       const data = await res.json();
       setLeads(data.leads || []);
@@ -44,12 +49,13 @@ export default function MloLeadsPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [search]);
 
   useEffect(() => {
-    if (authStatus === 'authenticated') {
-      fetchLeads();
-    }
+    if (authStatus !== 'authenticated') return;
+    setLoading(true);
+    const timer = setTimeout(() => fetchLeads(), 300);
+    return () => clearTimeout(timer);
   }, [authStatus, fetchLeads]);
 
   const filteredLeads = leads.filter((lead) => {
@@ -58,13 +64,19 @@ export default function MloLeadsPage() {
   });
 
   const newCount = leads.filter((l) => l.status === 'new').length;
+  const warmCount = leads.filter((l) => WARM_SOURCES.includes(l.source)).length;
+
+  // Enrich leads with warm/cold flag
+  const enrichedLeads = filteredLeads.map(l => ({
+    ...l,
+    isWarm: WARM_SOURCES.includes(l.source) || l.contact?.status === 'past_client',
+  }));
 
   if (authStatus === 'loading' || loading) {
     return (
-      <div className="max-w-5xl mx-auto py-8">
+      <div className="w-full py-8">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-gray-200 rounded w-48" />
-          <div className="h-4 bg-gray-200 rounded w-72" />
           <div className="h-64 bg-gray-200 rounded" />
         </div>
       </div>
@@ -72,52 +84,57 @@ export default function MloLeadsPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto">
-      <div className="flex items-start justify-between mb-6">
+    <div className="w-full">
+      <div className="flex items-start justify-between mb-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Leads</h1>
+          <h1 className="text-xl font-bold text-gray-900">Leads</h1>
           <p className="text-gray-500 text-sm mt-1">
-            Incoming leads from the website. Click a row to expand details.
+            {leads.length} total
+            {warmCount > 0 && <span className="text-green-600 ml-2">{warmCount} warm</span>}
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <Link
-            href="/portal/mlo"
-            className="text-xs text-gray-400 hover:text-brand transition-colors"
-          >
-            &larr; Pipeline
-          </Link>
+        <div className="flex items-center gap-2">
           {newCount > 0 && (
             <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
               {newCount} New
             </span>
           )}
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-            {leads.length} Total
-          </span>
         </div>
       </div>
 
-      {/* Status Filter Tabs */}
-      <div className="flex gap-1 mb-4 overflow-x-auto pb-1">
-        {STATUS_FILTERS.map((f) => (
-          <button
-            key={f.value}
-            onClick={() => setFilter(f.value)}
-            className={`px-3 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap transition-colors ${
-              filter === f.value
-                ? 'bg-brand text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            {f.label}
-            {f.value === 'new' && newCount > 0 && (
-              <span className="ml-1.5 bg-white/20 rounded-full px-1.5 text-[10px]">
-                {newCount}
-              </span>
-            )}
-          </button>
-        ))}
+      {/* Filters row */}
+      <div className="flex items-center gap-3 mb-4">
+        {/* Status tabs */}
+        <div className="flex gap-1 overflow-x-auto">
+          {STATUS_FILTERS.map((f) => {
+            const count = f.value === 'all' ? leads.length : leads.filter(l => l.status === f.value).length;
+            if (count === 0 && f.value !== 'all' && f.value !== filter) return null;
+            return (
+              <button
+                key={f.value}
+                onClick={() => setFilter(f.value)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap transition-colors ${
+                  filter === f.value
+                    ? 'bg-brand text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {f.label}
+                {count > 0 && <span className="ml-1 opacity-75">{count}</span>}
+              </button>
+            );
+          })}
+        </div>
+        {/* Search */}
+        <div className="flex-1 max-w-sm ml-auto">
+          <input
+            type="text"
+            placeholder="Search leads..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none"
+          />
+        </div>
       </div>
 
       {error && (
@@ -126,7 +143,7 @@ export default function MloLeadsPage() {
         </div>
       )}
 
-      {filteredLeads.length === 0 && !error ? (
+      {enrichedLeads.length === 0 && !error ? (
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-6 py-12 text-center">
           <p className="text-gray-400 text-sm">
             {leads.length === 0
@@ -135,7 +152,7 @@ export default function MloLeadsPage() {
           </p>
         </div>
       ) : (
-        <LeadsTable leads={filteredLeads} onStatusChange={fetchLeads} />
+        <LeadsTable leads={enrichedLeads} onStatusChange={fetchLeads} />
       )}
     </div>
   );
