@@ -34,6 +34,7 @@ Inspect file content to determine the lender. Check in this order:
 | XLSX with single sheet, rate grid starting ~row 5 | Keystone | `src/lib/rates/parsers/keystone.js` | XLSX |
 | XLSX with sheet named "RATESHEET" | SWMC (Sun West) | `src/lib/rates/parsers/swmc.js` | XLSX |
 | XLSX with sheets "FT_LLPAS" or "LLPAS" | AmWest | `src/lib/rates/parsers/amwest.js` | XLSX |
+| XLSX with "Conv LLPA" and "Conventional and Government" sheets | Windsor | `src/lib/rates/parsers/windsor.js` | XLSX |
 | XLSX with "WS DU & LP Pricing" sheet | Rocket Pro TPO | No dedicated parser yet | XLSX |
 
 File ID prefixes from the download system:
@@ -43,6 +44,7 @@ File ID prefixes from the download system:
 - `80220` = Keystone XLSX
 - `99522` = SWMC XLSX
 - `47006` = AmWest XLSX
+- `65196` = Windsor XLSX
 
 ## CRITICAL: Read the ENTIRE Rate Sheet
 

@@ -271,7 +271,22 @@ async function parseWindsor(files) {
   const buf = await downloadBuffer(xlsxFile.path);
   const result = windsorParser.parseRates(buf);
   console.log(`  Parsed: ${result.programs.length} programs, date: ${result.sheetDate}`);
-  return { lenderId: 'windsor', sheetDate: result.sheetDate, programs: result.programs };
+  return {
+    lenderId: 'windsor',
+    sheetDate: result.sheetDate,
+    programs: result.programs,
+    llpas: result.llpas,
+    loanAmountAdj: result.loanAmountAdj,
+    stateAdj: result.stateAdj,
+    specPayups: result.specPayups,
+    pricingSpecials: result.pricingSpecials,
+    occupancyAdj: result.occupancyAdj,
+    lenderFee: result.lenderFee,
+    compCap: result.compCap,
+    convLlpas: result.convLlpas,
+    govAdj: result.govAdj,
+    jumboAdj: result.jumboAdj,
+  };
 }
 
 const PARSERS = {
