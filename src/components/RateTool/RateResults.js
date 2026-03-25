@@ -2,7 +2,7 @@
 
 import { calculateLLPA, calculatePI, priceRates } from '@/lib/rates/engine';
 
-export default function RateResults({ scenario, rateData, compareRates = [], onToggleCompare, onViewReport }) {
+export default function RateResults({ scenario, rateData, apiResults, loading, compareRates = [], onToggleCompare, onViewReport }) {
 
   if (!scenario.loanAmount || scenario.loanAmount <= 0 || !scenario.propertyValue) {
     return (
@@ -12,9 +12,29 @@ export default function RateResults({ scenario, rateData, compareRates = [], onT
     );
   }
 
-  const llpa = calculateLLPA(scenario, rateData);
-  const rates = priceRates(scenario, rateData);
+  // Use API results if available, fall back to old engine.js
+  let rates, llpa;
+  if (apiResults && apiResults.length > 0) {
+    rates = apiResults;
+    // Build LLPA summary from the first result's breakdown
+    const firstWithLlpa = apiResults.find(r => r.llpaBreakdown?.length > 0);
+    llpa = {
+      total: firstWithLlpa?.llpaPoints || 0,
+      breakdown: firstWithLlpa?.llpaBreakdown || [],
+    };
+  } else {
+    llpa = calculateLLPA(scenario, rateData);
+    rates = priceRates(scenario, rateData);
+  }
   const currentPI = scenario.currentRate ? calculatePI(scenario.currentRate, scenario.loanAmount) : null;
+
+  if (loading) {
+    return (
+      <div className="bg-white border border-gray-200 rounded-lg p-8 my-4 text-center text-gray-500">
+        Loading rates...
+      </div>
+    );
+  }
 
   let parIdx = 0;
   let minAbsAdj = Infinity;
