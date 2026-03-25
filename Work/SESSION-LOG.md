@@ -5,6 +5,48 @@
 
 ---
 
+## 2026-03-25 — Dev — Parser Rewrites, Pricing Engine Overhaul, LoanSifter Calibration
+
+**Focus:** Complete all 6 parser rewrites, centralize default scenario, build static LLPA configs, wire pricing engine to match LoanSifter
+
+**Key accomplishments:**
+- Completed parser rewrites for Windsor, SWMC, EverStream, TLS (all 6 lenders now done)
+- Parsed fresh rate sheets from GCS (OC ran morning + afternoon drops)
+- Centralized DEFAULT_SCENARIO (780 FICO, 75% LTV, $400K, purchase, CO) — one constant, 6+ files updated
+- Rate tool: credit score changed from dropdown to number input (500-850), defaults flow from DEFAULT_SCENARIO
+- Rate tool: defaults to purchase (was refi), 25% down (was 20%)
+- Deep LoanSifter calibration for EverStream Core FNMA — traced every adjustment:
+  - SRP (+1.830 for CO, Fixed 20/25/30yr)
+  - Risk-Based (+0.050 for 780-799 at 70.01-75%)
+  - Loan Amount (-0.040 for >300K<=400K)
+  - FNMA-specific (-0.220 for 21-30yr Primary)
+  - Purchase adj (+0.100)
+  - Total: +1.720 adjustments — matched LoanSifter within $200
+- Built complete static LLPA configs for all 5 XLSX lenders (EverStream 2.5MB, Keystone 122KB, SWMC 75KB, AmWest 35KB, Windsor 31KB)
+- Wired pricing engine to apply static configs (SRP, risk-based, loan amt, FNMA-specific, purchase adj)
+- Fixed double-counting: old lenderLlpaData skipped when static config exists
+- Comp cap: $3,595 for both purchase and refi (matches LoanSifter)
+- Disabled stale rate-snapshot scheduled task (redundant — parse-rate-sheets already writes rate history)
+- Resolved relay: prisma generate for scope field, misdirected Zoho email relays
+
+**Architecture decision:** Static LLPA configs + dynamic rate parsing for all lenders. Rate grids change daily (parsed from CSV/XLSX). LLPAs, SRPs, and adjustment tables stored as static JSON — updated only when lenders send bulletins.
+
+**Commits:** 4311aa5, c5051f8, 6064b2d, 512fd16, 8076d8c, ccbf7ce, 750440a, c21f12d, e4b9798, 8b5a3ab, 3cb27cb, 347ff68, ce545c8, 8de9759, b8c71ea
+
+**Open items for next session:**
+- EverStream product tier filtering — engine matches wrong loan amount tier (>400K instead of 375K-400K)
+- Verify comp cap + pricing on live Vercel deploy
+- Continue LoanSifter calibration for other lenders (Keystone, AmWest, Windsor, SWMC, TLS)
+- Wire static configs for non-EverStream lenders (currently only EverStream uses new path)
+- Add ARM toggle to rate tool UI
+- EverStream static config incomplete: FNMA-specific adj has flat -0.14 instead of term-specific -0.22/-0.14 (hardcoded workaround in place)
+- Rate tool "Price Adjustments Applied" UI doesn't show SRP/static adjustments (only FICO/LTV)
+- Mac relay: Dev batch (Tickets API, contacts scope, email attachments, signing queue) — awaiting Mac response on ownership
+- DSCR Scenario Builder + Income Calculator (Claw relay)
+- CRM migration to TrackerPortal (Claw relay)
+
+---
+
 ## 2026-03-24 — Dev (Session 2) — AmWest Parser Rewrite
 
 **Focus:** Rewrite AmWest rate sheet parser to extract all adjustment data (following Keystone model)
