@@ -122,7 +122,7 @@ export default function PrequalLetterModal({ loan, session, onClose }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ prequalLetterData: form }),
         });
-      } catch (e) {
+      } catch (_) {
         // Silent fail — not critical
       } finally {
         setSaving(false);
