@@ -209,7 +209,22 @@ async function parseSWMC(files) {
   const buf = await downloadBuffer(xlsxFile.path);
   const result = swmcParser.parseRates(buf);
   console.log(`  Parsed: ${result.programs.length} programs, date: ${result.sheetDate}`);
-  return { lenderId: 'swmc', sheetDate: result.sheetDate, programs: result.programs };
+  return {
+    lenderId: 'swmc',
+    sheetDate: result.sheetDate,
+    programs: result.programs,
+    llpas: result.llpas,
+    loanAmountAdj: result.loanAmountAdj,
+    stateAdj: result.stateAdj,
+    specPayups: result.specPayups,
+    pricingSpecials: result.pricingSpecials,
+    occupancyAdj: result.occupancyAdj,
+    lenderFee: result.lenderFee,
+    compCap: result.compCap,
+    agencyAdj: result.agencyAdj,
+    govAdj: result.govAdj,
+    fees: result.fees,
+  };
 }
 
 async function parseAmWest(files) {

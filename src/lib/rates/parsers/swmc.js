@@ -182,10 +182,360 @@ function makeProgramName(match, rawName) {
   return parts.join(' ');
 }
 
+// ---------------------------------------------------------------------------
+// Adjustment parsing helpers
+// ---------------------------------------------------------------------------
+
+function findRow(ws, text, { startRow = 0, endRow = 4500, cols = [0, 1, 2, 3] } = {}) {
+  const needle = String(text).toLowerCase().trim();
+  for (let r = startRow; r <= endRow; r++) {
+    for (const c of cols) {
+      const v = cellVal(ws, r, c);
+      if (v !== null && String(v).toLowerCase().trim().includes(needle)) {
+        return r;
+      }
+    }
+  }
+  return -1;
+}
+
+function normalizeLtvBand(str) {
+  if (str === null || str === undefined) return null;
+  const s = String(str).replace(/≤/g, '<=').replace(/≥/g, '>=').replace(/\s+/g, '').replace(/\.00/g, '').replace(/%/g, '');
+  if (s === 'N/A' || s === 'NA') return null;
+  return s;
+}
+
+/** Parse LLPA value. SWMC uses positive = cost (matches engine convention). */
+function parseLlpa(val) {
+  if (val === null || val === undefined) return null;
+  if (typeof val === 'string') {
+    const lower = val.toLowerCase().trim();
+    if (lower === 'na' || lower === 'n/a' || lower === '' || lower === '-') return null;
+    const n = parseFloat(lower);
+    if (isNaN(n)) return null;
+    return n; // positive = cost, no negation needed
+  }
+  if (typeof val === 'number') return val;
+  return null;
+}
+
+/**
+ * Parse a FICO/LTV grid from the Agency Conforming section.
+ * FICO labels in col 1, LTV bands in cols 10-18.
+ */
+function parseAgencyLlpaMatrix(ws, headerRow) {
+  const ltvBands = [];
+  for (let c = 10; c <= 18; c++) {
+    const v = cellVal(ws, headerRow, c);
+    if (v === null) continue;
+    const band = normalizeLtvBand(v);
+    if (band) ltvBands.push({ col: c, band });
+  }
+  if (ltvBands.length === 0) return null;
+
+  const matrix = {};
+  for (let r = headerRow + 1; r < headerRow + 15; r++) {
+    const ficoLabel = cellVal(ws, r, 1);
+    if (ficoLabel === null) continue;
+    const label = String(ficoLabel).trim();
+    if (!label || !/\d/.test(label)) continue;
+    if (/other\s*adj|purchase|refinance|cashout|product/i.test(label)) break;
+
+    const values = ltvBands.map(lb => parseLlpa(cellVal(ws, r, lb.col)));
+    if (values.some(v => v !== null)) {
+      // Normalize: "760 - 779" → "760-779", ">= 780" → ">=780"
+      const normalized = label.replace(/\s*[-–]\s*/g, '-').replace(/>=\s*/g, '>=').replace(/<=\s*/g, '<=').replace(/\s+/g, '');
+      matrix[normalized] = values;
+    }
+  }
+
+  return { matrix, ltvBands: ltvBands.map(lb => lb.band) };
+}
+
+/**
+ * Parse "Other Adjustments" grid (ARM, Condo, Investment, etc.)
+ * Same column layout as FICO/LTV grids — FICO label col 1, values cols 10-18.
+ */
+function parseOtherAdjGrid(ws, headerRow, numLtvCols) {
+  const additional = {};
+  for (let r = headerRow + 1; r < headerRow + 18; r++) {
+    const label = cellStr(ws, r, 1);
+    if (!label) continue;
+    if (/fico\s*\/\s*ltv|purchase|refinance|cashout|all\s*loan\s*terms|lpmi|minimum\s*mi/i.test(label)) break;
+
+    const values = [];
+    for (let c = 10; c < 10 + numLtvCols; c++) {
+      values.push(parseLlpa(cellVal(ws, r, c)));
+    }
+
+    const key = label.toLowerCase();
+    if (/^arm$/i.test(key.trim())) additional.arm = values;
+    else if (/condo/i.test(key)) additional.condo = values;
+    else if (/investment/i.test(key)) additional.investment = values;
+    else if (/second\s*home/i.test(key)) additional.secondHome = values;
+    else if (/manufactured/i.test(key)) additional.manufactured = values;
+    else if (/2\s*-\s*4\s*unit/i.test(key)) additional['2to4unit'] = values;
+    else if (/high\s*bal.*fixed.*<=\s*15|high\s*bal.*15/i.test(key)) additional.highBalFixed15 = values;
+    else if (/high\s*bal.*fixed.*>\s*15|high\s*bal.*fixed/i.test(key)) additional.highBalFixed = values;
+    else if (/high\s*bal.*arm/i.test(key)) additional.highBalArm = values;
+    else if (/subordinate|sub\s*fin/i.test(key)) additional.subFinancing = values;
+    else if (/owner\s*occ.*2\s*-\s*4/i.test(key)) additional.oo2to4unit = values;
+    else if (/dti\s*>\s*40/i.test(key)) additional.dtiOver40 = values;
+  }
+  return additional;
+}
+
+/**
+ * Parse Agency Conforming LLPAs — 3 FICO/LTV grids + 3 additional adj grids + all-terms adj.
+ */
+function parseAgencyConformingAdj(ws) {
+  const result = {
+    ficoLtvGrids: { purchase: {}, refinance: {}, cashout: {} },
+    additionalAdjustments: { purchase: {}, refinance: {}, cashout: {} },
+    ltvBuckets: { purchaseRefi: [], cashout: [] },
+    stateAdj: {},
+    allTermsAdj: {},
+  };
+
+  // Purchase FICO/LTV grid
+  const purchaseRow = findRow(ws, 'FICO / LTV (%), Purchase Transaction', { startRow: 1310, endRow: 1330, cols: [1] });
+  if (purchaseRow !== -1) {
+    const grid = parseAgencyLlpaMatrix(ws, purchaseRow);
+    if (grid) {
+      result.ficoLtvGrids.purchase = grid.matrix;
+      result.ltvBuckets.purchaseRefi = grid.ltvBands;
+    }
+  }
+
+  // Purchase Other Adjustments
+  const purchOtherRow = findRow(ws, 'Other Adjustments / LTV (%), Purchase Transaction', { startRow: 1340, endRow: 1360, cols: [1] });
+  if (purchOtherRow !== -1) {
+    result.additionalAdjustments.purchase = parseOtherAdjGrid(ws, purchOtherRow, result.ltvBuckets.purchaseRefi.length);
+  }
+
+  // Limited Cashout Refi FICO/LTV grid
+  const refiRow = findRow(ws, 'FICO / LTV (%), Limited Cashout', { startRow: 1370, endRow: 1390, cols: [1] });
+  if (refiRow !== -1) {
+    const grid = parseAgencyLlpaMatrix(ws, refiRow);
+    if (grid) result.ficoLtvGrids.refinance = grid.matrix;
+  }
+
+  // Refi Other Adjustments
+  const refiOtherRow = findRow(ws, 'Other Adjustments / LTV (%), Limited Cashout', { startRow: 1400, endRow: 1420, cols: [1] });
+  if (refiOtherRow !== -1) {
+    result.additionalAdjustments.refinance = parseOtherAdjGrid(ws, refiOtherRow, result.ltvBuckets.purchaseRefi.length);
+  }
+
+  // Cashout Refi FICO/LTV grid
+  const cashoutRow = findRow(ws, 'FICO / LTV (%), Cashout Refinance', { startRow: 1430, endRow: 1450, cols: [1] });
+  if (cashoutRow !== -1) {
+    const grid = parseAgencyLlpaMatrix(ws, cashoutRow);
+    if (grid) {
+      result.ficoLtvGrids.cashout = grid.matrix;
+      result.ltvBuckets.cashout = grid.ltvBands;
+    }
+  }
+
+  // Cashout Other Adjustments
+  const cashoutOtherRow = findRow(ws, 'Other Adjustments / LTV (%), Cashout Refinance', { startRow: 1460, endRow: 1480, cols: [1] });
+  if (cashoutOtherRow !== -1) {
+    result.additionalAdjustments.cashout = parseOtherAdjGrid(ws, cashoutOtherRow, result.ltvBuckets.cashout.length || result.ltvBuckets.purchaseRefi.length);
+  }
+
+  // All loan terms adjustments — state LLPAs are here
+  const allTermsRow = findRow(ws, 'Other Adjustments / LTV (%), All loan terms', { startRow: 1488, endRow: 1500, cols: [1] });
+  if (allTermsRow !== -1) {
+    for (let r = allTermsRow + 1; r < allTermsRow + 30; r++) {
+      const label = cellStr(ws, r, 1);
+      if (!label) continue;
+      if (/lpmi\s*coverage|loan\s*amount\s*price/i.test(label)) break;
+
+      // State LLPAs
+      const stateMatch = label.match(/Properties\s+located\s+in\s+(\w{2})/i);
+      if (stateMatch) {
+        const st = stateMatch[1].toUpperCase();
+        // Read value from col 10 (flat value, same across all LTV bands)
+        const val = parseLlpa(cellVal(ws, r, 10));
+        if (val !== null) {
+          result.stateAdj[st] = { adj30yr: val, adj15yr: val };
+        }
+        continue;
+      }
+
+      // Other all-terms adjustments
+      const values = [];
+      for (let c = 10; c < 10 + result.ltvBuckets.purchaseRefi.length; c++) {
+        values.push(parseLlpa(cellVal(ws, r, c)));
+      }
+      if (values.some(v => v !== null)) {
+        const key = label.toLowerCase().replace(/,.*$/, '').trim().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+        result.allTermsAdj[key] = values;
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Parse Government Program Price Adjustments (3 sub-tables side by side at row 896).
+ */
+function parseGovAdjustments(ws) {
+  const headerRow = findRow(ws, 'GOVERNMENT PROGRAM PRICE ADJUSTMENTS', { startRow: 890, endRow: 910, cols: [1] });
+  if (headerRow === -1) return null;
+
+  const result = {
+    ficoAdj: {},
+    programAdj: {},
+    stateAdj: {},
+    propertyAdj: {},
+    otherAdj: {},
+    loanAmtAdj: [],
+  };
+
+  // Left table: col 1 = label, col 7 = value (FICO + program adjustments)
+  for (let r = headerRow + 1; r < headerRow + 16; r++) {
+    const label = cellStr(ws, r, 1);
+    if (!label) continue;
+    if (/construction|applies\s+to/i.test(label)) continue;
+
+    const val = parseLlpa(cellVal(ws, r, 7));
+
+    // FICO adjustments
+    const ficoMatch = label.match(/FICO\s*(>=?|=>|<=?|)\s*(\d+)(?:\s*[-–]\s*(\d+))?/i);
+    if (ficoMatch && val !== null) {
+      let normalized;
+      if (ficoMatch[3]) {
+        normalized = `${ficoMatch[2]}-${ficoMatch[3]}`;
+      } else if (ficoMatch[1]) {
+        normalized = `${ficoMatch[1].replace(/\s/g, '').replace('=>', '>=')}${ficoMatch[2]}`;
+      } else {
+        normalized = ficoMatch[2];
+      }
+      result.ficoAdj[normalized] = val;
+      continue;
+    }
+
+    // Non-Traditional Credit
+    if (/non.*traditional/i.test(label) && val !== null) {
+      result.ficoAdj['NTC'] = val;
+      continue;
+    }
+
+    // Program adjustments
+    if (val !== null) {
+      const key = label.toLowerCase().replace(/[*]/g, '').trim().replace(/\s+/g, '_').replace(/[^a-z0-9_/]/g, '');
+      result.programAdj[key] = val;
+    }
+
+    // Loan amount (special case — value at col 9)
+    if (/loan\s*amount/i.test(label)) {
+      const laVal = parseLlpa(cellVal(ws, r, 9));
+      if (laVal !== null) {
+        const amtMatch = label.match(/<=?\s*\$?([\d,]+)/i);
+        if (amtMatch) {
+          const max = parseInt(amtMatch[1].replace(/,/g, ''), 10);
+          result.loanAmtAdj.push({ min: 0, max, adj30yr: laVal, adj15yr: laVal });
+        }
+      }
+    }
+  }
+
+  // Middle table: col 9 = label, col 15 = value (state + property adjustments)
+  for (let r = headerRow + 1; r < headerRow + 14; r++) {
+    const label = cellStr(ws, r, 9);
+    if (!label) continue;
+
+    const val = parseLlpa(cellVal(ws, r, 15));
+    if (val === null) continue;
+
+    // State adjustments
+    const stateMatch = label.match(/Properties\s+(?:located\s+)?in\s+(\w{2})/i);
+    if (stateMatch) {
+      result.stateAdj[stateMatch[1].toUpperCase()] = { adj30yr: val, adj15yr: val };
+      continue;
+    }
+
+    // Property/purpose adjustments
+    const key = label.toLowerCase().replace(/[*]/g, '').trim().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+    result.propertyAdj[key] = val;
+  }
+
+  // Right table: col 17 = label, col 19 = value
+  for (let r = headerRow + 1; r < headerRow + 12; r++) {
+    const label = cellStr(ws, r, 17);
+    if (!label) continue;
+
+    const val = parseLlpa(cellVal(ws, r, 19));
+    if (val === null) continue;
+
+    const key = label.toLowerCase().replace(/[*]/g, '').trim().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+    result.otherAdj[key] = val;
+  }
+
+  return result;
+}
+
+/**
+ * Parse UW Fees and promos from header area.
+ */
+function parseFees(ws) {
+  const result = {
+    uwFee: 1195,
+    streamlineFee: 625,
+    nqmFee: 1299,
+    portfolioFee: 795,
+    portfolioStreamlineFee: 425,
+    txAttorneyPurchase: 0,
+    txAttorneyRefi: 0,
+    promos: [],
+  };
+
+  // Attorney fees for TX
+  const txPurchVal = parseLlpa(cellVal(ws, 8, 19));
+  if (txPurchVal !== null) result.txAttorneyPurchase = txPurchVal;
+  const txRefiVal = parseLlpa(cellVal(ws, 9, 19));
+  if (txRefiVal !== null) result.txAttorneyRefi = txRefiVal;
+
+  // March promo
+  const promoStr = cellStr(ws, 18, 9);
+  if (promoStr && /promo/i.test(promoStr)) {
+    const bpsMatch = promoStr.match(/(\d+)\s*basis\s*points?\s*\(?([\d.]+)\)?/i);
+    if (bpsMatch) {
+      result.promos.push({
+        label: promoStr.substring(0, 80),
+        bps: parseInt(bpsMatch[1], 10),
+        points: parseFloat(bpsMatch[2]),
+        type: 'conventional',
+      });
+    }
+  }
+
+  const fhaPromoStr = cellStr(ws, 22, 9);
+  if (fhaPromoStr && /special/i.test(fhaPromoStr)) {
+    const bpsMatch = fhaPromoStr.match(/(\d+)\s*basis\s*points?\s*\(?([\d.]+)\)?/i);
+    if (bpsMatch) {
+      result.promos.push({
+        label: fhaPromoStr.substring(0, 80),
+        bps: parseInt(bpsMatch[1], 10),
+        points: parseFloat(bpsMatch[2]),
+        type: 'fha_usda',
+      });
+    }
+  }
+
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// Main parser
+// ---------------------------------------------------------------------------
+
 /**
  * Parse SWMC rate sheet XLSX.
  * @param {Buffer|ArrayBuffer} xlsxBuffer - raw XLSX file
- * @returns {{ sheetDate: string|null, programs: Array }}
+ * @returns full parsed result with programs + all adjustment data
  */
 function parseRates(xlsxBuffer) {
   const wb = XLSX.read(xlsxBuffer, { type: 'buffer' });
@@ -272,7 +622,36 @@ function parseRates(xlsxBuffer) {
     }
   }
 
-  return { sheetDate, programs };
+  // ─── Parse adjustment sections ────────────────────────────────────
+
+  const agencyAdj = parseAgencyConformingAdj(ws);
+  const govAdj = parseGovAdjustments(ws);
+  const fees = parseFees(ws);
+
+  // Build standard output format
+  const llpas = agencyAdj ? {
+    purchase: agencyAdj.ficoLtvGrids.purchase,
+    refinance: agencyAdj.ficoLtvGrids.refinance,
+    cashout: agencyAdj.ficoLtvGrids.cashout,
+    ltvBands: agencyAdj.ltvBuckets.purchaseRefi,
+  } : null;
+
+  return {
+    sheetDate,
+    programs,
+    llpas,
+    loanAmountAdj: govAdj?.loanAmtAdj || [],
+    stateAdj: agencyAdj?.stateAdj || {},
+    specPayups: {},
+    pricingSpecials: fees.promos.length > 0 ? { promos: fees.promos } : null,
+    occupancyAdj: null,
+    lenderFee: fees.uwFee,
+    compCap: { purchase: 4595, refinance: 3595 },
+    // SWMC-specific
+    agencyAdj,
+    govAdj,
+    fees,
+  };
 }
 
 function parse({ xlsxBuffer }) {
