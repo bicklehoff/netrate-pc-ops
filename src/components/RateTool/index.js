@@ -37,6 +37,7 @@ export default function RateTool({ initialRateData, defaultState }) {
 
   const [scenario, setScenario] = useState({
     purpose: DEFAULT_SCENARIO.loanPurpose,
+    loanType: 'conventional',
     propertyType: DEFAULT_SCENARIO.propertyType,
     propertyValue: DEFAULT_SCENARIO.propertyValue,
     downPaymentPct: DEFAULT_SCENARIO.downPaymentPct,

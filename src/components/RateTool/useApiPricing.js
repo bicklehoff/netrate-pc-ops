@@ -30,7 +30,7 @@ export function useApiPricing(scenario) {
           body: JSON.stringify({
             loanAmount: scenario.loanAmount,
             loanPurpose: purposeMap[scenario.purpose] || scenario.purpose,
-            loanType: 'conventional',
+            loanType: scenario.loanType || 'conventional',
             creditScore: scenario.fico,
             propertyValue: scenario.propertyValue,
             propertyType: scenario.propertyType,
@@ -96,7 +96,7 @@ export function useApiPricing(scenario) {
     }, 300);
 
     return () => { if (debounce.current) clearTimeout(debounce.current); };
-  }, [scenario.loanAmount, scenario.fico, scenario.propertyValue, scenario.purpose, scenario.propertyType, scenario.state, scenario.currentRate]);
+  }, [scenario.loanAmount, scenario.fico, scenario.propertyValue, scenario.purpose, scenario.loanType, scenario.propertyType, scenario.state, scenario.currentRate]);
 
   return { results, loading };
 }

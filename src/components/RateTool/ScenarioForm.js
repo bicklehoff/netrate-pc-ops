@@ -39,6 +39,15 @@ export default function ScenarioForm({ scenario, onChange }) {
           </select>
         </div>
         <div>
+          <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Loan Type</label>
+          <select value={scenario.loanType || 'conventional'} onChange={e => update("loanType", e.target.value)}
+            className="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white">
+            <option value="conventional">Conventional</option>
+            <option value="fha">FHA</option>
+            <option value="va">VA</option>
+          </select>
+        </div>
+        <div>
           <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Property Type</label>
           <select value={scenario.propertyType} onChange={e => update("propertyType", e.target.value)}
             className="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white">
