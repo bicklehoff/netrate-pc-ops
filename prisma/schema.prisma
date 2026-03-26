@@ -837,6 +837,10 @@ model RateProduct {
   // Documentation type (for Non-QM)
   docType         String?   @map("doc_type")           // full/altDoc/bankStatement/dscr/asset
 
+  // Product-level fees (overrides RateLender defaults)
+  uwFee           Decimal?  @map("uw_fee") @db.Decimal(10, 2)
+  originationFee  Decimal?  @map("origination_fee") @db.Decimal(10, 2)
+
   // Eligibility
   ficoMin         Int?      @map("fico_min")
   ficoMax         Int?      @map("fico_max")
