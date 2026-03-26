@@ -38,7 +38,7 @@ function formatDate(dateStr) {
   });
 }
 
-export default function PostCloseSection({ loan, onRefresh }) {
+export default function PostCloseSection({ loan, onRefresh: _onRefresh }) {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState('');
