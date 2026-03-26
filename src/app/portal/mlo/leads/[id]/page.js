@@ -43,6 +43,7 @@ export default function LeadDetailPage() {
   const [converting, setConverting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
 
   const handleConvert = async () => {
     if (!confirm('Convert this lead to a draft loan? This will create a contact (if needed), borrower, and loan record.')) return;
@@ -121,6 +122,28 @@ export default function LeadDetailPage() {
     }
   };
 
+  const runContactAction = async (action, payload = {}) => {
+    const cid = lead?.contactId || lead?.contact?.id;
+    if (!cid) { setError('No contact linked — convert lead or link a contact first'); return; }
+    setActionLoading(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/portal/mlo/contacts/${cid}/actions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, ...payload }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || 'Action failed'); return; }
+      setSuccess(action === 'send_portal_invite' ? 'Portal invite sent!' : 'Sent!');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch {
+      setError('Action failed');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   if (loading) return <div className="w-full py-12 text-center text-gray-400">Loading...</div>;
   if (!lead) return <div className="w-full py-12 text-center text-red-500">Lead not found</div>;
 
@@ -171,6 +194,37 @@ export default function LeadDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Actions Bar */}
+      {lead.email && (lead.contactId || lead.contact?.id) && (
+        <div className="flex items-center gap-2 mb-4 pb-4 border-b border-gray-100">
+          <button
+            onClick={() => runContactAction('send_portal_invite')}
+            disabled={actionLoading}
+            className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 px-3 py-1.5 rounded-lg text-sm hover:bg-gray-50 transition-colors disabled:opacity-50"
+          >
+            <span>🔗</span> Send Portal Invite
+          </button>
+          <button
+            onClick={() => {
+              const docs = [
+                { label: 'Completed & signed 1003 application' },
+                { label: 'Most recent 2 months bank statements (all pages)' },
+                { label: 'Most recent 30 days pay stubs' },
+                { label: 'Most recent 2 years W-2s' },
+                { label: 'Most recent 2 years federal tax returns (all pages)' },
+                { label: 'Valid government-issued photo ID' },
+              ];
+              runContactAction('send_needs_list', { documents: docs });
+            }}
+            disabled={actionLoading}
+            className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 px-3 py-1.5 rounded-lg text-sm hover:bg-gray-50 transition-colors disabled:opacity-50"
+          >
+            <span>📋</span> Send Needs List
+          </button>
+          {actionLoading && <span className="text-xs text-gray-400 ml-2">Sending...</span>}
+        </div>
+      )}
 
       {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">{error}</div>}
       {success && <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-4 text-sm">{success}</div>}

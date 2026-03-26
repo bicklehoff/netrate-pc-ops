@@ -73,6 +73,14 @@ export default function ContactDetailPage() {
   const [leadForm, setLeadForm] = useState({ loanPurpose: '', propertyState: '', notes: '' });
   const [creatingLead, setCreatingLead] = useState(false);
 
+  // Action modals
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [emailForm, setEmailForm] = useState({ subject: '', emailBody: '' });
+  const [showNeedsModal, setShowNeedsModal] = useState(false);
+  const [needsPurpose, setNeedsPurpose] = useState('default');
+  const [actionLoading, setActionLoading] = useState(false);
+  const [actionSuccess, setActionSuccess] = useState('');
+
   useEffect(() => {
     if (authStatus === 'unauthenticated') router.push('/portal/mlo/login');
   }, [authStatus, router]);
@@ -152,6 +160,35 @@ export default function ContactDetailPage() {
       setError('Failed to create lead');
     } finally {
       setCreatingLead(false);
+    }
+  };
+
+  const runAction = async (action, payload = {}) => {
+    setActionLoading(true);
+    setError('');
+    setActionSuccess('');
+    try {
+      const res = await fetch(`/api/portal/mlo/contacts/${id}/actions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, ...payload }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || 'Action failed'); return; }
+      setActionSuccess(
+        action === 'send_portal_invite' ? 'Portal invite sent!' :
+        action === 'send_needs_list' ? 'Needs list sent!' :
+        action === 'send_email' ? 'Email sent!' : 'Done!'
+      );
+      setTimeout(() => setActionSuccess(''), 3000);
+      fetchContact(); // Refresh timeline
+    } catch {
+      setError('Action failed');
+    } finally {
+      setActionLoading(false);
+      setShowEmailModal(false);
+      setShowNeedsModal(false);
+      setEmailForm({ subject: '', emailBody: '' });
     }
   };
 
@@ -243,6 +280,35 @@ export default function ContactDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Actions Bar */}
+      {contact.email && (
+        <div className="flex items-center gap-2 mb-4 pb-4 border-b border-gray-100">
+          <button
+            onClick={() => runAction('send_portal_invite')}
+            disabled={actionLoading}
+            className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 px-3 py-1.5 rounded-lg text-sm hover:bg-gray-50 transition-colors disabled:opacity-50"
+          >
+            <span>🔗</span> Send Portal Invite
+          </button>
+          <button
+            onClick={() => setShowNeedsModal(true)}
+            disabled={actionLoading}
+            className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 px-3 py-1.5 rounded-lg text-sm hover:bg-gray-50 transition-colors disabled:opacity-50"
+          >
+            <span>📋</span> Send Needs List
+          </button>
+          <button
+            onClick={() => setShowEmailModal(true)}
+            disabled={actionLoading}
+            className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 px-3 py-1.5 rounded-lg text-sm hover:bg-gray-50 transition-colors disabled:opacity-50"
+          >
+            <span>✉️</span> Send Email
+          </button>
+          {actionLoading && <span className="text-xs text-gray-400 ml-2">Sending...</span>}
+          {actionSuccess && <span className="text-xs text-green-600 ml-2">{actionSuccess}</span>}
+        </div>
+      )}
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm mb-4">
@@ -544,6 +610,124 @@ export default function ContactDetailPage() {
                 className="bg-brand text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-dark transition-colors disabled:opacity-50"
               >
                 {creatingLead ? 'Creating...' : 'Create Lead'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Send Email Modal */}
+      {showEmailModal && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setShowEmailModal(false)}>
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold mb-4">Send Email to {contact.firstName}</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">To</label>
+                <div className="text-sm text-gray-500 bg-gray-50 px-3 py-2 rounded-lg">{contact.email}</div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Subject</label>
+                <input
+                  value={emailForm.subject}
+                  onChange={(e) => setEmailForm(f => ({ ...f, subject: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none"
+                  placeholder="Email subject..."
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Message</label>
+                <textarea
+                  value={emailForm.emailBody}
+                  onChange={(e) => setEmailForm(f => ({ ...f, emailBody: e.target.value }))}
+                  rows={6}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none"
+                  placeholder="Type your message..."
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
+              <button onClick={() => setShowEmailModal(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm">Cancel</button>
+              <button
+                onClick={() => runAction('send_email', emailForm)}
+                disabled={actionLoading || !emailForm.subject || !emailForm.emailBody}
+                className="bg-brand text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-dark transition-colors disabled:opacity-50"
+              >
+                {actionLoading ? 'Sending...' : 'Send Email'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Send Needs List Modal */}
+      {showNeedsModal && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setShowNeedsModal(false)}>
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold mb-4">Send Needs List to {contact.firstName}</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Loan Type</label>
+                <select
+                  value={needsPurpose}
+                  onChange={(e) => setNeedsPurpose(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none"
+                >
+                  <option value="default">General</option>
+                  <option value="purchase">Purchase</option>
+                  <option value="refinance">Refinance</option>
+                </select>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="text-xs font-medium text-gray-500 mb-2">Documents included:</p>
+                <ul className="text-xs text-gray-600 space-y-1">
+                  <li>• 1003 application</li>
+                  <li>• Bank statements (2 months)</li>
+                  <li>• Pay stubs (30 days)</li>
+                  <li>• W-2s (2 years)</li>
+                  <li>• Tax returns (2 years)</li>
+                  <li>• Photo ID</li>
+                  {needsPurpose === 'purchase' && <>
+                    <li>• Purchase contract</li>
+                    <li>• Earnest money verification</li>
+                    <li>• Homeowners insurance quote</li>
+                  </>}
+                  {needsPurpose === 'refinance' && <>
+                    <li>• Current mortgage statement</li>
+                    <li>• HOI declaration page</li>
+                    <li>• HOA statement (if applicable)</li>
+                  </>}
+                </ul>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
+              <button onClick={() => setShowNeedsModal(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm">Cancel</button>
+              <button
+                onClick={() => {
+                  const docs = [
+                    { label: 'Completed & signed 1003 application' },
+                    { label: 'Most recent 2 months bank statements (all pages)' },
+                    { label: 'Most recent 30 days pay stubs' },
+                    { label: 'Most recent 2 years W-2s' },
+                    { label: 'Most recent 2 years federal tax returns (all pages)' },
+                    { label: 'Valid government-issued photo ID' },
+                    ...(needsPurpose === 'purchase' ? [
+                      { label: 'Purchase contract (when available)' },
+                      { label: 'Earnest money deposit verification' },
+                      { label: 'Homeowners insurance quote' },
+                    ] : []),
+                    ...(needsPurpose === 'refinance' ? [
+                      { label: 'Current mortgage statement' },
+                      { label: 'Homeowners insurance declaration page' },
+                      { label: 'HOA statement (if applicable)' },
+                    ] : []),
+                  ];
+                  runAction('send_needs_list', { documents: docs });
+                }}
+                disabled={actionLoading}
+                className="bg-brand text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-dark transition-colors disabled:opacity-50"
+              >
+                {actionLoading ? 'Sending...' : 'Send Needs List'}
               </button>
             </div>
           </div>

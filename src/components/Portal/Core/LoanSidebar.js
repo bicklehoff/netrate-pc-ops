@@ -6,39 +6,53 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 
-const SECTIONS = [
-  {
-    group: 'Loan',
-    items: [
-      { key: 'overview', label: 'Overview', icon: '📊' },
-      { key: 'loan-info', label: 'Loan Info', icon: '📋' },
-    ],
-  },
-  {
-    group: 'People',
-    items: [
-      { key: 'borrower', label: 'Borrower', icon: '👤' },
-    ],
-  },
-  {
-    group: 'Processing',
-    items: [
-      { key: 'processing', label: 'Processing', icon: '⚙️' },
-      { key: 'documents', label: 'Documents', icon: '📁' },
-    ],
-  },
-  {
-    group: 'Activity',
-    items: [
-      { key: 'notes', label: 'Notes & Activity', icon: '💬' },
-    ],
-  },
-];
+function getSections(loanStatus) {
+  const sections = [
+    {
+      group: 'Loan',
+      items: [
+        { key: 'overview', label: 'Overview', icon: '📊' },
+        { key: 'loan-info', label: 'Loan Info', icon: '📋' },
+      ],
+    },
+    {
+      group: 'People',
+      items: [
+        { key: 'borrower', label: 'Borrower', icon: '👤' },
+      ],
+    },
+    {
+      group: 'Processing',
+      items: [
+        { key: 'processing', label: 'Processing', icon: '⚙️' },
+        { key: 'documents', label: 'Documents', icon: '📁' },
+      ],
+    },
+    {
+      group: 'Activity',
+      items: [
+        { key: 'notes', label: 'Notes & Activity', icon: '💬' },
+      ],
+    },
+  ];
 
-export default function LoanSidebar({ loanId }) {
+  if (['funded', 'archived'].includes(loanStatus)) {
+    sections.push({
+      group: 'Post-Close',
+      items: [
+        { key: 'post-close', label: 'Post-Close', icon: '✅' },
+      ],
+    });
+  }
+
+  return sections;
+}
+
+export default function LoanSidebar({ loanId, loanStatus }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeSection = searchParams.get('section') || 'overview';
+  const SECTIONS = getSections(loanStatus);
 
   const navigate = (sectionKey) => {
     router.push(`/portal/mlo/loans/${loanId}?section=${sectionKey}`, { scroll: false });
@@ -93,7 +107,7 @@ export default function LoanSidebar({ loanId }) {
 
       {/* Mobile horizontal tab strip */}
       <nav className="lg:hidden flex overflow-x-auto border-b border-gray-200 bg-white px-2 flex-shrink-0">
-        {SECTIONS.flatMap((group) =>
+        {getSections(loanStatus).flatMap((group) =>
           group.items.map((item) => {
             const isActive = activeSection === item.key;
             return (

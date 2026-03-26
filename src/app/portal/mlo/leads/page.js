@@ -7,6 +7,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import LeadsTable from '@/components/Portal/LeadsTable';
+import LeadKanban from '@/components/Portal/LeadKanban';
 
 const STATUS_FILTERS = [
   { value: 'all', label: 'All' },
@@ -28,6 +29,7 @@ export default function MloLeadsPage() {
   const [error, setError] = useState('');
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
+  const [viewMode, setViewMode] = useState('table'); // 'table' | 'kanban'
 
   useEffect(() => {
     if (authStatus === 'unauthenticated') {
@@ -98,6 +100,26 @@ export default function MloLeadsPage() {
               {newCount} New
             </span>
           )}
+          <div className="flex bg-gray-100 rounded-lg p-0.5">
+            <button
+              onClick={() => setViewMode('table')}
+              className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+                viewMode === 'table' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              }`}
+              title="Table view"
+            >
+              ☰
+            </button>
+            <button
+              onClick={() => setViewMode('kanban')}
+              className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+                viewMode === 'kanban' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              }`}
+              title="Board view"
+            >
+              ▦
+            </button>
+          </div>
         </div>
       </div>
 
@@ -150,6 +172,8 @@ export default function MloLeadsPage() {
               : `No leads matching "${STATUS_FILTERS.find((f) => f.value === filter)?.label}" filter.`}
           </p>
         </div>
+      ) : viewMode === 'kanban' ? (
+        <LeadKanban leads={enrichedLeads} onStatusChange={fetchLeads} />
       ) : (
         <LeadsTable leads={enrichedLeads} onStatusChange={fetchLeads} />
       )}

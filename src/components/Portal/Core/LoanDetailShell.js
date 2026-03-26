@@ -18,6 +18,7 @@ import BorrowerSection from './sections/BorrowerSection';
 import ProcessingSection from './sections/ProcessingSection';
 import DocumentsSection from './sections/DocumentsSection';
 import NotesActivitySection from './sections/NotesActivitySection';
+import PostCloseSection from './sections/PostCloseSection';
 import PrequalLetterModal from '../PrequalLetter/PrequalLetterModal';
 
 export default function LoanDetailShell({ loan, onRefresh }) {
@@ -114,6 +115,13 @@ export default function LoanDetailShell({ loan, onRefresh }) {
             updateLoanField={updateLoanField}
           />
         );
+      case 'post-close':
+        return (
+          <PostCloseSection
+            loan={loan}
+            onRefresh={onRefresh}
+          />
+        );
       default:
         return (
           <OverviewSection
@@ -126,7 +134,7 @@ export default function LoanDetailShell({ loan, onRefresh }) {
   return (
     <div className="flex flex-col lg:flex-row h-full -mx-6 -my-8">
       {/* Sidebar */}
-      <LoanSidebar loanId={loan.id} />
+      <LoanSidebar loanId={loan.id} loanStatus={loan.status} />
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
