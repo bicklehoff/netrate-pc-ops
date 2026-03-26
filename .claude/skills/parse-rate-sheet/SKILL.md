@@ -145,33 +145,75 @@ Each parser MUST return ALL of these fields:
 
 **FICO key format:** Must match the engine's `getFicoBand()` output: `">=780"`, `"760-779"`, `"740-759"`, etc. Normalize spaces: `"720 - 739"` → `"720-739"`.
 
-## Merge Into parsed-rates.json
+## Database Pipeline (PRIMARY — replaces JSON file)
 
-Write merged results to `src/data/parsed-rates.json`:
+Rate data now flows to the database, not a JSON file. The pricing engine reads from DB.
 
-```json
-{
-  "lenders": [
-    {
-      "lenderId": "keystone",
-      "sheetDate": "2026-03-24",
-      "programs": [...],
-      "llpas": {...},
-      "loanAmountAdj": [...],
-      "stateAdj": {...},
-      "specPayups": {...},
-      "pricingSpecials": {...},
-      "occupancyAdj": {...},
-      "lenderFee": 1125,
-      "compCap": {...}
-    }
-  ],
-  "date": "2026-03-24",
-  "generatedAt": "2026-03-24T16:00:00.000Z"
-}
+### Architecture
+
+```
+Rate Sheet File → Parser → DB Writer → rate_prices table → Pricing API → Website
+                                     → rate_sheets table (parse event log)
 ```
 
-**All fields must be present** for each lender. Use `null` if a section doesn't exist in the rate sheet.
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `src/lib/rates/db-writer.js` | Takes parser output, matches to rate_products, writes to rate_sheets + rate_prices |
+| `src/lib/rates/db-loader.js` | Loads rate data from DB in the shape the pricing engine expects |
+| `scripts/populate-products.js` | One-time script to populate rate_products taxonomy from parsed data |
+| `scripts/migrate-to-pc-db.js` | Data migration script (CRM + rate data) |
+
+### Database Tables
+
+| Table | Purpose | Changes |
+|-------|---------|---------|
+| `rate_lenders` | Lender metadata, fees, comp caps | Rarely |
+| `rate_products` | Product taxonomy — maps raw names to queryable fields | Rarely (when new products appear) |
+| `rate_sheets` | One row per parse event — lender, date, file, row count | Daily |
+| `rate_prices` | Individual rate/price rows — rate, price, lock_days, linked to product + sheet | Daily |
+| `lender_adjustments` | SRP, LLPA grids, loan amt adj as JSONB | Rarely (on lender bulletin) |
+| `broker_config` | David's comp caps, business settings (singleton) | Rarely |
+| `fee_templates` | Per-state fee estimates (HUD sections A-H) | Rarely |
+
+### How to Write Rates to DB
+
+```javascript
+const { writeRatesToDB } = require('./src/lib/rates/db-writer');
+const { parseRates } = require('./src/lib/rates/parsers/everstream');
+
+const csvContent = fs.readFileSync(csvPath, 'utf-8');
+const { sheetDate, programs } = parseRates(csvContent);
+const result = await writeRatesToDB('everstream', programs, sheetDate, csvPath);
+// result: { sheetId, pricesInserted, productsMatched, productsUnmatched }
+```
+
+### Product Matching
+
+The DB writer matches parsed programs to `rate_products` rows by `raw_name`. The raw_name format is:
+- `"FNMA 30yr Fixed Core"` (no loan amount range)
+- `"FNMA 30yr Fixed Core [375000-400000]"` (with range)
+
+If a new product appears in a rate sheet that doesn't have a `rate_products` row, the writer reports it as unmatched. Run `scripts/populate-products.js` to add new products.
+
+### Static Adjustments (LenderAdjustment)
+
+LLPAs, SRP tables, loan amount adjustments, and lender-specific adjustments are stored as JSONB in `lender_adjustments`. These rarely change — update when the lender sends a bulletin.
+
+Complete static configs are also stored as JSON files in `src/data/lender-llpas/` for reference:
+- `everstream-complete.json` (2.5 MB, 19 sheets)
+- `keystone-complete.json`, `amwest-complete.json`, `windsor-complete.json`, `swmc-complete.json`
+- TLS uses GSE defaults (no separate LLPA sheet)
+
+### Connection
+
+Database: `netrate_pc` on Neon (same project as old `neondb`).
+Env var: `PC_DATABASE_URL` (pooled) / `PC_DIRECT_URL` (direct).
+
+## Legacy: parsed-rates.json (DEPRECATED)
+
+The old `src/data/parsed-rates.json` file is still present as a fallback but is no longer the primary data source. The pricing API reads from the database first.
 
 ## When a Parser Fails
 
@@ -211,9 +253,11 @@ If validation fails, warn but still save — partial data is better than no data
 
 ## After Parsing
 
-1. Commit `src/data/parsed-rates.json` with message: "Update parsed rates: [date] — [N] programs from [lenders]"
-2. Push to trigger Vercel deploy (pricing engine uses this file as fallback)
-3. Report summary: lender, program count, date, any failures
+1. Write to DB using `writeRatesToDB(lenderCode, programs, sheetDate, sourceFile)`
+2. Report summary: lender, products matched/unmatched, prices inserted, date
+3. If unmatched products > 0, run `scripts/populate-products.js` to add new products, then re-run the writer
+4. Verify on website: check /rates page shows updated rates for this lender
+5. Log via `capture_thought` if anything unusual happened (new products, format changes)
 
 ## Verification Against OC (Optimal Blue)
 

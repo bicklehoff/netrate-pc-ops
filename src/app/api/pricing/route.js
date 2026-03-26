@@ -27,18 +27,16 @@
 
 import { NextResponse } from 'next/server';
 import { priceScenario } from '@/lib/rates/pricing';
-import { fetchGCSFile, isGCSConfigured } from '@/lib/gcs';
+import { loadRateDataFromDB } from '@/lib/rates/db-loader';
 import { DEFAULT_SCENARIO } from '@/lib/rates/defaults';
 
-const GCS_BUCKET = process.env.GCS_BUCKET_NAME || 'netrate-rates';
 const CACHE_TTL_MS = 2 * 60 * 1000;
 
-// Module-level cache for parsed rate data
+// Module-level cache for rate data from DB
 let rateCache = { data: null, fetchedAt: 0 };
 
 /**
- * Load parsed rate data from GCS (or static fallback).
- * Returns array of { lenderId, programs, sheetDate }
+ * Load rate data from the database (with 2-minute cache).
  */
 async function loadRateData() {
   const now = Date.now();
@@ -46,30 +44,14 @@ async function loadRateData() {
     return rateCache.data;
   }
 
-  // Primary: local parsed-rates.json (includes LLPAs, adjustments, spec payups)
   try {
-    const { default: parsedRates } = await import('@/data/parsed-rates.json');
-    if (parsedRates?.lenders?.length) {
-      rateCache = { data: parsedRates.lenders, fetchedAt: now };
-      return parsedRates.lenders;
-    }
-  } catch { /* ignore */ }
-
-  // Fallback: GCS (legacy — doesn't include lender-specific adjustments yet)
-  if (isGCSConfigured()) {
-    try {
-      const manifest = await fetchGCSFile(GCS_BUCKET, 'parsed/manifest.json');
-      const lenders = await Promise.all(
-        manifest.lenders.map(async (entry) => {
-          const data = await fetchGCSFile(GCS_BUCKET, `parsed/${entry.file}`);
-          return { lenderId: entry.id, ...data };
-        })
-      );
+    const lenders = await loadRateDataFromDB();
+    if (lenders?.length) {
       rateCache = { data: lenders, fetchedAt: now };
       return lenders;
-    } catch (err) {
-      console.error('GCS parsed rate fetch failed:', err.message);
     }
+  } catch (err) {
+    console.error('DB rate data load failed:', err.message);
   }
 
   return [];
