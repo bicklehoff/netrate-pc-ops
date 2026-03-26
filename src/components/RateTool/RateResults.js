@@ -12,20 +12,10 @@ export default function RateResults({ scenario, rateData, apiResults, loading, c
     );
   }
 
-  // Use API results if available, fall back to old engine.js
-  let rates, llpa;
-  if (apiResults && apiResults.length > 0) {
-    rates = apiResults;
-    // Build LLPA summary from the first result's breakdown
-    const firstWithLlpa = apiResults.find(r => r.llpaBreakdown?.length > 0);
-    llpa = {
-      total: firstWithLlpa?.llpaPoints || 0,
-      breakdown: firstWithLlpa?.llpaBreakdown || [],
-    };
-  } else {
-    llpa = calculateLLPA(scenario, rateData);
-    rates = priceRates(scenario, rateData);
-  }
+  // TODO: API pricing disabled until product eligibility filtering is fixed
+  // (FHA/NOO/SH products leaking into conventional searches)
+  const llpa = calculateLLPA(scenario, rateData);
+  const rates = priceRates(scenario, rateData);
   const currentPI = scenario.currentRate ? calculatePI(scenario.currentRate, scenario.loanAmount) : null;
 
   if (loading) {
@@ -147,7 +137,6 @@ export default function RateResults({ scenario, rateData, apiResults, loading, c
           <thead>
             <tr className="border-b border-gray-200 text-xs text-gray-500 uppercase tracking-wider">
               <th className="text-left px-3 py-3">Rate</th>
-              <th className="text-left px-2 py-3">Lender</th>
               <th className="text-right px-2 py-3">APR</th>
               <th className="text-right px-2 py-3">Monthly P&I</th>
               {currentPI && <th className="text-right px-2 py-3">Savings</th>}
@@ -168,7 +157,6 @@ export default function RateResults({ scenario, rateData, apiResults, loading, c
                 <tr key={r.rate}
                   className={`border-b border-gray-100 ${isPar ? "bg-cyan-50" : i % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-cyan-50 transition-colors`}>
                   <td className="px-3 py-3 font-semibold text-gray-800">{r.rate.toFixed(3)}%</td>
-                  <td className="px-2 py-3 text-xs text-gray-400">{r.lender || ''}</td>
                   <td className="text-right px-2 py-3 font-mono text-gray-500">{r.apr ? r.apr.toFixed(3) + '%' : '—'}</td>
                   <td className="text-right px-2 py-3 font-mono text-gray-700">
                     ${r.monthlyPI.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}

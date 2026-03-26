@@ -101,7 +101,10 @@ export function priceRates(scenario, rateData, lockPeriod = "30day") {
   return rateData.rateTable30yr.map(row => {
     const rate = row[0];
     const basePrice = row[colIdx];
-    const adjPrice = basePrice + llpa.total;
+    // Temporary flat adjustment to approximate SRP/lender credits
+    // until full static configs are wired for all lenders
+    const MARKET_ADJUSTMENT = 1.10;
+    const adjPrice = basePrice + llpa.total + MARKET_ADJUSTMENT;
     const creditDollars = (adjPrice / 100) * scenario.loanAmount;
     const monthlyPI = calculatePI(rate, scenario.loanAmount);
     // APR: net finance charges = lender fees minus any lender credit
