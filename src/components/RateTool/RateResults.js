@@ -2,7 +2,7 @@
 
 import { calculateLLPA, calculatePI, priceRates } from '@/lib/rates/engine';
 
-export default function RateResults({ scenario, rateData, apiResults, loading, compareRates = [], onToggleCompare, onViewReport }) {
+export default function RateResults({ scenario, rateData, loading, compareRates = [], onToggleCompare, onViewReport }) {
 
   if (!scenario.loanAmount || scenario.loanAmount <= 0 || !scenario.propertyValue) {
     return (
