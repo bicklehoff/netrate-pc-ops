@@ -5,6 +5,64 @@
 
 ---
 
+## 2026-03-25 (PM) — Dev — Rate Engine Calibration, LoanSifter Deep Dive, Architecture Decisions
+**Actor:** pc-dev | **Time:** ~8:30 AM – 6:30 PM
+
+### What Happened
+1. **Parser rewrite completed** — SWMC, EverStream, TLS parsers done (Keystone, AmWest, Windsor done yesterday)
+2. **LoanSifter calibration deep-dive (EverStream)** — hand-verified every adjustment layer:
+   - Base CSV price: 99.239 (Core FNMA >375K<=400K, 6.124%, 30-day)
+   - Core SRP (CO, Fixed 20/25/30yr): +1.830
+   - Purchase adj: +0.100
+   - Risk-Based (780-799, 70.01-75): +0.050 (already in FinalBasePrice)
+   - Loan Amt >300K<=400K: -0.040
+   - FNMA 21-30yr specific: -0.220
+   - Broker comp (0.899%): -0.899
+   - **Result: 100.010 = exact match to LoanSifter**
+3. **Defaults centralized** — `src/lib/rates/defaults.js`: 780 FICO, 75% LTV, $400K/$533,334, Purchase, CO
+4. **Credit score** — changed from dropdown range to numeric input (500-850)
+5. **Rate tool unified to pricing API** — then reverted (product eligibility filtering not ready)
+6. **Current state:** rate tool on old engine.js with +1.10 flat market adjustment
+
+### Key Decisions (logged to MCP)
+- Rate data to PC database, not flat JSON files
+- Static lender adjustments hardcoded; only daily rates parsed dynamically
+- Default scenario: 780/75LTV/Purchase per MND assumptions
+
+### What's Broken / Not Ready
+- Only EverStream has full adjustment stack mapped — 5 lenders still need scoring
+- No product eligibility filtering — Conv/FHA/VA/DSCR all mixed together
+- No product taxonomy — each lender names products differently
+- No Product Type selector in rate tool UI
+- Rate tool using +1.10 flat adjustment (temporary, not accurate per-lender)
+- Dual pricing systems (engine.js + pricing.js) — need to unify
+
+### Tomorrow's Priority
+1. **Database split** — PC gets own DB
+2. **Design rate DB schema** — RateSheet, RatePrice, LenderConfig, RateHistory
+3. **Product taxonomy layer** — map lender product names to standard types
+4. **Product eligibility filtering** — only show matching products for scenario
+5. **Score remaining lenders** against LoanSifter (AmWest, Keystone, Windsor, TLS, SWMC)
+6. **Unify rate tool** to pricing API once filtering works
+
+### Files Modified
+- `src/lib/rates/defaults.js` — centralized scenario defaults
+- `src/lib/rates/engine.js` — +1.10 flat market adjustment
+- `src/lib/rates/pricing.js` — static config integration (disabled)
+- `src/lib/rates/parsers/everstream.js`, `swmc.js`, `tls.js` — parser rewrites
+- `src/components/RateTool/RateResults.js` — reverted to engine.js, removed lender column
+- `src/components/RateTool/index.js` — disabled API pricing
+- `src/components/RateTool/ScenarioForm.js` — numeric credit score input
+- `src/data/rates/lender-llpas/everstream-complete.json` — full static config
+
+### EverStream Rate Sheet Reference (for next session)
+- **CSV** (daily rates): `96573_*.csv` — filter to Commit Period 30
+- **LLPA XLSX** (adjustments): `96596_*.xlsx` — tabs: Product Loan Amount LLPAs, Elite FNMA LLPA, Elite FHLMC LLPA, Core Conv LLPAs, Core/FNMA SRPs
+- **Adjustment layers**: SRP → FICO/LTV → Risk-Based → Loan Amt → FNMA-specific → Purchase → Comp
+- **David's LoanSifter files from today** in Downloads folder
+
+---
+
 ## 2026-03-25 — Dev — Parser Rewrites, Pricing Engine Overhaul, LoanSifter Calibration
 
 **Focus:** Complete all 6 parser rewrites, centralize default scenario, build static LLPA configs, wire pricing engine to match LoanSifter
