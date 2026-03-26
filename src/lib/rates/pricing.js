@@ -532,12 +532,15 @@ function checkEligibility(program, scenario) {
  * (Or equivalently, SUBTRACT from discount.)
  */
 function getStaticAdjustments(lenderId, scenario, program) {
-  // TODO: Static configs disabled until all lenders are properly wired.
-  // EverStream was producing impossible numbers (e.g., $9,678 credit at 5.624%).
-  // Need to filter by product tier/type before applying SRP.
-  return { total: 0, breakdown: [] };
   const cfg = STATIC_CONFIGS[lenderId];
   if (!cfg) return { total: 0, breakdown: [] };
+
+  // Only apply static adjustments to conventional products
+  // DSCR, FHA, VA, Non-QM, bank statement, etc. have different adjustment structures
+  const pLoanType = program.loanType || 'conventional';
+  if (!['conventional'].includes(pLoanType)) {
+    return { total: 0, breakdown: [] };
+  }
 
   const { creditScore, ltv, loanAmount, loanPurpose, state } = scenario;
   const term = program.term || 30;
@@ -550,6 +553,8 @@ function getStaticAdjustments(lenderId, scenario, program) {
   // ─── EverStream ────────────────────────────────────────────────
   if (lenderId === 'everstream') {
     const tier = program.tier || (program.name?.toLowerCase().includes('core') ? 'core' : 'elite');
+    // Guard: must have a recognized tier
+    if (!['core', 'elite'].includes(tier)) return { total: 0, breakdown: [] };
 
     // 1. SRP (Servicing Released Premium) — state × product type
     if (tier === 'core' && cfg.core?.convSRP) {
