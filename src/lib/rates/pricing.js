@@ -492,6 +492,26 @@ function checkEligibility(program, scenario) {
     // Standard agency still eligible (just with full doc requirements)
   }
 
+  // Occupancy filter — primary search should not show NOO/SH products
+  if (scenario.occupancy && program.occupancy && program.occupancy !== scenario.occupancy) {
+    return { eligible: false, reason: 'occupancy_mismatch' };
+  }
+
+  // FICO filter — some EverStream products have FICO restrictions baked into the product name
+  if (program.ficoFilter) {
+    if (program.ficoFilter.max && scenario.creditScore > program.ficoFilter.max) {
+      return { eligible: false, reason: 'fico_above_product_max' };
+    }
+    if (program.ficoFilter.min && scenario.creditScore < program.ficoFilter.min) {
+      return { eligible: false, reason: 'fico_below_product_min' };
+    }
+  }
+
+  // State filter — some products are state-specific (e.g., EverStream FL/TX Core products)
+  if (program.stateFilter && scenario.state && program.stateFilter !== scenario.state) {
+    return { eligible: false, reason: 'state_mismatch' };
+  }
+
   // Sub financing — apply CLTV-based adjustments (handled in LLPA calc)
   // Some programs have max CLTV limits
   if (scenario.subFinancing && scenario.cltv > 95 && program.category === 'agency') {
