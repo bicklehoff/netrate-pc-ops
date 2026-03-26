@@ -9,7 +9,7 @@ import LeadCapture from './LeadCapture';
 import ComparisonReport from './ComparisonReport';
 import { LO_CONFIG } from '@/lib/rates/config';
 import { DEFAULT_SCENARIO } from '@/lib/rates/defaults';
-// import { useApiPricing } from './useApiPricing';  // disabled until product filtering is ready
+import { useApiPricing } from './useApiPricing';
 import { trackRateToolInteraction, startEngagementTimer } from '@/lib/analytics';
 import { getThirdPartyCosts } from '@/lib/rates/closing-costs';
 
@@ -49,8 +49,7 @@ export default function RateTool({ initialRateData, defaultState }) {
     thirdPartyCosts: getThirdPartyCosts(initialState),
   });
 
-  // API pricing disabled until product eligibility filtering is ready
-  // const { results: apiResults, loading: apiLoading } = useApiPricing(scenario);
+  const { results: apiResults, loading: apiLoading } = useApiPricing(scenario);
 
   const [compareRates, setCompareRates] = useState([]);
   const [showReport, setShowReport] = useState(false);
@@ -88,7 +87,8 @@ export default function RateTool({ initialRateData, defaultState }) {
         <RateResults
           scenario={scenario}
           rateData={rateData}
-          loading={false}
+          apiResults={apiResults}
+          loading={apiLoading}
           compareRates={compareRates}
           onToggleCompare={handleToggleCompare}
           onViewReport={() => setShowReport(true)}

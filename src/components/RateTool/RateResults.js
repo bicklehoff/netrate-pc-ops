@@ -2,7 +2,7 @@
 
 import { calculateLLPA, calculatePI, priceRates } from '@/lib/rates/engine';
 
-export default function RateResults({ scenario, rateData, loading, compareRates = [], onToggleCompare, onViewReport }) {
+export default function RateResults({ scenario, rateData, apiResults, loading, compareRates = [], onToggleCompare, onViewReport }) {
 
   if (!scenario.loanAmount || scenario.loanAmount <= 0 || !scenario.propertyValue) {
     return (
@@ -12,10 +12,12 @@ export default function RateResults({ scenario, rateData, loading, compareRates 
     );
   }
 
-  // TODO: API pricing disabled until product eligibility filtering is fixed
-  // (FHA/NOO/SH products leaking into conventional searches)
-  const llpa = calculateLLPA(scenario, rateData);
-  const rates = priceRates(scenario, rateData);
+  // Use API results (DB-backed) when available, fall back to old engine
+  const useApi = apiResults && apiResults.length > 0;
+  const llpa = useApi
+    ? { total: apiResults[0]?.llpaPoints || 0, breakdown: apiResults[0]?.llpaBreakdown || [] }
+    : calculateLLPA(scenario, rateData);
+  const rates = useApi ? apiResults : priceRates(scenario, rateData);
   const currentPI = scenario.currentRate ? calculatePI(scenario.currentRate, scenario.loanAmount) : null;
 
   if (loading) {
@@ -41,7 +43,7 @@ export default function RateResults({ scenario, rateData, loading, compareRates 
   const visibleRates = isAscending ? sliced : sliced.reverse();
 
   // Compute badge thresholds
-  const lenderFees = rateData.lender.lenderFees;
+  const lenderFees = useApi ? (apiResults[0]?.lenderFee || 999) : (rateData.lender?.lenderFees || 0);
   const thirdPartyCosts = scenario.thirdPartyCosts || 0;
   const totalFixed = lenderFees + thirdPartyCosts;
 
@@ -137,6 +139,7 @@ export default function RateResults({ scenario, rateData, loading, compareRates 
           <thead>
             <tr className="border-b border-gray-200 text-xs text-gray-500 uppercase tracking-wider">
               <th className="text-left px-3 py-3">Rate</th>
+              {useApi && <th className="text-left px-2 py-3">Lender</th>}
               <th className="text-right px-2 py-3">APR</th>
               <th className="text-right px-2 py-3">Monthly P&I</th>
               {currentPI && <th className="text-right px-2 py-3">Savings</th>}
@@ -157,6 +160,7 @@ export default function RateResults({ scenario, rateData, loading, compareRates 
                 <tr key={r.rate}
                   className={`border-b border-gray-100 ${isPar ? "bg-cyan-50" : i % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-cyan-50 transition-colors`}>
                   <td className="px-3 py-3 font-semibold text-gray-800">{r.rate.toFixed(3)}%</td>
+                  {useApi && <td className="px-2 py-3 text-xs text-gray-500 capitalize">{r.lender || '—'}</td>}
                   <td className="text-right px-2 py-3 font-mono text-gray-500">{r.apr ? r.apr.toFixed(3) + '%' : '—'}</td>
                   <td className="text-right px-2 py-3 font-mono text-gray-700">
                     ${r.monthlyPI.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -212,7 +216,12 @@ export default function RateResults({ scenario, rateData, loading, compareRates 
       )}
 
       <div className="px-5 py-2 text-xs text-gray-400 border-t border-gray-100">
-        Rates approximate based on today&apos;s pricing. Lender fees: ${rateData.lender.lenderFees.toLocaleString()}. Est. third-party costs: ${(scenario.thirdPartyCosts || 0).toLocaleString()}. Contact for exact quote with full cost breakdown.
+        Rates approximate based on today&apos;s pricing.{' '}
+        {useApi
+          ? `Showing best rate across ${new Set(apiResults.map(r => r.lender)).size} lenders.`
+          : `Lender fees: $${(rateData.lender?.lenderFees || 0).toLocaleString()}.`
+        }{' '}
+        Est. third-party costs: ${(scenario.thirdPartyCosts || 0).toLocaleString()}. Contact for exact quote with full cost breakdown.
       </div>
     </div>
   );
