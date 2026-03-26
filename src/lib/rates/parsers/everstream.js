@@ -292,10 +292,9 @@ function parseRates(csvContent) {
   const lines = csvContent.trim().split(/\r?\n/);
   if (lines.length < 2) return { sheetDate: null, programs: [] };
 
-  // Skip header
+  // Skip header, filter to 30-day locks only (only lock period we display)
   const header = lines[0].split(',');
   const rows = lines.slice(1).map(line => {
-    // Simple CSV split — no quoted fields in this format
     const parts = line.split(',');
     return {
       product: parts[0],
@@ -304,7 +303,7 @@ function parseRates(csvContent) {
       price: parseFloat(parts[3]),
       releaseTime: parts[4],
     };
-  });
+  }).filter(r => r.lockDays === 30);
 
   // Extract sheet date from Release Time
   let sheetDate = null;
