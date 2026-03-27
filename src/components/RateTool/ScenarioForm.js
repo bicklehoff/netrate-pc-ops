@@ -90,7 +90,8 @@ export default function ScenarioForm({ scenario, onChange }) {
               const lt = e.target.value;
               const newDown = lt === 'fha' ? 3.5 : lt === 'va' ? 0 : 25;
               const newFico = lt === 'fha' ? 680 : lt === 'va' ? 720 : 780;
-              onChange({ ...scenario, loanType: lt, downPaymentPct: newDown, fico: newFico });
+              const newPV = lt === 'fha' ? 400000 : lt === 'va' ? 400000 : 533334;
+              onChange({ ...scenario, loanType: lt, downPaymentPct: newDown, fico: newFico, propertyValue: newPV });
               setLastEdited('pct');
             }}
             className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm bg-white">
