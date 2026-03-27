@@ -13,7 +13,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
-import { listFolder, uploadFile, downloadFile, deleteResource } from '@/lib/zoho-workdrive';
+import { listFolder, uploadFile, downloadFile, deleteResource, createLoanFolder } from '@/lib/zoho-workdrive';
 import { put } from '@vercel/blob';
 import { PDFDocument } from 'pdf-lib';
 import { sendSms } from '@/lib/twilio-voice';
@@ -118,8 +118,13 @@ export async function PUT(request, { params }) {
 
     const formData = await request.formData();
     const file = formData.get('file');
-    const targetFolder = formData.get('folder') || 'FLOOR';
+    let targetFolder = formData.get('folder') || 'FLOOR';
     const docType = formData.get('docType') || 'other';
+
+    // Auto-route CDs to CLOSING folder
+    if (targetFolder === 'FLOOR' && (docType === 'closing_disclosure' || docType === 'cd' || /closing.?disclosure|\.cd\b/i.test(file.name))) {
+      targetFolder = 'CLOSING';
+    }
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
@@ -158,9 +163,46 @@ export async function PUT(request, { params }) {
       }
     }
 
-    const subfolders = loan.workDriveSubfolders;
+    let subfolders = loan.workDriveSubfolders;
     let fileUrl;
     let storageType = 'blob';
+
+    // Auto-create WorkDrive folder if it doesn't exist
+    if (!loan.workDriveFolderId) {
+      try {
+        const borrower = await prisma.borrower.findUnique({
+          where: { id: loan.borrowerId },
+          select: { firstName: true, lastName: true },
+        });
+        const mlo = loan.mloId
+          ? await prisma.mlo.findUnique({ where: { id: loan.mloId }, select: { firstName: true, lastName: true } })
+          : null;
+        const loName = mlo ? `${mlo.firstName} ${mlo.lastName}` : 'David Burson';
+
+        const folder = await createLoanFolder({
+          borrowerFirstName: borrower.firstName,
+          borrowerLastName: borrower.lastName,
+          purpose: loan.purpose || 'purchase',
+          loName,
+        });
+
+        // Save folder info on the loan
+        await prisma.loan.update({
+          where: { id: loan.id },
+          data: {
+            workDriveFolderId: folder.rootFolderId,
+            workDriveSubfolders: folder.subfolders,
+          },
+        });
+
+        loan.workDriveFolderId = folder.rootFolderId;
+        subfolders = folder.subfolders;
+        console.log(`Auto-created WorkDrive folder for loan ${loan.loanNumber}: ${loName}/${borrower.lastName}`);
+      } catch (folderErr) {
+        console.error('Auto-create WorkDrive folder failed:', folderErr?.message);
+        // Fall through to Blob storage
+      }
+    }
 
     // Determine target folder ID: FLOOR = root folder, others = subfolder
     let targetFolderId = null;
