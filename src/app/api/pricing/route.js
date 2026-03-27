@@ -27,7 +27,7 @@
 
 import { NextResponse } from 'next/server';
 import { priceRate } from '@/lib/rates/pricing-v2';
-import { getLenderAdj } from '@/lib/rates/lender-adj-loader';
+import { getDbLenderAdj } from '@/lib/rates/db-adj-loader';
 import { loadRateDataFromDB } from '@/lib/rates/db-loader';
 import { DEFAULT_SCENARIO } from '@/lib/rates/defaults';
 
@@ -95,10 +95,9 @@ export async function POST(request) {
     for (const lenderData of allLenders) {
       const lenderId = lenderData.lenderId;
 
-      // Only EverStream for now — other lenders need adjustment configs
-      if (lenderId !== 'everstream') continue;
-
-      const lenderAdj = getLenderAdj(lenderId);
+      // Load adjustments from DB — skip lenders with no rules configured
+      const lenderAdj = await getDbLenderAdj(lenderId);
+      if (!lenderAdj) continue;
 
       for (const program of lenderData.programs) {
         // Term filter
@@ -139,40 +138,8 @@ export async function POST(request) {
         const llpaGrids = lenderData.llpas || null;
 
         for (const rateEntry of lockRates) {
-          // Only price with v2 engine if lender has adjustments configured
-          if (lenderAdj) {
-            const result = priceRate(rateEntry, product, scenario, lenderAdj, BROKER_CONFIG, llpaGrids);
-            results.push(result);
-          } else {
-            // Lenders without adjustment config — show raw price with comp only
-            const rawPrice = rateEntry.price;
-            const compDollars = Math.min(loanAmount * BROKER_CONFIG.compRate,
-              scenario.loanPurpose === 'purchase' ? BROKER_CONFIG.compCapPurchase : BROKER_CONFIG.compCapRefi);
-            const compPoints = (compDollars / loanAmount) * 100;
-            const finalPrice = rawPrice - compPoints;
-            const costOrCredit = finalPrice - 100;
-            const dollars = (costOrCredit / 100) * loanAmount;
-
-            results.push({
-              rate: rateEntry.rate,
-              lender: lenderId,
-              program: program.name || program.rawName,
-              investor: program.investor || 'unknown',
-              tier: program.tier || 'unknown',
-              finalPrice: Math.round(finalPrice * 1000) / 1000,
-              isRebate: finalPrice > 100,
-              isDiscount: finalPrice < 100,
-              isPar: Math.abs(finalPrice - 100) < 0.005,
-              rebateDollars: finalPrice > 100 ? Math.round(dollars) : 0,
-              discountDollars: finalPrice < 100 ? Math.round(Math.abs(dollars)) : 0,
-              compDollars: Math.round(compDollars),
-              lenderFee: lenderData.lenderFee || 0,
-              breakdown: [
-                { label: 'Base price', value: rawPrice },
-                { label: `Comp ($${compDollars.toFixed(0)})`, value: -compPoints },
-              ],
-            });
-          }
+          const result = priceRate(rateEntry, product, scenario, lenderAdj, BROKER_CONFIG, llpaGrids);
+          results.push(result);
         }
       }
     }

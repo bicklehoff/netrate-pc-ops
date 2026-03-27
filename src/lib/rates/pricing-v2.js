@@ -285,20 +285,28 @@ export function priceRate(rateEntry, product, scenario, lenderAdj, brokerConfig,
     breakdown.push({ label: `${investor.toUpperCase()} adj`, value: -investorCost });
   }
 
-  // Step 6b: FHLMC-specific refi + occupancy adjustments
-  // FHLMC has two extra adjustments that FNMA does not:
-  //   - Loan Purpose Rate/Term Refi: -0.150 (cost)
-  //   - Occupancy/term/loan amt (25/30yr, 400K-450K, primary): +0.050 (credit)
-  // Net: -0.100. These are on the Core Conv LLPAs sheet.
-  if (investor === 'fhlmc' && tier === 'core') {
-    if (loanPurpose === 'refinance') {
-      price -= 0.150;
-      breakdown.push({ label: 'FHLMC refi purpose adj', value: -0.150 });
-    }
-    // Occupancy/term/loan amt credit for 25/30yr primary, 400K-450K
-    if (term >= 25 && loanAmount > 400000 && loanAmount <= 450000) {
-      price += 0.050;
-      breakdown.push({ label: 'FHLMC occupancy/term adj', value: +0.050 });
+  // Step 6b: FHLMC-specific adjustments (data-driven from adjustment_rules table)
+  if (lenderAdj?.fhlmcSpecial?.length) {
+    for (const rule of lenderAdj.fhlmcSpecial) {
+      // Check filters
+      if (rule.agency && rule.agency !== investor) continue;
+      if (rule.tier && rule.tier !== tier) continue;
+      if (rule.purpose && rule.purpose !== loanPurpose) continue;
+      if (rule.termMin != null && term < rule.termMin) continue;
+      if (rule.termMax != null && term > rule.termMax) continue;
+      if (rule.loanAmountMin != null && loanAmount < rule.loanAmountMin) continue;
+      if (rule.loanAmountMax != null && loanAmount > rule.loanAmountMax) continue;
+
+      const adjValue = rule.value;
+      if (adjValue < 0) {
+        price += adjValue; // cost (negative value = subtract)
+      } else {
+        price += adjValue; // credit (positive value = add)
+      }
+      const label = rule.featureName === 'refiPurpose' ? 'FHLMC refi purpose adj'
+        : rule.featureName === 'occupancyTerm' ? 'FHLMC occupancy/term adj'
+        : `FHLMC ${rule.featureName}`;
+      breakdown.push({ label, value: adjValue });
     }
   }
 

@@ -796,7 +796,7 @@ model RateLender {
 
   products        RateProduct[]
   rateSheets      RateSheet[]
-  adjustments     LenderAdjustment[]
+  adjustments     AdjustmentRule[]
 
   @@map("rate_lenders")
 }
@@ -910,37 +910,51 @@ model RatePrice {
   @@map("rate_prices")
 }
 
-model LenderAdjustment {
+model AdjustmentRule {
   id              String    @id @default(uuid()) @db.Uuid
   lenderId        String    @map("lender_id") @db.Uuid
 
-  adjustmentType  String    @map("adjustment_type")      // srp/ficoLtv/riskBased/loanAmount/agencySpecific/purpose/state/occupancy/productFeature
+  // Adjustment type: ficoLtv, srp, riskBased, loanAmount, investor, fhlmcSpecial
+  adjustmentType  String    @map("adjustment_type")
 
-  // Scope filters (which products this applies to)
-  tier            String?
-  loanType        String?   @map("loan_type")
-  agency          String?
-  productType     String?   @map("product_type")
+  // Dimensional filters (null = applies to all)
+  purpose         String?                                  // purchase/refinance/cashout
+  agency          String?                                  // fnma/fhlmc
+  tier            String?                                  // core/elite
+  state           String?                                  // CO/CA/TX (for SRP)
+  escrowType      String?   @map("escrow_type")            // withImpounds/withoutImpounds
+  productGroup    String?   @map("product_group")          // "Fixed 20/25/30 Yr", "Fixed 10/15 Yr", "ARMs"
+  termGroup       String?   @map("term_group")             // "21-30yr", "20/15/10yr", "arms"
+  featureName     String?   @map("feature_name")           // For fhlmcSpecial: "refiPurpose", "occupancyTerm"
 
-  // The adjustment data
-  data            Json
+  // Range filters
+  ficoMin         Int?      @map("fico_min")
+  ficoMax         Int?      @map("fico_max")
+  ltvMin          Decimal?  @map("ltv_min") @db.Decimal(5, 2)
+  ltvMax          Decimal?  @map("ltv_max") @db.Decimal(5, 2)
+  loanAmountMin   Int?      @map("loan_amount_min")
+  loanAmountMax   Int?      @map("loan_amount_max")
+  termMin         Int?      @map("term_min")
+  termMax         Int?      @map("term_max")
+
+  // The adjustment value (points, 100-based)
+  value           Decimal   @db.Decimal(8, 4)
 
   // Versioning
-  effectiveDate   DateTime? @map("effective_date") @db.Date
+  effectiveDate   DateTime  @map("effective_date") @db.Date
   expiresDate     DateTime? @map("expires_date") @db.Date
   status          String    @default("active")
-
-  notes           String?
-  source          String?
+  source          String?                                  // "everstream-complete.json", "manual"
 
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   lender          RateLender @relation(fields: [lenderId], references: [id])
 
-  @@unique([lenderId, adjustmentType, tier, loanType, agency, productType])
-  @@index([lenderId])
-  @@map("lender_adjustments")
+  @@index([lenderId, adjustmentType, status])
+  @@index([lenderId, adjustmentType, purpose, tier])
+  @@index([status, effectiveDate])
+  @@map("adjustment_rules")
 }
 
 // =============================================================================
