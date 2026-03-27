@@ -46,8 +46,6 @@ export default function RateResults({ scenario, rateData, apiResults, loading, c
 
   // Compute badge thresholds
   const lenderFees = useApi ? (apiResults[0]?.lenderFee || 999) : (rateData.lender?.lenderFees || 0);
-  const thirdPartyCosts = scenario.thirdPartyCosts || 0;
-  const totalFixed = lenderFees + thirdPartyCosts;
 
   // Find sweet spots in both directions from par.
   // CHARGE SIDE (below par): cheapest cost per 1/8th of rate drop from par.
@@ -148,7 +146,6 @@ export default function RateResults({ scenario, rateData, apiResults, loading, c
           <tbody>
             {visibleRates.map((r, i) => {
               const isRebate = r.isRebate || false;
-              const isDiscount = r.isDiscount || false;
               const isPar = r.isPar || Math.abs(r.costDollars) < 50;
               const savings = currentPI ? currentPI - r.monthlyPI : 0;
               const displayDollars = isRebate ? r.rebateDollars : r.discountDollars;

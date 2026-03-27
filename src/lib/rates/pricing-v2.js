@@ -84,21 +84,7 @@ function getFicoBand(score) {
   return '<620';
 }
 
-function findLtvBandIndex(ltv, bands) {
-  for (let i = 0; i < bands.length; i++) {
-    const band = bands[i];
-    // Parse band like "70.01-75" or "<=60" or "60.01-70"
-    const rangeMatch = band.match(/([\d.]+)\s*[-–]\s*([\d.]+)/);
-    if (rangeMatch) {
-      const min = parseFloat(rangeMatch[1]);
-      const max = parseFloat(rangeMatch[2]);
-      if (ltv >= min && ltv <= max) return i;
-    }
-    const leMatch = band.match(/<=\s*([\d.]+)/);
-    if (leMatch && ltv <= parseFloat(leMatch[1])) return i;
-  }
-  return -1;
-}
+
 
 // ─── Step 3: SRP (Servicing Released Premium) ───────────────────────
 
