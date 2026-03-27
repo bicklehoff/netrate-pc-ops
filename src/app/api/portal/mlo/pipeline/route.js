@@ -53,6 +53,7 @@ export async function GET() {
       loanAmount: loan.loanAmount ? Number(loan.loanAmount) : null,
       loanNumber: loan.loanNumber,
       lenderName: loan.lenderName,
+      propertyStreet: loan.propertyAddress?.street || null,
       mloId: loan.mloId,
       mloName: loan.mlo ? `${loan.mlo.firstName} ${loan.mlo.lastName}` : null,
       pendingDocs: loan.documents.filter((d) => d.status === 'requested').length,

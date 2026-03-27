@@ -58,13 +58,13 @@ export default function MloLayout({ children }) {
         {/* Incoming call popup (floating, always available) */}
         <IncomingCallPopup />
 
-        {/* Floating nav (bottom-left) */}
-        <MloNav />
-
-        {/* MLO content with collapsible dialer sidebar */}
+        {/* MLO content: left nav + main + dialer */}
         <div className="flex h-[calc(100vh-73px)]">
+          {/* Left sidebar nav */}
+          <MloNav />
+
           {/* Main content area */}
-          <div className="flex-1 overflow-y-auto px-6 py-8">
+          <div className="flex-1 overflow-y-auto px-6 py-6">
             {children}
           </div>
 

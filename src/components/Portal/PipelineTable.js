@@ -312,7 +312,7 @@ export default function PipelineTable({ loans, mloList = [], selectedIds, onSele
                   <Link href={`/portal/mlo/loans/${loan.id}`} className="block">
                     <span className="font-medium text-gray-900">{loan.borrowerName}</span>
                     <span className="block text-xs text-gray-400 mt-0.5">
-                      SSN ···{loan.ssnLastFour}
+                      SSN ···{loan.ssnLastFour}{loan.propertyStreet ? ` · ${loan.propertyStreet}` : ''}
                     </span>
                   </Link>
                 </td>
