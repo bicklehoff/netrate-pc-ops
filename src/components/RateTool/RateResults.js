@@ -45,7 +45,6 @@ export default function RateResults({ scenario, rateData, apiResults, loading, c
   const visibleRates = isAscending ? sliced : sliced.reverse();
 
   // Compute badge thresholds
-  const lenderFees = useApi ? (apiResults[0]?.lenderFee || 999) : (rateData.lender?.lenderFees || 0);
 
   // Find sweet spots in both directions from par.
   // CHARGE SIDE (below par): cheapest cost per 1/8th of rate drop from par.
