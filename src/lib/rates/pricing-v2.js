@@ -71,6 +71,60 @@ function getFicoLtvAdjustment(creditScore, ltv, loanPurpose, llpaGrids) {
   return 0;
 }
 
+/**
+ * Same as getFicoLtvAdjustment but returns the raw signed value.
+ * Used for FHA where positive = credit, negative = cost.
+ */
+function getFicoLtvRawValue(creditScore, ltv, loanPurpose, llpaGrids) {
+  if (!llpaGrids) return 0;
+
+  const grid = loanPurpose === 'cashout' ? llpaGrids.cashout
+    : loanPurpose === 'purchase' ? llpaGrids.purchase
+    : llpaGrids.refinance;
+
+  if (!grid) {
+    // FHA grids may not be split by purpose — try the grid directly
+    // (FHA ficoPriceAdj is a flat FICO→LTV grid, not purpose-split)
+    const ficoBand = getFicoBand(creditScore);
+    const ficoRow = grid?.[ficoBand];
+    if (!ficoRow) return 0;
+  }
+
+  const ficoBand = getFicoBand(creditScore);
+  const ficoRow = grid[ficoBand];
+  if (!ficoRow) return 0;
+
+  for (const [bandKey, value] of Object.entries(ficoRow)) {
+    if (typeof value !== 'number') continue;
+
+    // "70.01 - 75.00%" range format (conventional)
+    const rangeMatch = bandKey.match(/([\d.]+)\s*[-–]\s*([\d.]+)/);
+    if (rangeMatch) {
+      const min = parseFloat(rangeMatch[1]);
+      const max = parseFloat(rangeMatch[2]);
+      if (ltv >= min && ltv <= max) return value;
+    }
+
+    // "<= 85%" format (FHA/conventional)
+    const leMatch = bandKey.match(/^<=\s*([\d.]+)/);
+    if (leMatch && ltv <= parseFloat(leMatch[1])) return value;
+
+    // "> 85% <= 95%" format (FHA)
+    const gtLeMatch = bandKey.match(/>\s*([\d.]+)%?\s*<=\s*([\d.]+)/);
+    if (gtLeMatch) {
+      const min = parseFloat(gtLeMatch[1]);
+      const max = parseFloat(gtLeMatch[2]);
+      if (ltv > min && ltv <= max) return value;
+    }
+
+    // "> 95%" format (FHA)
+    const gtMatch = bandKey.match(/^>\s*([\d.]+)%?$/);
+    if (gtMatch && ltv > parseFloat(gtMatch[1])) return value;
+  }
+
+  return 0;
+}
+
 function getFicoBand(score) {
   if (score >= 780) return '>=780';
   if (score >= 760) return '760-779';
@@ -240,7 +294,9 @@ function getBrokerComp(loanAmount, loanPurpose, brokerConfig) {
  */
 export function priceRate(rateEntry, product, scenario, lenderAdj, brokerConfig, llpaGrids) {
   const { creditScore, ltv, loanAmount, loanPurpose, state } = scenario;
+  const loanType = scenario.loanType || 'conventional';
   const { term, productType, investor, tier } = product;
+  const isConventional = loanType === 'conventional';
 
   const breakdown = [];
 
@@ -248,13 +304,22 @@ export function priceRate(rateEntry, product, scenario, lenderAdj, brokerConfig,
   let price = getBasePrice(rateEntry);
   breakdown.push({ label: 'Base price', value: price });
 
-  // Step 2: FICO/LTV — COST → subtract
-  // Try lenderAdj grids first, then fall back to parsed rate sheet grids
+  // Step 2: FICO/LTV adjustment
   const ficoGrids = lenderAdj?.ficoLtvGrids || llpaGrids;
-  const ficoLtvCost = getFicoLtvAdjustment(creditScore, ltv, loanPurpose, ficoGrids);
-  if (ficoLtvCost !== 0) {
-    price -= ficoLtvCost;
-    breakdown.push({ label: `FICO/LTV (${getFicoBand(creditScore)}, ${ltv}%)`, value: -ficoLtvCost });
+  if (isConventional) {
+    // Conventional: values are costs (negative in grid) → subtract
+    const ficoLtvCost = getFicoLtvAdjustment(creditScore, ltv, loanPurpose, ficoGrids);
+    if (ficoLtvCost !== 0) {
+      price -= ficoLtvCost;
+      breakdown.push({ label: `FICO/LTV (${getFicoBand(creditScore)}, ${ltv}%)`, value: -ficoLtvCost });
+    }
+  } else {
+    // FHA: values are signed — positive = credit, negative = cost
+    const ficoLtvVal = getFicoLtvRawValue(creditScore, ltv, loanPurpose, ficoGrids);
+    if (ficoLtvVal !== 0) {
+      price += ficoLtvVal;
+      breakdown.push({ label: `FICO/LTV (${getFicoBand(creditScore)}, ${ltv}%)`, value: ficoLtvVal });
+    }
   }
 
   // Step 3: SRP — CREDIT → add
@@ -264,11 +329,13 @@ export function priceRate(rateEntry, product, scenario, lenderAdj, brokerConfig,
     breakdown.push({ label: `SRP (${state})`, value: +srp });
   }
 
-  // Step 4: Risk-based — CREDIT → add
-  const riskAdj = getRiskBasedAdjustment(creditScore, ltv, lenderAdj);
-  if (riskAdj !== 0) {
-    price += riskAdj;
-    breakdown.push({ label: 'Risk-based', value: +riskAdj });
+  // Step 4: Risk-based — CREDIT → add (conventional only)
+  if (isConventional) {
+    const riskAdj = getRiskBasedAdjustment(creditScore, ltv, lenderAdj);
+    if (riskAdj !== 0) {
+      price += riskAdj;
+      breakdown.push({ label: 'Risk-based', value: +riskAdj });
+    }
   }
 
   // Step 5: Loan amount — CREDIT → add
@@ -278,11 +345,13 @@ export function priceRate(rateEntry, product, scenario, lenderAdj, brokerConfig,
     breakdown.push({ label: 'Loan amount adj', value: +loanAmtAdj });
   }
 
-  // Step 6: Investor-specific — COST → subtract
-  const investorCost = getInvestorAdjustment(investor, term, productType, lenderAdj);
-  if (investorCost !== 0) {
-    price -= investorCost;
-    breakdown.push({ label: `${investor.toUpperCase()} adj`, value: -investorCost });
+  // Step 6: Investor-specific — COST → subtract (conventional only)
+  if (isConventional) {
+    const investorCost = getInvestorAdjustment(investor, term, productType, lenderAdj);
+    if (investorCost !== 0) {
+      price -= investorCost;
+      breakdown.push({ label: `${investor.toUpperCase()} adj`, value: -investorCost });
+    }
   }
 
   // Step 6b: FHLMC-specific adjustments (data-driven from adjustment_rules table)

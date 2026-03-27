@@ -60,11 +60,20 @@ function buildAdjObject(allRows) {
 
     switch (row.adjustmentType) {
       case 'ficoLtv': {
-        const purpose = row.purpose || 'purchase';
-        const grid = adj.ficoLtvGrids[purpose];
         const ficoBand = formatFicoBand(row.ficoMin, row.ficoMax);
-        if (!grid[ficoBand]) grid[ficoBand] = {};
-        grid[ficoBand][formatLtvBand(row.ltvMin, row.ltvMax)] = val;
+        const ltvKey = formatLtvBand(row.ltvMin, row.ltvMax);
+        if (row.purpose) {
+          // Purpose-specific (conventional)
+          const grid = adj.ficoLtvGrids[row.purpose];
+          if (!grid[ficoBand]) grid[ficoBand] = {};
+          grid[ficoBand][ltvKey] = val;
+        } else {
+          // No purpose = applies to all (FHA)
+          for (const p of ['purchase', 'refinance', 'cashout']) {
+            if (!adj.ficoLtvGrids[p][ficoBand]) adj.ficoLtvGrids[p][ficoBand] = {};
+            adj.ficoLtvGrids[p][ficoBand][ltvKey] = val;
+          }
+        }
         break;
       }
 
@@ -123,9 +132,11 @@ function buildAdjObject(allRows) {
 
 // ─── Public API ─────────────────────────────────────────────────────
 
-export async function getDbLenderAdj(lenderCode) {
+export async function getDbLenderAdj(lenderCode, loanType = 'conventional') {
+  const cacheKey = `${lenderCode}:${loanType}`;
+
   // Check cache
-  const cached = cache.get(lenderCode);
+  const cached = cache.get(cacheKey);
   if (cached && Date.now() < cached.expiresAt) {
     return cached.data;
   }
@@ -137,11 +148,12 @@ export async function getDbLenderAdj(lenderCode) {
   });
   if (!lender) return null;
 
-  // Query all active rules for this lender
+  // Query active rules for this lender + loan type
   const today = new Date();
   const rules = await prisma.adjustmentRule.findMany({
     where: {
       lenderId: lender.id,
+      loanType,
       status: 'active',
       effectiveDate: { lte: today },
       OR: [
@@ -155,8 +167,8 @@ export async function getDbLenderAdj(lenderCode) {
 
   const data = buildAdjObject(rules);
 
-  // Cache
-  cache.set(lenderCode, { data, expiresAt: Date.now() + CACHE_TTL });
+  // Cache by lender + loan type
+  cache.set(cacheKey, { data, expiresAt: Date.now() + CACHE_TTL });
 
   return data;
 }

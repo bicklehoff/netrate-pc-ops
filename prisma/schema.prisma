@@ -918,6 +918,7 @@ model AdjustmentRule {
   adjustmentType  String    @map("adjustment_type")
 
   // Dimensional filters (null = applies to all)
+  loanType        String?   @map("loan_type")              // conventional/fha/va
   purpose         String?                                  // purchase/refinance/cashout
   agency          String?                                  // fnma/fhlmc
   tier            String?                                  // core/elite
@@ -952,6 +953,7 @@ model AdjustmentRule {
   lender          RateLender @relation(fields: [lenderId], references: [id])
 
   @@index([lenderId, adjustmentType, status])
+  @@index([lenderId, adjustmentType, loanType, status])
   @@index([lenderId, adjustmentType, purpose, tier])
   @@index([status, effectiveDate])
   @@map("adjustment_rules")

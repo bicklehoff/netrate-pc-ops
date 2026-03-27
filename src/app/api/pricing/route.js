@@ -95,8 +95,8 @@ export async function POST(request) {
     for (const lenderData of allLenders) {
       const lenderId = lenderData.lenderId;
 
-      // Load adjustments from DB — skip lenders with no rules configured
-      const lenderAdj = await getDbLenderAdj(lenderId);
+      // Load adjustments from DB for this loan type — skip lenders with no rules
+      const lenderAdj = await getDbLenderAdj(lenderId, scenario.loanType);
       if (!lenderAdj) continue;
 
       for (const program of lenderData.programs) {

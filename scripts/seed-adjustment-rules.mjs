@@ -85,6 +85,7 @@ const rows = [];
 function addRow(data) {
   rows.push({
     adjustment_type: data.adjustmentType,
+    loan_type: data.loanType || 'conventional',
     purpose: data.purpose || null,
     agency: data.agency || null,
     tier: data.tier || null,
@@ -266,6 +267,96 @@ function seedFhlmcSpecial() {
   });
 }
 
+// ─── 7. FHA FICO/LTV Adjustments ────────────────────────────────────
+
+/** Parse FHA LTV band string → { ltvMin, ltvMax } */
+function parseFhaLtvBand(band) {
+  // "<= 85%"
+  const leMatch = band.match(/<=\s*([\d.]+)%?/);
+  if (leMatch && !band.includes('>')) return { ltvMin: 0, ltvMax: parseFloat(leMatch[1]) };
+
+  // "> 85% <= 95%" or "> 85 <= 95%"
+  const rangeMatch = band.match(/>\s*([\d.]+)%?\s*<=\s*([\d.]+)%?/);
+  if (rangeMatch) return { ltvMin: parseFloat(rangeMatch[1]) + 0.01, ltvMax: parseFloat(rangeMatch[2]) };
+
+  // "> 95%"
+  const gtMatch = band.match(/>\s*([\d.]+)%?$/);
+  if (gtMatch) return { ltvMin: parseFloat(gtMatch[1]) + 0.01, ltvMax: 100 };
+
+  console.warn(`  ⚠ Could not parse FHA LTV band: "${band}"`);
+  return null;
+}
+
+function seedFhaFicoLtv() {
+  const grid = cfg.core?.fhaLLPA?.ficoPriceAdj;
+  if (!grid) { console.warn('  Missing FHA ficoPriceAdj'); return; }
+
+  for (const [ficoBand, ltvEntries] of Object.entries(grid)) {
+    const fico = parseFicoBand(ficoBand);
+    if (!fico) continue;
+
+    for (const [ltvBand, value] of Object.entries(ltvEntries)) {
+      if (typeof value !== 'number') continue;
+      const ltv = parseFhaLtvBand(ltvBand);
+      if (!ltv) continue;
+
+      addRow({
+        adjustmentType: 'ficoLtv',
+        loanType: 'fha',
+        tier: 'core',
+        ...fico,
+        ...ltv,
+        value,
+      });
+    }
+  }
+}
+
+// ─── 8. FHA Loan Amount Adjustments ─────────────────────────────────
+
+function seedFhaLoanAmount() {
+  const adj = cfg.core?.fhaLLPA?.loanAmountAdj;
+  if (!adj) { console.warn('  Missing FHA loanAmountAdj'); return; }
+
+  for (const [range, value] of Object.entries(adj)) {
+    if (typeof value !== 'number') continue;
+    const parsed = parseLoanAmountRange(range);
+    if (!parsed) continue;
+
+    addRow({
+      adjustmentType: 'loanAmount',
+      loanType: 'fha',
+      tier: 'core',
+      ...parsed,
+      value,
+    });
+  }
+}
+
+// ─── 9. FHA SRP ─────────────────────────────────────────────────────
+
+function seedFhaSrp() {
+  const data = cfg.core?.fhaSRP;
+  if (!data) { console.warn('  Missing FHA SRP'); return; }
+
+  for (const [state, products] of Object.entries(data)) {
+    if (typeof products !== 'object') continue;
+    for (const [productGroup, value] of Object.entries(products)) {
+      if (typeof value !== 'number') continue;
+
+      addRow({
+        adjustmentType: 'srp',
+        loanType: 'fha',
+        tier: 'core',
+        state,
+        escrowType: 'withImpounds', // FHA SRP doesn't split by escrow — use default
+        productGroup,
+        value,
+      });
+    }
+  }
+}
+
 // ─── Execute ────────────────────────────────────────────────────────
 
 async function main() {
@@ -273,7 +364,7 @@ async function main() {
   console.log(`Source: ${cfgPath}`);
   console.log(`Dry run: ${dryRun}\n`);
 
-  // Build all rows
+  // Build all rows — Conventional
   seedFicoLtvGrids();
   seedRiskBased();
   seedLoanAmount();
@@ -281,14 +372,26 @@ async function main() {
   seedInvestorAdj();
   seedFhlmcSpecial();
 
-  // Count by type
+  // Build all rows — FHA
+  seedFhaFicoLtv();
+  seedFhaLoanAmount();
+  seedFhaSrp();
+
+  // Count by loan type and adjustment type
   const counts = {};
+  const byLoanType = {};
   for (const r of rows) {
     counts[r.adjustment_type] = (counts[r.adjustment_type] || 0) + 1;
+    const lt = r.loan_type || 'conventional';
+    byLoanType[lt] = (byLoanType[lt] || 0) + 1;
   }
-  console.log('Row counts by type:');
+  console.log('Row counts by adjustment type:');
   for (const [type, count] of Object.entries(counts)) {
     console.log(`  ${type}: ${count}`);
+  }
+  console.log('Row counts by loan type:');
+  for (const [lt, count] of Object.entries(byLoanType)) {
+    console.log(`  ${lt}: ${count}`);
   }
   console.log(`  TOTAL: ${rows.length}\n`);
 
@@ -321,14 +424,14 @@ async function main() {
     for (const r of batch) {
       await sql`
         INSERT INTO adjustment_rules (
-          id, lender_id, adjustment_type,
+          id, lender_id, adjustment_type, loan_type,
           purpose, agency, tier, state, escrow_type, product_group, term_group, feature_name,
           fico_min, fico_max, ltv_min, ltv_max,
           loan_amount_min, loan_amount_max, term_min, term_max,
           value, effective_date, status, source,
           created_at, updated_at
         ) VALUES (
-          gen_random_uuid(), ${lenderId}, ${r.adjustment_type},
+          gen_random_uuid(), ${lenderId}, ${r.adjustment_type}, ${r.loan_type},
           ${r.purpose}, ${r.agency}, ${r.tier}, ${r.state}, ${r.escrow_type}, ${r.product_group}, ${r.term_group}, ${r.feature_name},
           ${r.fico_min}, ${r.fico_max}, ${r.ltv_min}, ${r.ltv_max},
           ${r.loan_amount_min}, ${r.loan_amount_max}, ${r.term_min}, ${r.term_max},
