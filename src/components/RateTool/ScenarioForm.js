@@ -1,29 +1,74 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { getFicoBand } from '@/lib/rates/engine';
 import { STATE_DEFAULTS, getThirdPartyCosts } from '@/lib/rates/closing-costs';
 
 export default function ScenarioForm({ scenario, onChange }) {
   const update = (field, value) => onChange({ ...scenario, [field]: value });
 
-  const loanAmount = useMemo(() => {
-    if (scenario.purpose === "purchase") {
-      return scenario.propertyValue * (1 - scenario.downPaymentPct / 100);
+  // Track which purchase field was last edited to avoid circular updates
+  // 'pct' = down payment %, 'dollars' = down payment $, 'loan' = loan amount
+  const [lastEdited, setLastEdited] = useState('pct');
+
+  // Purchase: interlinked fields — any one drives the other two
+  const purchaseCalc = useMemo(() => {
+    const pv = scenario.propertyValue || 0;
+    if (!pv) return { loanAmount: 0, downPct: 0, downDollars: 0, ltv: 0 };
+
+    let loanAmount, downPct, downDollars;
+
+    if (lastEdited === 'pct') {
+      downPct = scenario.downPaymentPct || 0;
+      downDollars = Math.round(pv * downPct / 100);
+      loanAmount = pv - downDollars;
+    } else if (lastEdited === 'dollars') {
+      downDollars = scenario.downPaymentDollars || 0;
+      downPct = pv > 0 ? Math.round((downDollars / pv) * 10000) / 100 : 0;
+      loanAmount = pv - downDollars;
+    } else if (lastEdited === 'loan') {
+      loanAmount = scenario.manualLoanAmount || 0;
+      downDollars = pv - loanAmount;
+      downPct = pv > 0 ? Math.round((downDollars / pv) * 10000) / 100 : 0;
     }
-    return scenario.currentPayoff || 0;
-  }, [scenario.purpose, scenario.propertyValue, scenario.downPaymentPct, scenario.currentPayoff]);
 
-  const ltv = useMemo(() => {
-    if (!scenario.propertyValue) return 0;
-    return (loanAmount / scenario.propertyValue) * 100;
-  }, [loanAmount, scenario.propertyValue]);
+    const ltv = pv > 0 ? (loanAmount / pv) * 100 : 0;
+    return { loanAmount, downPct, downDollars, ltv };
+  }, [scenario.propertyValue, scenario.downPaymentPct, scenario.downPaymentDollars, scenario.manualLoanAmount, lastEdited]);
 
+  // Refi: loan amount entered directly
+  const refiCalc = useMemo(() => {
+    const pv = scenario.propertyValue || 0;
+    const loan = scenario.newLoanAmount || scenario.currentPayoff || 0;
+    const ltv = pv > 0 ? (loan / pv) * 100 : 0;
+    return { loanAmount: loan, ltv };
+  }, [scenario.propertyValue, scenario.newLoanAmount, scenario.currentPayoff]);
+
+  const isPurchase = scenario.purpose === 'purchase';
+  const loanAmount = isPurchase ? purchaseCalc.loanAmount : refiCalc.loanAmount;
+  const ltv = isPurchase ? purchaseCalc.ltv : refiCalc.ltv;
+
+  // Sync loanAmount and ltv to parent scenario
   useMemo(() => {
     if (scenario.loanAmount !== loanAmount || scenario.ltv !== ltv) {
       onChange({ ...scenario, loanAmount, ltv });
     }
   }, [loanAmount, ltv]);
+
+  const handleDownPct = useCallback((val) => {
+    setLastEdited('pct');
+    onChange({ ...scenario, downPaymentPct: val });
+  }, [scenario, onChange]);
+
+  const handleDownDollars = useCallback((val) => {
+    setLastEdited('dollars');
+    onChange({ ...scenario, downPaymentDollars: val });
+  }, [scenario, onChange]);
+
+  const handleLoanAmount = useCallback((val) => {
+    setLastEdited('loan');
+    onChange({ ...scenario, manualLoanAmount: val });
+  }, [scenario, onChange]);
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-5 my-4">
@@ -58,27 +103,54 @@ export default function ScenarioForm({ scenario, onChange }) {
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">
-            {scenario.purpose === "purchase" ? "Purchase Price" : "Property Value"}
+            {isPurchase ? "Purchase Price" : "Property Value"}
           </label>
           <input type="number" value={scenario.propertyValue || ""} placeholder="$"
             onChange={e => update("propertyValue", Number(e.target.value))}
             className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
         </div>
-        {scenario.purpose === "purchase" ? (
+
+        {/* Purchase: three interlinked fields */}
+        {isPurchase && (
+          <>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Down Payment %</label>
+              <input type="number" step="0.5" min="0" max="99"
+                value={lastEdited === 'pct' ? (scenario.downPaymentPct || "") : (purchaseCalc.downPct || "")}
+                placeholder="%"
+                onChange={e => handleDownPct(Number(e.target.value))}
+                className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Down Payment $</label>
+              <input type="number" step="1000"
+                value={lastEdited === 'dollars' ? (scenario.downPaymentDollars || "") : (purchaseCalc.downDollars || "")}
+                placeholder="$"
+                onChange={e => handleDownDollars(Number(e.target.value))}
+                className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Loan Amount</label>
+              <input type="number" step="1000"
+                value={lastEdited === 'loan' ? (scenario.manualLoanAmount || "") : (purchaseCalc.loanAmount || "")}
+                placeholder="$"
+                onChange={e => handleLoanAmount(Number(e.target.value))}
+                className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+            </div>
+          </>
+        )}
+
+        {/* Refi: New Loan Amount */}
+        {!isPurchase && (
           <div>
-            <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Down Payment %</label>
-            <input type="number" value={scenario.downPaymentPct || ""} placeholder="%"
-              onChange={e => update("downPaymentPct", Number(e.target.value))}
+            <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">New Loan Amount</label>
+            <input type="number" value={scenario.newLoanAmount || scenario.currentPayoff || ""} placeholder="$"
+              onChange={e => update("newLoanAmount", Number(e.target.value))}
               className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
-          </div>
-        ) : (
-          <div>
-            <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Current Payoff</label>
-            <input type="number" value={scenario.currentPayoff || ""} placeholder="$"
-              onChange={e => update("currentPayoff", Number(e.target.value))}
-              className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+            <p className="text-xs text-gray-400 mt-1">Your new mortgage balance</p>
           </div>
         )}
+
         <div>
           <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Credit Score</label>
           <input type="number" min={500} max={850} step={1} value={scenario.fico || ""}
@@ -88,7 +160,7 @@ export default function ScenarioForm({ scenario, onChange }) {
             }}
             className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
         </div>
-        {scenario.purpose !== "purchase" && (
+        {!isPurchase && (
           <div>
             <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Current Rate</label>
             <input type="number" step="0.125" value={scenario.currentRate || ""} placeholder="%"

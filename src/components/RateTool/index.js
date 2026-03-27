@@ -42,6 +42,7 @@ export default function RateTool({ initialRateData, defaultState }) {
     propertyValue: DEFAULT_SCENARIO.propertyValue,
     downPaymentPct: DEFAULT_SCENARIO.downPaymentPct,
     currentPayoff: DEFAULT_SCENARIO.currentPayoff,
+    newLoanAmount: DEFAULT_SCENARIO.currentPayoff,
     currentRate: DEFAULT_SCENARIO.currentRate,
     fico: DEFAULT_SCENARIO.fico,
     loanAmount: 0,
