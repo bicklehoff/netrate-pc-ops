@@ -16,18 +16,30 @@ import { encrypt } from '@/lib/encryption';
 
 const STATUS_MAP = {
   'Prospect':              'prospect',
+  'Web Application':       'prospect',
+  'Prequalification':      'prospect',
   'Application':           'applied',
   'Processing':            'processing',
   'Submitted':             'submitted_uw',
+  'UW Submitted':          'submitted_uw',
+  'UW Suspended':          'suspended',
   'Conditional Approval':  'cond_approved',
   'Cond. Approved':        'cond_approved',
+  'UW Approved':           'cond_approved',
   'Suspended':             'suspended',
   'Clear to Close':        'ctc',
-  'Docs Out':              'docs_out',
+  'Clear To Close':        'ctc',
+  'Closing Docs Sent':     'ctc',
+  'Docs Out':              'ctc',
+  'Closing Scheduled':     'ctc',
+  'Closed':                'ctc',
+  'Wire Requested':        'ctc',
   'Funded':                'funded',
-  'Closed':                'funded',
+  'Final Disposition':     'settled',
+  'Servicing':             'settled',
   'Denied':                'denied',
   'Withdrawn':             'withdrawn',
+  'Closed Incomplete':     'withdrawn',
 };
 
 // Ball-in-court derived from status
