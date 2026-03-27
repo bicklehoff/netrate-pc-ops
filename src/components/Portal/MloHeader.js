@@ -3,16 +3,17 @@
 
 'use client';
 
+import { useState } from 'react';
 import { useSession } from 'next-auth/react';
-import Image from 'next/image';
 
 const MLO_PHOTOS = {
   'Jamie Cunningham': '/images/team/jamie-cunningham.jpg',
   'David Burson': '/images/team/david-burson.jpg',
 };
 
-function UserAvatar({ name, size = 32 }) {
+function UserAvatar({ name, size = 28 }) {
   const photo = MLO_PHOTOS[name];
+  const [imgError, setImgError] = useState(false);
   const initials = (name || 'U')
     .split(' ')
     .map((n) => n[0])
@@ -20,16 +21,17 @@ function UserAvatar({ name, size = 32 }) {
     .toUpperCase()
     .slice(0, 2);
 
-  if (photo) {
+  if (photo && !imgError) {
     return (
-      <div className="rounded-full ring-2 ring-gray-200 ring-offset-1" style={{ width: size, height: size }}>
-        <Image
+      <div className="rounded-full ring-2 ring-gray-200 ring-offset-1 flex-shrink-0" style={{ width: size, height: size }}>
+        <img
           src={photo}
           alt={name}
           width={size}
           height={size}
           className="rounded-full object-cover"
           style={{ width: size, height: size }}
+          onError={() => setImgError(true)}
         />
       </div>
     );
@@ -37,7 +39,7 @@ function UserAvatar({ name, size = 32 }) {
 
   return (
     <div
-      className="rounded-full bg-brand text-white flex items-center justify-center text-[10px] font-semibold ring-2 ring-gray-200 ring-offset-1"
+      className="rounded-full bg-brand text-white flex items-center justify-center text-[10px] font-semibold ring-2 ring-gray-200 ring-offset-1 flex-shrink-0"
       style={{ width: size, height: size }}
     >
       {initials}
@@ -70,7 +72,7 @@ export default function MloHeader() {
           <div className="text-sm font-medium text-gray-700">{userName}</div>
           <div className="text-[10px] text-gray-400">{userEmail}</div>
         </div>
-        <UserAvatar name={userName} size={28} />
+        <UserAvatar name={userName} />
       </div>
     </div>
   );

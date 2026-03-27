@@ -20,10 +20,8 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const isAdmin = session.user.role === 'admin';
-
     const loans = await prisma.loan.findMany({
-      where: isAdmin ? {} : { mloId: session.user.id },
+      where: {},  // All MLOs see full pipeline — LO filter handles scoping
       include: {
         borrower: {
           select: { firstName: true, lastName: true, email: true, phone: true, ssnLastFour: true },
