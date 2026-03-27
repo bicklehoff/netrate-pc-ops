@@ -213,6 +213,9 @@ export default function MloDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState('active');
+  const [search, setSearch] = useState('');
+  const [pageSize, setPageSize] = useState(25);
+  const [page, setPage] = useState(0);
   const [importOpen, setImportOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
 
@@ -314,17 +317,26 @@ export default function MloDashboardPage() {
     setSelectedIds(new Set());
   }, [selectedIds]);
 
-  // Filter loans
+  // Filter loans by status + search
   const filteredLoans = loans.filter((loan) => {
-    if (filter === 'all') return true;
-    if (filter === 'active') return !TERMINAL_STATUSES.includes(loan.status);
-    return loan.status === filter;
+    // Status filter
+    if (filter === 'active' && TERMINAL_STATUSES.includes(loan.status)) return false;
+    if (filter !== 'all' && filter !== 'active' && loan.status !== filter) return false;
+
+    // Search filter
+    if (search) {
+      const q = search.toLowerCase();
+      const fields = [loan.borrowerName, loan.loanNumber, loan.lenderName, loan.propertyStreet, loan.borrowerEmail, loan.mloName].filter(Boolean);
+      return fields.some(f => f.toLowerCase().includes(q));
+    }
+    return true;
   });
 
-  // Clear selection when filter changes (selected IDs may no longer be visible)
+  // Clear selection and reset page when filter/search changes
   useEffect(() => {
     setSelectedIds(new Set());
-  }, [filter]);
+    setPage(0);
+  }, [filter, search]);
 
   const activeCount = loans.filter((l) => !TERMINAL_STATUSES.includes(l.status)).length;
 
@@ -410,21 +422,30 @@ export default function MloDashboardPage() {
         </div>
       </Link>
 
-      {/* Status Filter Tabs */}
-      <div className="flex gap-1 mb-4 overflow-x-auto pb-1">
-        {STATUS_FILTERS.map((f) => (
-          <button
-            key={f.value}
-            onClick={() => setFilter(f.value)}
-            className={`px-3 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap transition-colors ${
-              filter === f.value
-                ? 'bg-brand text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
+      {/* Status Filter + Search */}
+      <div className="flex items-center gap-3 mb-4 flex-wrap">
+        <div className="flex gap-1 overflow-x-auto pb-1 flex-1">
+          {STATUS_FILTERS.map((f) => (
+            <button
+              key={f.value}
+              onClick={() => setFilter(f.value)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap transition-colors ${
+                filter === f.value
+                  ? 'bg-brand text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+        <input
+          type="text"
+          placeholder="Search borrower, lender, address..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand"
+        />
       </div>
 
       {error && (
@@ -438,17 +459,55 @@ export default function MloDashboardPage() {
           <p className="text-gray-400 text-sm">
             {loans.length === 0
               ? 'No loan applications yet. They will appear here when borrowers apply.'
-              : `No loans matching "${STATUS_FILTERS.find((f) => f.value === filter)?.label}" filter.`}
+              : search
+                ? `No loans matching "${search}".`
+                : `No loans matching "${STATUS_FILTERS.find((f) => f.value === filter)?.label}" filter.`}
           </p>
         </div>
       ) : (
-        <PipelineTable
-          loans={filteredLoans}
-          mloList={mloList}
-          selectedIds={selectedIds}
-          onSelectionChange={setSelectedIds}
-          onLoanUpdate={handleLoanUpdate}
-        />
+        <>
+          <PipelineTable
+            loans={filteredLoans.slice(page * pageSize, (page + 1) * pageSize)}
+            mloList={mloList}
+            selectedIds={selectedIds}
+            onSelectionChange={setSelectedIds}
+            onLoanUpdate={handleLoanUpdate}
+          />
+          {/* Pagination controls */}
+          <div className="flex items-center justify-between mt-3 text-sm text-gray-500">
+            <div className="flex items-center gap-2">
+              <span>Show</span>
+              <select
+                value={pageSize}
+                onChange={(e) => { setPageSize(Number(e.target.value)); setPage(0); }}
+                className="border border-gray-300 rounded px-2 py-1 text-sm"
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+              <span>of {filteredLoans.length} loans</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage(p => Math.max(0, p - 1))}
+                disabled={page === 0}
+                className="px-2 py-1 rounded border border-gray-300 disabled:opacity-30 hover:bg-gray-100"
+              >
+                &larr; Prev
+              </button>
+              <span>Page {page + 1} of {Math.max(1, Math.ceil(filteredLoans.length / pageSize))}</span>
+              <button
+                onClick={() => setPage(p => Math.min(Math.ceil(filteredLoans.length / pageSize) - 1, p + 1))}
+                disabled={(page + 1) * pageSize >= filteredLoans.length}
+                className="px-2 py-1 rounded border border-gray-300 disabled:opacity-30 hover:bg-gray-100"
+              >
+                Next &rarr;
+              </button>
+            </div>
+          </div>
+        </>
       )}
 
       {/* Bulk Action Bar — appears when loans are selected */}
