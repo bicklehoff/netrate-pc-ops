@@ -308,11 +308,11 @@ export default function PipelineTable({ loans, mloList = [], selectedIds, onSele
                 </td>
 
                 {/* Borrower (read-only, links to detail) */}
-                <td className="px-4 py-3">
+                <td className="px-4 py-3 max-w-[200px]">
                   <Link href={`/portal/mlo/loans/${loan.id}`} className="block">
                     <span className="font-medium text-gray-900">{loan.borrowerName}</span>
-                    <span className="block text-xs text-gray-400 mt-0.5">
-                      SSN ···{loan.ssnLastFour}{loan.propertyStreet ? ` · ${loan.propertyStreet}` : ''}
+                    <span className="block text-xs text-gray-400 mt-0.5 truncate" title={loan.propertyStreet ? `SSN ···${loan.ssnLastFour} · ${loan.propertyStreet}` : undefined}>
+                      ···{loan.ssnLastFour}{loan.propertyStreet ? ` · ${loan.propertyStreet}` : ''}
                     </span>
                   </Link>
                 </td>
