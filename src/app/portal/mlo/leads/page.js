@@ -29,6 +29,7 @@ export default function MloLeadsPage() {
   const [error, setError] = useState('');
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
+  const [activeSearch, setActiveSearch] = useState('');
   const [viewMode, setViewMode] = useState('table'); // 'table' | 'kanban'
 
   useEffect(() => {
@@ -37,10 +38,11 @@ export default function MloLeadsPage() {
     }
   }, [authStatus, router]);
 
-  const fetchLeads = useCallback(async () => {
+  const fetchLeads = useCallback(async (q) => {
     try {
+      setLoading(true);
       const params = new URLSearchParams();
-      if (search) params.set('q', search);
+      if (q) params.set('q', q);
       const res = await fetch(`/api/portal/mlo/leads?${params}`);
       if (!res.ok) throw new Error('Failed to load');
       const data = await res.json();
@@ -50,14 +52,12 @@ export default function MloLeadsPage() {
     } finally {
       setLoading(false);
     }
-  }, [search]);
+  }, []);
 
   useEffect(() => {
     if (authStatus !== 'authenticated') return;
-    setLoading(true);
-    const timer = setTimeout(() => fetchLeads(), 300);
-    return () => clearTimeout(timer);
-  }, [authStatus, fetchLeads]);
+    fetchLeads(activeSearch);
+  }, [authStatus, activeSearch, fetchLeads]);
 
   const filteredLeads = leads.filter((lead) => {
     if (filter === 'all') return true;
@@ -147,14 +147,21 @@ export default function MloLeadsPage() {
           })}
         </div>
         {/* Search */}
-        <div className="flex-1 max-w-sm ml-auto">
+        <div className="flex-1 max-w-sm ml-auto flex gap-1.5">
           <input
             type="text"
             placeholder="Search leads..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none"
+            onKeyDown={(e) => { if (e.key === 'Enter') setActiveSearch(search); }}
+            className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none"
           />
+          <button
+            onClick={() => setActiveSearch(search)}
+            className="px-3 py-1.5 bg-brand text-white text-sm font-medium rounded-lg hover:bg-brand-dark transition-colors"
+          >
+            Search
+          </button>
         </div>
       </div>
 
