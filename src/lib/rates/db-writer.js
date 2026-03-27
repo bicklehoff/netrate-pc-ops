@@ -12,6 +12,7 @@
  */
 
 /* eslint-disable @typescript-eslint/no-require-imports */
+try { require('dotenv').config(); } catch { /* dotenv optional in Next.js runtime */ }
 const { Client } = require('pg');
 
 const DB_URL = process.env.PC_DATABASE_URL || process.env.DATABASE_URL;
