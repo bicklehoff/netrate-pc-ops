@@ -297,6 +297,11 @@ export function priceRate(rateEntry, product, scenario, lenderAdj, brokerConfig,
   const loanType = scenario.loanType || 'conventional';
   const { term, productType, investor, tier } = product;
   const isConventional = loanType === 'conventional';
+  const isFha = loanType === 'fha';
+
+  // FHA: UFMIP (1.75%) is financed into the loan
+  const ufmip = isFha ? Math.round(loanAmount * 0.0175) : 0;
+  const effectiveLoanAmount = loanAmount + ufmip;
 
   const breakdown = [];
 
@@ -338,8 +343,8 @@ export function priceRate(rateEntry, product, scenario, lenderAdj, brokerConfig,
     }
   }
 
-  // Step 5: Loan amount — CREDIT → add
-  const loanAmtAdj = getLoanAmountAdjustment(loanAmount, lenderAdj);
+  // Step 5: Loan amount — CREDIT → add (use effective amount for FHA)
+  const loanAmtAdj = getLoanAmountAdjustment(effectiveLoanAmount, lenderAdj);
   if (loanAmtAdj !== 0) {
     price += loanAmtAdj;
     breakdown.push({ label: 'Loan amount adj', value: +loanAmtAdj });
@@ -379,8 +384,8 @@ export function priceRate(rateEntry, product, scenario, lenderAdj, brokerConfig,
     }
   }
 
-  // Step 7: Broker comp — COST → subtract (always last)
-  const { compDollars, compPoints } = getBrokerComp(loanAmount, loanPurpose, brokerConfig);
+  // Step 7: Broker comp — COST → subtract (use effective amount for FHA)
+  const { compDollars, compPoints } = getBrokerComp(effectiveLoanAmount, loanPurpose, brokerConfig);
   price -= compPoints;
   breakdown.push({ label: `Comp ($${compDollars.toFixed(0)})`, value: -compPoints });
 
@@ -390,7 +395,7 @@ export function priceRate(rateEntry, product, scenario, lenderAdj, brokerConfig,
   // = 100 = PAR
 
   const costOrCredit = price - 100; // positive = rebate, negative = discount
-  const dollars = (costOrCredit / 100) * loanAmount;
+  const dollars = (costOrCredit / 100) * effectiveLoanAmount;
 
   return {
     rate: rateEntry.rate,
@@ -406,6 +411,9 @@ export function priceRate(rateEntry, product, scenario, lenderAdj, brokerConfig,
     discountDollars: price < 100 ? Math.round(Math.abs(dollars)) : 0,
     compDollars: Math.round(compDollars),
     lenderFee: product.uwFee || 999,
+    baseLoanAmount: loanAmount,
+    ufmip,
+    effectiveLoanAmount,
     breakdown,
   };
 }

@@ -45,6 +45,7 @@ export default function ScenarioForm({ scenario, onChange }) {
   }, [scenario.propertyValue, scenario.newLoanAmount, scenario.currentPayoff]);
 
   const isPurchase = scenario.purpose === 'purchase';
+  const isFha = scenario.loanType === 'fha';
   const loanAmount = isPurchase ? purchaseCalc.loanAmount : refiCalc.loanAmount;
   const ltv = isPurchase ? purchaseCalc.ltv : refiCalc.ltv;
 
@@ -190,8 +191,11 @@ export default function ScenarioForm({ scenario, onChange }) {
         </div>
       </div>
       {loanAmount > 0 && (
-        <div className="mt-3 pt-2 border-t border-gray-100 flex flex-wrap gap-6 text-sm text-gray-600">
-          <span>Loan Amount: <strong className="text-gray-800">${loanAmount.toLocaleString("en-US", { maximumFractionDigits: 0 })}</strong></span>
+        <div className="mt-3 pt-2 border-t border-gray-100 flex flex-wrap gap-x-6 gap-y-1 text-sm text-gray-600">
+          <span>Base Loan: <strong className="text-gray-800">${loanAmount.toLocaleString("en-US", { maximumFractionDigits: 0 })}</strong></span>
+          {isFha && (
+            <span>w/ UFMIP: <strong className="text-gray-800">${Math.round(loanAmount * 1.0175).toLocaleString("en-US")}</strong></span>
+          )}
           <span>LTV: <strong className="text-gray-800">{ltv.toFixed(1)}%</strong></span>
           <span>FICO Band: <strong className="text-gray-800">{getFicoBand(scenario.fico)}</strong></span>
           <span>State: <strong className="text-gray-800">{scenario.state || 'CO'}</strong></span>
