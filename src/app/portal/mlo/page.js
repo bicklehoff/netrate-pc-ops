@@ -12,24 +12,20 @@ import { useRouter } from 'next/navigation';
 import PipelineTable from '@/components/Portal/PipelineTable';
 import XmlImportModal from '@/components/Portal/XmlImportModal';
 
-const STATUS_FILTERS = [
-  { value: 'all', label: 'All' },
-  { value: 'active', label: 'Active' },
-  { value: 'draft', label: 'Prospect' },
-  { value: 'applied', label: 'Applied' },
-  { value: 'processing', label: 'Processing' },
-  { value: 'submitted_uw', label: 'In UW' },
-  { value: 'cond_approved', label: 'Cond. Approved' },
-  { value: 'ctc', label: 'CTC' },
-  { value: 'funded', label: 'Funded' },
-  { value: 'denied', label: 'Denied' },
-  { value: 'archived', label: 'Archived' },
+// ─── Status Groupings ────────────────────────────────────────
+const ACTIVE_STATUSES = ['prospect', 'applied', 'processing', 'submitted_uw', 'cond_approved', 'ctc', 'docs_out', 'funded'];
+const SETTLED_STATUSES = ['settled'];
+const CANCELLED_STATUSES = ['withdrawn', 'denied', 'suspended'];
+
+const TIER1_FILTERS = [
+  { value: 'active', label: 'Active', statuses: ACTIVE_STATUSES },
+  { value: 'settled', label: 'Settled', statuses: SETTLED_STATUSES },
+  { value: 'cancelled', label: 'Cancelled', statuses: CANCELLED_STATUSES },
+  { value: 'all', label: 'All', statuses: null },
 ];
 
-const TERMINAL_STATUSES = ['funded', 'denied', 'archived'];
-
 const STATUS_LABELS = {
-  draft: 'Prospect',
+  prospect: 'Prospect',
   applied: 'Applied',
   processing: 'Processing',
   submitted_uw: 'In UW',
@@ -38,15 +34,18 @@ const STATUS_LABELS = {
   ctc: 'Clear to Close',
   docs_out: 'Docs Out',
   funded: 'Funded',
+  settled: 'Settled',
+  withdrawn: 'Withdrawn',
   denied: 'Denied',
   archived: 'Archived',
 };
 
 const ALL_STATUSES = [
-  'draft', 'applied', 'processing', 'submitted_uw',
+  'prospect', 'applied', 'processing', 'submitted_uw',
   'cond_approved', 'ctc', 'docs_out', 'funded',
-  'suspended', 'denied', 'archived',
+  'settled', 'withdrawn', 'suspended', 'denied', 'archived',
 ];
+
 
 // ─── Bulk Action Bar ──────────────────────────────────────────
 // Floating bar at the bottom when 1+ loans are selected.
@@ -212,7 +211,8 @@ export default function MloDashboardPage() {
   const [mloList, setMloList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [filter, setFilter] = useState('active');
+  const [tier1, setTier1] = useState('active');
+  const [tier2, setTier2] = useState(null); // null = show all in tier1 group
   const [search, setSearch] = useState('');
   const [pageSize, setPageSize] = useState(25);
   const [page, setPage] = useState(0);
@@ -318,11 +318,15 @@ export default function MloDashboardPage() {
     setSelectedIds(new Set());
   }, [selectedIds]);
 
-  // Filter loans by status + LO + search
+  // Filter loans by tier1 + tier2 + LO + search
   const filteredLoans = loans.filter((loan) => {
-    // Status filter
-    if (filter === 'active' && TERMINAL_STATUSES.includes(loan.status)) return false;
-    if (filter !== 'all' && filter !== 'active' && loan.status !== filter) return false;
+    // Tier 1 group filter
+    const tier1Def = TIER1_FILTERS.find(t => t.value === tier1);
+    if (tier1Def && tier1Def.statuses) {
+      if (!tier1Def.statuses.includes(loan.status)) return false;
+    }
+    // Tier 2 specific status
+    if (tier2 && loan.status !== tier2) return false;
 
     // LO filter
     if (mloFilter === 'unassigned' && loan.mloId) return false;
@@ -337,13 +341,30 @@ export default function MloDashboardPage() {
     return true;
   });
 
-  // Clear selection and reset page when filter/search changes
+  // Clear selection and reset page when filter changes
   useEffect(() => {
     setSelectedIds(new Set());
     setPage(0);
-  }, [filter, search]);
+  }, [tier1, tier2, search]);
 
-  const activeCount = loans.filter((l) => !TERMINAL_STATUSES.includes(l.status)).length;
+  // Counts per tier1 group
+  const tier1Counts = {};
+  for (const t of TIER1_FILTERS) {
+    tier1Counts[t.value] = t.statuses
+      ? loans.filter(l => t.statuses.includes(l.status)).length
+      : loans.length;
+  }
+
+  // Counts per status within current tier1
+  const tier1Def = TIER1_FILTERS.find(t => t.value === tier1);
+  const tier2Statuses = tier1Def?.statuses || ALL_STATUSES;
+  const tier2Counts = {};
+  for (const s of tier2Statuses) {
+    const c = loans.filter(l => l.status === s).length;
+    if (c > 0) tier2Counts[s] = c;
+  }
+
+  const activeCount = tier1Counts.active || 0;
 
   if (authStatus === 'loading' || loading) {
     return (
@@ -387,42 +408,87 @@ export default function MloDashboardPage() {
 
 
 
-      {/* Status Filter + Search */}
-      <div className="flex items-center gap-3 mb-4 flex-wrap">
-        <div className="flex gap-1 overflow-x-auto pb-1 flex-1">
-          {STATUS_FILTERS.map((f) => (
+      {/* Tier 1: Big group filters */}
+      <div className="flex items-center gap-2 mb-2">
+        {TIER1_FILTERS.map((t) => {
+          const isActive = tier1 === t.value;
+          const isMuted = t.value === 'cancelled';
+          const count = tier1Counts[t.value] || 0;
+          return (
             <button
-              key={f.value}
-              onClick={() => setFilter(f.value)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap transition-colors ${
-                filter === f.value
-                  ? 'bg-brand text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              key={t.value}
+              onClick={() => { setTier1(t.value); setTier2(null); }}
+              className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${
+                isActive
+                  ? isMuted
+                    ? 'bg-gray-600 text-white'
+                    : t.value === 'settled'
+                      ? 'bg-green-700 text-white'
+                      : 'bg-brand text-white'
+                  : isMuted
+                    ? 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-500'
+                    : t.value === 'settled'
+                      ? 'bg-green-50 text-green-700 hover:bg-green-100'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
-              {f.label}
+              {t.label}
+              <span className={`ml-1.5 text-xs ${isActive ? 'opacity-80' : 'opacity-60'}`}>
+                {count}
+              </span>
+            </button>
+          );
+        })}
+
+        <div className="ml-auto flex items-center gap-2">
+          <select
+            value={mloFilter}
+            onChange={(e) => setMloFilter(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand"
+          >
+            <option value="all">All LOs</option>
+            <option value="unassigned">Unassigned</option>
+            {mloList.map((m) => (
+              <option key={m.id} value={m.id}>{m.name}</option>
+            ))}
+          </select>
+          <input
+            type="text"
+            placeholder="Search borrower, lender, address..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand"
+          />
+        </div>
+      </div>
+
+      {/* Tier 2: Status drill-down within selected group */}
+      {Object.keys(tier2Counts).length > 1 && (
+        <div className="flex items-center gap-1 mb-3">
+          <button
+            onClick={() => setTier2(null)}
+            className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
+              !tier2 ? 'bg-gray-700 text-white' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+            }`}
+          >
+            All
+          </button>
+          {Object.entries(tier2Counts).map(([status, count]) => (
+            <button
+              key={status}
+              onClick={() => setTier2(status)}
+              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
+                tier2 === status
+                  ? 'bg-gray-700 text-white'
+                  : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+              }`}
+            >
+              {STATUS_LABELS[status] || status}
+              <span className="ml-1 opacity-60">{count}</span>
             </button>
           ))}
         </div>
-        <select
-          value={mloFilter}
-          onChange={(e) => setMloFilter(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand"
-        >
-          <option value="all">All LOs</option>
-          <option value="unassigned">Unassigned</option>
-          {mloList.map((m) => (
-            <option key={m.id} value={m.id}>{m.name}</option>
-          ))}
-        </select>
-        <input
-          type="text"
-          placeholder="Search borrower, lender, address..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand"
-        />
-      </div>
+      )}
 
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
@@ -437,7 +503,7 @@ export default function MloDashboardPage() {
               ? 'No loan applications yet. They will appear here when borrowers apply.'
               : search
                 ? `No loans matching "${search}".`
-                : `No loans matching "${STATUS_FILTERS.find((f) => f.value === filter)?.label}" filter.`}
+                : `No ${tier2 ? STATUS_LABELS[tier2] || tier2 : tier1} loans found.`}
           </p>
         </div>
       ) : (

@@ -15,45 +15,41 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 
 const STATUS_LABELS = {
-  draft: 'Prospect',
   prospect: 'Prospect',
-  application: 'Application',
   applied: 'Applied',
   processing: 'Processing',
   submitted_uw: 'In UW',
   cond_approved: 'Cond. Approved',
   suspended: 'Suspended',
-  clear_to_close: 'CTC',
   ctc: 'Clear to Close',
   docs_out: 'Docs Out',
   funded: 'Funded',
+  settled: 'Settled',
   withdrawn: 'Withdrawn',
   denied: 'Denied',
   archived: 'Archived',
 };
 
 const STATUS_COLORS = {
-  draft: 'bg-gray-100 text-gray-700',
   prospect: 'bg-gray-100 text-gray-700',
-  application: 'bg-blue-50 text-blue-700',
   applied: 'bg-blue-100 text-blue-800',
   processing: 'bg-yellow-100 text-yellow-800',
   submitted_uw: 'bg-purple-100 text-purple-800',
   cond_approved: 'bg-orange-100 text-orange-800',
   suspended: 'bg-red-50 text-red-700',
-  clear_to_close: 'bg-green-100 text-green-800',
   ctc: 'bg-green-100 text-green-800',
   docs_out: 'bg-green-100 text-green-800',
-  funded: 'bg-green-200 text-green-900',
+  funded: 'bg-emerald-100 text-emerald-800',
+  settled: 'bg-green-200 text-green-900',
   withdrawn: 'bg-gray-200 text-gray-500',
   denied: 'bg-red-100 text-red-800',
   archived: 'bg-gray-200 text-gray-500',
 };
 
 const ALL_STATUSES = [
-  'prospect', 'application', 'draft', 'applied', 'processing', 'submitted_uw',
-  'cond_approved', 'clear_to_close', 'ctc', 'docs_out', 'funded',
-  'withdrawn', 'suspended', 'denied', 'archived',
+  'prospect', 'applied', 'processing', 'submitted_uw',
+  'cond_approved', 'ctc', 'docs_out', 'funded',
+  'settled', 'withdrawn', 'suspended', 'denied', 'archived',
 ];
 
 const PURPOSE_LABELS = {
