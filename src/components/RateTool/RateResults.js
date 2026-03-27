@@ -1,6 +1,6 @@
 'use client';
 
-import { calculateLLPA, calculatePI, priceRates } from '@/lib/rates/engine';
+import { calculatePI } from '@/lib/rates/engine';
 
 export default function RateResults({ scenario, rateData, apiResults, loading, compareRates = [], onToggleCompare, onViewReport }) {
 
