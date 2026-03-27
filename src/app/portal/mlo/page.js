@@ -216,6 +216,7 @@ export default function MloDashboardPage() {
   const [search, setSearch] = useState('');
   const [pageSize, setPageSize] = useState(25);
   const [page, setPage] = useState(0);
+  const [mloFilter, setMloFilter] = useState('all');
   const [importOpen, setImportOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
 
@@ -317,11 +318,15 @@ export default function MloDashboardPage() {
     setSelectedIds(new Set());
   }, [selectedIds]);
 
-  // Filter loans by status + search
+  // Filter loans by status + LO + search
   const filteredLoans = loans.filter((loan) => {
     // Status filter
     if (filter === 'active' && TERMINAL_STATUSES.includes(loan.status)) return false;
     if (filter !== 'all' && filter !== 'active' && loan.status !== filter) return false;
+
+    // LO filter
+    if (mloFilter === 'unassigned' && loan.mloId) return false;
+    if (mloFilter !== 'all' && mloFilter !== 'unassigned' && loan.mloId !== mloFilter) return false;
 
     // Search filter
     if (search) {
@@ -399,6 +404,17 @@ export default function MloDashboardPage() {
             </button>
           ))}
         </div>
+        <select
+          value={mloFilter}
+          onChange={(e) => setMloFilter(e.target.value)}
+          className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand"
+        >
+          <option value="all">All LOs</option>
+          <option value="unassigned">Unassigned</option>
+          {mloList.map((m) => (
+            <option key={m.id} value={m.id}>{m.name}</option>
+          ))}
+        </select>
         <input
           type="text"
           placeholder="Search borrower, lender, address..."
