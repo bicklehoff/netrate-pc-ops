@@ -16,56 +16,85 @@ import Link from 'next/link';
 
 const STATUS_LABELS = {
   draft: 'Prospect',
+  prospect: 'Prospect',
+  application: 'Application',
   applied: 'Applied',
   processing: 'Processing',
   submitted_uw: 'In UW',
   cond_approved: 'Cond. Approved',
   suspended: 'Suspended',
+  clear_to_close: 'CTC',
   ctc: 'Clear to Close',
   docs_out: 'Docs Out',
   funded: 'Funded',
+  withdrawn: 'Withdrawn',
   denied: 'Denied',
   archived: 'Archived',
 };
 
 const STATUS_COLORS = {
   draft: 'bg-gray-100 text-gray-700',
+  prospect: 'bg-gray-100 text-gray-700',
+  application: 'bg-blue-50 text-blue-700',
   applied: 'bg-blue-100 text-blue-800',
   processing: 'bg-yellow-100 text-yellow-800',
   submitted_uw: 'bg-purple-100 text-purple-800',
   cond_approved: 'bg-orange-100 text-orange-800',
   suspended: 'bg-red-50 text-red-700',
+  clear_to_close: 'bg-green-100 text-green-800',
   ctc: 'bg-green-100 text-green-800',
   docs_out: 'bg-green-100 text-green-800',
   funded: 'bg-green-200 text-green-900',
+  withdrawn: 'bg-gray-200 text-gray-500',
   denied: 'bg-red-100 text-red-800',
   archived: 'bg-gray-200 text-gray-500',
 };
 
 const ALL_STATUSES = [
-  'draft', 'applied', 'processing', 'submitted_uw',
-  'cond_approved', 'ctc', 'docs_out', 'funded',
-  'suspended', 'denied', 'archived',
+  'prospect', 'application', 'draft', 'applied', 'processing', 'submitted_uw',
+  'cond_approved', 'clear_to_close', 'ctc', 'docs_out', 'funded',
+  'withdrawn', 'suspended', 'denied', 'archived',
 ];
+
+const PURPOSE_LABELS = {
+  purchase: 'Purch', refinance: 'Refi', cash_out: 'C/O',
+  heloc: 'HELOC', hecm: 'HECM',
+};
+
+const PURPOSE_COLORS = {
+  purchase: 'bg-blue-50 text-blue-700', refinance: 'bg-purple-50 text-purple-700',
+  cash_out: 'bg-orange-50 text-orange-700', heloc: 'bg-teal-50 text-teal-700',
+  hecm: 'bg-pink-50 text-pink-700',
+};
+
+const TYPE_LABELS = {
+  conventional: 'Conv', fha: 'FHA', va: 'VA', usda: 'USDA', jumbo: 'Jumbo',
+};
 
 function formatCurrency(val) {
   if (!val) return '—';
   return `$${Number(val).toLocaleString('en-US', { minimumFractionDigits: 0 })}`;
 }
 
-function timeAgo(dateStr) {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now - date;
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 60) return `${diffMins}m`;
-  if (diffHours < 24) return `${diffHours}h`;
-  if (diffDays < 30) return `${diffDays}d`;
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+function formatShortDate(dateStr) {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
+
+function isExpiringSoon(dateStr) {
+  if (!dateStr) return false;
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diffDays = (d - now) / 86400000;
+  return diffDays >= 0 && diffDays <= 7;
+}
+
+function isExpired(dateStr) {
+  if (!dateStr) return false;
+  return new Date(dateStr) < new Date();
+}
+
 
 // ─── Editable Text Cell ──────────────────────────────────────
 
@@ -266,26 +295,41 @@ export default function PipelineTable({ loans, mloList = [], selectedIds, onSele
               <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">
                 Borrower
               </th>
-              <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">
+              <th className="text-left px-3 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">
                 Loan #
               </th>
-              <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">
+              <th className="text-left px-3 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">
                 Lender
               </th>
-              <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">
+              <th className="text-center px-2 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">
+                Purpose
+              </th>
+              <th className="text-center px-2 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">
+                Type
+              </th>
+              <th className="text-right px-2 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">
+                Rate
+              </th>
+              <th className="text-center px-2 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">
+                Term
+              </th>
+              <th className="text-left px-3 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">
                 LO
               </th>
-              <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">
+              <th className="text-left px-3 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">
                 Status
               </th>
-              <th className="text-right px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">
+              <th className="text-right px-3 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">
                 Amount
               </th>
-              <th className="text-center px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">
-                Docs
+              <th className="text-center px-2 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">
+                Lock Exp
               </th>
-              <th className="text-right px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">
-                Updated
+              <th className="text-center px-2 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">
+                Close
+              </th>
+              <th className="text-center px-3 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">
+                Docs
               </th>
             </tr>
           </thead>
@@ -318,7 +362,7 @@ export default function PipelineTable({ loans, mloList = [], selectedIds, onSele
                 </td>
 
                 {/* Loan # (editable text) */}
-                <td className="px-4 py-3">
+                <td className="px-3 py-3">
                   <EditableText
                     value={loan.loanNumber}
                     placeholder="—"
@@ -327,7 +371,7 @@ export default function PipelineTable({ loans, mloList = [], selectedIds, onSele
                 </td>
 
                 {/* Lender (editable text) */}
-                <td className="px-4 py-3">
+                <td className="px-3 py-3">
                   <EditableText
                     value={loan.lenderName}
                     placeholder="—"
@@ -335,8 +379,40 @@ export default function PipelineTable({ loans, mloList = [], selectedIds, onSele
                   />
                 </td>
 
+                {/* Purpose (read-only badge) */}
+                <td className="px-2 py-3 text-center">
+                  {loan.purpose ? (
+                    <span className={`inline-flex px-1.5 py-0.5 rounded text-xs font-medium ${PURPOSE_COLORS[loan.purpose] || 'bg-gray-50 text-gray-600'}`}>
+                      {PURPOSE_LABELS[loan.purpose] || loan.purpose}
+                    </span>
+                  ) : <span className="text-xs text-gray-300">—</span>}
+                </td>
+
+                {/* Type (read-only badge) */}
+                <td className="px-2 py-3 text-center">
+                  {loan.loanType ? (
+                    <span className="inline-flex px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">
+                      {TYPE_LABELS[loan.loanType] || loan.loanType}
+                    </span>
+                  ) : <span className="text-xs text-gray-300">—</span>}
+                </td>
+
+                {/* Rate (read-only) */}
+                <td className="px-2 py-3 text-right">
+                  <span className="text-xs text-gray-700">
+                    {loan.interestRate ? `${loan.interestRate}%` : '—'}
+                  </span>
+                </td>
+
+                {/* Term (read-only) */}
+                <td className="px-2 py-3 text-center">
+                  <span className="text-xs text-gray-600">
+                    {loan.loanTerm ? `${loan.loanTerm}yr` : '—'}
+                  </span>
+                </td>
+
                 {/* LO (editable select) */}
-                <td className="px-4 py-3">
+                <td className="px-3 py-3">
                   <EditableSelect
                     value={loan.mloId || ''}
                     options={mloOptions}
@@ -391,9 +467,24 @@ export default function PipelineTable({ loans, mloList = [], selectedIds, onSele
                   )}
                 </td>
 
-                {/* Updated (read-only) */}
-                <td className="px-4 py-3 text-right">
-                  <span className="text-xs text-gray-400">{timeAgo(loan.updatedAt)}</span>
+                {/* Lock Expiration */}
+                <td className="px-2 py-3 text-center">
+                  {loan.lockExpiration ? (
+                    <span className={`text-xs ${
+                      isExpired(loan.lockExpiration) ? 'text-red-600 font-medium' :
+                      isExpiringSoon(loan.lockExpiration) ? 'text-amber-600 font-medium' :
+                      'text-gray-600'
+                    }`} title={new Date(loan.lockExpiration).toLocaleDateString()}>
+                      {formatShortDate(loan.lockExpiration)}
+                    </span>
+                  ) : <span className="text-xs text-gray-300">—</span>}
+                </td>
+
+                {/* Closing Date / Estimated */}
+                <td className="px-2 py-3 text-center">
+                  <span className="text-xs text-gray-600">
+                    {formatShortDate(loan.closingDate || loan.estimatedClosing)}
+                  </span>
                 </td>
               </tr>
             ))}

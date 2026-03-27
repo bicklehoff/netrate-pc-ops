@@ -34,6 +34,12 @@ export async function GET() {
         mlo: {
           select: { id: true, firstName: true, lastName: true },
         },
+        dates: {
+          select: {
+            applicationDate: true, estimatedClosing: true, closingDate: true,
+            fundingDate: true, lockedDate: true, lockExpiration: true,
+          },
+        },
       },
       orderBy: { updatedAt: 'desc' },
     });
@@ -58,6 +64,17 @@ export async function GET() {
       mloName: loan.mlo ? `${loan.mlo.firstName} ${loan.mlo.lastName}` : null,
       pendingDocs: loan.documents.filter((d) => d.status === 'requested').length,
       totalDocs: loan.documents.length,
+      loanType: loan.loanType,
+      interestRate: loan.interestRate ? Number(loan.interestRate) : null,
+      loanTerm: loan.loanTerm,
+      creditScore: loan.creditScore,
+      occupancy: loan.occupancy,
+      applicationDate: loan.dates?.applicationDate || null,
+      estimatedClosing: loan.dates?.estimatedClosing || null,
+      closingDate: loan.dates?.closingDate || null,
+      fundingDate: loan.dates?.fundingDate || null,
+      lockDate: loan.dates?.lockedDate || null,
+      lockExpiration: loan.dates?.lockExpiration || null,
       submittedAt: loan.submittedAt,
       updatedAt: loan.updatedAt,
       createdAt: loan.createdAt,
