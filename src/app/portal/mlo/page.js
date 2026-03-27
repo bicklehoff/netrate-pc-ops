@@ -362,34 +362,6 @@ export default function MloDashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Link
-            href="/portal/mlo/backlog"
-            className="text-xs text-amber-600 hover:text-amber-700 font-medium transition-colors"
-          >
-            Dev Backlog &rarr;
-          </Link>
-          <Link
-            href="/portal/mlo/tools/hecm-optimizer"
-            className="text-xs text-cyan-600 hover:text-cyan-700 font-medium transition-colors"
-          >
-            HECM Optimizer &rarr;
-          </Link>
-          {session?.user?.role === 'admin' && (
-            <>
-              <Link
-                href="/portal/mlo/marketing"
-                className="text-xs text-gray-400 hover:text-brand transition-colors"
-              >
-                Marketing Playbook &rarr;
-              </Link>
-              <Link
-                href="/portal/mlo/gbp-checklist"
-                className="text-xs text-gray-400 hover:text-brand transition-colors"
-              >
-                GBP Rename &rarr;
-              </Link>
-            </>
-          )}
           <button
             onClick={() => setImportOpen(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-brand rounded-lg hover:bg-brand-dark transition-colors"
@@ -408,19 +380,7 @@ export default function MloDashboardPage() {
         </div>
       </div>
 
-      {/* Leads Banner */}
-      <Link
-        href="/portal/mlo/leads"
-        className="block mb-4 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl p-4 transition-colors shadow-sm"
-      >
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-semibold">Website Leads</h2>
-            <p className="text-cyan-100 text-sm mt-0.5">View and manage incoming leads from the website</p>
-          </div>
-          <span className="text-2xl">&rarr;</span>
-        </div>
-      </Link>
+
 
       {/* Status Filter + Search */}
       <div className="flex items-center gap-3 mb-4 flex-wrap">
