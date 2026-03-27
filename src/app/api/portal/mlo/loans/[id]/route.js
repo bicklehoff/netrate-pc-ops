@@ -37,7 +37,8 @@ const EDITABLE_FIELDS = [
   // Employment/Income
   'employmentStatus', 'employerName', 'positionTitle', 'yearsInPosition',
   'monthlyBaseIncome', 'otherMonthlyIncome', 'otherIncomeSource',
-  'presentHousingExpense', 'maritalStatus',
+  'presentHousingExpense', 'maritalStatus', 'numDependents', 'dependentAges',
+  'creditScore',
   // MCR
   'actionTaken', 'actionTakenDate', 'applicationMethod',
   // CRM
@@ -54,7 +55,7 @@ const DECIMAL_FIELDS = [
 ];
 
 // Fields that need Integer conversion
-const INT_FIELDS = ['loanTerm', 'numUnits', 'yearsInPosition', 'numBorrowers'];
+const INT_FIELDS = ['loanTerm', 'numUnits', 'yearsInPosition', 'numBorrowers', 'creditScore', 'numDependents'];
 
 export async function GET(request, { params }) {
   try {
@@ -64,7 +65,6 @@ export async function GET(request, { params }) {
     }
 
     const { id } = await params;
-    const isAdmin = session.user.role === 'admin';
 
     const loan = await prisma.loan.findUnique({
       where: { id },
@@ -99,7 +99,7 @@ export async function GET(request, { params }) {
           orderBy: { ordinal: 'asc' },
           include: {
             borrower: {
-              select: { id: true, firstName: true, lastName: true, email: true },
+              select: { id: true, firstName: true, lastName: true, email: true, phone: true },
             },
           },
         },
@@ -113,10 +113,7 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
     }
 
-    // Non-admins can only see their own loans
-    if (!isAdmin && loan.mloId !== session.user.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-    }
+    // All MLOs can view all loans (LO filter handles scoping in pipeline)
 
     // Convert Decimal fields to numbers
     const serialized = {
