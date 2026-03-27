@@ -10,7 +10,9 @@
 import { NextResponse } from 'next/server';
 import { neon } from '@neondatabase/serverless';
 
-const sql = neon(process.env.DATABASE_URL);
+function getSql() {
+  return neon(process.env.DATABASE_URL);
+}
 
 // MND product keys → DB loan_type mapping
 const PRODUCT_MAP = {
@@ -25,6 +27,7 @@ const PRODUCT_MAP = {
 export async function GET() {
   try {
     // Get the most recent MND rates
+    const sql = getSql();
     const rows = await sql`
       SELECT date, loan_type, rate, points, lender AS change_str
       FROM rate_history
@@ -82,6 +85,7 @@ export async function POST(request) {
       return NextResponse.json({ error: 'rates and date required' }, { status: 400 });
     }
 
+    const sql = getSql();
     let inserted = 0;
     let updated = 0;
 
