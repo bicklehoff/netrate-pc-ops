@@ -5,6 +5,47 @@
 
 ---
 
+## 2026-03-27 — Dev — EverStream Exact Match Confirmed, Data-Driven Engine Decision
+**Actor:** pc-dev
+
+### What was done
+- **EverStream pricing matches LoanSifter exactly** — verified at 6.375% refi: FHLMC Core $675 rebate = LS $675. Also FNMA Core at 6.125% = exact match.
+- **Root causes of pricing bugs found and fixed:**
+  1. State-specific products (FL/TX) in CSV corrupting base prices — filtered out in parser
+  2. Duplicate rate_prices from state variants — dedup added
+  3. Old engine fallback overriding correct API results — removed entirely
+  4. Stale rate sheets in DB — transactional sheet deactivation (one active per lender)
+  5. Scenario form had wrong loan amount ($400K payoff vs $450K loan) — form redesigned
+- **DB cleanup:** 7 sheets → 1 active, 41,705 stale prices deleted
+- **Scenario form redesigned (purchase):** Three interlinked fields — Down Payment %, Down Payment $, Loan Amount. Any one drives the other two. Purchase Price is anchor.
+- **Refi form:** "Current Payoff" renamed to "New Loan Amount"
+- **Parsed today's rate sheet (3/27)** into DB — 388 programs, 10,424 prices
+- **Got TrackerPortal Backlog API access** — `tracker.netratemortgage.com/api/backlog` with header `x-tracker-api-key: agent`
+- **MAJOR DECISION: Pricing engine moves from code to database.** All adjustment rules become queryable data rows, not hardcoded JavaScript if-statements.
+
+### Known issue
+- FHLMC purchase pricing off by $224 — hardcoded occupancy/term adj (+0.050) fires on purchase when it might not apply. Exactly why we're moving to data-driven adjustments.
+
+### Architecture decision: Data-driven pricing engine
+**Current:** Adjustments hardcoded in pricing-v2.js. Bugs when conditions wrong. Every lender tweak = code change + deploy.
+
+**Next:** All adjustment rules as queryable rows in lender_adjustments table:
+- Each row: lender, type, investor, purpose, tier, term range, loan amt range, state, FICO range, LTV range, value
+- Engine sends scenario → DB matches rows → sums adjustments → returns priced rates
+- No code changes for adjustment updates. No deploy for new lenders.
+
+### Open items for next session
+- [ ] Design and build data-driven adjustment table schema
+- [ ] Create pricing engine skill (separate from parser skill)
+- [ ] Load EverStream adjustments into DB from static config JSONs
+- [ ] Fix FHLMC purchase adj ($224 gap) — verify from rate sheet
+- [ ] Fix rate sheet date display (shows 3/23, should pull from DB)
+- [ ] Wire other 5 lenders (becomes DB rows, not code)
+- [ ] Add FHA/VA product type dropdown
+- [ ] Update backlog item #42 as done
+
+---
+
 ## 2026-03-26 (Session 3) — Dev — Pricing Engine v2 Rewrite, EverStream Exact Match
 **Actor:** pc-dev
 
