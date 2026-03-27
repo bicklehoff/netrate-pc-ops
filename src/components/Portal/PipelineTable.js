@@ -11,7 +11,7 @@
 
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 
 const STATUS_LABELS = {
@@ -241,7 +241,131 @@ function EditableSelect({ value, options, onSave, renderValue }) {
 
 // ─── Pipeline Table ───────────────────────────────────────────
 
+// ─── Expandable Detail Row ───────────────────────────────────
+
+function DetailField({ label, value, className = '' }) {
+  if (value === null || value === undefined || value === '') return null;
+  return (
+    <div className={className}>
+      <span className="text-[10px] uppercase tracking-wider text-gray-400 block">{label}</span>
+      <span className="text-sm text-gray-800">{value}</span>
+    </div>
+  );
+}
+
+function DetailMoney({ label, value }) {
+  if (!value) return null;
+  return <DetailField label={label} value={formatCurrency(value)} />;
+}
+
+function DetailDate({ label, value }) {
+  if (!value) return null;
+  return <DetailField label={label} value={formatShortDate(value)} />;
+}
+
+function ExpandedDetail({ loan }) {
+  const addr = loan.propertyAddress;
+  const addrStr = addr ? [addr.street, addr.city, addr.state, addr.zip].filter(Boolean).join(', ') : null;
+  const d = loan.dates || {};
+
+  return (
+    <div className="grid grid-cols-4 gap-x-6 gap-y-3 p-4 text-sm">
+      {/* Column 1: Borrower */}
+      <div className="space-y-2">
+        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100 pb-1">Borrower</div>
+        <DetailField label="Name" value={loan.borrowerName} />
+        <DetailField label="Email" value={loan.borrowerEmail} />
+        <DetailField label="Phone" value={loan.borrowerPhone} />
+        <DetailField label="SSN" value={loan.ssnLastFour ? `···${loan.ssnLastFour}` : null} />
+        <DetailField label="FICO" value={loan.creditScore} />
+        <DetailMoney label="Monthly Income" value={loan.monthlyBaseIncome} />
+        {loan.otherMonthlyIncome && <DetailMoney label="Other Income" value={loan.otherMonthlyIncome} />}
+        {loan.otherIncomeSource && <DetailField label="Other Source" value={loan.otherIncomeSource} />}
+        <DetailField label="Employment" value={loan.employmentStatus} />
+        <DetailField label="Employer" value={loan.employerName} />
+        <DetailField label="Position" value={loan.positionTitle} />
+        <DetailMoney label="Housing Expense" value={loan.presentHousingExpense} />
+        {loan.coBorrowers?.length > 0 && (
+          <div className="pt-1">
+            <span className="text-[10px] uppercase tracking-wider text-gray-400 block mb-1">Co-Borrowers</span>
+            {loan.coBorrowers.map((cb, i) => (
+              <div key={i} className="text-xs text-gray-600 mb-1">
+                {cb.name}{cb.email ? ` · ${cb.email}` : ''}{cb.phone ? ` · ${cb.phone}` : ''}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Column 2: Property & Financials */}
+      <div className="space-y-2">
+        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100 pb-1">Property</div>
+        <DetailField label="Address" value={addrStr} />
+        <DetailField label="County" value={loan.propertyCounty} />
+        <DetailField label="Type" value={loan.propertyType} />
+        {loan.numUnits > 1 && <DetailField label="Units" value={loan.numUnits} />}
+        <DetailField label="Occupancy" value={loan.occupancy} />
+        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100 pb-1 mt-3">Financials</div>
+        <DetailMoney label="Loan Amount" value={loan.loanAmount} />
+        <DetailMoney label="Purchase Price" value={loan.purchasePrice} />
+        <DetailMoney label="Down Payment" value={loan.downPayment} />
+        <DetailMoney label="Appraised Value" value={loan.estimatedValue} />
+        <DetailMoney label="Current Balance" value={loan.currentBalance} />
+        {loan.refiPurpose && <DetailField label="Refi Purpose" value={loan.refiPurpose} />}
+        <DetailMoney label="Cash Out" value={loan.cashOutAmount} />
+      </div>
+
+      {/* Column 3: Dates */}
+      <div className="space-y-2">
+        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100 pb-1">Key Dates</div>
+        <DetailDate label="Application" value={d.applicationDate} />
+        <DetailDate label="Credit Pulled" value={d.creditPulledDate} />
+        <DetailDate label="Credit Expires" value={d.creditExpiration} />
+        <DetailDate label="Rate Locked" value={d.lockedDate} />
+        <DetailDate label="Lock Expires" value={d.lockExpiration} />
+        {d.lockTerm && <DetailField label="Lock Term" value={`${d.lockTerm} days`} />}
+        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100 pb-1 mt-3">Processing</div>
+        <DetailDate label="Appraisal Ordered" value={d.appraisalOrdered} />
+        <DetailDate label="Appraisal Received" value={d.appraisalReceived} />
+        {d.appraisalWaiver && <DetailField label="Appraisal" value="Waiver" />}
+        <DetailDate label="Title Ordered" value={d.titleOrdered} />
+        <DetailDate label="Title Received" value={d.titleReceived} />
+        <DetailDate label="HOI Received" value={d.hoiReceived} />
+        <DetailDate label="Flood Cert" value={d.floodCertReceived} />
+      </div>
+
+      {/* Column 4: Pipeline & Source */}
+      <div className="space-y-2">
+        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100 pb-1">Pipeline</div>
+        <DetailDate label="Submitted to UW" value={d.submittedToUwDate} />
+        <DetailDate label="Cond. Approved" value={d.condApprovedDate} />
+        <DetailDate label="CTC" value={d.ctcDate} />
+        <DetailDate label="Docs Out" value={d.docsOutDate} />
+        <DetailDate label="Est. Closing" value={d.estimatedClosing} />
+        <DetailDate label="Closing" value={d.closingDate} />
+        <DetailDate label="Funding" value={d.fundingDate} />
+        <DetailDate label="First Payment" value={d.firstPaymentDate} />
+        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100 pb-1 mt-3">Source</div>
+        <DetailField label="Lead Source" value={loan.leadSource} />
+        <DetailField label="Referral" value={loan.referralSource} />
+        <DetailField label="Channel" value={loan.applicationChannel} />
+        <DetailField label="Method" value={loan.applicationMethod} />
+        <DetailField label="LDox ID" value={loan.ldoxLoanId} />
+        {loan.actionTaken && (
+          <>
+            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100 pb-1 mt-3">MCR</div>
+            <DetailField label="Action Taken" value={loan.actionTaken} />
+            <DetailDate label="Action Date" value={loan.actionTakenDate} />
+            <DetailField label="Lien Status" value={loan.lienStatus} />
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function PipelineTable({ loans, mloList = [], selectedIds, onSelectionChange, onLoanUpdate }) {
+  const [expandedId, setExpandedId] = useState(null);
   const allSelected = loans.length > 0 && loans.every((l) => selectedIds.has(l.id));
   const someSelected = loans.some((l) => selectedIds.has(l.id));
 
@@ -279,6 +403,7 @@ export default function PipelineTable({ loans, mloList = [], selectedIds, onSele
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50/50">
+              <th className="w-6"></th>
               <th className="px-3 py-3 w-10">
                 <input
                   type="checkbox"
@@ -330,13 +455,25 @@ export default function PipelineTable({ loans, mloList = [], selectedIds, onSele
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {loans.map((loan) => (
+            {loans.map((loan) => {
+              const isExpanded = expandedId === loan.id;
+              return (
+              <React.Fragment key={loan.id}>
               <tr
-                key={loan.id}
                 className={`transition-colors ${
-                  selectedIds.has(loan.id) ? 'bg-brand/5' : 'hover:bg-gray-50'
+                  selectedIds.has(loan.id) ? 'bg-brand/5' : isExpanded ? 'bg-gray-50' : 'hover:bg-gray-50'
                 }`}
               >
+                {/* Expand chevron */}
+                <td className="pl-2 py-3 w-6">
+                  <button
+                    onClick={() => setExpandedId(isExpanded ? null : loan.id)}
+                    className="text-gray-400 hover:text-gray-600 text-xs"
+                  >
+                    {isExpanded ? '▼' : '▶'}
+                  </button>
+                </td>
+
                 {/* Checkbox */}
                 <td className="px-3 py-3">
                   <input
@@ -483,7 +620,16 @@ export default function PipelineTable({ loans, mloList = [], selectedIds, onSele
                   </span>
                 </td>
               </tr>
-            ))}
+              {isExpanded && (
+                <tr className="bg-gray-50/80">
+                  <td colSpan={15} className="px-0 py-0 border-b border-gray-200">
+                    <ExpandedDetail loan={loan} />
+                  </td>
+                </tr>
+              )}
+              </React.Fragment>
+              );
+            })}
           </tbody>
         </table>
       </div>

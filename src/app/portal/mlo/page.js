@@ -463,7 +463,7 @@ export default function MloDashboardPage() {
       </div>
 
       {/* Tier 2: Status drill-down within selected group */}
-      {Object.keys(tier2Counts).length > 1 && (
+      {tier1Def?.statuses && tier1Def.statuses.length > 1 && (
         <div className="flex items-center gap-1 mb-3">
           <button
             onClick={() => setTier2(null)}
@@ -473,20 +473,25 @@ export default function MloDashboardPage() {
           >
             All
           </button>
-          {Object.entries(tier2Counts).map(([status, count]) => (
+          {tier1Def.statuses.map((status) => {
+            const count = tier2Counts[status] || 0;
+            return (
             <button
               key={status}
               onClick={() => setTier2(status)}
               className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
                 tier2 === status
                   ? 'bg-gray-700 text-white'
-                  : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+                  : count > 0
+                    ? 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+                    : 'bg-gray-50 text-gray-300'
               }`}
             >
               {STATUS_LABELS[status] || status}
-              <span className="ml-1 opacity-60">{count}</span>
+              {count > 0 && <span className="ml-1 opacity-60">{count}</span>}
             </button>
-          ))}
+            );
+          })}
         </div>
       )}
 

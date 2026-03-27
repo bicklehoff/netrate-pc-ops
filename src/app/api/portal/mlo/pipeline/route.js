@@ -26,7 +26,7 @@ export async function GET() {
       where: isAdmin ? {} : { mloId: session.user.id },
       include: {
         borrower: {
-          select: { firstName: true, lastName: true, email: true, ssnLastFour: true },
+          select: { firstName: true, lastName: true, email: true, phone: true, ssnLastFour: true },
         },
         documents: {
           select: { id: true, status: true },
@@ -34,47 +34,124 @@ export async function GET() {
         mlo: {
           select: { id: true, firstName: true, lastName: true },
         },
-        dates: {
-          select: {
-            applicationDate: true, estimatedClosing: true, closingDate: true,
-            fundingDate: true, lockedDate: true, lockExpiration: true,
-          },
+        dates: true,
+        loanBorrowers: {
+          include: { borrower: { select: { firstName: true, lastName: true, email: true, phone: true } } },
+          orderBy: { ordinal: 'asc' },
         },
       },
       orderBy: { updatedAt: 'desc' },
     });
 
+    // Convert Decimal fields to numbers
+    const num = (v) => v ? Number(v) : null;
+
     // Transform for the pipeline table
     const pipeline = loans.map((loan) => ({
       id: loan.id,
+      // Borrower
       borrowerName: `${loan.borrower.firstName} ${loan.borrower.lastName}`,
       borrowerEmail: loan.borrower.email,
+      borrowerPhone: loan.borrower.phone,
       ssnLastFour: loan.borrower.ssnLastFour,
+      // Co-borrowers
+      coBorrowers: loan.loanBorrowers
+        .filter(lb => lb.borrowerType !== 'primary')
+        .map(lb => ({
+          name: `${lb.borrower.firstName} ${lb.borrower.lastName}`,
+          email: lb.borrower.email,
+          phone: lb.borrower.phone,
+          type: lb.borrowerType,
+        })),
+      numBorrowers: loan.numBorrowers,
+      // Status
       status: loan.status,
       ballInCourt: loan.ballInCourt,
+      // Loan details
       purpose: loan.purpose,
-      propertyType: loan.propertyType,
-      purchasePrice: loan.purchasePrice ? Number(loan.purchasePrice) : null,
-      estimatedValue: loan.estimatedValue ? Number(loan.estimatedValue) : null,
-      loanAmount: loan.loanAmount ? Number(loan.loanAmount) : null,
+      loanType: loan.loanType,
       loanNumber: loan.loanNumber,
       lenderName: loan.lenderName,
-      propertyStreet: loan.propertyAddress?.street || null,
-      mloId: loan.mloId,
-      mloName: loan.mlo ? `${loan.mlo.firstName} ${loan.mlo.lastName}` : null,
-      pendingDocs: loan.documents.filter((d) => d.status === 'requested').length,
-      totalDocs: loan.documents.length,
-      loanType: loan.loanType,
-      interestRate: loan.interestRate ? Number(loan.interestRate) : null,
+      loanAmount: num(loan.loanAmount),
+      interestRate: num(loan.interestRate),
       loanTerm: loan.loanTerm,
       creditScore: loan.creditScore,
+      lienStatus: loan.lienStatus,
+      // Property
+      propertyAddress: loan.propertyAddress,
+      propertyStreet: loan.propertyAddress?.street || null,
+      propertyCity: loan.propertyAddress?.city || null,
+      propertyState: loan.propertyAddress?.state || null,
+      propertyZip: loan.propertyAddress?.zip || null,
+      propertyCounty: loan.propertyAddress?.county || null,
+      propertyType: loan.propertyType,
+      numUnits: loan.numUnits,
       occupancy: loan.occupancy,
-      applicationDate: loan.dates?.applicationDate || null,
+      // Financials
+      purchasePrice: num(loan.purchasePrice),
+      downPayment: num(loan.downPayment),
+      estimatedValue: num(loan.estimatedValue),
+      currentBalance: num(loan.currentBalance),
+      refiPurpose: loan.refiPurpose,
+      cashOutAmount: num(loan.cashOutAmount),
+      // Income / Employment
+      employmentStatus: loan.employmentStatus,
+      employerName: loan.employerName,
+      positionTitle: loan.positionTitle,
+      yearsInPosition: loan.yearsInPosition,
+      monthlyBaseIncome: num(loan.monthlyBaseIncome),
+      otherMonthlyIncome: num(loan.otherMonthlyIncome),
+      otherIncomeSource: loan.otherIncomeSource,
+      presentHousingExpense: num(loan.presentHousingExpense),
+      // MLO
+      mloId: loan.mloId,
+      mloName: loan.mlo ? `${loan.mlo.firstName} ${loan.mlo.lastName}` : null,
+      // Documents
+      pendingDocs: loan.documents.filter((d) => d.status === 'requested').length,
+      totalDocs: loan.documents.length,
+      // Source / CRM
+      leadSource: loan.leadSource,
+      referralSource: loan.referralSource,
+      applicationMethod: loan.applicationMethod,
+      applicationChannel: loan.applicationChannel,
+      ldoxLoanId: loan.ldoxLoanId,
+      // MCR / HMDA
+      actionTaken: loan.actionTaken,
+      actionTakenDate: loan.actionTakenDate,
+      // Dates (all)
+      dates: loan.dates ? {
+        applicationDate: loan.dates.applicationDate,
+        lockedDate: loan.dates.lockedDate,
+        lockExpiration: loan.dates.lockExpiration,
+        lockTerm: loan.dates.lockTerm,
+        creditPulledDate: loan.dates.creditPulledDate,
+        creditExpiration: loan.dates.creditExpiration,
+        appraisalOrdered: loan.dates.appraisalOrdered,
+        appraisalScheduled: loan.dates.appraisalScheduled,
+        appraisalReceived: loan.dates.appraisalReceived,
+        appraisalDue: loan.dates.appraisalDue,
+        appraisalWaiver: loan.dates.appraisalWaiver,
+        titleOrdered: loan.dates.titleOrdered,
+        titleReceived: loan.dates.titleReceived,
+        hoiOrdered: loan.dates.hoiOrdered,
+        hoiReceived: loan.dates.hoiReceived,
+        hoiBound: loan.dates.hoiBound,
+        floodCertOrdered: loan.dates.floodCertOrdered,
+        floodCertReceived: loan.dates.floodCertReceived,
+        estimatedClosing: loan.dates.estimatedClosing,
+        closingDate: loan.dates.closingDate,
+        fundingDate: loan.dates.fundingDate,
+        firstPaymentDate: loan.dates.firstPaymentDate,
+        submittedToUwDate: loan.dates.submittedToUwDate,
+        condApprovedDate: loan.dates.condApprovedDate,
+        ctcDate: loan.dates.ctcDate,
+        docsOutDate: loan.dates.docsOutDate,
+      } : null,
+      // Convenience date fields for table columns
+      lockExpiration: loan.dates?.lockExpiration || null,
       estimatedClosing: loan.dates?.estimatedClosing || null,
       closingDate: loan.dates?.closingDate || null,
-      fundingDate: loan.dates?.fundingDate || null,
-      lockDate: loan.dates?.lockedDate || null,
-      lockExpiration: loan.dates?.lockExpiration || null,
+      // Timestamps
       submittedAt: loan.submittedAt,
       updatedAt: loan.updatedAt,
       createdAt: loan.createdAt,
