@@ -52,7 +52,7 @@ const ALL_STATUSES = [
 // Floating bar at the bottom when 1+ loans are selected.
 // Offers "Change Status" and "Assign LO" dropdowns, plus Clear.
 
-function BulkActionBar({ count, mloList, onBulkUpdate, onClear }) {
+function BulkActionBar({ count, mloList, onBulkUpdate, onBulkDelete, onClear }) {
   const [activeAction, setActiveAction] = useState(null); // 'status' | 'mlo' | null
   const [applying, setApplying] = useState(false);
   const barRef = useRef(null);
@@ -157,12 +157,36 @@ function BulkActionBar({ count, mloList, onBulkUpdate, onClear }) {
         <button
           onClick={() => applyUpdate({ status: 'archived' })}
           disabled={applying}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-red-900/60 hover:bg-red-800 rounded-lg transition-colors disabled:opacity-50"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50"
         >
           <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
           </svg>
           Archive
+        </button>
+
+        {/* Delete */}
+        <button
+          onClick={async () => {
+            if (confirm(`Delete ${count} loan${count !== 1 ? 's' : ''} permanently? This cannot be undone.`)) {
+              setApplying(true);
+              try {
+                await onBulkDelete();
+              } catch (err) {
+                console.error('Bulk delete failed:', err);
+                alert(`Delete failed: ${err.message}`);
+              } finally {
+                setApplying(false);
+              }
+            }
+          }}
+          disabled={applying}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-red-900/60 hover:bg-red-800 rounded-lg transition-colors disabled:opacity-50"
+        >
+          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+          Delete
         </button>
 
         <div className="w-px h-5 bg-gray-600" />
@@ -257,6 +281,28 @@ export default function MloDashboardPage() {
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
       throw new Error(data.error || 'Bulk update failed');
+    }
+
+    // Refresh pipeline and clear selection
+    const pipelineRes = await fetch('/api/portal/mlo/pipeline');
+    if (pipelineRes.ok) {
+      const data = await pipelineRes.json();
+      setLoans(data.loans || []);
+    }
+    setSelectedIds(new Set());
+  }, [selectedIds]);
+
+  const handleBulkDelete = useCallback(async () => {
+    const ids = Array.from(selectedIds);
+    const res = await fetch('/api/portal/mlo/pipeline', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ loanIds: ids }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'Delete failed');
     }
 
     // Refresh pipeline and clear selection
@@ -411,6 +457,7 @@ export default function MloDashboardPage() {
           count={selectedIds.size}
           mloList={mloList}
           onBulkUpdate={handleBulkUpdate}
+          onBulkDelete={handleBulkDelete}
           onClear={() => setSelectedIds(new Set())}
         />
       )}

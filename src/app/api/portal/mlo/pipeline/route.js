@@ -167,3 +167,39 @@ export async function PATCH(request) {
     return NextResponse.json({ error: 'Bulk update failed' }, { status: 500 });
   }
 }
+
+// ─── Bulk Delete ─────────────────────────────────────────────
+// Body: { loanIds: string[] }
+// Admin only. Deletes loans and associated records.
+
+export async function DELETE(request) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.userType !== 'mlo') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (session.user.role !== 'admin') {
+      return NextResponse.json({ error: 'Admin access required for delete' }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const { loanIds } = body;
+
+    if (!loanIds || !Array.isArray(loanIds) || loanIds.length === 0) {
+      return NextResponse.json({ error: 'loanIds array is required' }, { status: 400 });
+    }
+
+    // Delete associated records first (non-cascade), then loans (cascade handles the rest)
+    await prisma.condition.deleteMany({ where: { loanId: { in: loanIds } } }).catch(() => {});
+    await prisma.loanEvent.deleteMany({ where: { loanId: { in: loanIds } } }).catch(() => {});
+    await prisma.document.deleteMany({ where: { loanId: { in: loanIds } } }).catch(() => {});
+
+    const result = await prisma.loan.deleteMany({ where: { id: { in: loanIds } } });
+
+    return NextResponse.json({ success: true, deletedCount: result.count });
+  } catch (error) {
+    console.error('Bulk delete error:', error);
+    return NextResponse.json({ error: 'Bulk delete failed' }, { status: 500 });
+  }
+}
