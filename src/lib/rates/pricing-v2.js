@@ -350,6 +350,34 @@ export function priceRate(rateEntry, product, scenario, lenderAdj, brokerConfig,
     breakdown.push({ label: 'Loan amount adj', value: +loanAmtAdj });
   }
 
+  // Step 5b: Product feature adjustments (FICO band, purpose, state)
+  if (lenderAdj?.productFeatures?.length) {
+    const scenarioPropertyType = scenario.propertyType || 'sfr';
+    for (const pf of lenderAdj.productFeatures) {
+      // Check filters
+      if (pf.ficoMin != null && creditScore < pf.ficoMin) continue;
+      if (pf.ficoMax != null && creditScore > pf.ficoMax) continue;
+      if (pf.purpose && pf.purpose !== loanPurpose) continue;
+      if (pf.state && pf.state !== state) continue;
+
+      // Property type adjustments only apply if scenario matches
+      if (pf.featureName === 'propertyType') {
+        if (pf.productGroup === 'condo' && scenarioPropertyType !== 'condo') continue;
+        if (pf.productGroup === 'manufactured' && scenarioPropertyType !== 'manufactured') continue;
+      }
+      // Occupancy adjustments only for non-primary
+      if (pf.featureName === 'occupancy') continue; // skip for now — all scenarios are primary
+
+      const label = pf.featureName === 'ficoAdj' ? `FICO ${pf.ficoMin}-${pf.ficoMax} adj`
+        : pf.featureName === 'purposeAdj' ? `${pf.purpose} adj`
+        : pf.featureName === 'stateAdj' ? `State ${pf.state} adj`
+        : pf.featureName === 'propertyType' ? `${pf.productGroup} adj`
+        : pf.featureName;
+      price += pf.value;
+      breakdown.push({ label, value: pf.value });
+    }
+  }
+
   // Step 6: Investor-specific — COST → subtract (conventional only)
   if (isConventional) {
     const investorCost = getInvestorAdjustment(investor, term, productType, lenderAdj);

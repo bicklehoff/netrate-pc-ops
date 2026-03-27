@@ -53,6 +53,7 @@ function buildAdjObject(allRows) {
     loanAmountAdj: {},
     investorAdj: { fnma: {}, fhlmc: {} },
     fhlmcSpecial: [],
+    productFeatures: [],
   };
 
   for (const row of allRows) {
@@ -120,6 +121,19 @@ function buildAdjObject(allRows) {
           termMax: row.termMax,
           loanAmountMin: row.loanAmountMin,
           loanAmountMax: row.loanAmountMax,
+          value: val,
+        });
+        break;
+      }
+
+      case 'productFeature': {
+        adj.productFeatures.push({
+          featureName: row.featureName,
+          purpose: row.purpose,
+          state: row.state,
+          productGroup: row.productGroup,
+          ficoMin: row.ficoMin,
+          ficoMax: row.ficoMax,
           value: val,
         });
         break;

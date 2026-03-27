@@ -357,6 +357,80 @@ function seedFhaSrp() {
   }
 }
 
+// ─── 10. FHA Additional Adjustments (from otherAdj + Elite product data) ──
+
+function seedFhaAdditionalAdj() {
+  // FICO band adjustments (from Elite FHA 30yr ficoAdjusters — applies to Core too)
+  const ficoAdj = { '0-619': -1.1, '620-639': -0.4, '640-699': -0.1, '700-max': 0 };
+  for (const [band, value] of Object.entries(ficoAdj)) {
+    if (value === 0) continue;
+    const match = band.match(/(\d+)-(\d+|max)/);
+    if (!match) continue;
+    addRow({
+      adjustmentType: 'productFeature',
+      loanType: 'fha',
+      featureName: 'ficoAdj',
+      ficoMin: parseInt(match[1]),
+      ficoMax: match[2] === 'max' ? 999 : parseInt(match[2]),
+      value,
+    });
+  }
+
+  // Loan purpose adjustment (from Elite FHA 30yr loanPurpose)
+  const purposeAdj = { purchase: 0.1, rateTermRefi: 0, cashOut: 0 };
+  for (const [purpose, value] of Object.entries(purposeAdj)) {
+    if (value === 0) continue;
+    const purposeMap = { purchase: 'purchase', rateTermRefi: 'refinance', cashOut: 'cashout' };
+    addRow({
+      adjustmentType: 'productFeature',
+      loanType: 'fha',
+      featureName: 'purposeAdj',
+      purpose: purposeMap[purpose] || purpose,
+      value,
+    });
+  }
+
+  // State adjustment — specific states get +0.1 for FHA
+  const fhaStateAdj = cfg.core?.fhaLLPA?.otherAdj?.['AK, CA, CO, DC, FL, ME, NV, UT, WY Additional'];
+  if (typeof fhaStateAdj === 'number' && fhaStateAdj !== 0) {
+    const states = ['AK', 'CA', 'CO', 'DC', 'FL', 'ME', 'NV', 'UT', 'WY'];
+    for (const state of states) {
+      addRow({
+        adjustmentType: 'productFeature',
+        loanType: 'fha',
+        featureName: 'stateAdj',
+        state,
+        value: fhaStateAdj,
+      });
+    }
+  }
+
+  // Property type adjustments (from Elite FHA 30yr)
+  const propAdj = { condo: -0.3, manufactured: -0.5 };
+  for (const [propType, value] of Object.entries(propAdj)) {
+    if (value === 0) continue;
+    addRow({
+      adjustmentType: 'productFeature',
+      loanType: 'fha',
+      featureName: 'propertyType',
+      productGroup: propType,
+      value,
+    });
+  }
+
+  // Investment / Second Home (from core otherAdj)
+  const investAdj = cfg.core?.fhaLLPA?.otherAdj?.['Investment Prop / Second Home'];
+  if (typeof investAdj === 'number' && investAdj !== 0) {
+    addRow({
+      adjustmentType: 'productFeature',
+      loanType: 'fha',
+      featureName: 'occupancy',
+      productGroup: 'investmentSecondHome',
+      value: investAdj,
+    });
+  }
+}
+
 // ─── Execute ────────────────────────────────────────────────────────
 
 async function main() {
@@ -376,6 +450,7 @@ async function main() {
   seedFhaFicoLtv();
   seedFhaLoanAmount();
   seedFhaSrp();
+  seedFhaAdditionalAdj();
 
   // Count by loan type and adjustment type
   const counts = {};
