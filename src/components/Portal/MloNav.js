@@ -20,7 +20,7 @@ const NAV_ITEMS = [
   },
   {
     href: '/portal/mlo/contacts',
-    label: 'Contacts',
+    label: 'Borrowers',
     match: (p) => p.startsWith('/portal/mlo/contacts'),
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -40,7 +40,7 @@ const NAV_ITEMS = [
   },
   {
     href: '/portal/mlo/accounts',
-    label: 'Accounts',
+    label: 'Partners',
     match: (p) => p.startsWith('/portal/mlo/accounts'),
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
