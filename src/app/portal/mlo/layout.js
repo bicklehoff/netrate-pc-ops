@@ -52,6 +52,12 @@ function DialerSidebar() {
 }
 
 export default function MloLayout({ children }) {
+  // Lock body scroll — MLO portal owns the full viewport
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
   return (
     <SessionProvider>
       <DialerProvider>
