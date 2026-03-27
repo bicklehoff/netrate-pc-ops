@@ -26,18 +26,15 @@
  */
 
 import { NextResponse } from 'next/server';
-import { priceScenario } from '@/lib/rates/pricing';
+import { priceRate } from '@/lib/rates/pricing-v2';
+import { getLenderAdj } from '@/lib/rates/lender-adj-loader';
 import { loadRateDataFromDB } from '@/lib/rates/db-loader';
 import { DEFAULT_SCENARIO } from '@/lib/rates/defaults';
 
 const CACHE_TTL_MS = 2 * 60 * 1000;
 
-// Module-level cache for rate data from DB
 let rateCache = { data: null, fetchedAt: 0 };
 
-/**
- * Load rate data from the database (with 2-minute cache).
- */
 async function loadRateData() {
   const now = Date.now();
   if (rateCache.data && (now - rateCache.fetchedAt) < CACHE_TTL_MS) {
@@ -57,11 +54,17 @@ async function loadRateData() {
   return [];
 }
 
+// Broker config — will come from DB in future
+const BROKER_CONFIG = {
+  compRate: 0.02,
+  compCapPurchase: 3595,
+  compCapRefi: 3595,
+};
+
 export async function POST(request) {
   try {
     const body = await request.json();
 
-    // Validate required fields
     if (!body.loanAmount || body.loanAmount < 50000 || body.loanAmount > 10000000) {
       return NextResponse.json(
         { error: 'loanAmount required (50K-10M)' },
@@ -69,35 +72,119 @@ export async function POST(request) {
       );
     }
 
+    const loanAmount = Number(body.loanAmount);
+    const propertyValue = body.propertyValue ? Number(body.propertyValue) : null;
+    const ltv = propertyValue ? (loanAmount / propertyValue) * 100 : 75;
+
     const scenario = {
-      loanAmount: Number(body.loanAmount),
+      loanAmount,
       loanPurpose: body.loanPurpose || 'purchase',
-      loanType: body.loanType || null,
-      category: body.category || null,
-      state: body.state || null,
-      county: body.county || null,
+      loanType: body.loanType || 'conventional',
+      state: body.state || 'CO',
       creditScore: body.creditScore || DEFAULT_SCENARIO.fico,
-      propertyValue: body.propertyValue ? Number(body.propertyValue) : null,
-      propertyType: body.propertyType || 'sfr',
-      occupancy: body.occupancy || 'primary',
+      ltv: Math.round(ltv * 100) / 100,
+      propertyValue,
       term: body.term || 30,
-      employmentType: body.employmentType || 'w2',
-      subFinancing: body.subFinancing || false,
-      subFinancingBalance: body.subFinancingBalance ? Number(body.subFinancingBalance) : 0,
-      includeBuydowns: body.includeBuydowns || false,
-      includeIO: body.includeIO || false,
     };
 
-    const options = {
-      lockDays: body.lockDays || 30,
-      termFilter: body.term || 30,
-      productType: body.productType || null,
-    };
+    const lockDays = body.lockDays || 30;
+    const termFilter = body.term || 30;
+    const allLenders = await loadRateData();
+    const results = [];
 
-    const allPrograms = await loadRateData();
-    const result = priceScenario(scenario, allPrograms, options);
+    for (const lenderData of allLenders) {
+      const lenderId = lenderData.lenderId;
 
-    return NextResponse.json(result, {
+      // Only EverStream for now — other lenders need adjustment configs
+      if (lenderId !== 'everstream') continue;
+
+      const lenderAdj = getLenderAdj(lenderId);
+
+      for (const program of lenderData.programs) {
+        // Term filter
+        if (program.term !== termFilter) continue;
+
+        // Loan type filter
+        if (scenario.loanType && program.loanType !== scenario.loanType) continue;
+
+        // Occupancy filter — only primary for now
+        if (program.occupancy && program.occupancy !== 'primary') continue;
+
+        // Loan amount range filter
+        if (program.loanAmountRange) {
+          const { min, max } = program.loanAmountRange;
+          if (min && loanAmount <= min) continue;
+          if (max && loanAmount > max) continue;
+        }
+
+        // Product type filter (fixed vs arm)
+        if (body.productType && program.productType !== body.productType) continue;
+
+        // Get rates for requested lock period
+        const lockRates = program.rates.filter(r => r.lockDays === lockDays);
+        if (lockRates.length === 0) continue;
+
+        // Build product object for pricing-v2
+        const product = {
+          name: program.name || program.rawName,
+          lenderCode: lenderId,
+          term: program.term,
+          productType: program.productType || 'fixed',
+          investor: program.investor || 'fnma',
+          tier: program.tier || 'core',
+          uwFee: lenderData.lenderFee || 999,
+        };
+
+        // LLPA grids from parsed rate sheet data
+        const llpaGrids = lenderData.llpas || null;
+
+        for (const rateEntry of lockRates) {
+          // Only price with v2 engine if lender has adjustments configured
+          if (lenderAdj) {
+            const result = priceRate(rateEntry, product, scenario, lenderAdj, BROKER_CONFIG, llpaGrids);
+            results.push(result);
+          } else {
+            // Lenders without adjustment config — show raw price with comp only
+            const rawPrice = rateEntry.price;
+            const compDollars = Math.min(loanAmount * BROKER_CONFIG.compRate,
+              scenario.loanPurpose === 'purchase' ? BROKER_CONFIG.compCapPurchase : BROKER_CONFIG.compCapRefi);
+            const compPoints = (compDollars / loanAmount) * 100;
+            const finalPrice = rawPrice - compPoints;
+            const costOrCredit = finalPrice - 100;
+            const dollars = (costOrCredit / 100) * loanAmount;
+
+            results.push({
+              rate: rateEntry.rate,
+              lender: lenderId,
+              program: program.name || program.rawName,
+              investor: program.investor || 'unknown',
+              tier: program.tier || 'unknown',
+              finalPrice: Math.round(finalPrice * 1000) / 1000,
+              isRebate: finalPrice > 100,
+              isDiscount: finalPrice < 100,
+              isPar: Math.abs(finalPrice - 100) < 0.005,
+              rebateDollars: finalPrice > 100 ? Math.round(dollars) : 0,
+              discountDollars: finalPrice < 100 ? Math.round(Math.abs(dollars)) : 0,
+              compDollars: Math.round(compDollars),
+              lenderFee: lenderData.lenderFee || 0,
+              breakdown: [
+                { label: 'Base price', value: rawPrice },
+                { label: `Comp ($${compDollars.toFixed(0)})`, value: -compPoints },
+              ],
+            });
+          }
+        }
+      }
+    }
+
+    // Sort by rate ascending
+    results.sort((a, b) => a.rate - b.rate);
+
+    return NextResponse.json({
+      scenario,
+      resultCount: results.length,
+      results,
+    }, {
       headers: {
         'Cache-Control': 'public, s-maxage=60, max-age=30, stale-while-revalidate=60',
       },
@@ -111,13 +198,11 @@ export async function POST(request) {
   }
 }
 
-// GET for health check / info
 export async function GET() {
   return NextResponse.json({
-    engine: 'NetRate Pricing Engine v1',
+    engine: 'NetRate Pricing Engine v2',
     endpoint: 'POST /api/pricing',
-    lenders: ['everstream', 'tls', 'keystone', 'swmc', 'amwest'],
-    comp: { rate: '2%', capRefi: 3595, capPurchase: 4595, type: 'lender-paid' },
-    features: ['multi-lender', 'county-loan-limits', 'price-normalization', 'best-execution'],
+    lenders: ['everstream', 'tls', 'keystone', 'swmc', 'amwest', 'windsor'],
+    comp: { rate: '2%', capRefi: 3595, capPurchase: 3595, type: 'lender-paid' },
   });
 }

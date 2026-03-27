@@ -28,10 +28,12 @@ export default function RateResults({ scenario, rateData, apiResults, loading, c
     );
   }
 
+  // Find PAR rate — closest to 100 (smallest absolute cost/credit)
   let parIdx = 0;
-  let minAbsAdj = Infinity;
+  let minAbsCost = Infinity;
   rates.forEach((r, i) => {
-    if (Math.abs(r.adjPrice) < minAbsAdj) { minAbsAdj = Math.abs(r.adjPrice); parIdx = i; }
+    const absCost = Math.abs(r.costDollars || 0);
+    if (absCost < minAbsCost) { minAbsCost = absCost; parIdx = i; }
   });
 
   const showStart = Math.max(0, parIdx - 5);
@@ -55,31 +57,26 @@ export default function RateResults({ scenario, rateData, apiResults, loading, c
   {
     const parRate = rates[parIdx];
     if (parRate) {
-      const parCost = (parRate.adjPrice / 100) * scenario.loanAmount;
-
-      // Charge side — lowest cost per eighth below par
+      // Charge side — lowest cost per eighth below par (lower rate = more discount)
       let bestCostPerEighth = Infinity;
       for (const r of rates) {
-        if (r.rate >= parRate.rate || r.adjPrice <= 0) continue;
+        if (r.rate >= parRate.rate || !r.isDiscount) continue;
         const eighthsBelow = (parRate.rate - r.rate) / 0.125;
         if (eighthsBelow <= 0) continue;
-        const totalCost = ((r.adjPrice / 100) * scenario.loanAmount) - parCost;
-        if (totalCost <= 0) continue;
-        const costPerEighth = totalCost / eighthsBelow;
+        const costPerEighth = r.discountDollars / eighthsBelow;
         if (costPerEighth < bestCostPerEighth) {
           bestCostPerEighth = costPerEighth;
           bestValueRate = r;
         }
       }
 
-      // Credit side — most credit per eighth above par
+      // Credit side — most rebate per eighth above par (higher rate = more rebate)
       let bestCreditPerEighth = 0;
       for (const r of rates) {
-        if (r.rate <= parRate.rate || r.creditDollars >= 0) continue;
+        if (r.rate <= parRate.rate || !r.isRebate) continue;
         const eighthsAbove = (r.rate - parRate.rate) / 0.125;
         if (eighthsAbove <= 0) continue;
-        const totalCredit = Math.abs(r.creditDollars);
-        const creditPerEighth = totalCredit / eighthsAbove;
+        const creditPerEighth = r.rebateDollars / eighthsAbove;
         if (creditPerEighth > bestCreditPerEighth) {
           bestCreditPerEighth = creditPerEighth;
           bestCreditRate = r;
@@ -139,7 +136,7 @@ export default function RateResults({ scenario, rateData, apiResults, loading, c
           <thead>
             <tr className="border-b border-gray-200 text-xs text-gray-500 uppercase tracking-wider">
               <th className="text-left px-3 py-3">Rate</th>
-              {useApi && <th className="text-left px-2 py-3">Lender</th>}
+              {/* Lender column hidden — only EverStream for now */}
               <th className="text-right px-2 py-3">APR</th>
               <th className="text-right px-2 py-3">Monthly P&I</th>
               {currentPI && <th className="text-right px-2 py-3">Savings</th>}
@@ -150,17 +147,19 @@ export default function RateResults({ scenario, rateData, apiResults, loading, c
           </thead>
           <tbody>
             {visibleRates.map((r, i) => {
-              const isCredit = r.adjPrice < 0;
-              const isPar = Math.abs(r.adjPrice) < 0.15;
+              const isRebate = r.isRebate || false;
+              const isDiscount = r.isDiscount || false;
+              const isPar = r.isPar || Math.abs(r.costDollars) < 50;
               const savings = currentPI ? currentPI - r.monthlyPI : 0;
-              const isNoCost = (totalFixed + r.creditDollars) <= 0;
+              const displayDollars = isRebate ? r.rebateDollars : r.discountDollars;
+              const isNoCost = isRebate && (r.rebateDollars >= (r.lenderFee || 0));
               const isBestValue = bestValueRate && r.rate === bestValueRate.rate;
               const isBestCredit = bestCreditRate && r.rate === bestCreditRate.rate;
               return (
                 <tr key={r.rate}
                   className={`border-b border-gray-100 ${isPar ? "bg-cyan-50" : i % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-cyan-50 transition-colors`}>
                   <td className="px-3 py-3 font-semibold text-gray-800">{r.rate.toFixed(3)}%</td>
-                  {useApi && <td className="px-2 py-3 text-xs text-gray-500 capitalize">{r.lender || '—'}</td>}
+                  {/* Lender column hidden — only EverStream for now */}
                   <td className="text-right px-2 py-3 font-mono text-gray-500">{r.apr ? r.apr.toFixed(3) + '%' : '—'}</td>
                   <td className="text-right px-2 py-3 font-mono text-gray-700">
                     ${r.monthlyPI.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -170,10 +169,10 @@ export default function RateResults({ scenario, rateData, apiResults, loading, c
                       {savings > 0 ? `-$${savings.toFixed(0)}/mo` : "\u2014"}
                     </td>
                   )}
-                  <td className={`text-right px-3 py-3 font-mono font-semibold ${isCredit ? "text-green-700" : "text-red-600"}`}>
-                    {isCredit
-                      ? `($${Math.abs(r.creditDollars).toLocaleString("en-US", { maximumFractionDigits: 0 })})`
-                      : `$${Math.abs(r.creditDollars).toLocaleString("en-US", { maximumFractionDigits: 0 })}`}
+                  <td className={`text-right px-3 py-3 font-mono font-semibold ${isRebate ? "text-green-700" : "text-red-600"}`}>
+                    {isRebate
+                      ? `($${displayDollars.toLocaleString("en-US", { maximumFractionDigits: 0 })})`
+                      : `$${displayDollars.toLocaleString("en-US", { maximumFractionDigits: 0 })}`}
                   </td>
                   <td className="px-2 py-3">
                     <div className="flex flex-wrap gap-1">

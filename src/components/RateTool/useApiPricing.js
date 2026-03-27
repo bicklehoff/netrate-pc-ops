@@ -47,11 +47,12 @@ export function useApiPricing(scenario) {
           return;
         }
 
-        // Group by rate — pick the best (lowest cost) result at each rate
+        // Group by rate — pick the best result at each rate
+        // "Best" = highest finalPrice (most rebate or least discount)
         const byRate = {};
         for (const r of data.results) {
           const rateKey = r.rate.toFixed(3);
-          if (!byRate[rateKey] || r.costDollars < byRate[rateKey].costDollars) {
+          if (!byRate[rateKey] || r.finalPrice > byRate[rateKey].finalPrice) {
             byRate[rateKey] = r;
           }
         }
@@ -65,24 +66,29 @@ export function useApiPricing(scenario) {
           .map(r => {
             const monthlyPI = calculatePI(r.rate, scenario.loanAmount);
             const savings = currentPI ? currentPI - monthlyPI : 0;
-            // creditDollars: negative = borrower gets credit, positive = borrower pays
-            const creditDollars = -r.costDollars;
+
+            // v2 engine: isRebate/isDiscount determine display
+            // Rebate = borrower receives money (green, parentheses)
+            // Discount = borrower pays money (red, no parentheses)
+            const costDollars = r.isDiscount ? r.discountDollars : -r.rebateDollars;
+
             return {
               rate: r.rate,
               apr: r.apr || r.rate,
               monthlyPI,
               savings,
-              creditDollars,
-              costDollars: r.costDollars,
+              costDollars,
+              isRebate: r.isRebate,
+              isDiscount: r.isDiscount,
+              isPar: r.isPar,
+              rebateDollars: r.rebateDollars || 0,
+              discountDollars: r.discountDollars || 0,
               lender: r.lender,
               program: r.program,
               lenderFee: r.lenderFee,
-              llpaPoints: r.llpaPoints,
-              llpaBreakdown: r.llpaBreakdown,
               compDollars: r.compDollars,
-              rawPrice: r.rawPrice,
-              basePrice: r.rawPrice,
-              adjPrice: -(r.costPoints || 0), // for PAR calculation compatibility
+              finalPrice: r.finalPrice,
+              breakdown: r.breakdown,
             };
           })
           .sort((a, b) => a.rate - b.rate)
