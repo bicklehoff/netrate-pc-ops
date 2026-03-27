@@ -14,7 +14,7 @@ export default function PortalLayout({ children }) {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Portal Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/portal/apply" className="flex items-center gap-0.5">
             <span className="text-xl font-bold text-gray-900">Net</span>
             <span className="text-xl font-bold text-brand">Rate</span>
@@ -44,13 +44,13 @@ export default function PortalLayout({ children }) {
       </header>
 
       {/* Portal Content */}
-      <main className="flex-1 max-w-5xl mx-auto w-full px-6 py-8">
+      <main className="flex-1 w-full">
         {children}
       </main>
 
       {/* Portal Footer */}
       <footer className="border-t border-gray-200 bg-white mt-auto">
-        <div className="max-w-5xl mx-auto px-6 py-6 text-center text-xs text-gray-400">
+        <div className="max-w-7xl mx-auto px-6 py-6 text-center text-xs text-gray-400">
           <p>
             NetRate Mortgage | NMLS #1111861 | 357 South McCaslin Blvd., #200, Louisville, CO 80027
           </p>

@@ -284,7 +284,7 @@ export default function MloDashboardPage() {
 
   if (authStatus === 'loading' || loading) {
     return (
-      <div className="max-w-7xl mx-auto py-8">
+      <div className="py-8">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-gray-200 rounded w-48" />
           <div className="h-4 bg-gray-200 rounded w-72" />
@@ -295,7 +295,7 @@ export default function MloDashboardPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div>
       <div className="flex items-start justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Loan Pipeline</h1>
