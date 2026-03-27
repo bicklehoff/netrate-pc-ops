@@ -147,7 +147,7 @@ export default function RateResults({ scenario, rateData, apiResults, loading, c
               const isRebate = r.isRebate || false;
               const isPar = r.isPar || Math.abs(r.costDollars) < 50;
               const savings = currentPI ? currentPI - r.monthlyPI : 0;
-              const displayDollars = isRebate ? r.rebateDollars : r.discountDollars;
+              const displayDollars = isRebate ? (r.rebateDollars || 0) : (r.discountDollars || 0);
               const isNoCost = isRebate && (r.rebateDollars >= (r.lenderFee || 0));
               const isBestValue = bestValueRate && r.rate === bestValueRate.rate;
               const isBestCredit = bestCreditRate && r.rate === bestCreditRate.rate;
