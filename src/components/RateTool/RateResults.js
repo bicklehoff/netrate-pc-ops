@@ -18,10 +18,10 @@ export default function RateResults({ scenario, rateData, apiResults, loading, c
   const rates = apiResults || [];
   const currentPI = scenario.currentRate ? calculatePI(scenario.currentRate, scenario.loanAmount) : null;
 
-  if (loading) {
+  if (loading || !rates || rates.length === 0) {
     return (
       <div className="bg-white border border-gray-200 rounded-lg p-8 my-4 text-center text-gray-500">
-        Loading rates...
+        {loading ? 'Loading rates...' : 'No rates available'}
       </div>
     );
   }
