@@ -16,6 +16,7 @@ import prisma from '@/lib/prisma';
 import { listFolder, uploadFile, downloadFile, deleteResource } from '@/lib/zoho-workdrive';
 import { put } from '@vercel/blob';
 import { PDFDocument } from 'pdf-lib';
+import { sendSms } from '@/lib/twilio-voice';
 
 async function verifyMloAccess(loanId, session) {
   if (!session || session.user.userType !== 'mlo') return null;
@@ -210,6 +211,24 @@ export async function PUT(request, { params }) {
         details: { documentId: doc.id, fileName: uploadFileName, originalName: file.name, folder: targetFolder, storageType },
       },
     });
+
+    // Notify David when a CD or closing doc is uploaded
+    const isClosingDoc = docType === 'closing_disclosure' || docType === 'cd' ||
+      /closing.?disclosure|\.cd\b/i.test(uploadFileName) ||
+      targetFolder === 'CLOSING';
+    if (isClosingDoc || loan.status === 'funded') {
+      const uploaderName = session.user.name || session.user.email;
+      const borrower = await prisma.borrower.findUnique({ where: { id: loan.borrowerId }, select: { firstName: true, lastName: true } });
+      const borrowerName = borrower ? `${borrower.firstName} ${borrower.lastName}` : `Loan #${loan.loanNumber}`;
+      try {
+        await sendSms(
+          process.env.DAVID_PHONE || '+13034445251',
+          `CD uploaded for ${borrowerName} (Loan #${loan.loanNumber}) by ${uploaderName}. File: ${uploadFileName}`
+        );
+      } catch (smsErr) {
+        console.error('CD notification SMS failed:', smsErr?.message);
+      }
+    }
 
     return NextResponse.json({ document: doc, storageType });
   } catch (error) {
