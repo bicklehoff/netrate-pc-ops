@@ -130,11 +130,19 @@ async function processLoan(loanData) {
     throw new Error(`Loan ${loanNumber}: Could not match or create borrower`);
   }
 
-  // ── 2. Match MLO by ldoxOfficerId ────────────────────────
+  // ── 2. Match MLO by ldoxOfficerId, then NMLS fallback ───
   let mloId = null;
   if (loanData.loanOfficer) {
+    // Try ldoxOfficerId first
     const mlo = await prisma.mlo.findUnique({
       where: { ldoxOfficerId: parseInt(loanData.loanOfficer, 10) },
+    }).catch(() => null);
+    if (mlo) mloId = mlo.id;
+  }
+  // Fallback: match by NMLS
+  if (!mloId && loanData.loanOfficerNmls) {
+    const mlo = await prisma.mlo.findFirst({
+      where: { nmls: String(loanData.loanOfficerNmls) },
     });
     if (mlo) mloId = mlo.id;
   }
