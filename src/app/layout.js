@@ -161,6 +161,8 @@ export default function RootLayout({ children }) {
                     <a href="/breakeven" className="block px-4 py-2 text-gray-600 hover:bg-gray-50 hover:text-brand transition-colors">Breakeven Math</a>
                     <a href="/refinance-playbook" className="block px-4 py-2 text-gray-600 hover:bg-gray-50 hover:text-brand transition-colors">Refinance Playbook</a>
                     <a href="/reverse-mortgage" className="block px-4 py-2 text-gray-600 hover:bg-gray-50 hover:text-brand transition-colors">Reverse Mortgages</a>
+                    <a href="/condo-rules-changed" className="block px-4 py-2 text-gray-600 hover:bg-gray-50 hover:text-brand transition-colors">Condo Rules Changed</a>
+                    <a href="/equity-without-losing-rate" className="block px-4 py-2 text-gray-600 hover:bg-gray-50 hover:text-brand transition-colors">Home Equity Options</a>
                     <div className="border-t border-gray-100 my-1"></div>
                     <a href="/why-netrate" className="block px-4 py-2 text-gray-600 hover:bg-gray-50 hover:text-brand transition-colors">Why NetRate</a>
                     <a href="/good-deal" className="block px-4 py-2 text-gray-600 hover:bg-gray-50 hover:text-brand transition-colors">Is It a Good Deal?</a>
@@ -248,6 +250,8 @@ export default function RootLayout({ children }) {
                   <li><a href="/breakeven" className="hover:text-white transition-colors">Breakeven Math</a></li>
                   <li><a href="/refinance-playbook" className="hover:text-white transition-colors">Refinance Playbook</a></li>
                   <li><a href="/reverse-mortgage" className="hover:text-white transition-colors">Reverse Mortgages</a></li>
+                  <li><a href="/condo-rules-changed" className="hover:text-white transition-colors">Condo Rules Changed</a></li>
+                  <li><a href="/equity-without-losing-rate" className="hover:text-white transition-colors">Home Equity Options</a></li>
                   <li><a href="/why-netrate" className="hover:text-white transition-colors">Why NetRate</a></li>
                   <li><a href="/good-deal" className="hover:text-white transition-colors">Is It a Good Deal?</a></li>
                 </ul>
