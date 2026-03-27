@@ -94,7 +94,7 @@ export default function MloNav() {
   const items = isAdmin ? [...NAV_ITEMS, ...ADMIN_ITEMS] : NAV_ITEMS;
 
   return (
-    <nav className="w-14 hover:w-44 transition-all duration-200 bg-gray-900 border-r border-gray-800 flex flex-col h-full flex-shrink-0 overflow-hidden group">
+    <nav className="w-14 md:w-48 transition-all duration-200 bg-gray-900 border-r border-gray-800 flex flex-col h-full flex-shrink-0 overflow-hidden group">
       {/* Nav items */}
       <div className="flex-1 py-4 flex flex-col gap-1">
         {items.map((item) => {
@@ -111,7 +111,7 @@ export default function MloNav() {
               title={item.label}
             >
               <span className="flex-shrink-0">{item.icon}</span>
-              <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">{item.label}</span>
+              <span className="hidden md:inline">{item.label}</span>
             </Link>
           );
         })}
@@ -129,7 +129,7 @@ export default function MloNav() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
             </svg>
           </span>
-          <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">Sign Out</span>
+          <span className="hidden md:inline">Sign Out</span>
         </button>
       </div>
     </nav>
