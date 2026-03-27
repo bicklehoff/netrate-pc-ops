@@ -25,6 +25,7 @@ const STATUS_MAP = {
   'Clear to Close':        'ctc',
   'Docs Out':              'docs_out',
   'Funded':                'funded',
+  'Closed':                'funded',
   'Denied':                'denied',
   'Withdrawn':             'withdrawn',
 };
