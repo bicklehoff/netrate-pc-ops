@@ -189,6 +189,28 @@ const result = await writeRatesToDB('everstream', programs, sheetDate, csvPath);
 // result: { sheetId, pricesInserted, productsMatched, productsUnmatched }
 ```
 
+### Sheet Deactivation Rule
+
+**One active sheet per lender at any time.**
+
+When `writeRatesToDB` runs:
+1. BEGIN transaction
+2. Set all existing active sheets for this lender to `status = 'superseded'`
+3. Delete rate_prices for superseded sheets (keep DB clean)
+4. Insert new sheet as `status = 'active'`
+5. Insert new rate_prices
+6. COMMIT
+
+If anything fails, ROLLBACK — DB stays unchanged. No partial states.
+
+### State-Specific Product Dedup
+
+EverStream CSV has state-specific variants (e.g., "FNMA 25/30Yr Fixed FL > 400K Core" for Florida). The parser strips the state prefix, causing these to map to the same product as the base variant. The DB writer inserts duplicates.
+
+**Current fix:** After parsing, deduplicate rate_prices — keep first inserted row per (product_id, rate, lock_days). The first row is the base product (no state prefix), which is correct for non-FL/TX states.
+
+**Future fix:** Create separate rate_products entries for state-specific variants and filter by borrower's state in the pricing engine.
+
 ### Product Matching
 
 The DB writer matches parsed programs to `rate_products` rows by `raw_name`. The raw_name format is:
@@ -239,6 +261,72 @@ This is the most important part. When a parser throws an error:
    topics: ["rate-sheet-parser", lenderId]
    content: "Keystone rate sheet format changed: rate grid moved from row 5 to row 8. Updated parser offset."
    ```
+
+## LOAN PRICING RULES — ABSOLUTE, NO EXCEPTIONS
+
+```
+Step 1: Start with FinalBasePrice from CSV (e.g., 98.6732)
+Step 2: Add credits (SRP, loan amt credit, risk-based credit)
+Step 3: Subtract costs (FICO/LTV hit, FNMA/FHLMC hit)
+Step 4: Subtract broker comp (always last adjustment)
+Step 5: Read the final number
+
+FINAL PRICE > 100 → REBATE → borrower RECEIVES money → green ($X)
+FINAL PRICE < 100 → DISCOUNT → borrower PAYS money → red $X
+FINAL PRICE = 100 → PAR → no cost, no credit
+
+Dollar amount = |final price - 100| × loan amount / 100
+
+NEVER determine credit vs charge until AFTER comp is subtracted.
+NEVER call a discount a credit. Below par = CHARGE. ALWAYS.
+```
+
+### Adjustment Order
+
+| Order | Adjustment | Source | Direction |
+|-------|-----------|--------|-----------|
+| 1 | FICO/LTV LLPA | Parsed rate sheet LLPA grids | Cost = subtract from base |
+| 2 | SRP (Servicing Released Premium) | Core Conv SRP tab in LLPA XLSX | Credit = add to base |
+| 3 | Risk-Based Price Adjustment | Core Conv LLPAs tab, Risk Based section | Credit = add to base |
+| 4 | Loan Amount Adjustment | Core Conv LLPAs tab | Credit = add to base |
+| 5 | Investor-specific (FNMA/FHLMC) | Core Conv LLPAs tab, FNMA/FHLMC Only sections | Cost = subtract from base |
+| 6 | Broker comp | BrokerConfig in DB | Cost = subtract (always last) |
+
+### Display Convention (Borrower-Facing)
+
+- REBATE (above par after all adjustments) → green text, parentheses: ($2,525)
+- DISCOUNT (below par after all adjustments) → red text, no parentheses: $1,832
+
+### Comparing to LoanSifter
+
+LoanSifter's displayed price already has comp deducted. To compare:
+- Our: base + credits - costs - comp = final price
+- LS: shows final price (comp already deducted)
+- These should match
+
+### EverStream FNMA vs FHLMC Adjustments (from Core Conv LLPAs tab)
+
+| Investor | 21-30yr | 20/15/10yr | ARMs |
+|----------|---------|------------|------|
+| FNMA | -0.220 | -0.140 | -0.220 |
+| FHLMC | -0.150 | 0 | -0.150 |
+
+These are costs — subtract from base.
+
+### Example: FNMA Core 30yr Fixed > $400K, 6.124%, $450K loan, Refi, CO, 780 FICO, 75% LTV
+
+| Step | Adjustment | Value | Running Total |
+|------|-----------|-------|--------------|
+| Base | CSV FinalBasePrice | | 98.6732 |
+| 1 | FICO/LTV refi (780, 70.01-75%) | -0.125 | 98.5482 |
+| 2 | SRP (CO, Fixed 20/25/30yr, Impounds) | +1.830 | 100.3782 |
+| 3 | Risk-Based (780-799, 70.01-75%) | +0.050 | 100.4282 |
+| 4 | Loan Amt (>400K<=500K) | +0.030 | 100.4582 |
+| 5 | FNMA 21-30yr | -0.220 | 100.2382 |
+| 6 | Broker comp ($3,595 / $450K = 0.799%) | -0.799 | 99.4392 |
+| | **Final price** | | **99.439** |
+
+99.439 < 100 → DISCOUNT → borrower PAYS: 0.561% = $2,525. Matches LoanSifter exactly.
 
 ## Validation
 

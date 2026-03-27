@@ -34,6 +34,9 @@ async function writeRatesToDB(lenderCode, programs, sheetDate, sourceFile = null
   await client.connect();
 
   try {
+    // Everything in a transaction — if anything fails, nothing changes
+    await client.query('BEGIN');
+
     // Get lender ID
     const lenderResult = await client.query(
       'SELECT id FROM rate_lenders WHERE code = $1', [lenderCode]
@@ -42,6 +45,20 @@ async function writeRatesToDB(lenderCode, programs, sheetDate, sourceFile = null
       throw new Error(`Lender not found: ${lenderCode}`);
     }
     const lenderId = lenderResult.rows[0].id;
+
+    // Deactivate ALL existing active sheets for this lender FIRST
+    // One active sheet per lender at any time.
+    await client.query(`
+      UPDATE rate_sheets SET status = 'superseded'
+      WHERE lender_id = $1 AND status = 'active'
+    `, [lenderId]);
+
+    // Delete rate_prices for superseded sheets (keep DB clean)
+    await client.query(`
+      DELETE FROM rate_prices WHERE rate_sheet_id IN (
+        SELECT id FROM rate_sheets WHERE lender_id = $1 AND status = 'superseded'
+      )
+    `, [lenderId]);
 
     // Load all rate_products for this lender (keyed by raw_name)
     const productsResult = await client.query(
@@ -59,12 +76,6 @@ async function writeRatesToDB(lenderCode, programs, sheetDate, sourceFile = null
       RETURNING id
     `, [lenderId, sheetDate, sourceFile, programs.length]);
     const sheetId = sheetResult.rows[0].id;
-
-    // Deactivate previous sheets for this lender (keep only latest active)
-    await client.query(`
-      UPDATE rate_sheets SET status = 'superseded'
-      WHERE lender_id = $1 AND id != $2 AND status = 'active'
-    `, [lenderId, sheetId]);
 
     // Collect all rate price rows for batch insert
     let productsMatched = 0;
@@ -124,6 +135,9 @@ async function writeRatesToDB(lenderCode, programs, sheetDate, sourceFile = null
       [pricesInserted, sheetId]
     );
 
+    // Commit the transaction — all or nothing
+    await client.query('COMMIT');
+
     return {
       sheetId,
       lenderCode,
@@ -133,6 +147,10 @@ async function writeRatesToDB(lenderCode, programs, sheetDate, sourceFile = null
       productsUnmatched,
       unmatchedNames,
     };
+  } catch (err) {
+    // Rollback on any error — DB stays unchanged
+    try { await client.query('ROLLBACK'); } catch { /* ignore rollback errors */ }
+    throw err;
   } finally {
     await client.end();
   }
