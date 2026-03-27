@@ -15,7 +15,7 @@ import { encrypt } from '@/lib/encryption';
 // Core statuses were modeled after LDox lifecycle.
 
 const STATUS_MAP = {
-  'Prospect':              'draft',
+  'Prospect':              'prospect',
   'Application':           'applied',
   'Processing':            'processing',
   'Submitted':             'submitted_uw',
@@ -26,12 +26,12 @@ const STATUS_MAP = {
   'Docs Out':              'docs_out',
   'Funded':                'funded',
   'Denied':                'denied',
-  'Withdrawn':             'denied',
+  'Withdrawn':             'withdrawn',
 };
 
 // Ball-in-court derived from status
 const BALL_IN_COURT = {
-  draft: 'borrower',
+  prospect: 'borrower',
   applied: 'mlo',
   processing: 'mlo',
   submitted_uw: 'lender',
@@ -39,15 +39,17 @@ const BALL_IN_COURT = {
   suspended: 'mlo',
   ctc: 'mlo',
   docs_out: 'lender',
-  funded: 'none',
+  funded: 'mlo',
+  settled: 'none',
   denied: 'none',
+  withdrawn: 'none',
 };
 
 // ─── Helpers ─────────────────────────────────────────────────
 
 function normalizeStatus(ldoxStatus) {
-  if (!ldoxStatus) return 'draft';
-  return STATUS_MAP[ldoxStatus] || 'draft';
+  if (!ldoxStatus) return 'prospect';
+  return STATUS_MAP[ldoxStatus] || 'prospect';
 }
 
 function parseDate(val) {
@@ -133,13 +135,22 @@ async function processLoan(loanData) {
   // ── 2. Match MLO by ldoxOfficerId, then NMLS fallback ───
   let mloId = null;
   if (loanData.loanOfficer) {
-    // Try ldoxOfficerId first
-    const mlo = await prisma.mlo.findUnique({
-      where: { ldoxOfficerId: parseInt(loanData.loanOfficer, 10) },
+    const loValue = String(loanData.loanOfficer);
+    // Try ldoxOfficerId first (integer)
+    const mloByLdox = await prisma.mlo.findUnique({
+      where: { ldoxOfficerId: parseInt(loValue, 10) },
     }).catch(() => null);
-    if (mlo) mloId = mlo.id;
+    if (mloByLdox) {
+      mloId = mloByLdox.id;
+    } else {
+      // Fallback: match by NMLS (loanOfficer field often contains NMLS)
+      const mloByNmls = await prisma.mlo.findFirst({
+        where: { nmls: loValue },
+      });
+      if (mloByNmls) mloId = mloByNmls.id;
+    }
   }
-  // Fallback: match by NMLS
+  // Also check explicit loanOfficerNmls field
   if (!mloId && loanData.loanOfficerNmls) {
     const mlo = await prisma.mlo.findFirst({
       where: { nmls: String(loanData.loanOfficerNmls) },
@@ -214,8 +225,8 @@ async function processLoan(loanData) {
     loan = await prisma.loan.create({
       data: {
         ...loanFields,
-        applicationStep: coreStatus === 'draft' ? 1 : 6,
-        submittedAt: coreStatus !== 'draft' ? new Date() : null,
+        applicationStep: coreStatus === 'prospect' ? 1 : 6,
+        submittedAt: coreStatus !== 'prospect' ? new Date() : null,
       },
     });
   }

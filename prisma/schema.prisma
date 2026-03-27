@@ -128,7 +128,7 @@ model Loan {
   referralSource        String?        @map("referral_source")
   leadSource            String?        @map("lead_source")
   applicationChannel    String?        @map("application_channel")
-  ldoxLoanId            String?        @map("ldox_loan_id")
+  ldoxLoanId            String?        @unique @map("ldox_loan_id")
   creditScore           Int?           @map("credit_score")
   prequalLetterData     Json?          @map("prequal_letter_data")
   conditions            Condition[]
