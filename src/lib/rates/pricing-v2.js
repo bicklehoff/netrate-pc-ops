@@ -285,6 +285,23 @@ export function priceRate(rateEntry, product, scenario, lenderAdj, brokerConfig,
     breakdown.push({ label: `${investor.toUpperCase()} adj`, value: -investorCost });
   }
 
+  // Step 6b: FHLMC-specific refi + occupancy adjustments
+  // FHLMC has two extra adjustments that FNMA does not:
+  //   - Loan Purpose Rate/Term Refi: -0.150 (cost)
+  //   - Occupancy/term/loan amt (25/30yr, 400K-450K, primary): +0.050 (credit)
+  // Net: -0.100. These are on the Core Conv LLPAs sheet.
+  if (investor === 'fhlmc' && tier === 'core') {
+    if (loanPurpose === 'refinance') {
+      price -= 0.150;
+      breakdown.push({ label: 'FHLMC refi purpose adj', value: -0.150 });
+    }
+    // Occupancy/term/loan amt credit for 25/30yr primary, 400K-450K
+    if (term >= 25 && loanAmount > 400000 && loanAmount <= 450000) {
+      price += 0.050;
+      breakdown.push({ label: 'FHLMC occupancy/term adj', value: +0.050 });
+    }
+  }
+
   // Step 7: Broker comp — COST → subtract (always last)
   const { compDollars, compPoints } = getBrokerComp(loanAmount, loanPurpose, brokerConfig);
   price -= compPoints;

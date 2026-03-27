@@ -303,7 +303,13 @@ function parseRates(csvContent) {
       price: parseFloat(parts[3]),
       releaseTime: parts[4],
     };
-  }).filter(r => r.lockDays === 30);
+  }).filter(r => r.lockDays === 30)
+    .filter(r => {
+      // Exclude state-specific products (FL, TX, NY variants)
+      // These have state codes embedded in the product name like "FNMA 25/30Yr Fixed FL > 400K Core"
+      // They use different base prices that only apply in those states
+      return !/ (FL|TX|NY|CA|IL|PA|NJ|CT|MA|MD|VA|GA|OH|MI|WA|AZ|NV|MN) /.test(r.product);
+    });
 
   // Extract sheet date from Release Time
   let sheetDate = null;
