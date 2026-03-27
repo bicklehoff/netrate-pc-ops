@@ -51,7 +51,7 @@ export default function RateTool({ initialRateData, defaultState }) {
     thirdPartyCosts: getThirdPartyCosts(initialState),
   });
 
-  const { results: apiResults, loading: apiLoading } = useApiPricing(scenario);
+  const { results: apiResults, loading: apiLoading, fetchRates } = useApiPricing(scenario);
 
   const [compareRates, setCompareRates] = useState([]);
   const [showReport, setShowReport] = useState(false);
@@ -75,7 +75,7 @@ export default function RateTool({ initialRateData, defaultState }) {
 
       {/* Rate Tool Body */}
       <div className="px-1">
-        <ScenarioForm scenario={scenario} onChange={handleScenarioChange} />
+        <ScenarioForm scenario={scenario} onChange={handleScenarioChange} onSubmit={fetchRates} loading={apiLoading} />
         <RateResults
           scenario={scenario}
           rateData={rateData}
