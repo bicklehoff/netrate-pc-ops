@@ -85,7 +85,12 @@ export default function ScenarioForm({ scenario, onChange }) {
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Loan Type</label>
-          <select value={scenario.loanType || 'conventional'} onChange={e => update("loanType", e.target.value)}
+          <select value={scenario.loanType || 'conventional'} onChange={e => {
+              const lt = e.target.value;
+              const newDown = lt === 'fha' ? 3.5 : lt === 'va' ? 0 : 25;
+              onChange({ ...scenario, loanType: lt, downPaymentPct: newDown });
+              setLastEdited('pct');
+            }}
             className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm bg-white">
             <option value="conventional">Conventional</option>
             <option value="fha">FHA</option>
@@ -152,13 +157,15 @@ export default function ScenarioForm({ scenario, onChange }) {
         )}
 
         <div>
-          <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Credit Score</label>
-          <input type="number" min={500} max={850} step={1} value={scenario.fico || ""}
-            onChange={e => {
-              const v = parseInt(e.target.value, 10);
-              if (!isNaN(v)) update("fico", Math.min(850, Math.max(500, v)));
-            }}
-            className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm" />
+          <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">
+            Credit Score: <span className="text-gray-800 font-semibold">{scenario.fico || 780}</span>
+          </label>
+          <input type="range" min={580} max={850} step={5} value={scenario.fico || 780}
+            onChange={e => update("fico", parseInt(e.target.value, 10))}
+            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-brand" />
+          <div className="flex justify-between text-[10px] text-gray-400 mt-0.5">
+            <span>580</span><span>660</span><span>740</span><span>850</span>
+          </div>
         </div>
         {!isPurchase && (
           <div>
