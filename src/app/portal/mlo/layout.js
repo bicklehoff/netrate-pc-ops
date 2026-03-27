@@ -58,8 +58,8 @@ export default function MloLayout({ children }) {
         {/* Incoming call popup (floating, always available) */}
         <IncomingCallPopup />
 
-        {/* MLO content: left nav + main + dialer */}
-        <div className="flex h-[calc(100vh-73px)]">
+        {/* MLO content: left nav + main + dialer — full viewport, hides portal chrome */}
+        <div className="flex h-screen fixed inset-0 z-50 bg-gray-50">
           {/* Left sidebar nav */}
           <MloNav />
 

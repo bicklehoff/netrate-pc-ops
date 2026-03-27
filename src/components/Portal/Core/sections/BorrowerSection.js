@@ -241,6 +241,19 @@ export default function BorrowerSection({ loan, updateLoanField }) {
             type="currency"
             onSave={save('presentHousingExpense')}
           />
+          <EditableField
+            label="# Dependents"
+            value={loan.numDependents}
+            type="text"
+            onSave={save('numDependents')}
+          />
+          <EditableField
+            label="Dependent Ages"
+            value={loan.dependentAges}
+            type="text"
+            placeholder="e.g. 5, 8, 12"
+            onSave={save('dependentAges')}
+          />
         </div>
       </SectionCard>
 

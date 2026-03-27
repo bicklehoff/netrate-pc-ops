@@ -85,6 +85,7 @@ export default function LoanDetailShell({ loan, onRefresh }) {
           <LoanInfoSection
             loan={loan}
             updateLoanField={updateLoanField}
+            updateDates={updateDates}
           />
         );
       case 'borrower':

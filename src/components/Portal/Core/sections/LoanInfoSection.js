@@ -57,7 +57,7 @@ function formatAddress(addr) {
   return parts.join(', ') || '—';
 }
 
-export default function LoanInfoSection({ loan, updateLoanField }) {
+export default function LoanInfoSection({ loan, updateLoanField, updateDates }) {
   const save = (field) => async (value) => {
     await updateLoanField({ [field]: value });
   };
@@ -95,6 +95,12 @@ export default function LoanInfoSection({ loan, updateLoanField }) {
             onSave={save('loanTerm')}
           />
           <EditableField
+            label="Credit Score"
+            value={loan.creditScore}
+            type="text"
+            onSave={save('creditScore')}
+          />
+          <EditableField
             label="Lien Status"
             value={loan.lienStatus}
             type="select"
@@ -106,6 +112,30 @@ export default function LoanInfoSection({ loan, updateLoanField }) {
             value={loan.numBorrowers}
             type="text"
             readOnly
+          />
+        </div>
+      </SectionCard>
+
+      {/* ─── Rate Lock ─── */}
+      <SectionCard title="Rate Lock" icon="🔒" defaultOpen={true}>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <EditableField
+            label="Lock Date"
+            value={loan.dates?.lockedDate}
+            type="date"
+            onSave={async (v) => updateDates({ lockedDate: v })}
+          />
+          <EditableField
+            label="Lock Expiration"
+            value={loan.dates?.lockExpiration}
+            type="date"
+            onSave={async (v) => updateDates({ lockExpiration: v })}
+          />
+          <EditableField
+            label="Lock Term (days)"
+            value={loan.dates?.lockTerm}
+            type="text"
+            onSave={async (v) => updateDates({ lockTerm: parseInt(v) || null })}
           />
         </div>
       </SectionCard>
@@ -122,6 +152,12 @@ export default function LoanInfoSection({ loan, updateLoanField }) {
             className="col-span-2"
           />
           <EditableField
+            label="County"
+            value={loan.propertyAddress?.county}
+            type="text"
+            readOnly
+          />
+          <EditableField
             label="Property Type"
             value={loan.propertyType}
             type="select"
@@ -129,42 +165,42 @@ export default function LoanInfoSection({ loan, updateLoanField }) {
             onSave={save('propertyType')}
           />
           <EditableField
+            label="Occupancy"
+            value={loan.occupancy}
+            type="select"
+            options={OCCUPANCY_OPTIONS}
+            onSave={save('occupancy')}
+          />
+          <EditableField
             label="# Units"
             value={loan.numUnits}
             type="text"
             onSave={save('numUnits')}
           />
-          {loan.purpose === 'purchase' ? (
-            <>
-              <EditableField
-                label="Purchase Price"
-                value={loan.purchasePrice}
-                type="currency"
-                onSave={save('purchasePrice')}
-              />
-              <EditableField
-                label="Down Payment"
-                value={loan.downPayment}
-                type="currency"
-                onSave={save('downPayment')}
-              />
-            </>
-          ) : (
-            <>
-              <EditableField
-                label="Estimated Value"
-                value={loan.estimatedValue}
-                type="currency"
-                onSave={save('estimatedValue')}
-              />
-              <EditableField
-                label="Current Balance"
-                value={loan.currentBalance}
-                type="currency"
-                onSave={save('currentBalance')}
-              />
-            </>
-          )}
+          <EditableField
+            label="Purchase Price"
+            value={loan.purchasePrice}
+            type="currency"
+            onSave={save('purchasePrice')}
+          />
+          <EditableField
+            label="Down Payment"
+            value={loan.downPayment}
+            type="currency"
+            onSave={save('downPayment')}
+          />
+          <EditableField
+            label="Appraised Value"
+            value={loan.estimatedValue}
+            type="currency"
+            onSave={save('estimatedValue')}
+          />
+          <EditableField
+            label="Current Balance"
+            value={loan.currentBalance}
+            type="currency"
+            onSave={save('currentBalance')}
+          />
         </div>
       </SectionCard>
 
@@ -179,28 +215,17 @@ export default function LoanInfoSection({ loan, updateLoanField }) {
             onSave={save('purpose')}
           />
           <EditableField
-            label="Occupancy"
-            value={loan.occupancy}
-            type="select"
-            options={OCCUPANCY_OPTIONS}
-            onSave={save('occupancy')}
+            label="Refi Purpose"
+            value={loan.refiPurpose}
+            type="text"
+            onSave={save('refiPurpose')}
           />
-          {(loan.purpose === 'refinance' || loan.purpose === 'cash_out') && (
-            <>
-              <EditableField
-                label="Refi Purpose"
-                value={loan.refiPurpose}
-                type="text"
-                onSave={save('refiPurpose')}
-              />
-              <EditableField
-                label="Cash Out Amount"
-                value={loan.cashOutAmount}
-                type="currency"
-                onSave={save('cashOutAmount')}
-              />
-            </>
-          )}
+          <EditableField
+            label="Cash Out Amount"
+            value={loan.cashOutAmount}
+            type="currency"
+            onSave={save('cashOutAmount')}
+          />
         </div>
       </SectionCard>
 
@@ -274,6 +299,24 @@ export default function LoanInfoSection({ loan, updateLoanField }) {
             type="text"
             placeholder="Free text..."
             onSave={save('referralSource')}
+          />
+          <EditableField
+            label="LDox Loan ID"
+            value={loan.ldoxLoanId}
+            type="text"
+            readOnly
+          />
+          <EditableField
+            label="Submitted At"
+            value={loan.submittedAt}
+            type="date"
+            readOnly
+          />
+          <EditableField
+            label="Created"
+            value={loan.createdAt}
+            type="date"
+            readOnly
           />
         </div>
       </SectionCard>
