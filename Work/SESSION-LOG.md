@@ -5,6 +5,115 @@
 
 ---
 
+## 2026-03-26 (Session 3) — Dev — Pricing Engine v2 Rewrite, EverStream Exact Match
+**Actor:** pc-dev
+
+### What was done
+- **Pricing engine v2 rewrite** — new `pricing-v2.js` that uses simple 100-based math (add credits, subtract costs). Replaces the old engine's sign-conversion mess.
+- **Hand-verified EverStream pricing** against LoanSifter — exact match at 6.124% FNMA Core ($2,523 discount vs LS $2,525 = $2 rounding)
+- **Full adjustment stack mapped and working:** FICO/LTV, SRP, Risk-Based, Loan Amount, FNMA/FHLMC investor adj, broker comp
+- **FNMA vs FHLMC adjustments confirmed from rate sheet:** FNMA 21-30yr = -0.220, FHLMC 21-30yr = -0.150
+- **Rate tool display fixed:** Red = discount (borrower pays), Green parentheses = rebate (borrower receives). NO COST and SWEET SPOT badges working.
+- **Only EverStream enabled** — other 5 lenders disabled until their adjustment configs are built
+- **Lender column hidden** from borrower-facing display
+- **Loan pricing rules documented** in parser skill — absolute rules for sign convention
+- **Database split completed** (from session 2): PC now on `netrate_pc` via `PC_DATABASE_URL`
+- **Data migration verified**: 3,251 rows, zero mismatches
+
+### Key files
+- `src/lib/rates/pricing-v2.js` — new pricing engine (100-based math)
+- `src/lib/rates/lender-adj-loader.js` — loads static adjustment configs
+- `src/app/api/pricing/route.js` — API route wired to v2 engine
+- `src/components/RateTool/useApiPricing.js` — hook updated for v2 response
+- `src/components/RateTool/RateResults.js` — display updated (isRebate/isDiscount)
+- `skills/parse-rate-sheet/SKILL.md` — loan pricing rules added
+
+### Decisions
+- **Pricing engine stays in 100-based the whole way through** — no format conversions, no double-negation
+- **FHLMC adj is -0.150** (from rate sheet), NOT -0.220 (which is FNMA). LS appears to apply FNMA value to Freddie products.
+- **SRP confirmed at 1.830** for CO, Fixed 20/25/30yr, with impounds — verified against rate sheet Core Conv SRP tab
+- **Comp cap $3,595** for both purchase and refi (David's business decision, not lender-specific)
+
+### Open items
+- [ ] Wire adjustment configs for AmWest, Keystone, Windsor, TLS, SWMC
+- [ ] Add Product Type dropdown (FHA/VA) to rate tool
+- [ ] Verify live site matches local (Vercel deploy succeeded but check /rates)
+- [ ] Investigate SRP — David unsure if we get it (Core Conv SRP tab might be for non-del customers)
+- [ ] Rate sheet date shows 3/23 — need today's rates to display correctly
+
+---
+
+## 2026-03-26 (Session 2) — Dev — Database Split, New Neon DB, Schema with Rate Engine Models, Vercel Cutover
+**Actor:** pc-dev
+
+### What Happened
+1. **Created new Neon database** — `netrate_pc` on same Neon project (same credentials, different DB name)
+2. **New Prisma schema** — 35 models (27 existing PC models + 8 new rate engine/quote models). Stripped all 64 Mac-only tracker models. Schema validates clean.
+3. **New rate engine models:**
+   - `RateLender` — lender metadata, fees, comp caps, active status
+   - `RateProduct` — product taxonomy (agency, type, tier, term, occupancy, loan amount range)
+   - `RateSheet` — parse events (one row per daily parse per lender)
+   - `RatePrice` — individual rate/price rows (normalized to 100-based)
+   - `LenderAdjustment` — SRP, LLPA grids, loan amt adj as JSONB (the static configs)
+   - `FeeTemplate` — per-state fee estimates (HUD sections A-H, purchase vs refi)
+   - `BorrowerQuote` — full quote document (replaces Excel workbook)
+   - `BrokerConfig` — David's business settings (comp caps, licensed states, singleton)
+4. **Data migration** — 3,251 rows copied from neondb → netrate_pc. All counts verified:
+   - Contacts: 874, ContactNotes: 849, Leads: 727, Loans: 21, Borrowers: 23
+   - RateHistory: 216, RateWatchCommentaries: 4, LoanEvents: 122, Documents: 29
+   - Accounts: 296, AccountContacts: 56, CallLogs: 2, LoanDates: 10, LoanBorrowers: 20, MLOs: 2
+5. **Seeded new tables** — BrokerConfig, 6 RateLenders, 4 FeeTemplates (CO/TX purchase/refi)
+6. **Prisma config updated** — switched to `PC_DATABASE_URL` / `PC_DIRECT_URL` to avoid conflict with Vercel's Neon integration env vars
+7. **Build passes** with new schema
+
+### NOT DONE — Vercel Cutover
+- Vercel env vars NOT yet updated — site still points to old `neondb`
+- Need to add `PC_DATABASE_URL` and `PC_DIRECT_URL` as new Vercel env vars pointing to `netrate_pc`
+- The Neon integration locks `DATABASE_URL` — can't edit it. Workaround: code uses `PC_DATABASE_URL` instead
+- **MUST add these env vars in Vercel before deploying the schema/prisma changes**
+
+### Uncommitted Changes (IMPORTANT — must commit next session)
+- `prisma/schema.prisma` — new 35-model schema (biggest change, +1781/-many lines)
+- `prisma.config.ts` — switched to PC_DATABASE_URL
+- `src/lib/prisma.js` — switched to PC_DATABASE_URL
+- `package.json` / `package-lock.json` — added `pg` dependency for migration script
+- `src/lib/rates/parsers/everstream.js` — 30-day lock filter
+- `src/data/parsed-rates.json` — re-parsed with 30-day filter (much smaller)
+- `scripts/migrate-to-pc-db.js` — data migration script (new, untracked)
+- `prisma/schema.prisma.backup` — backup of old schema (untracked)
+
+### Key Decisions (logged to MCP)
+- PC gets own Neon DB (`netrate_pc`) — same project, separate database
+- Rate data stored in normalized DB tables, not flat JSON files
+- Static lender adjustments as JSONB, daily rates parsed to DB
+- Code uses `PC_DATABASE_URL` to avoid Vercel-Neon integration conflict
+- BorrowerQuote model added now (for future quote generator, replaces Excel workbook)
+- FeeTemplate covers HUD sections A-H for purchase and refi
+
+### Connection Strings (for next session)
+- Pooled: `postgresql://neondb_owner:npg_sWV0dtFf4iwZ@ep-plain-math-aixa3lmr-pooler.c-4.us-east-1.aws.neon.tech/netrate_pc?sslmode=require`
+- Direct: `postgresql://neondb_owner:npg_sWV0dtFf4iwZ@ep-plain-math-aixa3lmr.c-4.us-east-1.aws.neon.tech/netrate_pc?sslmode=require`
+
+### Tomorrow's Priority (EXACT ORDER)
+1. **Add Vercel env vars** — `PC_DATABASE_URL` and `PC_DIRECT_URL` pointing to netrate_pc
+2. **Commit all uncommitted changes** — schema, prisma config, prisma.js, migration script
+3. **Push and deploy** — verify live site works with new DB
+4. **Verify CRM data** — contacts, leads, loans all load correctly on live site
+5. **Build rate parser → DB pipeline** — parsers write to RatePrice/RateSheet tables instead of JSON
+6. **Wire pricing engine to read from DB** — replace parsed-rates.json with DB queries
+7. **Product taxonomy** — populate RateProduct table for all 6 lenders
+8. **Product eligibility filtering** — pricing engine filters by loan type, occupancy, term
+
+### Files Modified (uncommitted)
+- `prisma/schema.prisma`, `prisma.config.ts`, `src/lib/prisma.js`
+- `package.json`, `package-lock.json`
+- `src/lib/rates/parsers/everstream.js`, `src/data/parsed-rates.json`
+- `src/components/Portal/Core/sections/OverviewSection.js`
+- `Work/Dev/Integrations/TWILIO-STATUS.md`
+- NEW: `scripts/migrate-to-pc-db.js`, `prisma/schema.prisma.backup`
+
+---
+
 ## 2026-03-25 (PM) — Dev — Rate Engine Calibration, LoanSifter Deep Dive, Architecture Decisions
 **Actor:** pc-dev | **Time:** ~8:30 AM – 6:30 PM
 
