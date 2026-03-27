@@ -89,7 +89,8 @@ export default function ScenarioForm({ scenario, onChange }) {
           <select value={scenario.loanType || 'conventional'} onChange={e => {
               const lt = e.target.value;
               const newDown = lt === 'fha' ? 3.5 : lt === 'va' ? 0 : 25;
-              onChange({ ...scenario, loanType: lt, downPaymentPct: newDown });
+              const newFico = lt === 'fha' ? 680 : lt === 'va' ? 720 : 780;
+              onChange({ ...scenario, loanType: lt, downPaymentPct: newDown, fico: newFico });
               setLastEdited('pct');
             }}
             className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm bg-white">
