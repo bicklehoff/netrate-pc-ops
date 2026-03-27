@@ -94,7 +94,7 @@ export default function MloNav() {
   const items = isAdmin ? [...NAV_ITEMS, ...ADMIN_ITEMS] : NAV_ITEMS;
 
   return (
-    <nav className="w-16 hover:w-44 transition-all duration-200 bg-surface border-r border-white/10 flex flex-col h-full flex-shrink-0 overflow-hidden group">
+    <nav className="w-14 hover:w-44 transition-all duration-200 bg-gray-900 border-r border-gray-800 flex flex-col h-full flex-shrink-0 overflow-hidden group">
       {/* Nav items */}
       <div className="flex-1 py-4 flex flex-col gap-1">
         {items.map((item) => {
@@ -103,14 +103,14 @@ export default function MloNav() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-3 px-5 py-2.5 text-sm font-medium transition-colors whitespace-nowrap ${
+              className={`flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors whitespace-nowrap ${
                 active
-                  ? 'text-white bg-white/10 border-l-2 border-brand'
+                  ? 'text-brand bg-white/10 border-l-2 border-brand'
                   : 'text-gray-400 hover:text-white hover:bg-white/5 border-l-2 border-transparent'
               }`}
               title={item.label}
             >
-              {item.icon}
+              <span className="flex-shrink-0">{item.icon}</span>
               <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">{item.label}</span>
             </Link>
           );
@@ -121,12 +121,14 @@ export default function MloNav() {
       <div className="py-4 border-t border-white/10">
         <button
           onClick={() => signOut({ callbackUrl: '/portal/mlo/login' })}
-          className="flex items-center gap-3 px-5 py-2.5 text-sm font-medium text-gray-500 hover:text-red-400 hover:bg-white/5 transition-colors whitespace-nowrap w-full"
+          className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-500 hover:text-red-400 hover:bg-white/5 transition-colors whitespace-nowrap w-full"
           title="Sign Out"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-          </svg>
+          <span className="flex-shrink-0">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+          </span>
           <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">Sign Out</span>
         </button>
       </div>
