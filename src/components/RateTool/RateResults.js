@@ -12,12 +12,10 @@ export default function RateResults({ scenario, rateData, apiResults, loading, c
     );
   }
 
-  // Use API results (DB-backed) when available, fall back to old engine
-  const useApi = apiResults && apiResults.length > 0;
-  const llpa = useApi
-    ? { total: apiResults[0]?.llpaPoints || 0, breakdown: apiResults[0]?.llpaBreakdown || [] }
-    : calculateLLPA(scenario, rateData);
-  const rates = useApi ? apiResults : priceRates(scenario, rateData);
+  // Use API results only — no old engine fallback
+  const useApi = true;
+  const llpa = { total: 0, breakdown: apiResults?.[0]?.breakdown || [] };
+  const rates = apiResults || [];
   const currentPI = scenario.currentRate ? calculatePI(scenario.currentRate, scenario.loanAmount) : null;
 
   if (loading) {
