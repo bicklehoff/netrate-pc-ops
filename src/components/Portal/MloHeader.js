@@ -22,20 +22,22 @@ function UserAvatar({ name, size = 32 }) {
 
   if (photo) {
     return (
-      <Image
-        src={photo}
-        alt={name}
-        width={size}
-        height={size}
-        className="rounded-full object-cover"
-        style={{ width: size, height: size }}
-      />
+      <div className="rounded-full ring-2 ring-gray-200 ring-offset-1" style={{ width: size, height: size }}>
+        <Image
+          src={photo}
+          alt={name}
+          width={size}
+          height={size}
+          className="rounded-full object-cover"
+          style={{ width: size, height: size }}
+        />
+      </div>
     );
   }
 
   return (
     <div
-      className="rounded-full bg-brand text-white flex items-center justify-center text-xs font-semibold"
+      className="rounded-full bg-brand text-white flex items-center justify-center text-[10px] font-semibold ring-2 ring-gray-200 ring-offset-1"
       style={{ width: size, height: size }}
     >
       {initials}
@@ -68,7 +70,7 @@ export default function MloHeader() {
           <div className="text-sm font-medium text-gray-700">{userName}</div>
           <div className="text-[10px] text-gray-400">{userEmail}</div>
         </div>
-        <UserAvatar name={userName} size={32} />
+        <UserAvatar name={userName} size={28} />
       </div>
     </div>
   );
