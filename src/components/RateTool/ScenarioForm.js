@@ -71,13 +71,13 @@ export default function ScenarioForm({ scenario, onChange }) {
   }, [scenario, onChange]);
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-5 my-4">
-      <h2 className="text-lg font-semibold text-gray-800 mb-4">Your Scenario</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
+    <div className="bg-white border border-gray-200 rounded-lg p-4 my-3">
+      <h2 className="text-base font-semibold text-gray-800 mb-3">Your Scenario</h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-2">
         <div>
           <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Loan Purpose</label>
           <select value={scenario.purpose} onChange={e => update("purpose", e.target.value)}
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white">
+            className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm bg-white">
             <option value="purchase">Purchase</option>
             <option value="refi">Rate/Term Refinance</option>
             <option value="cashout">Cash-Out Refinance</option>
@@ -86,7 +86,7 @@ export default function ScenarioForm({ scenario, onChange }) {
         <div>
           <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Loan Type</label>
           <select value={scenario.loanType || 'conventional'} onChange={e => update("loanType", e.target.value)}
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white">
+            className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm bg-white">
             <option value="conventional">Conventional</option>
             <option value="fha">FHA</option>
             <option value="va">VA</option>
@@ -95,7 +95,7 @@ export default function ScenarioForm({ scenario, onChange }) {
         <div>
           <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Property Type</label>
           <select value={scenario.propertyType} onChange={e => update("propertyType", e.target.value)}
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white">
+            className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm bg-white">
             <option value="sfr">Single Family</option>
             <option value="condo">Condo</option>
             <option value="townhome">Townhome</option>
@@ -107,7 +107,7 @@ export default function ScenarioForm({ scenario, onChange }) {
           </label>
           <input type="number" value={scenario.propertyValue || ""} placeholder="$"
             onChange={e => update("propertyValue", Number(e.target.value))}
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+            className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm" />
         </div>
 
         {/* Purchase: three interlinked fields */}
@@ -119,7 +119,7 @@ export default function ScenarioForm({ scenario, onChange }) {
                 value={lastEdited === 'pct' ? (scenario.downPaymentPct || "") : (purchaseCalc.downPct || "")}
                 placeholder="%"
                 onChange={e => handleDownPct(Number(e.target.value))}
-                className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+                className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm" />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Down Payment $</label>
@@ -127,7 +127,7 @@ export default function ScenarioForm({ scenario, onChange }) {
                 value={lastEdited === 'dollars' ? (scenario.downPaymentDollars || "") : (purchaseCalc.downDollars || "")}
                 placeholder="$"
                 onChange={e => handleDownDollars(Number(e.target.value))}
-                className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+                className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm" />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Loan Amount</label>
@@ -135,7 +135,7 @@ export default function ScenarioForm({ scenario, onChange }) {
                 value={lastEdited === 'loan' ? (scenario.manualLoanAmount || "") : (purchaseCalc.loanAmount || "")}
                 placeholder="$"
                 onChange={e => handleLoanAmount(Number(e.target.value))}
-                className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+                className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm" />
             </div>
           </>
         )}
@@ -146,7 +146,7 @@ export default function ScenarioForm({ scenario, onChange }) {
             <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">New Loan Amount</label>
             <input type="number" value={scenario.newLoanAmount || scenario.currentPayoff || ""} placeholder="$"
               onChange={e => update("newLoanAmount", Number(e.target.value))}
-              className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+              className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm" />
             <p className="text-xs text-gray-400 mt-1">Your new mortgage balance</p>
           </div>
         )}
@@ -158,14 +158,14 @@ export default function ScenarioForm({ scenario, onChange }) {
               const v = parseInt(e.target.value, 10);
               if (!isNaN(v)) update("fico", Math.min(850, Math.max(500, v)));
             }}
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+            className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm" />
         </div>
         {!isPurchase && (
           <div>
             <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Current Rate</label>
             <input type="number" step="0.125" value={scenario.currentRate || ""} placeholder="%"
               onChange={e => update("currentRate", Number(e.target.value))}
-              className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+              className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm" />
             <p className="text-xs text-gray-400 mt-1">Your existing mortgage rate &mdash; used to calculate savings</p>
           </div>
         )}
@@ -175,7 +175,7 @@ export default function ScenarioForm({ scenario, onChange }) {
             const st = e.target.value;
             onChange({ ...scenario, state: st, thirdPartyCosts: getThirdPartyCosts(st) });
           }}
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white">
+            className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm bg-white">
             {Object.entries(STATE_DEFAULTS).map(([code, { label }]) => (
               <option key={code} value={code}>{label}</option>
             ))}
@@ -183,7 +183,7 @@ export default function ScenarioForm({ scenario, onChange }) {
         </div>
       </div>
       {loanAmount > 0 && (
-        <div className="mt-4 pt-3 border-t border-gray-100 flex flex-wrap gap-6 text-sm text-gray-600">
+        <div className="mt-3 pt-2 border-t border-gray-100 flex flex-wrap gap-6 text-sm text-gray-600">
           <span>Loan Amount: <strong className="text-gray-800">${loanAmount.toLocaleString("en-US", { maximumFractionDigits: 0 })}</strong></span>
           <span>LTV: <strong className="text-gray-800">{ltv.toFixed(1)}%</strong></span>
           <span>FICO Band: <strong className="text-gray-800">{getFicoBand(scenario.fico)}</strong></span>

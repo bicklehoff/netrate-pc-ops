@@ -53,11 +53,11 @@ export default async function RatesPage({ searchParams }) {
     <div>
       <TrustBar />
       <div className="bg-brand/10 border-b border-brand/20">
-        <p className="text-center py-2.5 px-4 text-sm font-semibold text-brand">
+        <p className="text-center py-1.5 px-4 text-sm font-semibold text-brand">
           No credit pull. No Social Security number needed to check rates. Just rates.
         </p>
       </div>
-      <div className="max-w-3xl mx-auto px-4 py-8">
+      <div className="max-w-3xl mx-auto px-4 py-4">
       <RateTool initialRateData={rateData} defaultState={defaultState} />
 
       {/* Strike Rate / Rate Alert signup */}

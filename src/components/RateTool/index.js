@@ -68,19 +68,9 @@ export default function RateTool({ initialRateData, defaultState }) {
   return (
     <div>
       {/* Rate Tool Header */}
-      <div className="bg-brand text-white px-6 py-5 rounded-t-lg">
-        <div className="flex justify-between items-start flex-wrap gap-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">{LO_CONFIG.company}</h1>
-            <p className="text-cyan-100 text-sm mt-1">{LO_CONFIG.name} | NMLS {LO_CONFIG.nmls}</p>
-            <p className="text-cyan-200/70 text-sm">{LO_CONFIG.phone} | {LO_CONFIG.email}</p>
-          </div>
-          <div className="text-right">
-            <p className="text-xs text-cyan-200/70 uppercase tracking-widest">Today&apos;s Rates</p>
-            <p className="text-sm text-cyan-100">Effective {rateData.lender.effectiveDate}</p>
-            <p className="text-xs text-cyan-200/50">Updated {rateData.lender.effectiveTime}</p>
-          </div>
-        </div>
+      <div className="bg-brand text-white px-5 py-2 rounded-t-lg flex justify-between items-center flex-wrap gap-2">
+        <p className="text-cyan-100 text-sm">{LO_CONFIG.name} | NMLS {LO_CONFIG.nmls} | {LO_CONFIG.phone}</p>
+        <p className="text-sm text-cyan-100">Rates effective {rateData.lender.effectiveDate}</p>
       </div>
 
       {/* Rate Tool Body */}
