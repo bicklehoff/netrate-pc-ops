@@ -155,6 +155,8 @@ export default function RootLayout({ children }) {
                 </button>
                 <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                   <div className="bg-white rounded-xl shadow-lg border border-gray-200 py-2 w-56">
+                    <a href="/resources" className="block px-4 py-2 text-brand font-medium hover:bg-gray-50 transition-colors">All Resources &rarr;</a>
+                    <div className="border-t border-gray-100 my-1"></div>
                     <a href="/how-pricing-works" className="block px-4 py-2 text-gray-600 hover:bg-gray-50 hover:text-brand transition-colors">How Pricing Works</a>
                     <a href="/points-and-credits" className="block px-4 py-2 text-gray-600 hover:bg-gray-50 hover:text-brand transition-colors">Points &amp; Credits</a>
                     <a href="/closing-costs" className="block px-4 py-2 text-gray-600 hover:bg-gray-50 hover:text-brand transition-colors">Closing Costs</a>

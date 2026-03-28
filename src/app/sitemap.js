@@ -46,6 +46,12 @@ export default function sitemap() {
     },
     // Educational content hub
     {
+      url: `${BASE_URL}/resources`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    },
+    {
       url: `${BASE_URL}/how-pricing-works`,
       lastModified: new Date(),
       changeFrequency: 'monthly',
