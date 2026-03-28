@@ -43,6 +43,20 @@ const updates = [
     tag: 'HELOC & Second Liens',
     date: 'March 2026',
   },
+  {
+    href: '/adu-rental-income',
+    title: 'Have an ADU? You Can Now Use That Rental Income to Qualify',
+    description: 'Fannie Mae now allows rental income from your ADU to count toward mortgage qualifying. New rule effective March 2026.',
+    tag: 'Fannie Mae DU 12.1',
+    date: 'March 2026',
+  },
+  {
+    href: '/california-housing-update',
+    title: 'California: More Housing Near Transit, Easier Condo Financing',
+    description: 'SB 79 opens transit-oriented development. Fannie Mae relaxes condo rules. Two shifts working in the same direction.',
+    tag: 'California',
+    date: 'March 2026',
+  },
 ];
 
 const guides = [
@@ -85,6 +99,26 @@ const guides = [
     href: '/why-netrate',
     title: 'How NetRate Charges Less',
     description: 'No TV ads. No cold calls. No haggling. How the direct mortgage model keeps overhead low and passes savings to you.',
+  },
+  {
+    href: '/heloc-vs-cashout',
+    title: 'HELOC vs Cash-Out Refinance',
+    description: 'Two ways to access equity. One keeps your rate. One replaces it. How to figure out which is right.',
+  },
+  {
+    href: '/when-to-refinance',
+    title: 'When Does a Refinance Make Sense?',
+    description: 'The breakeven math, the cost of waiting, and how long you\u2019ll keep the loan. Three questions that decide it.',
+  },
+  {
+    href: '/crypto-mortgage',
+    title: 'Can You Use Crypto to Qualify for a Mortgage?',
+    description: 'Down payment, reserves, asset depletion \u2014 how cryptocurrency works across conventional, government, and non-QM loans.',
+  },
+  {
+    href: '/airbnb-financing',
+    title: 'Can You Finance an Airbnb?',
+    description: 'DSCR loans qualify on rental income \u2014 no W-2s, no tax returns. How it works for short-term rental properties.',
   },
 ];
 
