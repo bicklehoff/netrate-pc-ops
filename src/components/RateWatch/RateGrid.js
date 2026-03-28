@@ -28,8 +28,8 @@ export default function RateGrid({ netRates, nationalRates, date }) {
   if (!netRates) return null;
 
   return (
-    <div className="px-5 py-4">
-      <div className="bg-surface rounded-xl border border-white/10 overflow-hidden">
+    <div className="h-full">
+      <div className="bg-surface rounded-xl border border-white/10 overflow-hidden h-full flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-5 pb-3">
           <div>

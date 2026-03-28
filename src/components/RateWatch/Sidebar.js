@@ -94,32 +94,9 @@ function RateRow({ product, rate, change }) {
   );
 }
 
-export default function Sidebar({ fredLatest, todayRate, rateChange }) {
+export default function Sidebar({ fredLatest }) {
   return (
-    <div className="flex flex-col overflow-y-auto max-h-[500px]">
-      {/* Today's Rates */}
-      <div className="px-6 py-5 border-b border-white/10">
-        <h3 className="text-slate-300 text-[13px] font-bold uppercase tracking-wide mb-3.5 flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-green-500" />
-          Today&apos;s Rates (780+ credit)
-        </h3>
-        <table className="w-full">
-          <thead>
-            <tr>
-              <th className="text-left text-slate-400 text-xs uppercase tracking-wide font-semibold pb-2.5">
-                Product
-              </th>
-              <th className="text-right text-slate-400 text-xs uppercase tracking-wide font-semibold pb-2.5">
-                Rate
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <RateRow product="30yr Fixed" rate={todayRate} change={rateChange} />
-          </tbody>
-        </table>
-      </div>
-
+    <div className="flex flex-col">
       {/* Treasury Yields */}
       <div className="px-6 py-5 border-b border-white/10">
         <h3 className="text-slate-300 text-[13px] font-bold uppercase tracking-wide mb-3.5">
