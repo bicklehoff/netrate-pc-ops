@@ -32,7 +32,7 @@ export default function HeroStrip({ todayRate, rateChange }) {
   });
 
   return (
-    <div className="bg-surface rounded-xl border border-white/10 p-3 h-full flex flex-col">
+    <div className="bg-surface rounded-xl border border-white/10 p-3 flex flex-col">
       {/* Rate + Trend header */}
       <div className="flex items-center justify-between mb-1.5">
         <div className="flex items-baseline gap-2">

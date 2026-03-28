@@ -153,7 +153,7 @@ export default async function RateWatchPage() {
 
       {/* === ABOVE THE FOLD: 3-column dashboard === */}
       <PredictionDataProvider>
-        <div className="px-3 py-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+        <div className="px-3 py-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 items-start">
           {/* Column 1: Commentary + Rate */}
           <HeroStrip
             todayRate={todayRate}

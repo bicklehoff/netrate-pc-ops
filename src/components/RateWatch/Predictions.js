@@ -31,7 +31,7 @@ export function FedPanelSection() {
 
   if (loading) {
     return (
-      <div className="bg-surface rounded-xl border border-white/10 p-3 h-full">
+      <div className="bg-surface rounded-xl border border-white/10 p-3">
         <div className="animate-pulse space-y-3">
           <div className="h-5 w-32 bg-white/10 rounded" />
           <div className="h-24 bg-white/5 rounded-lg" />
@@ -43,7 +43,7 @@ export function FedPanelSection() {
   if (!data?.fedEvents?.length) return null;
 
   return (
-    <div className="bg-surface rounded-xl border border-white/10 p-3 h-full">
+    <div className="bg-surface rounded-xl border border-white/10 p-3">
       <FedPanel fedEvents={data.fedEvents} />
     </div>
   );
@@ -56,7 +56,7 @@ export function MarketPredictions() {
   if (loading || !data?.markets?.length) return null;
 
   return (
-    <div className="bg-surface rounded-xl border border-white/10 p-3 h-full flex flex-col">
+    <div className="bg-surface rounded-xl border border-white/10 p-3 flex flex-col">
       <h2 className="text-white text-sm font-bold mb-2">Market Predictions</h2>
       <div className="grid grid-cols-1 gap-2 flex-1">
         {data.markets.slice(0, 6).map(market => (

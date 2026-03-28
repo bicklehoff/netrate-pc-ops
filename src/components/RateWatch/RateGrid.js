@@ -28,8 +28,8 @@ export default function RateGrid({ netRates, nationalRates, date }) {
   if (!netRates) return null;
 
   return (
-    <div className="h-full">
-      <div className="bg-surface rounded-xl border border-white/10 overflow-hidden h-full flex flex-col">
+    <div>
+      <div className="bg-surface rounded-xl border border-white/10 overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-3 pt-3 pb-1.5">
           <h2 className="text-white text-sm font-bold">NetRate vs National Avg</h2>
