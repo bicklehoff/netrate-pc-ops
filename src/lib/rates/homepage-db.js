@@ -1,7 +1,7 @@
 /**
  * Homepage Rate Computation — DB-driven
  * Server-side only — computes consumer-friendly rates using pricing-v2 + DB adjustments.
- * Replaces the old homepage.js that used parsed-rates.json + legacy pricing engine.
+ * Same engine as the Rate Tool.
  *
  * Used by: page.js (homepage), rate-watch/page.js
  */
@@ -12,6 +12,12 @@ import { getDbLenderAdj } from './db-adj-loader';
 import { DEFAULT_SCENARIO } from './defaults';
 
 const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+const BROKER_CONFIG = {
+  compRate: 0.02,
+  compCapPurchase: 3595,
+  compCapRefi: 3595,
+};
 
 function calculatePI(rate, amount, termYears = 30) {
   const monthlyRate = rate / 100 / 12;
@@ -36,83 +42,114 @@ function calculateAPR(noteRate, loanAmount, financeCharges, termYears = 30) {
 
 /**
  * Price a single product type using the DB-driven engine.
- * Returns the par rate (lowest cost to borrower) across all lenders with DB adjustments.
+ * Queries: active rate sheet → products matching loan type + term → prices at 30-day lock
+ * Then runs each through priceRate() with DB adjustments.
+ * Returns the par rate (lowest cost to borrower).
  */
-async function priceProduct(loanType, term) {
+async function priceProduct(loanType, termYears) {
   const loanAmount = DEFAULT_SCENARIO.loanAmount;
   const propertyValue = DEFAULT_SCENARIO.propertyValue;
   const ltv = Math.floor((loanAmount / propertyValue) * 10000) / 100;
   const fico = DEFAULT_SCENARIO.fico;
   const purpose = DEFAULT_SCENARIO.loanPurpose;
 
-  // Get all active rate sheets with their lenders
-  const sheets = await prisma.rateSheet.findMany({
+  // Get active rate sheet
+  const activeSheet = await prisma.rateSheet.findFirst({
     where: { status: 'active' },
     include: { lender: true },
+    orderBy: { effectiveDate: 'desc' },
   });
+
+  if (!activeSheet?.lender) return null;
+
+  const lenderCode = activeSheet.lender.code;
+
+  // Get DB adjustments for this lender + loan type
+  const lenderAdj = await getDbLenderAdj(lenderCode, loanType);
+  if (!lenderAdj) return null;
+
+  // Find products matching our criteria
+  // Products have loan amount ranges in display_name — filter by loanType + term
+  const products = await prisma.rateProduct.findMany({
+    where: {
+      lenderId: activeSheet.lenderId,
+      loanType,
+      term: termYears,
+      productType: 'fixed',
+      occupancy: 'primary',
+      isHighBalance: false,
+      isStreamline: false,
+      isBuydown: false,
+      isInterestOnly: false,
+    },
+  });
+
+  if (!products.length) return null;
+
+  // Filter products that cover our loan amount
+  const matchingProducts = products.filter(p => {
+    if (p.loanAmountMin && loanAmount < p.loanAmountMin) return false;
+    if (p.loanAmountMax && loanAmount > p.loanAmountMax) return false;
+    return true;
+  });
+
+  if (!matchingProducts.length) return null;
 
   let bestRate = null;
 
-  for (const sheet of sheets) {
-    const lenderCode = sheet.lender?.code;
-    if (!lenderCode) continue;
-
-    // Get DB adjustments for this lender + loan type
-    const lenderAdj = await getDbLenderAdj(lenderCode, loanType);
-    if (!lenderAdj) continue;
-
-    // Get prices for this sheet matching our criteria
-    const products = await prisma.rateProduct.findMany({
+  for (const product of matchingProducts) {
+    // Get prices for this product from the active sheet
+    const prices = await prisma.ratePrice.findMany({
       where: {
-        sheetId: sheet.id,
-        term,
-        category: loanType === 'fha' ? 'fha' : loanType === 'va' ? 'va' : 'agency',
+        productId: product.id,
+        rateSheetId: activeSheet.id,
+        lockDays: 30,
       },
-      include: {
-        prices: {
-          where: { lockDays: 30 },
-          orderBy: { rate: 'asc' },
-        },
-      },
+      orderBy: { rate: 'asc' },
     });
 
-    for (const product of products) {
-      for (const price of product.prices) {
-        const rate = Number(price.rate);
-        const basePrice = Number(price.price);
+    for (const price of prices) {
+      const rate = Number(price.rate);
+      const basePrice = Number(price.price);
 
-        const result = priceRate({
-          basePrice,
+      const rateEntry = { rate, price: basePrice };
+      const productObj = {
+        term: termYears,
+        productType: 'fixed',
+        investor: product.agency,
+        tier: product.tier || 'core',
+        name: product.displayName,
+        lenderCode: lenderCode,
+        uwFee: product.originationFee || product.uwFee || 999,
+      };
+      const scenarioObj = {
+        creditScore: fico,
+        ltv,
+        loanAmount,
+        loanPurpose: purpose,
+        state: DEFAULT_SCENARIO.state,
+        loanType,
+      };
+
+      const result = priceRate(rateEntry, productObj, scenarioObj, lenderAdj, BROKER_CONFIG);
+
+      if (!result) continue;
+
+      // Par rate = closest to zero net cost to borrower
+      // rebateDollars > 0 means borrower receives money (negative cost)
+      // discountDollars > 0 means borrower pays (positive cost)
+      const netCost = (result.discountDollars || 0) - (result.rebateDollars || 0);
+      const absCost = Math.abs(netCost);
+
+      if (!bestRate || absCost < bestRate.absCost || (absCost === bestRate.absCost && rate < bestRate.rate)) {
+        const financeCharges = Math.max(0, netCost);
+        bestRate = {
           rate,
-          lenderAdj,
-          fico,
-          ltv,
-          loanAmount,
-          purpose,
-          state: DEFAULT_SCENARIO.state,
-          loanType,
-          term,
-          investor: product.investor,
-          tier: product.tier || 'core',
-          productName: product.name,
-        });
-
-        if (!result) continue;
-
-        // Find par rate: closest to zero borrower cost (rebate - comp ≈ 0)
-        const borrowerCost = result.totalCostDollars || 0;
-        const absCost = Math.abs(borrowerCost);
-
-        if (!bestRate || absCost < bestRate.absCost || (absCost === bestRate.absCost && rate < bestRate.rate)) {
-          const financeCharges = Math.max(0, borrowerCost);
-          bestRate = {
-            rate,
-            apr: calculateAPR(rate, loanAmount, financeCharges, term),
-            payment: Math.round(calculatePI(rate, loanAmount, term)),
-            absCost,
-            costDollars: Math.round(borrowerCost),
-          };
-        }
+          apr: calculateAPR(rate, loanAmount, financeCharges, termYears),
+          payment: Math.round(calculatePI(rate, loanAmount, termYears)),
+          absCost,
+          costDollars: Math.round(netCost),
+        };
       }
     }
   }
@@ -122,9 +159,7 @@ async function priceProduct(loanType, term) {
 
 /**
  * Compute homepage display rates from DB using pricing-v2 engine.
- * Same adjustments as the Rate Tool.
- *
- * @returns {Object|null} { date, dateShort, conv30, conv15, fha30, va30 }
+ * @returns {Object|null} { dateShort, conv30, conv15, fha30, va30 }
  */
 export async function getHomepageRatesFromDB() {
   try {
@@ -141,21 +176,13 @@ export async function getHomepageRatesFromDB() {
       dateShort = `${MONTHS_SHORT[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
     }
 
-    // Price all products in parallel
-    const [conv30, conv15, fha30, va30] = await Promise.all([
-      priceProduct('conventional', 30),
-      priceProduct('conventional', 15),
-      priceProduct('fha', 30),
-      priceProduct('va', 30),
-    ]);
+    // Price all products — sequential to avoid connection pool exhaustion
+    const conv30 = await priceProduct('conventional', 30);
+    const conv15 = await priceProduct('conventional', 15);
+    const fha30 = await priceProduct('fha', 30);
+    const va30 = await priceProduct('va', 30);
 
-    return {
-      dateShort,
-      conv30,
-      conv15,
-      fha30,
-      va30,
-    };
+    return { dateShort, conv30, conv15, fha30, va30 };
   } catch (err) {
     console.error('DB homepage rate computation failed:', err.message);
     return null;
