@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 
-export default function HeroStrip({ todayRate, rateChange, fredLatest }) {
+export default function HeroStrip({ todayRate, rateChange }) {
   const [commentary, setCommentary] = useState(null);
 
   useEffect(() => {
