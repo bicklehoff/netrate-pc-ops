@@ -6,6 +6,7 @@ import { TreasuryYields, EconomicCalendar } from '@/components/RateWatch/Sidebar
 import BelowFold from '@/components/RateWatch/BelowFold';
 import { PredictionDataProvider, FedPanelSection, MarketPredictions } from '@/components/RateWatch/Predictions';
 import RateGrid from '@/components/RateWatch/RateGrid';
+import FedStatementDiff from '@/components/RateWatch/FedStatementDiff';
 import { getHomepageRatesFromDB } from '@/lib/rates/homepage-db';
 
 export const revalidate = 300; // ISR: 5 minutes
@@ -176,9 +177,10 @@ export default async function RateWatchPage() {
             <MarketPredictions />
           </div>
 
-          {/* Column 3: Fed Panel + Economic Calendar */}
+          {/* Column 3: Fed Panel + Statement Diff + Economic Calendar */}
           <div className="md:col-span-2 lg:col-span-1 flex flex-col gap-2">
             <FedPanelSection />
+            <FedStatementDiff />
             <EconomicCalendar />
           </div>
         </div>

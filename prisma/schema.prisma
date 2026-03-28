@@ -1130,3 +1130,18 @@ model BrokerConfig {
 
   @@map("broker_config")
 }
+
+// =============================================================================
+// FOMC Statements — cached Fed press releases for statement diff feature
+// =============================================================================
+
+model FomcStatement {
+  id            Int      @id @default(autoincrement())
+  meetingDate   DateTime @unique @map("meeting_date") @db.Date
+  statementUrl  String   @map("statement_url")
+  statementText String   @map("statement_text") @db.Text
+  paragraphs    Json     // String[] of parsed paragraphs
+  scrapedAt     DateTime @default(now()) @map("scraped_at") @db.Timestamptz(6)
+
+  @@map("fomc_statements")
+}
