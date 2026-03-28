@@ -32,27 +32,27 @@ export default function HeroStrip({ todayRate, rateChange }) {
   });
 
   return (
-    <div className="bg-surface rounded-xl border border-white/10 p-5 h-full flex flex-col">
+    <div className="bg-surface rounded-xl border border-white/10 p-3 h-full flex flex-col">
       {/* Rate + Trend header */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-1.5">
         <div className="flex items-baseline gap-2">
-          <span className="text-white text-3xl font-extrabold tabular-nums">
+          <span className="text-white text-2xl font-extrabold tabular-nums">
             {todayRate ? todayRate.toFixed(3) + '%' : '—'}
           </span>
-          <span className={`text-sm font-bold tabular-nums ${changeClass}`}>{changeText}</span>
+          <span className={`text-xs font-bold tabular-nums ${changeClass}`}>{changeText}</span>
         </div>
-        <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded ${trendClass} bg-white/5`}>
+        <span className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded ${trendClass} bg-white/5`}>
           {trendLabel}
         </span>
       </div>
-      <div className="text-slate-500 text-xs mb-4">30-Yr Fixed · 780+ · {dateStr}</div>
+      <div className="text-slate-500 text-[11px] mb-2">30-Yr Fixed · 780+ · {dateStr}</div>
 
       {/* Commentary */}
-      <div className="flex items-center gap-2 mb-2">
+      <div className="flex items-center gap-1.5 mb-1.5">
         <span className="w-1.5 h-1.5 bg-brand-light rounded-full animate-pulse" />
-        <span className="text-[10px] font-bold uppercase tracking-widest text-brand">Commentary</span>
+        <span className="text-[9px] font-bold uppercase tracking-widest text-brand">Commentary</span>
         {commentary?.sentiment && (
-          <span className={`text-[10px] font-bold uppercase ${
+          <span className={`text-[9px] font-bold uppercase ${
             commentary.sentiment === 'bearish' ? 'text-red-400' :
             commentary.sentiment === 'bullish' ? 'text-green-400' : 'text-slate-400'
           }`}>
@@ -62,12 +62,12 @@ export default function HeroStrip({ todayRate, rateChange }) {
       </div>
 
       {commentary?.headline ? (
-        <div className="flex-1">
-          <h2 className="text-white text-base font-bold leading-snug mb-2">
+        <div className="flex-1 min-h-0">
+          <h2 className="text-white text-sm font-bold leading-snug mb-1">
             {commentary.headline}
           </h2>
           {commentary.treasury10yr && (
-            <div className="text-[12px] text-slate-400 mb-2">
+            <div className="text-[11px] text-slate-400 mb-1">
               10yr: {commentary.treasury10yr}%
               {commentary.treasury10yrChg != null && (
                 <span className={commentary.treasury10yrChg > 0 ? 'text-red-400 ml-1' : 'text-green-400 ml-1'}>
@@ -76,17 +76,17 @@ export default function HeroStrip({ todayRate, rateChange }) {
               )}
             </div>
           )}
-          <p className="text-slate-400 text-[13px] leading-relaxed line-clamp-4">
+          <p className="text-slate-400 text-[12px] leading-snug line-clamp-5">
             {commentary.commentary}
           </p>
         </div>
       ) : (
         <div className="flex-1">
-          <h2 className="text-white text-base font-bold leading-snug mb-2">
+          <h2 className="text-white text-sm font-bold leading-snug mb-1">
             Daily Mortgage Rate Snapshot
           </h2>
-          <p className="text-slate-400 text-[13px] leading-relaxed">
-            Live wholesale mortgage rates updated every business day.
+          <p className="text-slate-400 text-[12px] leading-snug">
+            Live wholesale rates updated every business day.
           </p>
         </div>
       )}

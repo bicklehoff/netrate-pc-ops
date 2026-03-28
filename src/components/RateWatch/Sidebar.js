@@ -48,8 +48,8 @@ export default function Sidebar({ fredLatest }) {
   return (
     <div className="flex flex-col">
       {/* Treasury Yields */}
-      <div className="px-6 py-5 border-b border-white/10">
-        <h3 className="text-slate-300 text-[13px] font-bold uppercase tracking-wide mb-3.5">
+      <div className="px-3 py-3 border-b border-white/10">
+        <h3 className="text-slate-300 text-[11px] font-bold uppercase tracking-wide mb-2">
           Treasury Yields
         </h3>
         {['DGS2', 'DGS5', 'DGS10', 'DGS30'].map((key) => {
@@ -64,7 +64,7 @@ export default function Sidebar({ fredLatest }) {
           return (
             <div
               key={key}
-              className="flex justify-between py-2 border-b border-white/10 last:border-b-0 text-[15px]"
+              className="flex justify-between py-1.5 border-b border-white/10 last:border-b-0 text-[13px]"
             >
               <span className="text-slate-300">{labelMap[key]}</span>
               <span>
@@ -77,14 +77,14 @@ export default function Sidebar({ fredLatest }) {
       </div>
 
       {/* Economic Calendar */}
-      <div className="px-6 py-5">
-        <h3 className="text-slate-300 text-[13px] font-bold uppercase tracking-wide mb-3.5">
+      <div className="px-3 py-3">
+        <h3 className="text-slate-300 text-[11px] font-bold uppercase tracking-wide mb-2">
           Economic Calendar
         </h3>
         {ECONOMIC_EVENTS.map((ev, i) => (
           <div
             key={i}
-            className={`py-2.5 border-b border-white/10 last:border-b-0 ${
+            className={`py-1.5 border-b border-white/10 last:border-b-0 ${
               ev.highlight ? 'border-l-[3px] border-l-amber-500 pl-2.5 -ml-2.5' : ''
             } ${ev.future ? 'opacity-80' : ''}`}
           >

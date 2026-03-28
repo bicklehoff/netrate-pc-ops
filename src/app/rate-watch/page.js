@@ -137,50 +137,42 @@ export default async function RateWatchPage() {
         </div>
       )}
 
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row items-baseline gap-4 px-5 pt-6 pb-2">
-        <h1 className="text-white text-3xl font-extrabold tracking-tight">
+      {/* Header row — title + ticker inline */}
+      <div className="flex items-center gap-4 px-3 pt-3 pb-1">
+        <h1 className="text-white text-xl font-extrabold tracking-tight whitespace-nowrap">
           Rate <span className="text-brand">Watch</span>
         </h1>
-        <span className="text-slate-400 text-sm">
-          Live rates, updated daily
-        </span>
+        <div className="flex-1 min-w-0">
+          <TickerBar
+            fredLatest={fredData.latest}
+            todayRate={todayRate}
+            rateHistory={rateHistory}
+          />
+        </div>
       </div>
-
-      {/* Ticker Bar */}
-      <TickerBar
-        fredLatest={fredData.latest}
-        todayRate={todayRate}
-        rateHistory={rateHistory}
-      />
 
       {/* === ABOVE THE FOLD: 3-column dashboard === */}
       <PredictionDataProvider>
-        <div className="px-5 py-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="px-3 py-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
           {/* Column 1: Commentary + Rate */}
           <HeroStrip
             todayRate={todayRate}
             rateChange={rateChange}
-            fredLatest={fredData.latest}
           />
 
           {/* Column 2: Rate Comparison Grid */}
-          <div className="md:col-span-1">
-            <RateGrid
-              netRates={liveRates}
-              nationalRates={nationalData?.rates || null}
-              date={nationalData?.date || null}
-            />
-          </div>
+          <RateGrid
+            netRates={liveRates}
+            nationalRates={nationalData?.rates || null}
+            date={nationalData?.date || null}
+          />
 
           {/* Column 3: Fed Panel + Treasury Yields + Calendar */}
-          <div className="md:col-span-2 lg:col-span-1 flex flex-col gap-4">
+          <div className="md:col-span-2 lg:col-span-1 flex flex-col gap-2">
             <FedPanelSection />
             <div className="bg-surface rounded-xl border border-white/10 overflow-hidden">
               <Sidebar
                 fredLatest={fredData.latest}
-                todayRate={todayRate}
-                rateChange={rateChange}
               />
             </div>
           </div>
@@ -188,26 +180,22 @@ export default async function RateWatchPage() {
 
         {/* === BELOW THE FOLD === */}
 
-        {/* Rate Chart — compact */}
-        <div className="px-5 py-4">
-          <div className="bg-surface rounded-xl border border-white/10 p-5 overflow-hidden">
+        {/* Chart + Market Predictions side by side */}
+        <div className="px-3 py-2 grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-2">
+          <div className="bg-surface rounded-xl border border-white/10 p-4 overflow-hidden">
             <RateChart rateHistory={rateHistory} fredData={fredData.series} />
           </div>
+          <MarketPredictions />
         </div>
-
-        {/* Market Predictions */}
-        <MarketPredictions />
       </PredictionDataProvider>
 
-      {/* Below the Fold — narrative + events + CTA */}
+      {/* Narrative + events + CTA */}
       <BelowFold />
 
-      {/* Disclaimer strip */}
-      <div className="px-5 py-3.5 border-t border-white/10 text-xs text-slate-400 leading-relaxed">
-        Market commentary is for informational purposes only and does not constitute financial
-        advice. Rates shown are wholesale par rates and are subject to change. Actual rates depend on
-        individual borrower scenario. Data updated daily on business days. NMLS #1111861. Equal
-        Housing Lender.
+      {/* Disclaimer */}
+      <div className="px-3 py-2 border-t border-white/10 text-[10px] text-slate-500 leading-relaxed">
+        Market commentary is for informational purposes only and does not constitute financial advice.
+        Rates shown are wholesale par rates and are subject to change. NMLS #1111861. Equal Housing Lender.
       </div>
     </div>
   );

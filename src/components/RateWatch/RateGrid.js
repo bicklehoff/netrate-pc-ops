@@ -1,10 +1,10 @@
 'use client';
 
 const PRODUCTS = [
-  { key: 'conv30', label: '30-Yr Fixed', sub: 'Conforming' },
-  { key: 'conv15', label: '15-Yr Fixed', sub: 'Conforming' },
-  { key: 'fha30', label: 'FHA 30-Yr', sub: 'Government' },
-  { key: 'va30', label: 'VA 30-Yr', sub: 'Military' },
+  { key: 'conv30', label: '30-Yr Fixed', sub: 'CONF' },
+  { key: 'conv15', label: '15-Yr Fixed', sub: 'CONF' },
+  { key: 'fha30', label: 'FHA 30-Yr', sub: 'GOV' },
+  { key: 'va30', label: 'VA 30-Yr', sub: 'MIL' },
 ];
 
 function fmt(val, decimals = 2) {
@@ -31,28 +31,21 @@ export default function RateGrid({ netRates, nationalRates, date }) {
     <div className="h-full">
       <div className="bg-surface rounded-xl border border-white/10 overflow-hidden h-full flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 pt-5 pb-3">
-          <div>
-            <h2 className="text-white text-base font-bold">NetRate vs National Average</h2>
-            <p className="text-slate-500 text-xs mt-0.5">
-              Wholesale rate vs Mortgage News Daily national average
-            </p>
-          </div>
-          {date && (
-            <span className="text-slate-600 text-xs">{date}</span>
-          )}
+        <div className="flex items-center justify-between px-3 pt-3 pb-1.5">
+          <h2 className="text-white text-sm font-bold">NetRate vs National Avg</h2>
+          {date && <span className="text-slate-600 text-[10px]">{date}</span>}
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto flex-1">
           <table className="w-full">
             <thead>
               <tr className="border-y border-white/10 bg-white/[0.03]">
-                <th className="text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider py-2.5 px-6">Product</th>
-                <th className="text-right text-[10px] font-bold text-slate-400 uppercase tracking-wider py-2.5 px-3">NetRate</th>
-                <th className="text-right text-[10px] font-bold text-slate-400 uppercase tracking-wider py-2.5 px-3">Nat&apos;l Avg</th>
-                <th className="text-right text-[10px] font-bold text-slate-400 uppercase tracking-wider py-2.5 px-3">Change</th>
-                <th className="text-right text-[10px] font-bold text-slate-400 uppercase tracking-wider py-2.5 px-6">You Save</th>
+                <th className="text-left text-[9px] font-bold text-slate-400 uppercase tracking-wider py-1.5 px-3">Product</th>
+                <th className="text-right text-[9px] font-bold text-slate-400 uppercase tracking-wider py-1.5 px-2">Rate</th>
+                <th className="text-right text-[9px] font-bold text-slate-400 uppercase tracking-wider py-1.5 px-2">Nat&apos;l</th>
+                <th className="text-right text-[9px] font-bold text-slate-400 uppercase tracking-wider py-1.5 px-2">Chg</th>
+                <th className="text-right text-[9px] font-bold text-slate-400 uppercase tracking-wider py-1.5 px-3">Save</th>
               </tr>
             </thead>
             <tbody>
@@ -64,32 +57,32 @@ export default function RateGrid({ netRates, nationalRates, date }) {
 
                 return (
                   <tr key={prod.key} className={i < PRODUCTS.length - 1 ? 'border-b border-white/[0.06]' : ''}>
-                    <td className="py-3 px-6">
-                      <div className="text-sm font-semibold text-slate-200">{prod.label}</div>
-                      <div className="text-[10px] text-slate-500 uppercase tracking-wider">{prod.sub}</div>
+                    <td className="py-1.5 px-3">
+                      <div className="text-[13px] font-semibold text-slate-200">{prod.label}</div>
+                      <div className="text-[9px] text-slate-500 uppercase">{prod.sub}</div>
                     </td>
-                    <td className="py-3 px-3 text-right">
-                      <span className="text-[17px] font-extrabold text-white tabular-nums">
+                    <td className="py-1.5 px-2 text-right">
+                      <span className="text-[15px] font-extrabold text-white tabular-nums">
                         {nr ? fmt(nr.rate, 3) : '—'}
                       </span>
                     </td>
-                    <td className="py-3 px-3 text-right">
-                      <span className="text-sm text-slate-400 tabular-nums">
+                    <td className="py-1.5 px-2 text-right">
+                      <span className="text-[12px] text-slate-400 tabular-nums">
                         {na ? fmt(na.rate) : '—'}
                       </span>
                     </td>
-                    <td className="py-3 px-3 text-right">
-                      <span className={`text-xs tabular-nums ${chgColor(na?.change)}`}>
+                    <td className="py-1.5 px-2 text-right">
+                      <span className={`text-[11px] tabular-nums ${chgColor(na?.change)}`}>
                         {na ? chgText(na.change) : '—'}
                       </span>
                     </td>
-                    <td className="py-3 px-6 text-right">
+                    <td className="py-1.5 px-3 text-right">
                       {hasSavings ? (
-                        <span className="inline-flex items-center gap-1 text-sm font-bold text-green-400 tabular-nums">
+                        <span className="text-[12px] font-bold text-green-400 tabular-nums">
                           {savings.toFixed(3)}%
                         </span>
                       ) : (
-                        <span className="text-xs text-slate-600">—</span>
+                        <span className="text-[11px] text-slate-600">—</span>
                       )}
                     </td>
                   </tr>
@@ -100,11 +93,9 @@ export default function RateGrid({ netRates, nationalRates, date }) {
         </div>
 
         {/* Footnote */}
-        <div className="px-6 py-3 border-t border-white/[0.06]">
-          <p className="text-[10px] text-slate-600 leading-relaxed">
-            NetRate: wholesale rate · 780+ FICO · 75% LTV · Purchase
-            {' | '}Nat&apos;l Avg: Mortgage News Daily index · 780 FICO · adjusted for points
-            {' | '}Source: <a href="https://www.mortgagenewsdaily.com/mortgage-rates" target="_blank" rel="noopener noreferrer" className="text-slate-500 hover:text-brand transition-colors">mortgagenewsdaily.com</a>
+        <div className="px-3 py-1.5 border-t border-white/[0.06]">
+          <p className="text-[9px] text-slate-600 leading-snug">
+            780+ FICO · 75% LTV · Purchase | Source: <a href="https://www.mortgagenewsdaily.com/mortgage-rates" target="_blank" rel="noopener noreferrer" className="text-slate-500 hover:text-brand transition-colors">MND</a>
           </p>
         </div>
       </div>
