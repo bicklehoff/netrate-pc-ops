@@ -51,7 +51,7 @@ export default function RateTool({ initialRateData, defaultState }) {
     thirdPartyCosts: getThirdPartyCosts(initialState),
   });
 
-  const { results: apiResults, loading: apiLoading, fetchRates } = useApiPricing(scenario);
+  const { results: apiResults, loading: apiLoading, fetchRates, effectiveDate: apiDate } = useApiPricing(scenario);
 
   const [compareRates, setCompareRates] = useState([]);
   const [showReport, setShowReport] = useState(false);
@@ -70,7 +70,7 @@ export default function RateTool({ initialRateData, defaultState }) {
       {/* Rate Tool Header */}
       <div className="bg-brand text-white px-5 py-2 rounded-t-lg flex justify-between items-center flex-wrap gap-2">
         <p className="text-cyan-100 text-sm">{LO_CONFIG.name} | NMLS {LO_CONFIG.nmls} | {LO_CONFIG.phone}</p>
-        <p className="text-sm text-cyan-100">Rates effective {rateData.lender.effectiveDate}</p>
+        <p className="text-sm text-cyan-100">Rates effective {apiDate || rateData?.lender?.effectiveDate || 'today'}</p>
       </div>
 
       {/* Rate Tool Body */}

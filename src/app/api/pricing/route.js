@@ -54,6 +54,21 @@ async function loadRateData() {
   return [];
 }
 
+async function getEffectiveDate() {
+  try {
+    const sheet = await (await import('@/lib/prisma')).default.rateSheet.findFirst({
+      where: { status: 'active' },
+      orderBy: { effectiveDate: 'desc' },
+      select: { effectiveDate: true },
+    });
+    if (sheet?.effectiveDate) {
+      const d = new Date(sheet.effectiveDate);
+      return `${d.getUTCMonth() + 1}/${d.getUTCDate()}/${d.getUTCFullYear()}`;
+    }
+  } catch { /* fall through */ }
+  return null;
+}
+
 // Broker config — will come from DB in future
 const BROKER_CONFIG = {
   compRate: 0.02,
@@ -147,8 +162,11 @@ export async function POST(request) {
     // Sort by rate ascending
     results.sort((a, b) => a.rate - b.rate);
 
+    const effectiveDate = await getEffectiveDate();
+
     return NextResponse.json({
       scenario,
+      effectiveDate,
       resultCount: results.length,
       results,
     }, {

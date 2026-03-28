@@ -12,6 +12,7 @@ const MIN_SPINNER_MS = 3000; // Minimum time to show spinner
 export function useApiPricing(scenario) {
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [effectiveDate, setEffectiveDate] = useState(null);
   const abortRef = useRef(null);
 
   const fetchRates = useCallback(async () => {
@@ -107,11 +108,12 @@ export function useApiPricing(scenario) {
       }
 
       setResults(rates);
+      if (data.effectiveDate) setEffectiveDate(data.effectiveDate);
     } catch (err) {
       if (err.name !== 'AbortError') setResults(null);
     }
     setLoading(false);
   }, [scenario.loanAmount, scenario.fico, scenario.propertyValue, scenario.purpose, scenario.loanType, scenario.propertyType, scenario.state, scenario.currentRate]);
 
-  return { results, loading, fetchRates };
+  return { results, loading, fetchRates, effectiveDate };
 }
