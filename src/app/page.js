@@ -1,8 +1,7 @@
 import Link from 'next/link';
 import TrustBar from '@/components/TrustBar';
 import StickyRateBar from '@/components/StickyRateBar';
-import parsedRates from '@/data/parsed-rates.json';
-import { computeHomepageRatesFromParsed } from '@/lib/rates/homepage';
+import { getHomepageRatesFromDB } from '@/lib/rates/homepage-db';
 
 // Revalidate every 5 minutes (ISR) — matches /api/rates and /rates page
 export const revalidate = 300;
@@ -28,13 +27,8 @@ async function getMarketSentiment() {
 }
 
 export default async function HomePage() {
-  // ─── Live Rate Data (from parsed-rates.json — all lenders, all products) ───
-  let liveRates = null;
-  try {
-    liveRates = computeHomepageRatesFromParsed(parsedRates);
-  } catch (err) {
-    console.error('Homepage rate computation failed:', err.message);
-  }
+  // ─── Live Rate Data (from DB via pricing-v2 engine) ───
+  const liveRates = await getHomepageRatesFromDB();
 
   // ─── Market Sentiment (from Rate Watch commentary) ───
   const sentiment = await getMarketSentiment();

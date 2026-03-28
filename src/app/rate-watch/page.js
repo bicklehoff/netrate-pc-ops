@@ -7,8 +7,7 @@ import Sidebar from '@/components/RateWatch/Sidebar';
 import BelowFold from '@/components/RateWatch/BelowFold';
 import Predictions from '@/components/RateWatch/Predictions';
 import RateGrid from '@/components/RateWatch/RateGrid';
-import parsedRates from '@/data/parsed-rates.json';
-import { computeHomepageRatesFromParsed } from '@/lib/rates/homepage';
+import { getHomepageRatesFromDB } from '@/lib/rates/homepage-db';
 
 export const revalidate = 300; // ISR: 5 minutes
 
@@ -117,10 +116,8 @@ export default async function RateWatchPage() {
   // Compute today's real rates from pricing engine (same as homepage)
   let liveRates = null;
   let realRate = null;
-  try {
-    liveRates = computeHomepageRatesFromParsed(parsedRates);
-    realRate = liveRates?.conv30?.rate || null;
-  } catch { /* fall through to DB rate */ }
+  liveRates = await getHomepageRatesFromDB();
+  realRate = liveRates?.conv30?.rate || null;
 
   // DB rate for historical chart
   const tier760 = rateHistory.filter((r) => r.credit_score_tier === '760+');
