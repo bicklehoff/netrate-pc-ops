@@ -2,7 +2,7 @@ import { neon } from '@neondatabase/serverless';
 import HeroStrip from '@/components/RateWatch/HeroStrip';
 import TickerBar from '@/components/RateWatch/TickerBar';
 import RateChart from '@/components/RateWatch/RateChart';
-import Sidebar from '@/components/RateWatch/Sidebar';
+import { TreasuryYields, EconomicCalendar } from '@/components/RateWatch/Sidebar';
 import BelowFold from '@/components/RateWatch/BelowFold';
 import { PredictionDataProvider, FedPanelSection, MarketPredictions } from '@/components/RateWatch/Predictions';
 import RateGrid from '@/components/RateWatch/RateGrid';
@@ -151,41 +151,36 @@ export default async function RateWatchPage() {
         </div>
       </div>
 
-      {/* === ABOVE THE FOLD: 3-column dashboard === */}
+      {/* === 3-column dashboard — pack everything in === */}
       <PredictionDataProvider>
         <div className="px-3 py-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 items-start">
-          {/* Column 1: Commentary + Rate */}
-          <HeroStrip
-            todayRate={todayRate}
-            rateChange={rateChange}
-          />
-
-          {/* Column 2: Rate Comparison Grid */}
-          <RateGrid
-            netRates={liveRates}
-            nationalRates={nationalData?.rates || null}
-            date={nationalData?.date || null}
-          />
-
-          {/* Column 3: Fed Panel + Treasury Yields + Calendar */}
-          <div className="md:col-span-2 lg:col-span-1 flex flex-col gap-2">
-            <FedPanelSection />
-            <div className="bg-surface rounded-xl border border-white/10 overflow-hidden">
-              <Sidebar
-                fredLatest={fredData.latest}
-              />
+          {/* Column 1: Commentary + Chart */}
+          <div className="flex flex-col gap-2">
+            <HeroStrip
+              todayRate={todayRate}
+              rateChange={rateChange}
+            />
+            <div className="bg-surface rounded-xl border border-white/10 p-3 overflow-hidden">
+              <RateChart rateHistory={rateHistory} fredData={fredData.series} />
             </div>
           </div>
-        </div>
 
-        {/* === BELOW THE FOLD === */}
-
-        {/* Chart + Market Predictions side by side */}
-        <div className="px-3 py-2 grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-2">
-          <div className="bg-surface rounded-xl border border-white/10 p-4 overflow-hidden">
-            <RateChart rateHistory={rateHistory} fredData={fredData.series} />
+          {/* Column 2: Rate Grid + Treasury Yields + Market Predictions */}
+          <div className="flex flex-col gap-2">
+            <RateGrid
+              netRates={liveRates}
+              nationalRates={nationalData?.rates || null}
+              date={nationalData?.date || null}
+            />
+            <TreasuryYields fredLatest={fredData.latest} />
+            <MarketPredictions />
           </div>
-          <MarketPredictions />
+
+          {/* Column 3: Fed Panel + Economic Calendar */}
+          <div className="md:col-span-2 lg:col-span-1 flex flex-col gap-2">
+            <FedPanelSection />
+            <EconomicCalendar />
+          </div>
         </div>
       </PredictionDataProvider>
 

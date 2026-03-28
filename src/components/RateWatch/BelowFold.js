@@ -53,7 +53,7 @@ export default function BelowFold() {
   return (
     <div className="px-5">
       {/* What Happened Today */}
-      <div className="bg-surface rounded-xl px-9 py-8 border border-white/10 border-l-4 border-l-red-500">
+      <div id="full-commentary" className="bg-surface rounded-xl px-9 py-8 border border-white/10 border-l-4 border-l-red-500 scroll-mt-4">
         <h2 className="text-white text-[26px] font-extrabold leading-tight mb-4">
           What Happened Today
         </h2>

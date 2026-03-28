@@ -79,6 +79,9 @@ export default function HeroStrip({ todayRate, rateChange }) {
           <p className="text-slate-400 text-[12px] leading-snug line-clamp-5">
             {commentary.commentary}
           </p>
+          <a href="#full-commentary" className="text-brand text-[11px] font-medium hover:text-cyan-400 transition-colors mt-1 inline-block">
+            Read more &darr;
+          </a>
         </div>
       ) : (
         <div className="flex-1">
