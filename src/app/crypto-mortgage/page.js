@@ -228,6 +228,11 @@ export default function CryptoMortgagePage() {
           </div>
 
           <section className="border-t border-gray-200 pt-6 text-sm text-gray-500">
+            <p className="font-medium mb-2">Sources</p>
+            <ul className="list-disc pl-5 space-y-1 mb-4">
+              <li>Newrez Wholesale Announcement (March 2026)</li>
+              <li>Fannie Mae Selling Guide</li>
+            </ul>
             <p>
               This information is provided for educational purposes and does not constitute financial or legal advice. Cryptocurrency policies vary by lender and are subject to change. Loan approval depends on individual borrower qualifications, property type, and program guidelines. Contact a licensed loan officer to discuss your specific situation. NetRate Mortgage LLC NMLS #1111861. Equal Housing Lender.
             </p>

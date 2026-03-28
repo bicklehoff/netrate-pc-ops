@@ -245,6 +245,11 @@ export default function AduRentalIncome() {
           </section>
 
           <section className="border-t border-gray-200 pt-6 text-sm text-gray-500">
+            <p className="font-medium mb-2">Sources</p>
+            <ul className="list-disc pl-5 space-y-1 mb-4">
+              <li>Fannie Mae Desktop Underwriter version 12.1 (March 21, 2026)</li>
+              <li>PennyMac Announcement #26-15</li>
+            </ul>
             <p>
               This article is for educational purposes only and does not constitute financial advice. Fannie Mae guidelines are subject to change. Lender overlays may apply. Contact a licensed mortgage professional for guidance specific to your situation. NetRate Mortgage LLC NMLS #1111861. Equal Housing Lender.
             </p>

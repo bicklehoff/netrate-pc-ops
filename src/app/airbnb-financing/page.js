@@ -299,6 +299,11 @@ export default function AirbnbFinancingPage() {
           </div>
 
           <section className="border-t border-gray-200 pt-6 text-sm text-gray-500">
+            <p className="font-medium mb-2">Sources</p>
+            <ul className="list-disc pl-5 space-y-1 mb-4">
+              <li>theLender (Hometown Equity Mortgage) theNONI Product Matrix</li>
+              <li>AIRDNA Rentalizer documentation</li>
+            </ul>
             <p>
               This information is provided for educational purposes and does not constitute financial advice. DSCR loan programs, requirements, and pricing vary by lender and are subject to change. Investment property loans carry different terms and risks than primary residence financing. Rental income projections are not guaranteed. Contact a licensed loan officer to discuss your specific situation. NetRate Mortgage LLC NMLS #1111861. Equal Housing Lender.
             </p>

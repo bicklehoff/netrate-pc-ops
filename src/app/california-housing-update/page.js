@@ -250,6 +250,11 @@ export default function CaliforniaHousingUpdate() {
           </section>
 
           <section className="border-t border-gray-200 pt-6 text-sm text-gray-500">
+            <p className="font-medium mb-2">Sources</p>
+            <ul className="list-disc pl-5 space-y-1 mb-4">
+              <li>California SB 79 (signed October 10, 2025, effective July 1, 2026)</li>
+              <li>Fannie Mae Lender Letter LL-2026-03 (March 18, 2026)</li>
+            </ul>
             <p>
               This article is for educational purposes only and does not constitute financial advice. Legislative and agency guidelines are subject to change. Condo project eligibility depends on individual building characteristics and lender overlays. Contact a licensed mortgage professional for guidance specific to your situation. NetRate Mortgage LLC NMLS #1111861. Equal Housing Lender.
             </p>
