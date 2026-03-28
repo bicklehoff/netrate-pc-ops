@@ -74,7 +74,7 @@ export async function POST(request) {
 
     const loanAmount = Number(body.loanAmount);
     const propertyValue = body.propertyValue ? Number(body.propertyValue) : null;
-    const ltv = propertyValue ? (loanAmount / propertyValue) * 100 : 75;
+    const ltv = propertyValue ? Math.floor((loanAmount / propertyValue) * 10000) / 100 : 75;
 
     const scenario = {
       loanAmount,
