@@ -21,26 +21,27 @@ export default function ScenarioForm({ scenario, onChange, onSubmit, loading }) 
     if (lastEdited === 'pct') {
       downPct = scenario.downPaymentPct || 0;
       downDollars = Math.round(pv * downPct / 100);
-      loanAmount = pv - downDollars;
+      loanAmount = Math.floor(pv - downDollars);
     } else if (lastEdited === 'dollars') {
       downDollars = scenario.downPaymentDollars || 0;
       downPct = pv > 0 ? Math.round((downDollars / pv) * 10000) / 100 : 0;
-      loanAmount = pv - downDollars;
+      loanAmount = Math.floor(pv - downDollars);
     } else if (lastEdited === 'loan') {
-      loanAmount = scenario.manualLoanAmount || 0;
+      loanAmount = Math.floor(scenario.manualLoanAmount || 0);
       downDollars = pv - loanAmount;
       downPct = pv > 0 ? Math.round((downDollars / pv) * 10000) / 100 : 0;
     }
 
-    const ltv = pv > 0 ? (loanAmount / pv) * 100 : 0;
+    // Always round loan down and LTV down — avoid pricing into higher tier on $1 rounding
+    const ltv = pv > 0 ? Math.floor((loanAmount / pv) * 10000) / 100 : 0;
     return { loanAmount, downPct, downDollars, ltv };
   }, [scenario.propertyValue, scenario.downPaymentPct, scenario.downPaymentDollars, scenario.manualLoanAmount, lastEdited]);
 
   // Refi: loan amount entered directly
   const refiCalc = useMemo(() => {
     const pv = scenario.propertyValue || 0;
-    const loan = scenario.newLoanAmount || scenario.currentPayoff || 0;
-    const ltv = pv > 0 ? (loan / pv) * 100 : 0;
+    const loan = Math.floor(scenario.newLoanAmount || scenario.currentPayoff || 0);
+    const ltv = pv > 0 ? Math.floor((loan / pv) * 10000) / 100 : 0;
     return { loanAmount: loan, ltv };
   }, [scenario.propertyValue, scenario.newLoanAmount, scenario.currentPayoff]);
 
@@ -196,7 +197,7 @@ export default function ScenarioForm({ scenario, onChange, onSubmit, loading }) 
         <div className="mt-3 pt-2 border-t border-gray-100 flex flex-wrap gap-x-6 gap-y-1 text-sm text-gray-600">
           <span>Base Loan: <strong className="text-gray-800">${loanAmount.toLocaleString("en-US", { maximumFractionDigits: 0 })}</strong></span>
           {isFha && (
-            <span>w/ UFMIP: <strong className="text-gray-800">${Math.round(loanAmount * 1.0175).toLocaleString("en-US")}</strong></span>
+            <span>w/ UFMIP: <strong className="text-gray-800">${Math.floor(loanAmount * 1.0175).toLocaleString("en-US")}</strong></span>
           )}
           <span>LTV: <strong className="text-gray-800">{ltv.toFixed(1)}%</strong></span>
           <span>FICO Band: <strong className="text-gray-800">{getFicoBand(scenario.fico)}</strong></span>
