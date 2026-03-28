@@ -42,7 +42,7 @@ function parseFedEvent(event) {
   for (const m of markets) {
     const q = (m.question || '').toLowerCase();
     let rawPrices = m.outcomePrices || '["0.5","0.5"]';
-    if (typeof rawPrices === 'string') { try { rawPrices = JSON.parse(rawPrices); } catch { rawPrices = ['0.5', '0.5']; } }
+    if (typeof rawPrices === 'string') { try { rawPrices = JSON.parse(rawPrices); } catch (e) { rawPrices = ['0.5', '0.5']; } }
     const yesPrice = parseFloat(rawPrices?.[0] || '0');
 
     if (q.includes('no change')) {
@@ -106,7 +106,7 @@ async function fetchEvents() {
         // General economic events — return as simple markets
         const markets = (event.markets || []).slice(0, 3).map(m => {
           let prices = m.outcomePrices || ['0.5', '0.5'];
-          if (typeof prices === 'string') { try { prices = JSON.parse(prices); } catch { prices = ['0.5', '0.5']; } }
+          if (typeof prices === 'string') { try { prices = JSON.parse(prices); } catch (e) { prices = ['0.5', '0.5']; } }
           return {
             id: m.id || m.condition_id,
             question: m.question,

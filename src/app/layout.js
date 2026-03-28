@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from 'next/font/google';
 import Script from 'next/script';
 import CookieBanner from '@/components/CookieBanner';
 import GlassNav from '@/components/GlassNav';
+import ContactBar from '@/components/ContactBar';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -136,6 +137,8 @@ export default function RootLayout({ children }) {
             strategy="afterInteractive"
           />
         )}
+        {/* Contact utility bar — above nav */}
+        <ContactBar />
         {/* Navigation — glassmorphism on scroll */}
         <GlassNav>
           <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
