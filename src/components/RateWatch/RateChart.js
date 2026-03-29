@@ -545,47 +545,40 @@ export default function RateChart({ rateHistory, fredData: serverFredData }) {
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row justify-between items-start gap-3 mb-3">
-        <div>
-          <h2 className="text-white text-lg font-bold">
-            30-Year Fixed Mortgage Rate &mdash; NetRate vs National Average
-          </h2>
-          <p className="text-slate-400 text-[13px] mt-1">
-            NetRate: wholesale par rate (zero points) &middot; Purchase &middot; $400K &middot; 75%
-            LTV &nbsp;|&nbsp; Freddie Mac: national avg with ~0.7 points
-          </p>
-        </div>
-        <div className="flex items-center gap-2.5 flex-shrink-0">
-          <span className="text-[13px] text-slate-400 font-semibold uppercase tracking-wide">
-            Score
-          </span>
+      {/* Title row */}
+      <h2 className="text-white text-sm font-bold mb-1">Rate History</h2>
+
+      {/* Controls row */}
+      <div className="flex flex-wrap items-center gap-2 mb-2">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] text-slate-500 uppercase tracking-wide">Score</span>
           <div className="flex">
             {CREDIT_TIERS.map((tier) => (
               <button
                 key={tier}
                 onClick={() => setCreditTier(tier)}
-                className={`px-4 py-1.5 text-sm font-semibold border border-slate-600 transition-all first:rounded-l-md last:rounded-r-md ${
+                className={`px-2 py-0.5 text-[11px] font-semibold border border-slate-600 transition-all first:rounded-l last:rounded-r ${
                   creditTier === tier
                     ? 'bg-brand text-white border-brand'
-                    : 'bg-surface text-slate-300 hover:bg-slate-700 hover:text-white'
+                    : 'bg-surface text-slate-400 hover:text-white'
                 }`}
               >
                 {tier === '760' ? '760+' : tier}
               </button>
             ))}
           </div>
-          <span className="text-[13px] text-slate-400 font-semibold uppercase tracking-wide ml-2">
-            Range
-          </span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] text-slate-500 uppercase tracking-wide">Range</span>
           <div className="flex">
             {TIME_RANGES.map((r) => (
               <button
                 key={r.days}
                 onClick={() => setTimeRange(r.days)}
-                className={`px-4 py-1.5 text-sm font-semibold border border-slate-600 transition-all first:rounded-l-md last:rounded-r-md ${
+                className={`px-2 py-0.5 text-[11px] font-semibold border border-slate-600 transition-all first:rounded-l last:rounded-r ${
                   timeRange === r.days
                     ? 'bg-brand text-white border-brand'
-                    : 'bg-surface text-slate-300 hover:bg-slate-700 hover:text-white'
+                    : 'bg-surface text-slate-400 hover:text-white'
                 }`}
               >
                 {r.label}
@@ -593,21 +586,11 @@ export default function RateChart({ rateHistory, fredData: serverFredData }) {
             ))}
           </div>
         </div>
-      </div>
-
-      {/* Legend */}
-      <div className="flex gap-6 mb-4 px-1">
-        <div className="flex items-center gap-2 text-[13px] text-slate-300">
-          <div className="w-3.5 h-3.5 rounded-sm bg-brand" />
-          NetRate Wholesale (no points)
-        </div>
-        <div className="flex items-center gap-2 text-[13px] text-slate-300">
-          <div className="w-3.5 h-3.5 rounded-sm bg-red-500" />
-          National Avg — Freddie Mac (with points)
-        </div>
-        <div className="flex items-center gap-2 text-[13px] text-slate-300">
-          <div className="w-3.5 h-3.5 rounded-sm bg-red-500/10 border border-red-500/20" />
-          Spread (your savings)
+        {/* Inline legend */}
+        <div className="flex items-center gap-3 ml-auto text-[10px] text-slate-500">
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-brand" />NetRate</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-red-500" />Nat&apos;l Avg</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-0.5 bg-red-500/30" />Spread</span>
         </div>
       </div>
 
