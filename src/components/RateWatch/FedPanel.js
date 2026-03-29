@@ -147,7 +147,7 @@ export default function FedPanel({ fedEvents = [] }) {
     <div>
       <div className="flex items-center justify-between mb-3">
         <div>
-          <h2 className="text-white text-[22px] font-extrabold">Fed Rate Decision</h2>
+          <h2 className="text-white text-[22px] font-extrabold">Fed Rate Prediction</h2>
           <p className="text-slate-400 text-[13px] mt-0.5">
             What prediction markets expect at each FOMC meeting
           </p>
