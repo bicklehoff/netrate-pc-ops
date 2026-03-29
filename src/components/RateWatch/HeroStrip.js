@@ -90,7 +90,7 @@ export default function HeroStrip({ todayRate, rateChange }) {
       ? `+${rateChange.toFixed(3)}`
       : rateChange < 0
         ? `${rateChange.toFixed(3)}`
-        : 'unch';
+        : 'unchanged';
 
   const today = new Date();
   const dateStr = today.toLocaleDateString('en-US', {
