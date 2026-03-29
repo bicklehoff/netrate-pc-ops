@@ -44,7 +44,17 @@ function formatLoanAmountRange(min, max) {
 
 function buildAdjObject(allRows) {
   const adj = {
-    ficoLtvGrids: { purchase: {}, refinance: {}, cashout: {} },
+    // FICO/LTV grids keyed: tier → termGroup → purpose → ficoBand → ltvBand → value
+    // Core has no agency distinction; Elite is per-agency
+    ficoLtvGrids: {
+      core: { '>15yr': { purchase: {}, refinance: {}, cashout: {} } },
+      elite: {
+        fnma: { '>15yr': { purchase: {}, refinance: {}, cashout: {} }, allTerms: { purchase: {}, refinance: {}, cashout: {} } },
+        fhlmc: { '>15yr': { purchase: {}, refinance: {}, cashout: {} }, allTerms: { purchase: {}, refinance: {}, cashout: {} } },
+      },
+    },
+    // SRP: Core = tier → escrow → state → productGroup → flat value
+    //      Elite = tier → escrow → state → productGroup → [{ min, max, value }]
     srp: {
       core: { withImpounds: {}, withoutImpounds: {} },
       elite: { withImpounds: {}, withoutImpounds: {} },
@@ -63,16 +73,32 @@ function buildAdjObject(allRows) {
       case 'ficoLtv': {
         const ficoBand = formatFicoBand(row.ficoMin, row.ficoMax);
         const ltvKey = formatLtvBand(row.ltvMin, row.ltvMax);
-        if (row.purpose) {
-          // Purpose-specific (conventional)
-          const grid = adj.ficoLtvGrids[row.purpose];
-          if (!grid[ficoBand]) grid[ficoBand] = {};
-          grid[ficoBand][ltvKey] = val;
+        const tier = row.tier || 'core';
+        const termGroup = row.termGroup || '>15yr';
+
+        if (tier === 'elite') {
+          // Elite: agency-specific grids
+          const agency = row.agency || 'fnma';
+          const grid = adj.ficoLtvGrids.elite[agency]?.[termGroup]?.[row.purpose];
+          if (grid) {
+            if (!grid[ficoBand]) grid[ficoBand] = {};
+            grid[ficoBand][ltvKey] = val;
+          }
+        } else if (row.purpose) {
+          // Core: purpose-specific (conventional)
+          const grid = adj.ficoLtvGrids.core[termGroup]?.[row.purpose];
+          if (grid) {
+            if (!grid[ficoBand]) grid[ficoBand] = {};
+            grid[ficoBand][ltvKey] = val;
+          }
         } else {
-          // No purpose = applies to all (FHA)
-          for (const p of ['purchase', 'refinance', 'cashout']) {
-            if (!adj.ficoLtvGrids[p][ficoBand]) adj.ficoLtvGrids[p][ficoBand] = {};
-            adj.ficoLtvGrids[p][ficoBand][ltvKey] = val;
+          // No purpose = applies to all (FHA) — put in core
+          const tg = adj.ficoLtvGrids.core[termGroup];
+          if (tg) {
+            for (const p of ['purchase', 'refinance', 'cashout']) {
+              if (!tg[p][ficoBand]) tg[p][ficoBand] = {};
+              tg[p][ficoBand][ltvKey] = val;
+            }
           }
         }
         break;
@@ -99,7 +125,21 @@ function buildAdjObject(allRows) {
         if (!adj.srp[tier]) adj.srp[tier] = {};
         if (!adj.srp[tier][escrow]) adj.srp[tier][escrow] = {};
         if (!adj.srp[tier][escrow][state]) adj.srp[tier][escrow][state] = {};
-        adj.srp[tier][escrow][state][productGroup] = val;
+
+        if (tier === 'elite' && row.loanAmountMin != null) {
+          // Elite SRP: amount-banded — store as sorted array
+          if (!Array.isArray(adj.srp[tier][escrow][state][productGroup])) {
+            adj.srp[tier][escrow][state][productGroup] = [];
+          }
+          adj.srp[tier][escrow][state][productGroup].push({
+            min: Number(row.loanAmountMin),
+            max: Number(row.loanAmountMax),
+            value: val,
+          });
+        } else {
+          // Core SRP: flat value
+          adj.srp[tier][escrow][state][productGroup] = val;
+        }
         break;
       }
 
@@ -129,6 +169,7 @@ function buildAdjObject(allRows) {
       case 'productFeature': {
         adj.productFeatures.push({
           featureName: row.featureName,
+          tier: row.tier,
           purpose: row.purpose,
           state: row.state,
           productGroup: row.productGroup,
@@ -137,6 +178,17 @@ function buildAdjObject(allRows) {
           value: val,
         });
         break;
+      }
+    }
+  }
+
+  // Sort Elite SRP amount bands by min for efficient lookup
+  for (const escrow of Object.values(adj.srp.elite)) {
+    for (const state of Object.values(escrow)) {
+      for (const [, bands] of Object.entries(state)) {
+        if (Array.isArray(bands)) {
+          bands.sort((a, b) => a.min - b.min);
+        }
       }
     }
   }

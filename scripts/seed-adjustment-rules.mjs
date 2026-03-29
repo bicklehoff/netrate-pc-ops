@@ -28,10 +28,11 @@ const TODAY = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
 // ─── Parse helpers ──────────────────────────────────────────────────
 
-/** Parse FICO band string → { ficoMin, ficoMax } */
+/** Parse FICO band string → { ficoMin, ficoMax }
+ *  Handles both Core format (">=780", "760-779") and Elite Unicode ("≥800", "780-799") */
 function parseFicoBand(band) {
-  // ">=780" or ">= 800"
-  const geMatch = band.match(/>=\s*(\d+)/);
+  // ">=780" or ">= 800" or "≥800"
+  const geMatch = band.match(/[≥>]=?\s*(\d+)/);
   if (geMatch) return { ficoMin: parseInt(geMatch[1]), ficoMax: 999 };
 
   // "< 620(1)" or "< 620"
@@ -46,13 +47,19 @@ function parseFicoBand(band) {
   return null;
 }
 
-/** Parse LTV band string → { ltvMin, ltvMax } */
+/** Parse LTV band string → { ltvMin, ltvMax }
+ *  Handles both Core format ("<= 30.00%", "30.01 - 60.00%") and
+ *  Elite format ("≤30", "30.01-60", "75.01-80") */
 function parseLtvBand(band) {
-  // "<= 30.00%" or "<= 40.00%"
+  // "≤30" or "≤ 30" (Elite Unicode)
+  const leUnicode = band.match(/≤\s*([\d.]+)/);
+  if (leUnicode) return { ltvMin: 0, ltvMax: parseFloat(leUnicode[1]) };
+
+  // "<= 30.00%" or "<= 40.00%" (Core)
   const leMatch = band.match(/<=\s*([\d.]+)/);
   if (leMatch && !band.includes('-')) return { ltvMin: 0, ltvMax: parseFloat(leMatch[1]) };
 
-  // "30.01 - 60.00%" or "70.01 - 75.00%"
+  // "30.01 - 60.00%" (Core) or "30.01-60" (Elite) — range format
   const rangeMatch = band.match(/([\d.]+)\s*[-–]\s*([\d.]+)/);
   if (rangeMatch) return { ltvMin: parseFloat(rangeMatch[1]), ltvMax: parseFloat(rangeMatch[2]) };
 
@@ -110,6 +117,7 @@ function addRow(data) {
 // ─── 1. FICO/LTV Grids ─────────────────────────────────────────────
 
 function seedFicoLtvGrids() {
+  // Core grids — no agency distinction, but these are >15yr grids
   const purposes = [
     { key: 'purchaseFicoLTV', purpose: 'purchase' },
     { key: 'nonCashoutRefiFicoLTV', purpose: 'refinance' },
@@ -133,10 +141,59 @@ function seedFicoLtvGrids() {
           adjustmentType: 'ficoLtv',
           purpose,
           tier: 'core',
+          termGroup: '>15yr',
           ...fico,
           ...ltv,
           value,
         });
+      }
+    }
+  }
+}
+
+// ─── 1b. Elite FICO/LTV Grids (FNMA + FHLMC, by purpose + term) ────
+
+function seedEliteFicoLtvGrids() {
+  const agencies = [
+    { key: 'fnmaLLPA', agency: 'fnma' },
+    { key: 'fhlmcLLPA', agency: 'fhlmc' },
+  ];
+
+  // Map Elite JSON section names → { purpose, termGroup }
+  const sections = [
+    { name: 'Purchase LLPAs (Terms > 15 years only)', purpose: 'purchase', termGroup: '>15yr' },
+    { name: 'Rate/Term Refinance LLPAs (Terms > 15 years only)', purpose: 'refinance', termGroup: '>15yr' },
+    { name: 'Cash Out Refinance LLPAs (all amortizatione terms)', purpose: 'cashout', termGroup: 'allTerms' },  // note: typo in source JSON
+  ];
+
+  for (const { key, agency } of agencies) {
+    const llpa = cfg.elite?.[key];
+    if (!llpa) { console.warn(`  Missing elite.${key}`); continue; }
+
+    for (const { name, purpose, termGroup } of sections) {
+      const grid = llpa[name];
+      if (!grid) { console.warn(`  Missing elite.${key}["${name}"]`); continue; }
+
+      for (const [ficoBand, ltvEntries] of Object.entries(grid)) {
+        const fico = parseFicoBand(ficoBand);
+        if (!fico) continue;
+
+        for (const [ltvBand, value] of Object.entries(ltvEntries)) {
+          if (typeof value !== 'number') continue;
+          const ltv = parseLtvBand(ltvBand);
+          if (!ltv) continue;
+
+          addRow({
+            adjustmentType: 'ficoLtv',
+            purpose,
+            agency,
+            tier: 'elite',
+            termGroup,
+            ...fico,
+            ...ltv,
+            value,
+          });
+        }
       }
     }
   }
@@ -190,17 +247,33 @@ function seedLoanAmount() {
 
 // ─── 4. SRP ─────────────────────────────────────────────────────────
 
+/** Parse Elite SRP loan amount band → { loanAmountMin, loanAmountMax }
+ *  Handles: "<=50,000", "50,001-85,000", ">700,000" */
+function parseEliteSrpAmountBand(band) {
+  const clean = band.replace(/,/g, '');
+
+  const leMatch = clean.match(/^<=\s*(\d+)$/);
+  if (leMatch) return { loanAmountMin: 0, loanAmountMax: parseInt(leMatch[1]) };
+
+  const rangeMatch = clean.match(/^(\d+)\s*[-–]\s*(\d+)$/);
+  if (rangeMatch) return { loanAmountMin: parseInt(rangeMatch[1]), loanAmountMax: parseInt(rangeMatch[2]) };
+
+  const gtMatch = clean.match(/^>\s*(\d+)$/);
+  if (gtMatch) return { loanAmountMin: parseInt(gtMatch[1]) + 1, loanAmountMax: 99999999 };
+
+  console.warn(`  ⚠ Could not parse Elite SRP amount band: "${band}"`);
+  return null;
+}
+
 function seedSRP() {
-  const srpSections = [
-    { tier: 'core', escrowType: 'withImpounds', data: cfg.core?.convSRP?.withImpounds },
-    { tier: 'core', escrowType: 'withoutImpounds', data: cfg.core?.convSRP?.withoutImpounds },
-    // Elite SRP uses different key names in the JSON
-    { tier: 'elite', escrowType: 'withImpounds', data: cfg.elite?.convSRP_withEscrows },
-    { tier: 'elite', escrowType: 'withoutImpounds', data: cfg.elite?.convSRP_withoutEscrows },
+  // ── Core SRP: state → productGroup → flat value
+  const coreSections = [
+    { escrowType: 'withImpounds', data: cfg.core?.convSRP?.withImpounds },
+    { escrowType: 'withoutImpounds', data: cfg.core?.convSRP?.withoutImpounds },
   ];
 
-  for (const { tier, escrowType, data } of srpSections) {
-    if (!data) { console.warn(`  Missing SRP ${tier}/${escrowType}`); continue; }
+  for (const { escrowType, data } of coreSections) {
+    if (!data) { console.warn(`  Missing Core SRP ${escrowType}`); continue; }
 
     for (const [state, products] of Object.entries(data)) {
       if (typeof products !== 'object') continue;
@@ -209,12 +282,47 @@ function seedSRP() {
 
         addRow({
           adjustmentType: 'srp',
-          tier,
+          tier: 'core',
           state,
           escrowType,
           productGroup,
           value,
         });
+      }
+    }
+  }
+
+  // ── Elite SRP: productGroup → state → loanAmountBand → value
+  const eliteSections = [
+    { escrowType: 'withImpounds', data: cfg.elite?.convSRP_withEscrows },
+    { escrowType: 'withoutImpounds', data: cfg.elite?.convSRP_withoutEscrows },
+  ];
+
+  for (const { escrowType, data } of eliteSections) {
+    if (!data) { console.warn(`  Missing Elite SRP ${escrowType}`); continue; }
+
+    for (const [productGroup, states] of Object.entries(data)) {
+      // Skip header rows like "Elite Conventional SRPs With Escrows*"
+      if (typeof states !== 'object' || !states) continue;
+
+      for (const [state, amountBands] of Object.entries(states)) {
+        if (typeof amountBands !== 'object') continue;
+
+        for (const [band, value] of Object.entries(amountBands)) {
+          if (typeof value !== 'number') continue;
+          const parsed = parseEliteSrpAmountBand(band);
+          if (!parsed) continue;
+
+          addRow({
+            adjustmentType: 'srp',
+            tier: 'elite',
+            state,
+            escrowType,
+            productGroup,
+            ...parsed,
+            value,
+          });
+        }
       }
     }
   }
@@ -243,13 +351,22 @@ function seedInvestorAdj() {
 // ─── 6. FHLMC Special Adjustments (currently hardcoded in pricing-v2) ──
 
 function seedFhlmcSpecial() {
-  // FHLMC Refi Purpose Adjustment: -0.150 (cost)
+  // FHLMC Purpose Adjustments: -0.150 for both purchase and refi
+  // (confirmed via LoanSifter — "Loan Purpose is Purchase/Rate/Term Refi" = -0.150)
   addRow({
     adjustmentType: 'fhlmcSpecial',
     agency: 'fhlmc',
     tier: 'core',
     purpose: 'refinance',
     featureName: 'refiPurpose',
+    value: -0.150,
+  });
+  addRow({
+    adjustmentType: 'fhlmcSpecial',
+    agency: 'fhlmc',
+    tier: 'core',
+    purpose: 'purchase',
+    featureName: 'purchasePurpose',
     value: -0.150,
   });
 
@@ -264,6 +381,19 @@ function seedFhlmcSpecial() {
     loanAmountMin: 400001,
     loanAmountMax: 450000,
     value: 0.050,
+  });
+}
+
+// ─── 6b. Elite Purpose Credits ──────────────────────────────────────
+
+function seedPurposeCredits() {
+  // EverStream purchase credit: +0.100 for all tiers
+  // (confirmed via LoanSifter — applies to both Core and Elite purchase loans)
+  addRow({
+    adjustmentType: 'productFeature',
+    purpose: 'purchase',
+    featureName: 'purposeAdj',
+    value: 0.100,
   });
 }
 
@@ -438,13 +568,15 @@ async function main() {
   console.log(`Source: ${cfgPath}`);
   console.log(`Dry run: ${dryRun}\n`);
 
-  // Build all rows — Conventional
+  // Build all rows — Conventional (Core + Elite)
   seedFicoLtvGrids();
+  seedEliteFicoLtvGrids();
   seedRiskBased();
   seedLoanAmount();
   seedSRP();
   seedInvestorAdj();
   seedFhlmcSpecial();
+  seedPurposeCredits();
 
   // Build all rows — FHA
   seedFhaFicoLtv();

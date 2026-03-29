@@ -165,7 +165,10 @@ export default function RateResults({ scenario, rateData, apiResults, loading, c
               return (
                 <tr key={r.rate}
                   className={`border-b border-gray-100 ${isPar ? "bg-cyan-50" : i % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-cyan-50 transition-colors`}>
-                  <td className="px-3 py-3 font-semibold text-gray-800">{r.rate.toFixed(3)}%</td>
+                  <td className="px-3 py-3">
+                    <span className="font-semibold text-gray-800">{r.rate.toFixed(3)}%</span>
+                    {r.program && <div className="text-[10px] text-gray-400 truncate max-w-[180px]">{r.program}</div>}
+                  </td>
                   {/* Lender column hidden — only EverStream for now */}
                   <td className="text-right px-2 py-3 font-mono text-gray-500">{r.apr ? r.apr.toFixed(3) + '%' : '—'}</td>
                   <td className="text-right px-2 py-3 font-mono text-gray-700">

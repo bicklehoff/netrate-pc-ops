@@ -25,6 +25,39 @@ function getBasePrice(rateEntry) {
 // ─── Step 2: FICO/LTV Adjustment ────────────────────────────────────
 
 /**
+ * Resolve the correct FICO/LTV grid for this product's tier, agency, and term.
+ * Returns a purpose-keyed grid object { purchase: {}, refinance: {}, cashout: {} }
+ */
+function resolveGrids(tier, investor, term, lenderAdj, fallbackGrids) {
+  const grids = lenderAdj?.ficoLtvGrids;
+  if (!grids) return fallbackGrids;
+
+  if (tier === 'elite') {
+    const agency = investor || 'fnma';
+    const termGroup = term > 15 ? '>15yr' : 'allTerms';
+    const agencyGrids = grids.elite?.[agency]?.[termGroup];
+    // If we have Elite grids and they have data, use them
+    if (agencyGrids && Object.keys(agencyGrids.purchase || {}).length > 0) {
+      return agencyGrids;
+    }
+  }
+
+  // Core: use >15yr for >15yr products, skip FICO/LTV for <=15yr (returns 0)
+  const termGroup = term > 15 ? '>15yr' : null;
+  if (termGroup) {
+    const coreGrids = grids.core?.[termGroup];
+    if (coreGrids && Object.keys(coreGrids.purchase || {}).length > 0) {
+      return coreGrids;
+    }
+  }
+
+  // <=15yr products: no FICO/LTV LLPA applies (return empty grids)
+  if (term <= 15) return { purchase: {}, refinance: {}, cashout: {} };
+
+  return fallbackGrids;
+}
+
+/**
  * Look up the FICO/LTV LLPA from the parsed rate sheet grids.
  * Returns a COST value (positive = cost to borrower = subtract from base).
  *
@@ -146,9 +179,10 @@ function getFicoBand(score) {
  * Look up the SRP from the lender_adjustments table.
  * Returns a CREDIT value (positive = add to base).
  *
- * e.g., CO, Fixed 20/25/30yr, With Impounds → 1.830
+ * Core: flat value per state/product (e.g., CO Fixed 20/25/30yr → 1.830)
+ * Elite: amount-banded per state/product (e.g., CO $400K Fixed 20/25/30yr → 1.628)
  */
-function getSRP(state, term, productType, tier, lenderAdj) {
+function getSRP(state, term, productType, tier, lenderAdj, loanAmount) {
   if (!lenderAdj?.srp) return 0;
 
   const isArm = productType === 'arm';
@@ -161,10 +195,31 @@ function getSRP(state, term, productType, tier, lenderAdj) {
 
   if (!srpTable?.[state]) return 0;
 
-  const productKey = isArm ? 'ARMs' : (term <= 15 ? 'Fixed 10/15 Yr' : 'Fixed 20/25/30 Yr');
-  const srp = srpTable[state][productKey];
+  // Elite uses different product group names than Core
+  let productKey;
+  if (tier === 'elite') {
+    productKey = isArm
+      ? (term >= 10 ? 'Conventional 10/6 ARM' : term >= 7 ? 'Conventional 7/6 ARM' : 'Conventional 5/6 ARM')
+      : (term <= 15 ? 'Conventional 10/15 Year Fixed' : 'Conventional 20/25/30 Year Fixed');
+  } else {
+    productKey = isArm ? 'ARMs' : (term <= 15 ? 'Fixed 10/15 Yr' : 'Fixed 20/25/30 Yr');
+  }
 
-  return typeof srp === 'number' ? srp : 0;
+  const srpEntry = srpTable[state][productKey];
+
+  // Core: flat number
+  if (typeof srpEntry === 'number') return srpEntry;
+
+  // Elite: array of { min, max, value } — find matching band
+  if (Array.isArray(srpEntry) && loanAmount) {
+    for (const band of srpEntry) {
+      if (loanAmount >= band.min && loanAmount <= band.max) {
+        return band.value;
+      }
+    }
+  }
+
+  return 0;
 }
 
 // ─── Step 4: Risk-Based Price Adjustment ────────────────────────────
@@ -309,8 +364,8 @@ export function priceRate(rateEntry, product, scenario, lenderAdj, brokerConfig,
   let price = getBasePrice(rateEntry);
   breakdown.push({ label: 'Base price', value: price });
 
-  // Step 2: FICO/LTV adjustment
-  const ficoGrids = lenderAdj?.ficoLtvGrids || llpaGrids;
+  // Step 2: FICO/LTV adjustment — resolve tier/agency/term-specific grids
+  const ficoGrids = resolveGrids(tier, investor, term, lenderAdj, llpaGrids);
   if (isConventional) {
     // Conventional: values are costs (negative in grid) → subtract
     const ficoLtvCost = getFicoLtvAdjustment(creditScore, ltv, loanPurpose, ficoGrids);
@@ -327,15 +382,15 @@ export function priceRate(rateEntry, product, scenario, lenderAdj, brokerConfig,
     }
   }
 
-  // Step 3: SRP — CREDIT → add
-  const srp = getSRP(state, term, productType, tier, lenderAdj);
+  // Step 3: SRP — CREDIT → add (pass loanAmount for Elite banded lookup)
+  const srp = getSRP(state, term, productType, tier, lenderAdj, loanAmount);
   if (srp !== 0) {
     price += srp;
     breakdown.push({ label: `SRP (${state})`, value: +srp });
   }
 
-  // Step 4: Risk-based — CREDIT → add (conventional only)
-  if (isConventional) {
+  // Step 4: Risk-based — CREDIT → add (Core conventional only; Elite bakes this in)
+  if (isConventional && tier !== 'elite') {
     const riskAdj = getRiskBasedAdjustment(creditScore, ltv, lenderAdj);
     if (riskAdj !== 0) {
       price += riskAdj;
@@ -343,18 +398,21 @@ export function priceRate(rateEntry, product, scenario, lenderAdj, brokerConfig,
     }
   }
 
-  // Step 5: Loan amount — CREDIT → add (use effective amount for FHA)
-  const loanAmtAdj = getLoanAmountAdjustment(effectiveLoanAmount, lenderAdj);
-  if (loanAmtAdj !== 0) {
-    price += loanAmtAdj;
-    breakdown.push({ label: 'Loan amount adj', value: +loanAmtAdj });
+  // Step 5: Loan amount — CREDIT → add (Core only; Elite bakes this in)
+  if (tier !== 'elite') {
+    const loanAmtAdj = getLoanAmountAdjustment(effectiveLoanAmount, lenderAdj);
+    if (loanAmtAdj !== 0) {
+      price += loanAmtAdj;
+      breakdown.push({ label: 'Loan amount adj', value: +loanAmtAdj });
+    }
   }
 
-  // Step 5b: Product feature adjustments (FICO band, purpose, state)
+  // Step 5b: Product feature adjustments (FICO band, purpose, state, tier)
   if (lenderAdj?.productFeatures?.length) {
     const scenarioPropertyType = scenario.propertyType || 'sfr';
     for (const pf of lenderAdj.productFeatures) {
       // Check filters
+      if (pf.tier && pf.tier !== tier) continue;
       if (pf.ficoMin != null && creditScore < pf.ficoMin) continue;
       if (pf.ficoMax != null && creditScore > pf.ficoMax) continue;
       if (pf.purpose && pf.purpose !== loanPurpose) continue;
@@ -378,8 +436,8 @@ export function priceRate(rateEntry, product, scenario, lenderAdj, brokerConfig,
     }
   }
 
-  // Step 6: Investor-specific — COST → subtract (conventional only)
-  if (isConventional) {
+  // Step 6: Investor-specific — COST → subtract (Core conventional only; Elite bakes this in)
+  if (isConventional && tier !== 'elite') {
     const investorCost = getInvestorAdjustment(investor, term, productType, lenderAdj);
     if (investorCost !== 0) {
       price -= investorCost;
@@ -406,6 +464,7 @@ export function priceRate(rateEntry, product, scenario, lenderAdj, brokerConfig,
         price += adjValue; // credit (positive value = add)
       }
       const label = rule.featureName === 'refiPurpose' ? 'FHLMC refi purpose adj'
+        : rule.featureName === 'purchasePurpose' ? 'FHLMC purchase purpose adj'
         : rule.featureName === 'occupancyTerm' ? 'FHLMC occupancy/term adj'
         : `FHLMC ${rule.featureName}`;
       breakdown.push({ label, value: adjValue });
