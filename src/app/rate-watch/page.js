@@ -34,14 +34,34 @@ async function getRateHistory() {
 
 async function getNationalRates() {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL
-      || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
-    const res = await fetch(`${baseUrl}/api/market/national-rates`, {
-      next: { revalidate: 300 },
-    });
-    if (!res.ok) return null;
-    return res.json();
-  } catch {
+    const sql = neon(process.env.DATABASE_URL);
+    const rows = await sql`
+      SELECT date, loan_type, rate, lender AS change_str
+      FROM rate_history
+      WHERE source = 'mnd' AND credit_score_tier = 'national'
+      ORDER BY date DESC, id DESC
+      LIMIT 10
+    `;
+    if (!rows.length) return null;
+
+    const latestDate = String(rows[0].date).split('T')[0];
+    const latest = rows.filter(r => String(r.date).split('T')[0] === latestDate);
+
+    const PRODUCT_MAP = {
+      '30yr_fixed': 'conv30', '15yr_fixed': 'conv15',
+      'fha_30yr': 'fha30', 'va_30yr': 'va30',
+    };
+
+    const rates = {};
+    for (const row of latest) {
+      const key = PRODUCT_MAP[row.loan_type];
+      if (key) {
+        rates[key] = { rate: parseFloat(row.rate), change: row.change_str ? parseFloat(row.change_str) : 0 };
+      }
+    }
+    return { rates, date: latestDate, source: 'mnd' };
+  } catch (error) {
+    console.error('Failed to fetch national rates:', error);
     return null;
   }
 }
