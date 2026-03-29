@@ -1,0 +1,83 @@
+{
+  "_meta": {
+    "lender": "everstream",
+    "type": "config",
+    "updated": "2026-03-29"
+  },
+  "investorAdj": {
+    "fnma": {
+      "21-30yr": 0.22,
+      "20/15/10yr": 0.14,
+      "arms": 0.22
+    },
+    "fhlmc": {
+      "21-30yr": 0.15,
+      "20/15/10yr": 0,
+      "arms": 0.15
+    }
+  },
+  "fhlmcSpecial": [
+    {
+      "featureName": "refiPurpose",
+      "agency": "fhlmc",
+      "tier": "core",
+      "purpose": "refinance",
+      "value": -0.15
+    },
+    {
+      "featureName": "purchasePurpose",
+      "agency": "fhlmc",
+      "tier": "core",
+      "purpose": "purchase",
+      "value": -0.15
+    },
+    {
+      "featureName": "occupancyTerm",
+      "agency": "fhlmc",
+      "tier": "core",
+      "termMin": 25,
+      "termMax": 30,
+      "loanAmountMin": 400001,
+      "loanAmountMax": 450000,
+      "value": 0.05
+    }
+  ],
+  "purposeCredits": [
+    {
+      "purpose": "purchase",
+      "featureName": "purposeAdj",
+      "value": 0.1
+    }
+  ],
+  "fhaAdditional": {
+    "ficoAdj": {
+      "0-619": -1.1,
+      "620-639": -0.4,
+      "640-699": -0.1
+    },
+    "purposeAdj": {
+      "purchase": 0.1
+    },
+    "stateAdj": {
+      "states": [
+        "AK",
+        "CA",
+        "CO",
+        "DC",
+        "FL",
+        "ME",
+        "NV",
+        "UT",
+        "WY"
+      ],
+      "value": 0.1
+    },
+    "propertyType": {
+      "condo": -0.3,
+      "manufactured": -0.5
+    },
+    "occupancy": {
+      "investmentSecondHome": -0.5
+    }
+  }
+}

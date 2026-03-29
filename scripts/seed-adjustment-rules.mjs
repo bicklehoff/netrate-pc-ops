@@ -1,15 +1,15 @@
 /**
- * Seed adjustment_rules table from everstream-complete.json.
+ * Seed adjustment_rules table from lender adjustment staging files.
  *
- * Converts static JSON config into normalized DB rows so the pricing engine
- * can query adjustments from the database instead of reading JSON files.
+ * Reads focused JSON files from src/data/lender-adjustments/{lender}/
+ * and inserts normalized rows into the adjustment_rules DB table.
  *
- * Run: node scripts/seed-adjustment-rules.mjs [--dry-run]
+ * Run: node scripts/seed-adjustment-rules.mjs [--lender everstream] [--dry-run]
  */
 
 import { neon } from '@neondatabase/serverless';
 import dotenv from 'dotenv';
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
@@ -17,71 +17,64 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: join(__dirname, '..', '.env') });
 
 const dryRun = process.argv.includes('--dry-run');
+const lenderArg = process.argv.find((_, i, a) => a[i - 1] === '--lender') || 'everstream';
 const sql = neon(process.env.PC_DATABASE_URL || process.env.DATABASE_URL);
 
-// Load config
-const cfgPath = join(__dirname, '..', 'src', 'data', 'lender-llpas', 'everstream-complete.json');
-const cfg = JSON.parse(readFileSync(cfgPath, 'utf-8'));
+const BASE_DIR = join(__dirname, '..', 'src', 'data', 'lender-adjustments', lenderArg);
+const TODAY = new Date().toISOString().split('T')[0];
 
-const SOURCE = 'everstream-complete.json';
-const TODAY = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+// ─── File loader ────────────────────────────────────────────────────
 
-// ─── Parse helpers ──────────────────────────────────────────────────
+function loadJson(filename) {
+  const path = join(BASE_DIR, filename);
+  if (!existsSync(path)) { console.warn(`  Skipping ${filename} (not found)`); return null; }
+  return JSON.parse(readFileSync(path, 'utf-8'));
+}
 
-/** Parse FICO band string → { ficoMin, ficoMax }
- *  Handles both Core format (">=780", "760-779") and Elite Unicode ("≥800", "780-799") */
-function parseFicoBand(band) {
-  // ">=780" or ">= 800" or "≥800"
-  const geMatch = band.match(/[≥>]=?\s*(\d+)/);
-  if (geMatch) return { ficoMin: parseInt(geMatch[1]), ficoMax: 999 };
+// ─── Parse helpers (normalized keys — no Unicode, no %) ─────────────
 
-  // "< 620(1)" or "< 620"
-  const ltMatch = band.match(/<\s*(\d+)/);
-  if (ltMatch) return { ficoMin: 0, ficoMax: parseInt(ltMatch[1]) - 1 };
-
-  // "760-779" or "760 - 779" or "780 - 799"
-  const rangeMatch = band.match(/(\d+)\s*[-–]\s*(\d+)/);
-  if (rangeMatch) return { ficoMin: parseInt(rangeMatch[1]), ficoMax: parseInt(rangeMatch[2]) };
-
-  console.warn(`  ⚠ Could not parse FICO band: "${band}"`);
+/** ">=780" → { ficoMin: 780, ficoMax: 999 }, "760-779" → { ficoMin: 760, ficoMax: 779 } */
+function parseFico(band) {
+  const ge = band.match(/>=\s*(\d+)/);
+  if (ge) return { ficoMin: parseInt(ge[1]), ficoMax: 999 };
+  const lt = band.match(/<\s*(\d+)/);
+  if (lt) return { ficoMin: 0, ficoMax: parseInt(lt[1]) - 1 };
+  const range = band.match(/(\d+)-(\d+)/);
+  if (range) return { ficoMin: parseInt(range[1]), ficoMax: parseInt(range[2]) };
+  console.warn(`  ⚠ FICO: "${band}"`);
   return null;
 }
 
-/** Parse LTV band string → { ltvMin, ltvMax }
- *  Handles both Core format ("<= 30.00%", "30.01 - 60.00%") and
- *  Elite format ("≤30", "30.01-60", "75.01-80") */
-function parseLtvBand(band) {
-  // "≤30" or "≤ 30" (Elite Unicode)
-  const leUnicode = band.match(/≤\s*([\d.]+)/);
-  if (leUnicode) return { ltvMin: 0, ltvMax: parseFloat(leUnicode[1]) };
-
-  // "<= 30.00%" or "<= 40.00%" (Core)
-  const leMatch = band.match(/<=\s*([\d.]+)/);
-  if (leMatch && !band.includes('-')) return { ltvMin: 0, ltvMax: parseFloat(leMatch[1]) };
-
-  // "30.01 - 60.00%" (Core) or "30.01-60" (Elite) — range format
-  const rangeMatch = band.match(/([\d.]+)\s*[-–]\s*([\d.]+)/);
-  if (rangeMatch) return { ltvMin: parseFloat(rangeMatch[1]), ltvMax: parseFloat(rangeMatch[2]) };
-
-  console.warn(`  ⚠ Could not parse LTV band: "${band}"`);
+/** "<= 30" → { ltvMin: 0, ltvMax: 30 }, "30.01-60" → { ltvMin: 30.01, ltvMax: 60 } */
+function parseLtv(band) {
+  const le = band.match(/<=\s*([\d.]+)/);
+  if (le && !band.includes('-')) return { ltvMin: 0, ltvMax: parseFloat(le[1]) };
+  const range = band.match(/([\d.]+)-([\d.]+)/);
+  if (range) return { ltvMin: parseFloat(range[1]), ltvMax: parseFloat(range[2]) };
+  console.warn(`  ⚠ LTV: "${band}"`);
   return null;
 }
 
-/** Parse loan amount range string → { loanAmountMin, loanAmountMax } */
-function parseLoanAmountRange(range) {
-  // "<= 50000"
-  const leMatch = range.match(/^<=\s*(\d+)$/);
-  if (leMatch) return { loanAmountMin: 0, loanAmountMax: parseInt(leMatch[1]) };
+/** "0-50000" → { loanAmountMin: 0, loanAmountMax: 50000 } */
+function parseAmount(band) {
+  const range = band.match(/(\d+)-(\d+)/);
+  if (range) return { loanAmountMin: parseInt(range[1]), loanAmountMax: parseInt(range[2]) };
+  console.warn(`  ⚠ Amount: "${band}"`);
+  return null;
+}
 
-  // ">50000<=85000" or ">300000<=400000"
-  const rangeMatch = range.match(/>(\d+)<=(\d+)/);
-  if (rangeMatch) return { loanAmountMin: parseInt(rangeMatch[1]) + 1, loanAmountMax: parseInt(rangeMatch[2]) };
-
-  // ">1500000" (no upper bound)
-  const gtMatch = range.match(/>(\d+)$/);
-  if (gtMatch) return { loanAmountMin: parseInt(gtMatch[1]) + 1, loanAmountMax: 99999999 };
-
-  console.warn(`  ⚠ Could not parse loan amount range: "${range}"`);
+/** Parse FHA LTV: "<= 85" or "> 85 <= 95" or "> 95" */
+function parseFhaLtv(band) {
+  const le = band.match(/<=\s*([\d.]+)/);
+  if (le && !band.includes('>')) return { ltvMin: 0, ltvMax: parseFloat(le[1]) };
+  const gtLe = band.match(/>\s*([\d.]+)\s*<=\s*([\d.]+)/);
+  if (gtLe) return { ltvMin: parseFloat(gtLe[1]) + 0.01, ltvMax: parseFloat(gtLe[2]) };
+  const gt = band.match(/>\s*([\d.]+)$/);
+  if (gt) return { ltvMin: parseFloat(gt[1]) + 0.01, ltvMax: 100 };
+  // Normalized format: "85.01-95"
+  const range = band.match(/([\d.]+)-([\d.]+)/);
+  if (range) return { ltvMin: parseFloat(range[1]), ltvMax: parseFloat(range[2]) };
+  console.warn(`  ⚠ FHA LTV: "${band}"`);
   return null;
 }
 
@@ -110,481 +103,251 @@ function addRow(data) {
     term_min: data.termMin ?? null,
     term_max: data.termMax ?? null,
     value: data.value,
-    source: SOURCE,
+    source: `${lenderArg}/${data.sourceFile || 'config'}`,
   });
 }
 
-// ─── 1. FICO/LTV Grids ─────────────────────────────────────────────
-
-function seedFicoLtvGrids() {
-  // Core grids — no agency distinction, but these are >15yr grids
-  const purposes = [
-    { key: 'purchaseFicoLTV', purpose: 'purchase' },
-    { key: 'nonCashoutRefiFicoLTV', purpose: 'refinance' },
-    { key: 'cashoutRefiFicoLTV', purpose: 'cashout' },
-  ];
-
-  for (const { key, purpose } of purposes) {
-    const grid = cfg.core?.convLLPA?.[key];
-    if (!grid) { console.warn(`  Missing ${key}`); continue; }
-
-    for (const [ficoBand, ltvEntries] of Object.entries(grid)) {
-      const fico = parseFicoBand(ficoBand);
-      if (!fico) continue;
-
-      for (const [ltvBand, value] of Object.entries(ltvEntries)) {
-        if (typeof value !== 'number') continue;
-        const ltv = parseLtvBand(ltvBand);
-        if (!ltv) continue;
-
-        addRow({
-          adjustmentType: 'ficoLtv',
-          purpose,
-          tier: 'core',
-          termGroup: '>15yr',
-          ...fico,
-          ...ltv,
-          value,
-        });
-      }
-    }
-  }
-}
-
-// ─── 1b. Elite FICO/LTV Grids (FNMA + FHLMC, by purpose + term) ────
-
-function seedEliteFicoLtvGrids() {
-  const agencies = [
-    { key: 'fnmaLLPA', agency: 'fnma' },
-    { key: 'fhlmcLLPA', agency: 'fhlmc' },
-  ];
-
-  // Map Elite JSON section names → { purpose, termGroup }
-  const sections = [
-    { name: 'Purchase LLPAs (Terms > 15 years only)', purpose: 'purchase', termGroup: '>15yr' },
-    { name: 'Rate/Term Refinance LLPAs (Terms > 15 years only)', purpose: 'refinance', termGroup: '>15yr' },
-    { name: 'Cash Out Refinance LLPAs (all amortizatione terms)', purpose: 'cashout', termGroup: 'allTerms' },  // note: typo in source JSON
-  ];
-
-  for (const { key, agency } of agencies) {
-    const llpa = cfg.elite?.[key];
-    if (!llpa) { console.warn(`  Missing elite.${key}`); continue; }
-
-    for (const { name, purpose, termGroup } of sections) {
-      const grid = llpa[name];
-      if (!grid) { console.warn(`  Missing elite.${key}["${name}"]`); continue; }
-
-      for (const [ficoBand, ltvEntries] of Object.entries(grid)) {
-        const fico = parseFicoBand(ficoBand);
-        if (!fico) continue;
-
-        for (const [ltvBand, value] of Object.entries(ltvEntries)) {
-          if (typeof value !== 'number') continue;
-          const ltv = parseLtvBand(ltvBand);
-          if (!ltv) continue;
-
-          addRow({
-            adjustmentType: 'ficoLtv',
-            purpose,
-            agency,
-            tier: 'elite',
-            termGroup,
-            ...fico,
-            ...ltv,
-            value,
-          });
-        }
-      }
-    }
-  }
-}
-
-// ─── 2. Risk-Based Adjustments ──────────────────────────────────────
-
-function seedRiskBased() {
-  const grid = cfg.core?.convLLPA?.riskBasedPriceAdj;
-  if (!grid) { console.warn('  Missing riskBasedPriceAdj'); return; }
-
+/** Seed a FICO×LTV grid into rows */
+function seedGrid(grid, opts) {
   for (const [ficoBand, ltvEntries] of Object.entries(grid)) {
-    const fico = parseFicoBand(ficoBand);
+    const fico = parseFico(ficoBand);
     if (!fico) continue;
-
     for (const [ltvBand, value] of Object.entries(ltvEntries)) {
       if (typeof value !== 'number') continue;
-      const ltv = parseLtvBand(ltvBand);
+      const ltv = (opts.ltvParser || parseLtv)(ltvBand);
       if (!ltv) continue;
-
-      addRow({
-        adjustmentType: 'riskBased',
-        tier: 'core',
-        ...fico,
-        ...ltv,
-        value,
-      });
+      addRow({ ...opts, ...fico, ...ltv, value });
     }
   }
 }
 
-// ─── 3. Loan Amount Adjustments ─────────────────────────────────────
+// ─── Conventional: Core LLPA ────────────────────────────────────────
 
-function seedLoanAmount() {
-  const adj = cfg.core?.convLLPA?.loanAmountAdj;
-  if (!adj) { console.warn('  Missing loanAmountAdj'); return; }
+function seedCoreConvLlpa() {
+  const data = loadJson('core-conv-llpa.json');
+  if (!data) return;
 
-  for (const [range, value] of Object.entries(adj)) {
-    if (typeof value !== 'number') continue;
-    const parsed = parseLoanAmountRange(range);
-    if (!parsed) continue;
+  // FICO/LTV grids
+  for (const purpose of ['purchase', 'refinance', 'cashout']) {
+    const grid = data.ficoLtv?.[purpose];
+    if (!grid) continue;
+    seedGrid(grid, { adjustmentType: 'ficoLtv', purpose, tier: 'core', termGroup: '>15yr', sourceFile: 'core-conv-llpa.json' });
+  }
 
-    addRow({
-      adjustmentType: 'loanAmount',
-      tier: 'core',
-      ...parsed,
-      value,
-    });
+  // Risk-based
+  if (data.riskBased) {
+    seedGrid(data.riskBased, { adjustmentType: 'riskBased', tier: 'core', sourceFile: 'core-conv-llpa.json' });
+  }
+
+  // Loan amount
+  if (data.loanAmount) {
+    for (const [band, value] of Object.entries(data.loanAmount)) {
+      if (typeof value !== 'number') continue;
+      const parsed = parseAmount(band);
+      if (!parsed) continue;
+      addRow({ adjustmentType: 'loanAmount', tier: 'core', ...parsed, value, sourceFile: 'core-conv-llpa.json' });
+    }
   }
 }
 
-// ─── 4. SRP ─────────────────────────────────────────────────────────
+// ─── Conventional: Core SRP ─────────────────────────────────────────
 
-/** Parse Elite SRP loan amount band → { loanAmountMin, loanAmountMax }
- *  Handles: "<=50,000", "50,001-85,000", ">700,000" */
-function parseEliteSrpAmountBand(band) {
-  const clean = band.replace(/,/g, '');
+function seedCoreConvSrp() {
+  const data = loadJson('core-conv-srp.json');
+  if (!data) return;
 
-  const leMatch = clean.match(/^<=\s*(\d+)$/);
-  if (leMatch) return { loanAmountMin: 0, loanAmountMax: parseInt(leMatch[1]) };
-
-  const rangeMatch = clean.match(/^(\d+)\s*[-–]\s*(\d+)$/);
-  if (rangeMatch) return { loanAmountMin: parseInt(rangeMatch[1]), loanAmountMax: parseInt(rangeMatch[2]) };
-
-  const gtMatch = clean.match(/^>\s*(\d+)$/);
-  if (gtMatch) return { loanAmountMin: parseInt(gtMatch[1]) + 1, loanAmountMax: 99999999 };
-
-  console.warn(`  ⚠ Could not parse Elite SRP amount band: "${band}"`);
-  return null;
-}
-
-function seedSRP() {
-  // ── Core SRP: state → productGroup → flat value
-  const coreSections = [
-    { escrowType: 'withImpounds', data: cfg.core?.convSRP?.withImpounds },
-    { escrowType: 'withoutImpounds', data: cfg.core?.convSRP?.withoutImpounds },
-  ];
-
-  for (const { escrowType, data } of coreSections) {
-    if (!data) { console.warn(`  Missing Core SRP ${escrowType}`); continue; }
-
-    for (const [state, products] of Object.entries(data)) {
+  for (const escrowType of ['withImpounds', 'withoutImpounds']) {
+    const section = data[escrowType];
+    if (!section) continue;
+    for (const [state, products] of Object.entries(section)) {
       if (typeof products !== 'object') continue;
       for (const [productGroup, value] of Object.entries(products)) {
         if (typeof value !== 'number') continue;
-
-        addRow({
-          adjustmentType: 'srp',
-          tier: 'core',
-          state,
-          escrowType,
-          productGroup,
-          value,
-        });
+        addRow({ adjustmentType: 'srp', tier: 'core', state, escrowType, productGroup, value, sourceFile: 'core-conv-srp.json' });
       }
     }
   }
+}
 
-  // ── Elite SRP: productGroup → state → loanAmountBand → value
-  const eliteSections = [
-    { escrowType: 'withImpounds', data: cfg.elite?.convSRP_withEscrows },
-    { escrowType: 'withoutImpounds', data: cfg.elite?.convSRP_withoutEscrows },
-  ];
+// ─── Conventional: Elite LLPA ───────────────────────────────────────
 
-  for (const { escrowType, data } of eliteSections) {
-    if (!data) { console.warn(`  Missing Elite SRP ${escrowType}`); continue; }
+function seedEliteConvLlpa() {
+  const data = loadJson('elite-conv-llpa.json');
+  if (!data) return;
 
-    for (const [productGroup, states] of Object.entries(data)) {
-      // Skip header rows like "Elite Conventional SRPs With Escrows*"
-      if (typeof states !== 'object' || !states) continue;
+  for (const agency of ['fnma', 'fhlmc']) {
+    const agencyData = data[agency];
+    if (!agencyData) continue;
 
+    // Keys like "purchase_>15yr", "refinance_>15yr", "cashout_allTerms"
+    for (const [gridKey, grid] of Object.entries(agencyData)) {
+      const [purpose, termGroup] = gridKey.split('_');
+      seedGrid(grid, { adjustmentType: 'ficoLtv', purpose, agency, tier: 'elite', termGroup, sourceFile: 'elite-conv-llpa.json' });
+    }
+  }
+}
+
+// ─── Conventional: Elite SRP ────────────────────────────────────────
+
+function seedEliteConvSrp() {
+  const data = loadJson('elite-conv-srp.json');
+  if (!data) return;
+
+  for (const escrowType of ['withImpounds', 'withoutImpounds']) {
+    const section = data[escrowType];
+    if (!section) continue;
+
+    for (const [productGroup, states] of Object.entries(section)) {
+      if (typeof states !== 'object') continue;
       for (const [state, amountBands] of Object.entries(states)) {
         if (typeof amountBands !== 'object') continue;
-
         for (const [band, value] of Object.entries(amountBands)) {
           if (typeof value !== 'number') continue;
-          const parsed = parseEliteSrpAmountBand(band);
+          const parsed = parseAmount(band);
           if (!parsed) continue;
-
-          addRow({
-            adjustmentType: 'srp',
-            tier: 'elite',
-            state,
-            escrowType,
-            productGroup,
-            ...parsed,
-            value,
-          });
+          addRow({ adjustmentType: 'srp', tier: 'elite', state, escrowType, productGroup, ...parsed, value, sourceFile: 'elite-conv-srp.json' });
         }
       }
     }
   }
 }
 
-// ─── 5. Investor Adjustments (currently hardcoded in lender-adj-loader) ──
+// ─── FHA: LLPA ──────────────────────────────────────────────────────
 
-function seedInvestorAdj() {
-  const investorAdj = {
-    fnma: { '21-30yr': 0.220, '20/15/10yr': 0.140, 'arms': 0.220 },
-    fhlmc: { '21-30yr': 0.150, '20/15/10yr': 0, 'arms': 0.150 },
-  };
+function seedFhaLlpa() {
+  const data = loadJson('core-fha-llpa.json');
+  if (!data) return;
 
-  for (const [agency, termGroups] of Object.entries(investorAdj)) {
-    for (const [termGroup, value] of Object.entries(termGroups)) {
-      addRow({
-        adjustmentType: 'investor',
-        agency,
-        termGroup,
-        value,
-      });
-    }
+  // FICO/LTV
+  if (data.ficoLtv) {
+    seedGrid(data.ficoLtv, { adjustmentType: 'ficoLtv', loanType: 'fha', tier: 'core', ltvParser: parseFhaLtv, sourceFile: 'core-fha-llpa.json' });
   }
-}
 
-// ─── 6. FHLMC Special Adjustments (currently hardcoded in pricing-v2) ──
-
-function seedFhlmcSpecial() {
-  // FHLMC Purpose Adjustments: -0.150 for both purchase and refi
-  // (confirmed via LoanSifter — "Loan Purpose is Purchase/Rate/Term Refi" = -0.150)
-  addRow({
-    adjustmentType: 'fhlmcSpecial',
-    agency: 'fhlmc',
-    tier: 'core',
-    purpose: 'refinance',
-    featureName: 'refiPurpose',
-    value: -0.150,
-  });
-  addRow({
-    adjustmentType: 'fhlmcSpecial',
-    agency: 'fhlmc',
-    tier: 'core',
-    purpose: 'purchase',
-    featureName: 'purchasePurpose',
-    value: -0.150,
-  });
-
-  // FHLMC Occupancy/Term/Loan Amt Credit: +0.050 for 25/30yr primary, 400K-450K
-  addRow({
-    adjustmentType: 'fhlmcSpecial',
-    agency: 'fhlmc',
-    tier: 'core',
-    featureName: 'occupancyTerm',
-    termMin: 25,
-    termMax: 30,
-    loanAmountMin: 400001,
-    loanAmountMax: 450000,
-    value: 0.050,
-  });
-}
-
-// ─── 6b. Elite Purpose Credits ──────────────────────────────────────
-
-function seedPurposeCredits() {
-  // EverStream purchase credit: +0.100 for all tiers
-  // (confirmed via LoanSifter — applies to both Core and Elite purchase loans)
-  addRow({
-    adjustmentType: 'productFeature',
-    purpose: 'purchase',
-    featureName: 'purposeAdj',
-    value: 0.100,
-  });
-}
-
-// ─── 7. FHA FICO/LTV Adjustments ────────────────────────────────────
-
-/** Parse FHA LTV band string → { ltvMin, ltvMax } */
-function parseFhaLtvBand(band) {
-  // "<= 85%"
-  const leMatch = band.match(/<=\s*([\d.]+)%?/);
-  if (leMatch && !band.includes('>')) return { ltvMin: 0, ltvMax: parseFloat(leMatch[1]) };
-
-  // "> 85% <= 95%" or "> 85 <= 95%"
-  const rangeMatch = band.match(/>\s*([\d.]+)%?\s*<=\s*([\d.]+)%?/);
-  if (rangeMatch) return { ltvMin: parseFloat(rangeMatch[1]) + 0.01, ltvMax: parseFloat(rangeMatch[2]) };
-
-  // "> 95%"
-  const gtMatch = band.match(/>\s*([\d.]+)%?$/);
-  if (gtMatch) return { ltvMin: parseFloat(gtMatch[1]) + 0.01, ltvMax: 100 };
-
-  console.warn(`  ⚠ Could not parse FHA LTV band: "${band}"`);
-  return null;
-}
-
-function seedFhaFicoLtv() {
-  const grid = cfg.core?.fhaLLPA?.ficoPriceAdj;
-  if (!grid) { console.warn('  Missing FHA ficoPriceAdj'); return; }
-
-  for (const [ficoBand, ltvEntries] of Object.entries(grid)) {
-    const fico = parseFicoBand(ficoBand);
-    if (!fico) continue;
-
-    for (const [ltvBand, value] of Object.entries(ltvEntries)) {
+  // Loan amount
+  if (data.loanAmount) {
+    for (const [band, value] of Object.entries(data.loanAmount)) {
       if (typeof value !== 'number') continue;
-      const ltv = parseFhaLtvBand(ltvBand);
-      if (!ltv) continue;
-
-      addRow({
-        adjustmentType: 'ficoLtv',
-        loanType: 'fha',
-        tier: 'core',
-        ...fico,
-        ...ltv,
-        value,
-      });
+      const parsed = parseAmount(band);
+      if (!parsed) continue;
+      addRow({ adjustmentType: 'loanAmount', loanType: 'fha', tier: 'core', ...parsed, value, sourceFile: 'core-fha-llpa.json' });
     }
   }
 }
 
-// ─── 8. FHA Loan Amount Adjustments ─────────────────────────────────
-
-function seedFhaLoanAmount() {
-  const adj = cfg.core?.fhaLLPA?.loanAmountAdj;
-  if (!adj) { console.warn('  Missing FHA loanAmountAdj'); return; }
-
-  for (const [range, value] of Object.entries(adj)) {
-    if (typeof value !== 'number') continue;
-    const parsed = parseLoanAmountRange(range);
-    if (!parsed) continue;
-
-    addRow({
-      adjustmentType: 'loanAmount',
-      loanType: 'fha',
-      tier: 'core',
-      ...parsed,
-      value,
-    });
-  }
-}
-
-// ─── 9. FHA SRP ─────────────────────────────────────────────────────
+// ─── FHA: SRP ───────────────────────────────────────────────────────
 
 function seedFhaSrp() {
-  const data = cfg.core?.fhaSRP;
-  if (!data) { console.warn('  Missing FHA SRP'); return; }
+  const data = loadJson('core-fha-srp.json');
+  if (!data?.srp) return;
 
-  for (const [state, products] of Object.entries(data)) {
+  for (const [state, products] of Object.entries(data.srp)) {
     if (typeof products !== 'object') continue;
     for (const [productGroup, value] of Object.entries(products)) {
       if (typeof value !== 'number') continue;
-
-      addRow({
-        adjustmentType: 'srp',
-        loanType: 'fha',
-        tier: 'core',
-        state,
-        escrowType: 'withImpounds', // FHA SRP doesn't split by escrow — use default
-        productGroup,
-        value,
-      });
+      addRow({ adjustmentType: 'srp', loanType: 'fha', tier: 'core', state, escrowType: 'withImpounds', productGroup, value, sourceFile: 'core-fha-srp.json' });
     }
   }
 }
 
-// ─── 10. FHA Additional Adjustments (from otherAdj + Elite product data) ──
+// ─── Lender Config (investor adj, FHLMC specials, purpose credits, FHA additional) ──
 
-function seedFhaAdditionalAdj() {
-  // FICO band adjustments (from Elite FHA 30yr ficoAdjusters — applies to Core too)
-  const ficoAdj = { '0-619': -1.1, '620-639': -0.4, '640-699': -0.1, '700-max': 0 };
-  for (const [band, value] of Object.entries(ficoAdj)) {
-    if (value === 0) continue;
-    const match = band.match(/(\d+)-(\d+|max)/);
-    if (!match) continue;
-    addRow({
-      adjustmentType: 'productFeature',
-      loanType: 'fha',
-      featureName: 'ficoAdj',
-      ficoMin: parseInt(match[1]),
-      ficoMax: match[2] === 'max' ? 999 : parseInt(match[2]),
-      value,
-    });
-  }
+function seedLenderConfig() {
+  const cfg = loadJson('lender-config.json');
+  if (!cfg) return;
 
-  // Loan purpose adjustment (from Elite FHA 30yr loanPurpose)
-  const purposeAdj = { purchase: 0.1, rateTermRefi: 0, cashOut: 0 };
-  for (const [purpose, value] of Object.entries(purposeAdj)) {
-    if (value === 0) continue;
-    const purposeMap = { purchase: 'purchase', rateTermRefi: 'refinance', cashOut: 'cashout' };
-    addRow({
-      adjustmentType: 'productFeature',
-      loanType: 'fha',
-      featureName: 'purposeAdj',
-      purpose: purposeMap[purpose] || purpose,
-      value,
-    });
-  }
-
-  // State adjustment — specific states get +0.1 for FHA
-  const fhaStateAdj = cfg.core?.fhaLLPA?.otherAdj?.['AK, CA, CO, DC, FL, ME, NV, UT, WY Additional'];
-  if (typeof fhaStateAdj === 'number' && fhaStateAdj !== 0) {
-    const states = ['AK', 'CA', 'CO', 'DC', 'FL', 'ME', 'NV', 'UT', 'WY'];
-    for (const state of states) {
-      addRow({
-        adjustmentType: 'productFeature',
-        loanType: 'fha',
-        featureName: 'stateAdj',
-        state,
-        value: fhaStateAdj,
-      });
+  // Investor adjustments
+  if (cfg.investorAdj) {
+    for (const [agency, termGroups] of Object.entries(cfg.investorAdj)) {
+      for (const [termGroup, value] of Object.entries(termGroups)) {
+        addRow({ adjustmentType: 'investor', agency, termGroup, value, sourceFile: 'lender-config.json' });
+      }
     }
   }
 
-  // Property type adjustments (from Elite FHA 30yr)
-  const propAdj = { condo: -0.3, manufactured: -0.5 };
-  for (const [propType, value] of Object.entries(propAdj)) {
-    if (value === 0) continue;
-    addRow({
-      adjustmentType: 'productFeature',
-      loanType: 'fha',
-      featureName: 'propertyType',
-      productGroup: propType,
-      value,
-    });
+  // FHLMC special adjustments
+  if (cfg.fhlmcSpecial) {
+    for (const rule of cfg.fhlmcSpecial) {
+      addRow({ adjustmentType: 'fhlmcSpecial', ...rule, sourceFile: 'lender-config.json' });
+    }
   }
 
-  // Investment / Second Home (from core otherAdj)
-  const investAdj = cfg.core?.fhaLLPA?.otherAdj?.['Investment Prop / Second Home'];
-  if (typeof investAdj === 'number' && investAdj !== 0) {
-    addRow({
-      adjustmentType: 'productFeature',
-      loanType: 'fha',
-      featureName: 'occupancy',
-      productGroup: 'investmentSecondHome',
-      value: investAdj,
-    });
+  // Purpose credits
+  if (cfg.purposeCredits) {
+    for (const credit of cfg.purposeCredits) {
+      addRow({ adjustmentType: 'productFeature', ...credit, sourceFile: 'lender-config.json' });
+    }
+  }
+
+  // FHA additional adjustments
+  if (cfg.fhaAdditional) {
+    const fha = cfg.fhaAdditional;
+
+    // FICO band adjustments
+    if (fha.ficoAdj) {
+      for (const [band, value] of Object.entries(fha.ficoAdj)) {
+        if (value === 0) continue;
+        const match = band.match(/(\d+)-(\d+|max)/);
+        if (!match) continue;
+        addRow({ adjustmentType: 'productFeature', loanType: 'fha', featureName: 'ficoAdj',
+          ficoMin: parseInt(match[1]), ficoMax: match[2] === 'max' ? 999 : parseInt(match[2]), value, sourceFile: 'lender-config.json' });
+      }
+    }
+
+    // Purpose adjustments
+    if (fha.purposeAdj) {
+      const purposeMap = { purchase: 'purchase', rateTermRefi: 'refinance', cashOut: 'cashout' };
+      for (const [purpose, value] of Object.entries(fha.purposeAdj)) {
+        if (value === 0) continue;
+        addRow({ adjustmentType: 'productFeature', loanType: 'fha', featureName: 'purposeAdj',
+          purpose: purposeMap[purpose] || purpose, value, sourceFile: 'lender-config.json' });
+      }
+    }
+
+    // State adjustments
+    if (fha.stateAdj?.states && fha.stateAdj.value !== 0) {
+      for (const state of fha.stateAdj.states) {
+        addRow({ adjustmentType: 'productFeature', loanType: 'fha', featureName: 'stateAdj',
+          state, value: fha.stateAdj.value, sourceFile: 'lender-config.json' });
+      }
+    }
+
+    // Property type
+    if (fha.propertyType) {
+      for (const [propType, value] of Object.entries(fha.propertyType)) {
+        if (value === 0) continue;
+        addRow({ adjustmentType: 'productFeature', loanType: 'fha', featureName: 'propertyType',
+          productGroup: propType, value, sourceFile: 'lender-config.json' });
+      }
+    }
+
+    // Occupancy (investment/second home)
+    if (fha.occupancy) {
+      for (const [occType, value] of Object.entries(fha.occupancy)) {
+        if (value === 0) continue;
+        addRow({ adjustmentType: 'productFeature', loanType: 'fha', featureName: 'occupancy',
+          productGroup: occType, value, sourceFile: 'lender-config.json' });
+      }
+    }
   }
 }
 
 // ─── Execute ────────────────────────────────────────────────────────
 
 async function main() {
-  console.log('Seed adjustment_rules for EverStream');
-  console.log(`Source: ${cfgPath}`);
+  console.log(`Seed adjustment_rules for: ${lenderArg}`);
+  console.log(`Source: ${BASE_DIR}`);
   console.log(`Dry run: ${dryRun}\n`);
 
-  // Build all rows — Conventional (Core + Elite)
-  seedFicoLtvGrids();
-  seedEliteFicoLtvGrids();
-  seedRiskBased();
-  seedLoanAmount();
-  seedSRP();
-  seedInvestorAdj();
-  seedFhlmcSpecial();
-  seedPurposeCredits();
-
-  // Build all rows — FHA
-  seedFhaFicoLtv();
-  seedFhaLoanAmount();
+  // Build all rows
+  seedCoreConvLlpa();
+  seedCoreConvSrp();
+  seedEliteConvLlpa();
+  seedEliteConvSrp();
+  seedFhaLlpa();
   seedFhaSrp();
-  seedFhaAdditionalAdj();
+  seedLenderConfig();
 
-  // Count by loan type and adjustment type
+  // Count by type
   const counts = {};
   const byLoanType = {};
   for (const r of rows) {
@@ -593,73 +356,50 @@ async function main() {
     byLoanType[lt] = (byLoanType[lt] || 0) + 1;
   }
   console.log('Row counts by adjustment type:');
-  for (const [type, count] of Object.entries(counts)) {
-    console.log(`  ${type}: ${count}`);
-  }
+  for (const [type, count] of Object.entries(counts)) console.log(`  ${type}: ${count}`);
   console.log('Row counts by loan type:');
-  for (const [lt, count] of Object.entries(byLoanType)) {
-    console.log(`  ${lt}: ${count}`);
-  }
+  for (const [lt, count] of Object.entries(byLoanType)) console.log(`  ${lt}: ${count}`);
   console.log(`  TOTAL: ${rows.length}\n`);
 
-  if (dryRun) {
-    console.log('Dry run — no rows inserted.');
-    return;
-  }
+  if (dryRun) { console.log('Dry run — no rows inserted.'); return; }
 
-  // Get EverStream lender ID
-  const [lender] = await sql`SELECT id FROM rate_lenders WHERE code = 'everstream'`;
-  if (!lender) {
-    console.error('ERROR: No rate_lender with code "everstream" found.');
-    process.exit(1);
-  }
+  // Get lender ID
+  const [lender] = await sql`SELECT id FROM rate_lenders WHERE code = ${lenderArg}`;
+  if (!lender) { console.error(`ERROR: No rate_lender with code "${lenderArg}".`); process.exit(1); }
   const lenderId = lender.id;
-  console.log(`EverStream lender ID: ${lenderId}`);
+  console.log(`Lender ID: ${lenderId}`);
 
-  // Clear existing rules for this lender
-  const deleted = await sql`
-    DELETE FROM adjustment_rules WHERE lender_id = ${lenderId}
-  `;
-  console.log(`Cleared existing rules: ${deleted.length || 0} deleted`);
+  // Clear existing
+  await sql`DELETE FROM adjustment_rules WHERE lender_id = ${lenderId}`;
+  console.log('Cleared existing rules');
 
-  // Insert in batches of 100
+  // Insert
   let inserted = 0;
-  const batchSize = 100;
-  for (let i = 0; i < rows.length; i += batchSize) {
-    const batch = rows.slice(i, i + batchSize);
-
-    for (const r of batch) {
-      await sql`
-        INSERT INTO adjustment_rules (
-          id, lender_id, adjustment_type, loan_type,
-          purpose, agency, tier, state, escrow_type, product_group, term_group, feature_name,
-          fico_min, fico_max, ltv_min, ltv_max,
-          loan_amount_min, loan_amount_max, term_min, term_max,
-          value, effective_date, status, source,
-          created_at, updated_at
-        ) VALUES (
-          gen_random_uuid(), ${lenderId}, ${r.adjustment_type}, ${r.loan_type},
-          ${r.purpose}, ${r.agency}, ${r.tier}, ${r.state}, ${r.escrow_type}, ${r.product_group}, ${r.term_group}, ${r.feature_name},
-          ${r.fico_min}, ${r.fico_max}, ${r.ltv_min}, ${r.ltv_max},
-          ${r.loan_amount_min}, ${r.loan_amount_max}, ${r.term_min}, ${r.term_max},
-          ${r.value}, ${TODAY}, 'active', ${r.source},
-          NOW(), NOW()
-        )
-      `;
-      inserted++;
-    }
-
-    process.stdout.write(`  Inserted ${inserted}/${rows.length}\r`);
+  for (const r of rows) {
+    await sql`
+      INSERT INTO adjustment_rules (
+        id, lender_id, adjustment_type, loan_type,
+        purpose, agency, tier, state, escrow_type, product_group, term_group, feature_name,
+        fico_min, fico_max, ltv_min, ltv_max,
+        loan_amount_min, loan_amount_max, term_min, term_max,
+        value, effective_date, status, source,
+        created_at, updated_at
+      ) VALUES (
+        gen_random_uuid(), ${lenderId}, ${r.adjustment_type}, ${r.loan_type},
+        ${r.purpose}, ${r.agency}, ${r.tier}, ${r.state}, ${r.escrow_type}, ${r.product_group}, ${r.term_group}, ${r.feature_name},
+        ${r.fico_min}, ${r.fico_max}, ${r.ltv_min}, ${r.ltv_max},
+        ${r.loan_amount_min}, ${r.loan_amount_max}, ${r.term_min}, ${r.term_max},
+        ${r.value}, ${TODAY}, 'active', ${r.source},
+        NOW(), NOW()
+      )
+    `;
+    inserted++;
+    if (inserted % 100 === 0) process.stdout.write(`  Inserted ${inserted}/${rows.length}\r`);
   }
 
-  console.log(`\nDone! Inserted ${inserted} adjustment rules for EverStream.`);
-
-  // Verify
+  console.log(`\nDone! Inserted ${inserted} adjustment rules for ${lenderArg}.`);
   const [count] = await sql`SELECT COUNT(*) as cnt FROM adjustment_rules WHERE lender_id = ${lenderId}`;
-  console.log(`Verification: ${count.cnt} rows in adjustment_rules for EverStream`);
+  console.log(`Verification: ${count.cnt} rows in adjustment_rules`);
 }
 
-main().catch(err => {
-  console.error('SEED ERROR:', err);
-  process.exit(1);
-});
+main().catch(err => { console.error('SEED ERROR:', err); process.exit(1); });

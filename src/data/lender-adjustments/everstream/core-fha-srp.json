@@ -1,0 +1,266 @@
+{
+  "_meta": {
+    "lender": "everstream",
+    "tier": "core",
+    "loanType": "fha",
+    "type": "srp",
+    "updated": "2026-03-29"
+  },
+  "srp": {
+    "AK": {
+      "Fixed 20/25/30 Yr": 2.38,
+      "Fixed 10/15 Yr": 1.48,
+      "ARMs": 1.45
+    },
+    "AL": {
+      "Fixed 20/25/30 Yr": 2.21,
+      "Fixed 10/15 Yr": 1.35,
+      "ARMs": 1.31
+    },
+    "AR": {
+      "Fixed 20/25/30 Yr": 2.23,
+      "Fixed 10/15 Yr": 1.37,
+      "ARMs": 1.34
+    },
+    "AZ": {
+      "Fixed 20/25/30 Yr": 2.03,
+      "Fixed 10/15 Yr": 1.19,
+      "ARMs": 1.16
+    },
+    "CA": {
+      "Fixed 20/25/30 Yr": 2.05,
+      "Fixed 10/15 Yr": 1.25,
+      "ARMs": 1.22
+    },
+    "CO": {
+      "Fixed 20/25/30 Yr": 2.03,
+      "Fixed 10/15 Yr": 1.21,
+      "ARMs": 1.18
+    },
+    "CT": {
+      "Fixed 20/25/30 Yr": 2.42,
+      "Fixed 10/15 Yr": 1.52,
+      "ARMs": 1.49
+    },
+    "DC": {
+      "Fixed 20/25/30 Yr": 2.13,
+      "Fixed 10/15 Yr": 1.31,
+      "ARMs": 1.27
+    },
+    "DE": {
+      "Fixed 20/25/30 Yr": 2.36,
+      "Fixed 10/15 Yr": 1.48,
+      "ARMs": 1.45
+    },
+    "FL": {
+      "Fixed 20/25/30 Yr": 2.25,
+      "Fixed 10/15 Yr": 1.39,
+      "ARMs": 1.36
+    },
+    "GA": {
+      "Fixed 20/25/30 Yr": 2.19,
+      "Fixed 10/15 Yr": 1.3,
+      "ARMs": 1.27
+    },
+    "HI": {
+      "Fixed 20/25/30 Yr": 2.12,
+      "Fixed 10/15 Yr": 1.24,
+      "ARMs": 1.21
+    },
+    "IA": {
+      "Fixed 20/25/30 Yr": 2.2,
+      "Fixed 10/15 Yr": 1.36,
+      "ARMs": 1.32
+    },
+    "ID": {
+      "Fixed 20/25/30 Yr": 1.97,
+      "Fixed 10/15 Yr": 1.08,
+      "ARMs": 1.04
+    },
+    "IL": {
+      "Fixed 20/25/30 Yr": 2.41,
+      "Fixed 10/15 Yr": 1.51,
+      "ARMs": 1.47
+    },
+    "IN": {
+      "Fixed 20/25/30 Yr": 2.23,
+      "Fixed 10/15 Yr": 1.38,
+      "ARMs": 1.35
+    },
+    "KS": {
+      "Fixed 20/25/30 Yr": 2.31,
+      "Fixed 10/15 Yr": 1.44,
+      "ARMs": 1.41
+    },
+    "KY": {
+      "Fixed 20/25/30 Yr": 2.26,
+      "Fixed 10/15 Yr": 1.4,
+      "ARMs": 1.37
+    },
+    "LA": {
+      "Fixed 20/25/30 Yr": 2.33,
+      "Fixed 10/15 Yr": 1.45,
+      "ARMs": 1.42
+    },
+    "MA": {
+      "Fixed 20/25/30 Yr": 2.2,
+      "Fixed 10/15 Yr": 1.36,
+      "ARMs": 1.33
+    },
+    "MD": {
+      "Fixed 20/25/30 Yr": 2.28,
+      "Fixed 10/15 Yr": 1.42,
+      "ARMs": 1.38
+    },
+    "ME": {
+      "Fixed 20/25/30 Yr": 2.19,
+      "Fixed 10/15 Yr": 1.4,
+      "ARMs": 1.36
+    },
+    "MI": {
+      "Fixed 20/25/30 Yr": 2.2,
+      "Fixed 10/15 Yr": 1.34,
+      "ARMs": 1.31
+    },
+    "MN": {
+      "Fixed 20/25/30 Yr": 2.2,
+      "Fixed 10/15 Yr": 1.35,
+      "ARMs": 1.32
+    },
+    "MO": {
+      "Fixed 20/25/30 Yr": 2.19,
+      "Fixed 10/15 Yr": 1.34,
+      "ARMs": 1.31
+    },
+    "MS": {
+      "Fixed 20/25/30 Yr": 2.24,
+      "Fixed 10/15 Yr": 1.37,
+      "ARMs": 1.34
+    },
+    "MT": {
+      "Fixed 20/25/30 Yr": 2.12,
+      "Fixed 10/15 Yr": 1.26,
+      "ARMs": 1.23
+    },
+    "NC": {
+      "Fixed 20/25/30 Yr": 2.16,
+      "Fixed 10/15 Yr": 1.29,
+      "ARMs": 1.26
+    },
+    "ND": {
+      "Fixed 20/25/30 Yr": 2.1,
+      "Fixed 10/15 Yr": 1.3,
+      "ARMs": 1.26
+    },
+    "NE": {
+      "Fixed 20/25/30 Yr": 2.26,
+      "Fixed 10/15 Yr": 1.41,
+      "ARMs": 1.38
+    },
+    "NH": {
+      "Fixed 20/25/30 Yr": 2.27,
+      "Fixed 10/15 Yr": 1.4,
+      "ARMs": 1.37
+    },
+    "NJ": {
+      "Fixed 20/25/30 Yr": 2.42,
+      "Fixed 10/15 Yr": 1.51,
+      "ARMs": 1.48
+    },
+    "NM": {
+      "Fixed 20/25/30 Yr": 2.34,
+      "Fixed 10/15 Yr": 1.46,
+      "ARMs": 1.43
+    },
+    "NV": {
+      "Fixed 20/25/30 Yr": 1.94,
+      "Fixed 10/15 Yr": 1.06,
+      "ARMs": 1.03
+    },
+    "NY": {
+      "Fixed 20/25/30 Yr": 2.33,
+      "Fixed 10/15 Yr": 1.44,
+      "ARMs": 1.41
+    },
+    "OH": {
+      "Fixed 20/25/30 Yr": 2.28,
+      "Fixed 10/15 Yr": 1.42,
+      "ARMs": 1.39
+    },
+    "OK": {
+      "Fixed 20/25/30 Yr": 2.36,
+      "Fixed 10/15 Yr": 1.46,
+      "ARMs": 1.43
+    },
+    "OR": {
+      "Fixed 20/25/30 Yr": 2.04,
+      "Fixed 10/15 Yr": 1.32,
+      "ARMs": 1.29
+    },
+    "PA": {
+      "Fixed 20/25/30 Yr": 2.45,
+      "Fixed 10/15 Yr": 1.53,
+      "ARMs": 1.5
+    },
+    "RI": {
+      "Fixed 20/25/30 Yr": 2.21,
+      "Fixed 10/15 Yr": 1.35,
+      "ARMs": 1.32
+    },
+    "SC": {
+      "Fixed 20/25/30 Yr": 2.22,
+      "Fixed 10/15 Yr": 1.36,
+      "ARMs": 1.33
+    },
+    "SD": {
+      "Fixed 20/25/30 Yr": 2.1,
+      "Fixed 10/15 Yr": 1.27,
+      "ARMs": 1.23
+    },
+    "TN": {
+      "Fixed 20/25/30 Yr": 2.13,
+      "Fixed 10/15 Yr": 1.23,
+      "ARMs": 1.2
+    },
+    "TX": {
+      "Fixed 20/25/30 Yr": 2.32,
+      "Fixed 10/15 Yr": 1.4,
+      "ARMs": 1.37
+    },
+    "UT": {
+      "Fixed 20/25/30 Yr": 2.04,
+      "Fixed 10/15 Yr": 1.22,
+      "ARMs": 1.18
+    },
+    "VA": {
+      "Fixed 20/25/30 Yr": 2.19,
+      "Fixed 10/15 Yr": 1.33,
+      "ARMs": 1.3
+    },
+    "VT": {
+      "Fixed 20/25/30 Yr": 2.3,
+      "Fixed 10/15 Yr": 1.43,
+      "ARMs": 1.39
+    },
+    "WA": {
+      "Fixed 20/25/30 Yr": 2.09,
+      "Fixed 10/15 Yr": 1.23,
+      "ARMs": 1.2
+    },
+    "WI": {
+      "Fixed 20/25/30 Yr": 2.35,
+      "Fixed 10/15 Yr": 1.47,
+      "ARMs": 1.44
+    },
+    "WV": {
+      "Fixed 20/25/30 Yr": 2.21,
+      "Fixed 10/15 Yr": 1.36,
+      "ARMs": 1.33
+    },
+    "WY": {
+      "Fixed 20/25/30 Yr": 2.14,
+      "Fixed 10/15 Yr": 1.3,
+      "ARMs": 1.26
+    }
+  }
+}
