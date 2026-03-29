@@ -191,38 +191,26 @@ export default async function RateWatchPage() {
         </div>
       </div>
 
-      {/* === 3-column dashboard — pack everything in === */}
+      {/* === Masonry dashboard — blocks flow top-to-bottom, no gaps === */}
       <PredictionDataProvider>
-        <div className="px-3 py-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 items-start">
-          {/* Column 1: Commentary */}
+        <div className="px-3 py-2 lg:columns-3 md:columns-2 columns-1 gap-2 [&>*]:mb-2 [&>*]:break-inside-avoid">
+          {/* Flows top-to-bottom: col1 gets items 1,4,7; col2 gets 2,5,8; col3 gets 3,6,9 */}
           <HeroStrip
             todayRate={todayRate}
             rateChange={rateChange}
           />
-
-          {/* Column 2: Rate Grid */}
           <RateGrid
             netRates={liveRates}
             nationalRates={natRates}
             date={natDate}
           />
-
-          {/* Column 3: Fed Panel + Treasury Yields + Economic Calendar */}
-          <div className="md:col-span-2 lg:col-span-1 flex flex-col gap-2">
-            <FedPanelSection />
-            <TreasuryYields fredLatest={fredData.latest} />
-            <EconomicCalendar />
-          </div>
-
-          {/* Chart — spans columns 1+2, below commentary and rate grid */}
-          <div className="md:col-span-2 bg-surface rounded-xl border border-white/10 p-3 overflow-hidden">
+          <FedPanelSection />
+          <div className="bg-surface rounded-xl border border-white/10 p-3 overflow-hidden">
             <RateChart rateHistory={rateHistory} fredData={fredData.series} />
           </div>
-
-          {/* Statement Diff — column 3, next to chart */}
-          <div className="md:col-span-2 lg:col-span-1">
-            <FedStatementDiff />
-          </div>
+          <TreasuryYields fredLatest={fredData.latest} />
+          <FedStatementDiff />
+          <EconomicCalendar />
         </div>
       </PredictionDataProvider>
 
