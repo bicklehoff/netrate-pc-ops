@@ -194,7 +194,6 @@ export default async function RateWatchPage() {
       {/* === Masonry dashboard — blocks flow top-to-bottom, no gaps === */}
       <PredictionDataProvider>
         <div className="px-3 py-2 lg:columns-3 md:columns-2 columns-1 gap-2 [&>*]:mb-2 [&>*]:break-inside-avoid">
-          {/* Flows top-to-bottom: col1 gets items 1,4,7; col2 gets 2,5,8; col3 gets 3,6,9 */}
           <HeroStrip
             todayRate={todayRate}
             rateChange={rateChange}
@@ -205,12 +204,16 @@ export default async function RateWatchPage() {
             date={natDate}
           />
           <FedPanelSection />
-          <div className="bg-surface rounded-xl border border-white/10 p-3 overflow-hidden">
-            <RateChart rateHistory={rateHistory} fredData={fredData.series} />
-          </div>
           <TreasuryYields fredLatest={fredData.latest} />
           <FedStatementDiff />
           <EconomicCalendar />
+        </div>
+
+        {/* Rate History Chart — full width below masonry */}
+        <div className="px-3 py-2">
+          <div className="bg-surface rounded-xl border border-white/10 p-4 overflow-hidden">
+            <RateChart rateHistory={rateHistory} fredData={fredData.series} />
+          </div>
         </div>
       </PredictionDataProvider>
 
