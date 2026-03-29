@@ -24,7 +24,7 @@ export default function HeroStrip({ todayRate, rateChange }) {
   const trendClass =
     rateChange > 0 ? 'text-red-400' : rateChange < 0 ? 'text-green-400' : 'text-brand';
   const trendLabel =
-    rateChange > 0 ? 'TRENDING HIGHER' : rateChange < 0 ? 'TRENDING LOWER' : 'STABLE';
+    rateChange > 0 ? 'WORSENED' : rateChange < 0 ? 'IMPROVED' : 'UNCHANGED';
 
   const today = new Date();
   const dateStr = today.toLocaleDateString('en-US', {
@@ -45,7 +45,7 @@ export default function HeroStrip({ todayRate, rateChange }) {
           {trendLabel}
         </span>
       </div>
-      <div className="text-slate-500 text-[11px] mb-2">30-Yr Fixed · 780+ · {dateStr}</div>
+      <div className="text-slate-500 text-[11px] mb-2">Today&apos;s 30-Yr Fixed · 780+ · {dateStr}</div>
 
       {/* Commentary */}
       <div className="flex items-center gap-1.5 mb-1.5">
