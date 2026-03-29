@@ -194,32 +194,34 @@ export default async function RateWatchPage() {
       {/* === 3-column dashboard — pack everything in === */}
       <PredictionDataProvider>
         <div className="px-3 py-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 items-start">
-          {/* Column 1: Commentary + Chart */}
-          <div className="flex flex-col gap-2">
-            <HeroStrip
-              todayRate={todayRate}
-              rateChange={rateChange}
-            />
-            <div className="bg-surface rounded-xl border border-white/10 p-3 overflow-hidden">
-              <RateChart rateHistory={rateHistory} fredData={fredData.series} />
-            </div>
-          </div>
+          {/* Column 1: Commentary */}
+          <HeroStrip
+            todayRate={todayRate}
+            rateChange={rateChange}
+          />
 
-          {/* Column 2: Rate Grid + Treasury Yields */}
-          <div className="flex flex-col gap-2">
-            <RateGrid
-              netRates={liveRates}
-              nationalRates={natRates}
-              date={natDate}
-            />
-            <TreasuryYields fredLatest={fredData.latest} />
-          </div>
+          {/* Column 2: Rate Grid */}
+          <RateGrid
+            netRates={liveRates}
+            nationalRates={natRates}
+            date={natDate}
+          />
 
-          {/* Column 3: Fed Panel + Statement Diff + Economic Calendar */}
+          {/* Column 3: Fed Panel + Treasury Yields + Economic Calendar */}
           <div className="md:col-span-2 lg:col-span-1 flex flex-col gap-2">
             <FedPanelSection />
-            <FedStatementDiff />
+            <TreasuryYields fredLatest={fredData.latest} />
             <EconomicCalendar />
+          </div>
+
+          {/* Chart — spans columns 1+2, below commentary and rate grid */}
+          <div className="md:col-span-2 bg-surface rounded-xl border border-white/10 p-3 overflow-hidden">
+            <RateChart rateHistory={rateHistory} fredData={fredData.series} />
+          </div>
+
+          {/* Statement Diff — column 3, next to chart */}
+          <div className="md:col-span-2 lg:col-span-1">
+            <FedStatementDiff />
           </div>
         </div>
       </PredictionDataProvider>
