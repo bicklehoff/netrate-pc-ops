@@ -141,8 +141,6 @@ export default async function RateWatchPage() {
   const tier760 = rateHistory.filter((r) => r.credit_score_tier === '760+');
   const dbRate = tier760.length > 0 ? parseFloat(tier760[tier760.length - 1].rate) : null;
   const todayRate = realRate || dbRate;
-  const prevDbRate = tier760.length > 1 ? parseFloat(tier760[tier760.length - 2].rate) : null;
-  const rateChange = dbRate && prevDbRate ? Math.round((dbRate - prevDbRate) * 1000) / 1000 : 0;
 
   // Build national average rates from MND API or fall back to FRED (Freddie Mac weekly survey)
   let natRates = nationalData?.rates || null;
@@ -158,6 +156,12 @@ export default async function RateWatchPage() {
     }
     natDate = fl.MORTGAGE30US?.date || null;
   }
+
+  // Rate change: use MND's daily change (reliable day-over-day comparison)
+  // Falls back to FRED weekly change, then 0
+  const rateChange = natRates?.conv30?.change
+    || fredData.latest?.MORTGAGE30US?.change
+    || 0;
 
   return (
     <div className="bg-deep text-slate-200 min-h-screen">
