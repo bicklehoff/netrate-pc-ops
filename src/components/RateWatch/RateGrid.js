@@ -19,8 +19,9 @@ function chgColor(val) {
 
 function chgText(val) {
   if (val == null) return '—';
-  if (val === 0) return 'unch';
-  return (val > 0 ? '+' : '') + val.toFixed(2) + '%';
+  if (val === 0) return <span className="text-slate-500">0.00% —</span>;
+  const arrow = val > 0 ? '↑' : '↓';
+  return <>{(val > 0 ? '+' : '') + val.toFixed(2)}% {arrow}</>;
 }
 
 
