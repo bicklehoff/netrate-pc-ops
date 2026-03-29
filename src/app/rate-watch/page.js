@@ -124,6 +124,21 @@ export default async function RateWatchPage() {
   const prevDbRate = tier760.length > 1 ? parseFloat(tier760[tier760.length - 2].rate) : null;
   const rateChange = dbRate && prevDbRate ? Math.round((dbRate - prevDbRate) * 1000) / 1000 : 0;
 
+  // Build national average rates from MND API or fall back to FRED (Freddie Mac weekly survey)
+  let natRates = nationalData?.rates || null;
+  let natDate = nationalData?.date || null;
+  if (!natRates && fredData.latest) {
+    const fl = fredData.latest;
+    natRates = {};
+    if (fl.MORTGAGE30US) {
+      natRates.conv30 = { rate: fl.MORTGAGE30US.value, change: fl.MORTGAGE30US.change || 0 };
+    }
+    if (fl.MORTGAGE15US) {
+      natRates.conv15 = { rate: fl.MORTGAGE15US.value, change: fl.MORTGAGE15US.change || 0 };
+    }
+    natDate = fl.MORTGAGE30US?.date || null;
+  }
+
   return (
     <div className="bg-deep text-slate-200 min-h-screen">
       <script
@@ -170,8 +185,8 @@ export default async function RateWatchPage() {
           <div className="flex flex-col gap-2">
             <RateGrid
               netRates={liveRates}
-              nationalRates={nationalData?.rates || null}
-              date={nationalData?.date || null}
+              nationalRates={natRates}
+              date={natDate}
             />
             <TreasuryYields fredLatest={fredData.latest} />
             <MarketPredictions />
