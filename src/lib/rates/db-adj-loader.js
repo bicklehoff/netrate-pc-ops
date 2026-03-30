@@ -1,7 +1,7 @@
 /**
  * Load lender adjustments from the adjustment_rules DB table.
  *
- * Replaces lender-adj-loader.js (which reads static JSON files).
+ * Loads adjustment data from the DB (seeded via seed-adjustment-rules.mjs).
  * Returns the EXACT SAME shape that pricing-v2.js expects.
  *
  * Caches results for 5 minutes — adjustment configs change at most daily.

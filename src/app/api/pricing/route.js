@@ -69,12 +69,8 @@ async function getEffectiveDate() {
   return null;
 }
 
-// Broker config — will come from DB in future
-const BROKER_CONFIG = {
-  compRate: 0.02,
-  compCapPurchase: 3595,
-  compCapRefi: 3595,
-};
+// Default comp rate — comp caps come from rate_lenders table per lender
+const DEFAULT_COMP_RATE = 0.02;
 
 export async function POST(request) {
   try {
@@ -109,6 +105,13 @@ export async function POST(request) {
 
     for (const lenderData of allLenders) {
       const lenderId = lenderData.lenderId;
+
+      // Build broker config from DB lender data (comp caps, fees)
+      const brokerConfig = {
+        compRate: DEFAULT_COMP_RATE,
+        compCapPurchase: lenderData.compCap?.purchase || 3595,
+        compCapRefi: lenderData.compCap?.refinance || 3595,
+      };
 
       // Load adjustments from DB for this loan type — skip lenders with no rules
       const lenderAdj = await getDbLenderAdj(lenderId, scenario.loanType);
@@ -153,7 +156,7 @@ export async function POST(request) {
         const llpaGrids = lenderData.llpas || null;
 
         for (const rateEntry of lockRates) {
-          const result = priceRate(rateEntry, product, scenario, lenderAdj, BROKER_CONFIG, llpaGrids);
+          const result = priceRate(rateEntry, product, scenario, lenderAdj, brokerConfig, llpaGrids);
           results.push(result);
         }
       }

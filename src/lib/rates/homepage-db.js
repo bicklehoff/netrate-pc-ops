@@ -13,11 +13,7 @@ import { DEFAULT_SCENARIO } from './defaults';
 
 const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-const BROKER_CONFIG = {
-  compRate: 0.02,
-  compCapPurchase: 3595,
-  compCapRefi: 3595,
-};
+const DEFAULT_COMP_RATE = 0.02;
 
 function calculatePI(rate, amount, termYears = 30) {
   const monthlyRate = rate / 100 / 12;
@@ -63,6 +59,14 @@ async function priceProduct(loanType, termYears) {
   if (!activeSheet?.lender) return null;
 
   const lenderCode = activeSheet.lender.code;
+  const lender = activeSheet.lender;
+
+  // Build broker config from DB lender data
+  const brokerConfig = {
+    compRate: DEFAULT_COMP_RATE,
+    compCapPurchase: Number(lender.maxCompCapPurchase) || 3595,
+    compCapRefi: Number(lender.maxCompCapRefi) || 3595,
+  };
 
   // Get DB adjustments for this lender + loan type
   const lenderAdj = await getDbLenderAdj(lenderCode, loanType);
@@ -131,7 +135,7 @@ async function priceProduct(loanType, termYears) {
         loanType,
       };
 
-      const result = priceRate(rateEntry, productObj, scenarioObj, lenderAdj, BROKER_CONFIG);
+      const result = priceRate(rateEntry, productObj, scenarioObj, lenderAdj, brokerConfig);
 
       if (!result) continue;
 
