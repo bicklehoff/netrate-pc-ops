@@ -62,7 +62,7 @@ export async function GET(request, { params }) {
       });
     }
 
-    return NextResponse.json({
+    const response = {
       loanId: loan.id,
       status: loan.status,
       cdWorkDriveFileId: loan.cdWorkDriveFileId,
@@ -78,7 +78,6 @@ export async function GET(request, { params }) {
       isApproved: !!loan.cdApprovedAt,
       isSent: !!loan.payrollSentAt,
       relatedLoans,
-      // Include payroll event details if sent
       payrollDetails: null,
     };
 
