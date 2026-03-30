@@ -10,7 +10,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { put } from '@vercel/blob';
-import { uploadFile, getSubfolderForDocType } from '@/lib/zoho-workdrive';
+import { uploadFile } from '@/lib/zoho-workdrive';
 import { extractApprovalData } from '@/lib/approval-extractor';
 
 async function verifyMloAccess(loanId, session) {
