@@ -106,8 +106,10 @@ export default function OverviewSection({ loan, onRefresh }) {
       )}
 
       {loan.status === 'funded' && (
-        <PayrollSection loan={loan} onRefresh={onRefresh} />
-        <CompensationSection loan={loan} />
+        <>
+          <PayrollSection loan={loan} onRefresh={onRefresh} />
+          <CompensationSection loan={loan} />
+        </>
       )}
 
       {/* ─── Borrower & Property (side by side) ─── */}
