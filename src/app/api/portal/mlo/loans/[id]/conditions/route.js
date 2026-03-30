@@ -13,6 +13,8 @@ import { put } from '@vercel/blob';
 import { uploadFile } from '@/lib/zoho-workdrive';
 import { extractApprovalData } from '@/lib/approval-extractor';
 
+export const maxDuration = 60; // Claude extraction can take 20-30s on multi-page PDFs
+
 async function verifyMloAccess(loanId, session) {
   if (!session || session.user.userType !== 'mlo') return null;
   const loan = await prisma.loan.findUnique({ where: { id: loanId } });
