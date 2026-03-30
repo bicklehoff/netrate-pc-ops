@@ -18,7 +18,9 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 // These reconstruct the exact string keys pricing-v2.js expects.
 
 function formatFicoBand(ficoMin, ficoMax) {
-  if (ficoMax >= 999) return `>=${ficoMin}`;
+  // Normalize to match pricing-v2.js getFicoBand() output.
+  // Engine maps 780+ → ">=780", so merge 780-799 and >=800 into ">=780".
+  if (ficoMax >= 999 || ficoMin >= 780) return '>=780';
   if (ficoMin === 0) return `< ${ficoMax + 1}(1)`;
   return `${ficoMin}-${ficoMax}`;
 }
