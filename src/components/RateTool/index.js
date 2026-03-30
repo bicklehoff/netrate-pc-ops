@@ -45,6 +45,7 @@ export default function RateTool({ initialRateData, defaultState }) {
     newLoanAmount: DEFAULT_SCENARIO.currentPayoff,
     currentRate: DEFAULT_SCENARIO.currentRate,
     fico: DEFAULT_SCENARIO.fico,
+    productType: 'fixed',
     loanAmount: 0,
     ltv: 0,
     state: initialState,
