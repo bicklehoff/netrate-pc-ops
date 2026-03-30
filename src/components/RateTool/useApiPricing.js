@@ -113,7 +113,7 @@ export function useApiPricing(scenario) {
       if (err.name !== 'AbortError') setResults(null);
     }
     setLoading(false);
-  }, [scenario.loanAmount, scenario.fico, scenario.propertyValue, scenario.purpose, scenario.loanType, scenario.propertyType, scenario.state, scenario.currentRate]);
+  }, [scenario.loanAmount, scenario.fico, scenario.propertyValue, scenario.purpose, scenario.loanType, scenario.propertyType, scenario.productType, scenario.state, scenario.currentRate]);
 
   return { results, loading, fetchRates, effectiveDate };
 }
