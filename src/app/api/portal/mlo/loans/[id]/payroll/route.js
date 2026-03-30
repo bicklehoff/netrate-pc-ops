@@ -82,12 +82,16 @@ export async function GET(request, { params }) {
     };
 
     if (loan.payrollSentAt) {
-      const payrollEvent = await prisma.loanEvent.findFirst({
+      // Find the most recent payroll event with a successful tracker result
+      const payrollEvents = await prisma.loanEvent.findMany({
         where: { loanId: id, eventType: 'payroll_sent' },
         orderBy: { createdAt: 'desc' },
         select: { details: true, createdAt: true },
+        take: 5,
       });
-      response.payrollDetails = payrollEvent?.details || null;
+      // Prefer the most recent successful one, fall back to latest
+      const successfulEvent = payrollEvents.find(e => e.details?.trackerResult?.success);
+      response.payrollDetails = successfulEvent?.details || payrollEvents[0]?.details || null;
     }
 
     return NextResponse.json(response);
