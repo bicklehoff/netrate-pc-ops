@@ -142,6 +142,17 @@ export default function PayrollSection({ loan }) {
       // Force page reload to get fresh loan data — onRefresh alone leaves stale component state
       window.location.reload();
     } catch (err) {
+      // The upload may have succeeded on the server even if the response timed out.
+      // Check the loan state before showing an error.
+      try {
+        const check = await fetch(`/api/portal/mlo/loans/${loan.id}/payroll`);
+        const checkData = await check.json();
+        if (checkData.hasCD && checkData.cdExtractedData?.status === 'success') {
+          // Upload + extraction succeeded — just reload
+          window.location.reload();
+          return;
+        }
+      } catch {}
       setError(err.message || 'Upload failed');
     } finally {
       setUploading(false);
