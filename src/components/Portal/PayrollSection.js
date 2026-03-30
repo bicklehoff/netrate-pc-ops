@@ -217,19 +217,25 @@ export default function PayrollSection({ loan, onRefresh }) {
     : 'Processing...';
 
   // ─── Build comparison rows for review phase ───────────────
+  const fullAddress = loan.propertyAddress
+    ? `${loan.propertyAddress.street}, ${loan.propertyAddress.city}, ${loan.propertyAddress.state} ${loan.propertyAddress.zipCode}`
+    : null;
+
   const comparisonRows = isExtracted ? [
     { label: 'Loan Amount', ...compareValues(extraction.data.loanAmount, loan.loanAmount, 'currency') },
     { label: 'Interest Rate', ...compareValues(extraction.data.interestRate, loan.interestRate ? Number(loan.interestRate) : null, 'rate') },
-    { label: 'Monthly P&I', ...compareValues(extraction.data.monthlyPI, null, 'currency') },
+    { label: 'Monthly P&I', ...compareValues(extraction.data.monthlyPI, loan.monthlyPayment, 'currency') },
     { label: 'Loan Term', ...compareValues(extraction.data.loanTerm ? `${extraction.data.loanTerm} mo` : null, loan.loanTerm ? `${loan.loanTerm} mo` : null, 'text') },
-    { label: 'Broker Compensation', ...compareValues(extraction.data.brokerCompensation, null, 'currency') },
-    { label: 'Total Closing Costs', ...compareValues(extraction.data.totalClosingCosts, null, 'currency') },
-    { label: 'Cash to Close', ...compareValues(extraction.data.cashToClose, null, 'currency') },
-    { label: 'Lender Credits', ...compareValues(extraction.data.lenderCredits, null, 'currency') },
+    { label: 'Broker Compensation', ...compareValues(extraction.data.brokerCompensation, loan.brokerCompensation, 'currency') },
+    { label: 'Total Closing Costs', ...compareValues(extraction.data.totalClosingCosts, loan.totalClosingCosts, 'currency') },
+    { label: 'Cash to Close', ...compareValues(extraction.data.cashToClose, loan.cashToClose, 'currency') },
+    { label: 'Lender Credits', ...compareValues(extraction.data.lenderCredits, loan.lenderCredits, 'currency') },
+    { label: 'Lender', ...compareValues(extraction.data.lenderName, loan.lenderName, 'text') },
     { label: 'Loan Number', ...compareValues(extraction.data.loanNumber, loan.loanNumber, 'text') },
     { label: 'Borrower', ...compareValues(extraction.data.borrowerNames, loan.borrower ? `${loan.borrower.firstName} ${loan.borrower.lastName}` : null, 'text') },
-    { label: 'Property', ...compareValues(extraction.data.propertyAddress, loan.propertyAddress ? `${loan.propertyAddress.street}, ${loan.propertyAddress.city}` : null, 'text') },
-    { label: 'Closing Date', ...compareValues(extraction.data.closingDate, null, 'text') },
+    { label: 'Property', ...compareValues(extraction.data.propertyAddress, fullAddress, 'text') },
+    { label: 'Closing Date', ...compareValues(extraction.data.closingDate, loan.closingDate?.split('T')[0] || null, 'text') },
+    { label: 'Funding Date', ...compareValues(extraction.data.disbursementDate, loan.fundingDate?.split('T')[0] || null, 'text') },
     { label: 'Loan Type', ...compareValues(extraction.data.loanType, loan.loanType, 'text') },
   ] : [];
 
@@ -402,8 +408,8 @@ export default function PayrollSection({ loan, onRefresh }) {
               <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
                 <div className="grid grid-cols-12 gap-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   <div className="col-span-4">Field</div>
-                  <div className="col-span-3 text-right">From CD</div>
-                  <div className="col-span-3 text-right">On File</div>
+                  <div className="col-span-3 text-right text-blue-600">From CD</div>
+                  <div className="col-span-3 text-right text-gray-400">On File</div>
                   <div className="col-span-2 text-center">Status</div>
                 </div>
               </div>

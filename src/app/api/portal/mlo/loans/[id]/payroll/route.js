@@ -291,6 +291,7 @@ export async function PATCH(request, { params }) {
       if (cd.interestRate != null) loanUpdate.interestRate = cd.interestRate;
       if (cd.loanTerm != null) loanUpdate.loanTerm = cd.loanTerm;
       if (cd.loanType && cd.loanType !== 'other') loanUpdate.loanType = cd.loanType;
+      if (cd.lenderName) loanUpdate.lenderName = cd.lenderName;
       if (cd.loanNumber) loanUpdate.lenderLoanNumber = cd.loanNumber;
       if (cd.monthlyPI != null) loanUpdate.monthlyPayment = cd.monthlyPI;
       if (cd.brokerCompensation != null) loanUpdate.brokerCompensation = cd.brokerCompensation;

@@ -37,6 +37,7 @@ function buildExtractionPrompt(loanContext) {
   "disbursementDate": "<string — disbursement date in YYYY-MM-DD format if shown>",
   "loanNumber": "<string — loan number as shown on CD>",
   "loanType": "<string — Conventional, FHA, VA, or USDA>",
+  "lenderName": "<string — the lender/creditor name as shown on the CD>",
   "prepaidInterest": "<number — prepaid/per-diem interest>",
   "escrowsAtClosing": "<number — initial escrow deposit>",
   "totalLoanCosts": "<number — total loan costs>",
