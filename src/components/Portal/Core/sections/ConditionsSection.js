@@ -34,6 +34,8 @@ export default function ConditionsSection({ loan, onRefresh }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [extraction, setExtraction] = useState(null); // { document, extraction }
+  const [confirming, setConfirming] = useState(false);
   const fileInputRef = useRef(null);
 
   // Approval documents — filter from loan.documents, newest first
@@ -46,33 +48,60 @@ export default function ConditionsSection({ loan, onRefresh }) {
   const received = conditions.filter((c) => c.status === 'received').length;
   const cleared = conditions.filter((c) => c.status === 'cleared' || c.status === 'waived').length;
 
-  // ─── Upload approval doc ───
+  // ─── Upload approval doc + extract ───
   const handleApprovalUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setUploading(true);
     setError('');
+    setExtraction(null);
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('docType', 'approval');
-      formData.append('label', file.name.replace(/\.[^.]+$/, ''));
+      const fd = new FormData();
+      fd.append('file', file);
 
-      const res = await fetch(`/api/portal/mlo/loans/${loan.id}/docs`, {
+      const res = await fetch(`/api/portal/mlo/loans/${loan.id}/conditions`, {
         method: 'PUT',
-        body: formData,
+        body: fd,
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || 'Upload failed');
       }
-      onRefresh();
+      const result = await res.json();
+
+      if (result.extraction?.status === 'error') {
+        setError(`Extraction failed: ${result.extraction.error}`);
+        onRefresh(); // Still refresh to show the uploaded doc
+      } else {
+        setExtraction(result);
+      }
     } catch (err) {
       setError(err.message);
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  // ─── Confirm extracted conditions ───
+  const handleConfirmExtraction = async () => {
+    if (!extraction) return;
+    setConfirming(true);
+    setError('');
+    try {
+      await apiCall('POST', {
+        action: 'confirm_approval',
+        documentId: extraction.document.id,
+        extractedConditions: extraction.extraction.data.conditions,
+        extractedLoanData: extraction.extraction.data.loanData,
+      });
+      setExtraction(null);
+      onRefresh();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setConfirming(false);
     }
   };
 
@@ -188,7 +217,7 @@ export default function ConditionsSection({ loan, onRefresh }) {
               disabled={uploading}
               className="px-3 py-1.5 text-xs font-medium text-brand bg-brand/5 hover:bg-brand/10 border border-brand/20 rounded-lg transition-colors disabled:opacity-50"
             >
-              {uploading ? 'Uploading...' : '+ Upload Approval'}
+              {uploading ? 'Extracting...' : '+ Upload Approval'}
             </button>
           </>
         }
@@ -233,6 +262,81 @@ export default function ConditionsSection({ loan, onRefresh }) {
           </div>
         )}
       </SectionCard>
+
+      {/* ─── Extraction Review ─── */}
+      {extraction && extraction.extraction?.status === 'success' && (
+        <SectionCard title="Review Extracted Conditions" icon="🔍" defaultOpen={true}>
+          <div className="space-y-4">
+            {/* Loan Data */}
+            {extraction.extraction.data.loanData && (
+              <div>
+                <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Loan Data</h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  {Object.entries(extraction.extraction.data.loanData).filter(([, v]) => v != null && v !== '' && !Array.isArray(v)).map(([key, val]) => (
+                    <div key={key} className="px-3 py-1.5 bg-gray-50 rounded text-sm">
+                      <span className="text-[10px] text-gray-400 uppercase">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
+                      <span className="block text-gray-700 truncate">{String(val)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Extracted Conditions */}
+            <div>
+              <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                Conditions ({extraction.extraction.data.conditions.length} found)
+              </h4>
+              <div className="max-h-80 overflow-y-auto space-y-1 border border-gray-200 rounded-lg p-2">
+                {CONDITION_STAGE_ORDER.map((stageKey) => {
+                  const stageConds = extraction.extraction.data.conditions.filter((c) => c.stage === stageKey);
+                  if (stageConds.length === 0) return null;
+                  return (
+                    <div key={stageKey} className="mb-2">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                        {CONDITION_STAGE_LABELS[stageKey] || stageKey} ({stageConds.length})
+                      </span>
+                      {stageConds.map((c, i) => (
+                        <div key={i} className="flex items-start gap-2 py-1 px-2 text-sm hover:bg-gray-50 rounded">
+                          <span className="text-xs text-gray-400 font-mono flex-shrink-0 w-8">#{c.conditionNumber}</span>
+                          <span className="text-gray-700 text-xs line-clamp-2">{c.title}</span>
+                          <span className="text-[10px] text-gray-400 flex-shrink-0 ml-auto">
+                            {CONDITION_OWNER_LABELS[c.ownerRole] || c.ownerRole}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Existing approval conditions warning */}
+            {conditions.filter((c) => c.source === 'approval').length > 0 && (
+              <div className="px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700">
+                {conditions.filter((c) => c.source === 'approval').length} existing approval conditions will be replaced. Manual conditions ({conditions.filter((c) => c.source === 'manual').length}) will not be affected.
+              </div>
+            )}
+
+            {/* Action buttons */}
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                onClick={handleConfirmExtraction}
+                disabled={confirming}
+                className="px-4 py-2 text-sm font-medium text-white bg-brand hover:bg-brand-dark rounded-lg transition-colors disabled:opacity-50"
+              >
+                {confirming ? 'Importing...' : `Confirm & Import ${extraction.extraction.data.conditions.length} Conditions`}
+              </button>
+              <button
+                onClick={() => { setExtraction(null); onRefresh(); }}
+                className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                Discard
+              </button>
+            </div>
+          </div>
+        </SectionCard>
+      )}
 
       {/* ─── Conditions ─── */}
       <SectionCard
@@ -354,6 +458,9 @@ function ConditionRow({ cond, onStatusChange, onEdit, loading, isEditing }) {
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 font-medium">
                 {CONDITION_OWNER_LABELS[cond.ownerRole] || cond.ownerRole}
               </span>
+            )}
+            {cond.source === 'approval' && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-50 text-purple-500 font-medium">auto</span>
             )}
           </div>
           {cond.description && (

@@ -374,6 +374,7 @@ model Condition {
   conditionNumber  Int?      @map("condition_number")
   clearedAt        DateTime? @map("cleared_at") @db.Timestamptz(6)
   receivedAt       DateTime? @map("received_at") @db.Timestamptz(6)
+  source           String    @default("manual")
   dependsOnId      String?   @map("depends_on_id") @db.Uuid
   borrowerMessage  String?   @map("borrower_message")
   document         Document?  @relation(fields: [documentId], references: [id])

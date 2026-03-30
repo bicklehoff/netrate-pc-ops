@@ -18,6 +18,7 @@ const LOAN_SUBFOLDERS = [
   'SUBMITTED',
   'EXTRA',
   'CLOSING',
+  'APPROVALS',
 ];
 
 // ─── Token Management ─────────────────────────────────────────
@@ -430,6 +431,9 @@ export function getSubfolderForDocType(docType) {
     survey: 'SUBMITTED',
     deed: 'SUBMITTED',
   };
+
+  // Approval docs go to APPROVALS subfolder
+  mapping.approval = 'APPROVALS';
 
   return mapping[docType] || 'SUBMITTED'; // Default to SUBMITTED
 }
