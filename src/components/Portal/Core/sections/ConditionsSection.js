@@ -2,7 +2,7 @@
 // Grouped by stage, with add/edit/status-change actions
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import SectionCard from '../SectionCard';
 import {
   CONDITION_STAGE_ORDER,
@@ -33,11 +33,48 @@ export default function ConditionsSection({ loan, onRefresh }) {
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
+
+  // Approval documents — filter from loan.documents, newest first
+  const approvals = (loan.documents || [])
+    .filter((d) => d.docType === 'approval')
+    .sort((a, b) => new Date(b.uploadedAt || b.createdAt) - new Date(a.uploadedAt || a.createdAt));
 
   // Counts
   const needed = conditions.filter((c) => c.status === 'needed').length;
   const received = conditions.filter((c) => c.status === 'received').length;
   const cleared = conditions.filter((c) => c.status === 'cleared' || c.status === 'waived').length;
+
+  // ─── Upload approval doc ───
+  const handleApprovalUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    setError('');
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('docType', 'approval');
+      formData.append('label', file.name.replace(/\.[^.]+$/, ''));
+
+      const res = await fetch(`/api/portal/mlo/loans/${loan.id}/docs`, {
+        method: 'PUT',
+        body: formData,
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Upload failed');
+      }
+      onRefresh();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   const apiCall = useCallback(async (method, body) => {
     const res = await fetch(`/api/portal/mlo/loans/${loan.id}/conditions`, {
@@ -131,6 +168,73 @@ export default function ConditionsSection({ loan, onRefresh }) {
 
   return (
     <div className="space-y-6">
+      {/* ─── Approval Documents ─── */}
+      <SectionCard
+        title="Approvals"
+        icon="📄"
+        badge={approvals.length > 0 ? `${approvals.length}` : null}
+        defaultOpen={true}
+        actions={
+          <>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf"
+              onChange={handleApprovalUpload}
+              className="hidden"
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="px-3 py-1.5 text-xs font-medium text-brand bg-brand/5 hover:bg-brand/10 border border-brand/20 rounded-lg transition-colors disabled:opacity-50"
+            >
+              {uploading ? 'Uploading...' : '+ Upload Approval'}
+            </button>
+          </>
+        }
+      >
+        {approvals.length === 0 ? (
+          <p className="text-sm text-gray-400">No approval documents uploaded yet.</p>
+        ) : (
+          <div className="space-y-1.5">
+            {approvals.map((doc) => (
+              <div
+                key={doc.id}
+                className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="text-gray-400 flex-shrink-0">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </span>
+                  <div className="min-w-0">
+                    <span className="text-sm text-gray-700 truncate block">{doc.fileName || doc.label}</span>
+                    <span className="text-[10px] text-gray-400">
+                      {new Date(doc.uploadedAt || doc.createdAt).toLocaleDateString('en-US', {
+                        month: 'short', day: 'numeric', year: 'numeric',
+                      })}
+                      {doc.fileSize && ` · ${(doc.fileSize / 1024).toFixed(0)} KB`}
+                    </span>
+                  </div>
+                </div>
+                {doc.fileUrl && (
+                  <a
+                    href={doc.fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-brand hover:text-brand-dark font-medium flex-shrink-0 ml-3"
+                  >
+                    View →
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </SectionCard>
+
+      {/* ─── Conditions ─── */}
       <SectionCard
         title="Conditions"
         icon="📋"
