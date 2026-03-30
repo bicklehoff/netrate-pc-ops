@@ -6,6 +6,9 @@
 //
 // Flow: Upload CD → auto-extract via Claude → MLO reviews → MLO approves → Send to Payroll
 
+// Claude extraction can take 15-20s — extend Vercel serverless timeout
+export const maxDuration = 30;
+
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
