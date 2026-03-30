@@ -69,6 +69,7 @@ export default function PayrollSection({ loan, onRefresh }) {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
   const [dragOver, setDragOver] = useState(false);
+  const [relatedLoans, setRelatedLoans] = useState(loan?.relatedLoans || []);
 
   if (!loan || loan.status !== 'funded') return null;
 
@@ -108,6 +109,10 @@ export default function PayrollSection({ loan, onRefresh }) {
 
       if (!res.ok) {
         throw new Error(data.error || 'Upload failed');
+      }
+
+      if (data.relatedLoans?.length > 0) {
+        setRelatedLoans(data.relatedLoans);
       }
 
       onRefresh();
@@ -249,6 +254,38 @@ export default function PayrollSection({ loan, onRefresh }) {
             <button onClick={() => setError('')} className="text-xs text-red-500 hover:underline ml-3">
               Dismiss
             </button>
+          </div>
+        )}
+
+        {/* Related loans warning */}
+        {relatedLoans.length > 0 && (
+          <div className="mb-4 bg-amber-50 border border-amber-300 rounded-lg px-4 py-3">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-lg">⚠️</span>
+              <p className="text-sm font-semibold text-amber-800">
+                {relatedLoans.length} other loan{relatedLoans.length > 1 ? 's' : ''} found for this borrower
+              </p>
+            </div>
+            <div className="space-y-1.5 ml-7">
+              {relatedLoans.map((rl) => (
+                <div key={rl.id} className="flex items-center gap-2 text-xs text-amber-700">
+                  <span className="font-mono">{rl.loanNumber || '—'}</span>
+                  <span className="text-amber-400">|</span>
+                  <span>{rl.lenderName || 'No lender'}</span>
+                  <span className="text-amber-400">|</span>
+                  <span className="capitalize">{rl.status}</span>
+                  {rl.loanAmount && (
+                    <>
+                      <span className="text-amber-400">|</span>
+                      <span>${Number(rl.loanAmount).toLocaleString()}</span>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-amber-600 mt-2 ml-7">
+              Review these files — they may need to be dispositioned or marked as quotes for MCR compliance.
+            </p>
           </div>
         )}
 

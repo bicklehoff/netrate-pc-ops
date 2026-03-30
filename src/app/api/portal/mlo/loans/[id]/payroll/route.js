@@ -45,6 +45,23 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Dup-check: other loans for same borrower not settled/cancelled
+    let relatedLoans = [];
+    if (loan.borrowerId) {
+      relatedLoans = await prisma.loan.findMany({
+        where: {
+          borrowerId: loan.borrowerId,
+          id: { not: id },
+          status: { notIn: ['settled', 'cancelled'] },
+        },
+        select: {
+          id: true, status: true, loanNumber: true, lenderName: true,
+          loanType: true, loanAmount: true, purpose: true, createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+    }
+
     return NextResponse.json({
       loanId: loan.id,
       status: loan.status,
@@ -60,6 +77,7 @@ export async function GET(request, { params }) {
       isExtracted: loan.cdExtractedData?.status === 'success',
       isApproved: !!loan.cdApprovedAt,
       isSent: !!loan.payrollSentAt,
+      relatedLoans,
     });
   } catch (error) {
     console.error('Payroll status error:', error);
@@ -193,12 +211,37 @@ export async function PUT(request, { params }) {
       },
     });
 
+    // Dup-check: find other loans for the same borrower that aren't settled
+    let relatedLoans = [];
+    if (loan.borrowerId) {
+      const others = await prisma.loan.findMany({
+        where: {
+          borrowerId: loan.borrowerId,
+          id: { not: id },
+          status: { notIn: ['settled', 'cancelled'] },
+        },
+        select: {
+          id: true,
+          status: true,
+          loanNumber: true,
+          lenderName: true,
+          loanType: true,
+          loanAmount: true,
+          purpose: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+      relatedLoans = others;
+    }
+
     return NextResponse.json({
       success: true,
       cdWorkDriveFileId: uploaded.id,
       cdFileName: file.name,
       cdExtractedData: extraction,
       cdProcessedAt: new Date().toISOString(),
+      relatedLoans,
     });
   } catch (error) {
     console.error('CD upload error:', error);
