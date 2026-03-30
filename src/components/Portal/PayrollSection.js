@@ -139,9 +139,8 @@ export default function PayrollSection({ loan, onRefresh }) {
         setRelatedLoans(data.relatedLoans);
       }
 
-      // Small delay to ensure DB write is committed before refetch
-      await new Promise(r => setTimeout(r, 500));
-      onRefresh();
+      // Force page reload to get fresh loan data — onRefresh alone leaves stale component state
+      window.location.reload();
     } catch (err) {
       setError(err.message || 'Upload failed');
     } finally {
@@ -176,7 +175,7 @@ export default function PayrollSection({ loan, onRefresh }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Approval failed');
-      onRefresh();
+      window.location.reload();
     } catch (err) {
       setError(err.message || 'Approval failed');
     } finally {
@@ -196,7 +195,7 @@ export default function PayrollSection({ loan, onRefresh }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Dispute failed');
-      onRefresh();
+      window.location.reload();
     } catch (err) {
       setError(err.message || 'Dispute failed');
     } finally {
@@ -217,7 +216,7 @@ export default function PayrollSection({ loan, onRefresh }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to send to payroll');
-      onRefresh();
+      window.location.reload();
     } catch (err) {
       setError(err.message || 'Failed to send to payroll');
     } finally {
@@ -502,6 +501,46 @@ export default function PayrollSection({ loan, onRefresh }) {
                 ))}
               </div>
             </div>
+
+            {/* Compensation summary from CD */}
+            {isExtracted && extraction.data.brokerCompensation != null && (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3">
+                <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-2">Compensation from CD</p>
+                <div className="space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Broker Compensation</span>
+                    <span className="font-medium text-gray-900">{formatCurrency(extraction.data.brokerCompensation)}</span>
+                  </div>
+                  {extraction.data.appraisalReimb > 0 && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-500 pl-2">Appraisal Reimb</span>
+                      <span className="text-gray-700">{formatCurrency(extraction.data.appraisalReimb)}</span>
+                    </div>
+                  )}
+                  {extraction.data.creditReimb > 0 && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-500 pl-2">Credit Report Reimb</span>
+                      <span className="text-gray-700">{formatCurrency(extraction.data.creditReimb)}</span>
+                    </div>
+                  )}
+                  {extraction.data.miscReimb > 0 && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-500 pl-2">Other Reimb</span>
+                      <span className="text-gray-700">{formatCurrency(extraction.data.miscReimb)}</span>
+                    </div>
+                  )}
+                  {extraction.data.totalDueToBroker != null && (
+                    <>
+                      <div className="border-t border-emerald-200 my-1" />
+                      <div className="flex justify-between text-sm font-semibold">
+                        <span className="text-gray-700">Expected Wire</span>
+                        <span className="text-gray-900">{formatCurrency(extraction.data.totalDueToBroker)}</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Borrower name mismatch — nickname prompt */}
             {(() => {
