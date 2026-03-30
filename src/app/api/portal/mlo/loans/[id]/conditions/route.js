@@ -329,64 +329,68 @@ export async function PUT(request, { params }) {
     }
 
     // Read file buffer upfront (stream can only be read once)
-    const fileBuffer = await file.arrayBuffer();
-    const fileBlob = new Blob([fileBuffer], { type: 'application/pdf' });
+    let fileBuffer;
+    try {
+      fileBuffer = await file.arrayBuffer();
+    } catch (bufErr) {
+      return NextResponse.json({ error: `Buffer read failed: ${bufErr.message}` }, { status: 500 });
+    }
 
-    // ─── Upload to WorkDrive APPROVALS subfolder (or Blob fallback) ───
+    // ─── Upload to Vercel Blob (skip WorkDrive for now — simpler, always works) ───
     let fileUrl;
-    const subfolders = loan.workDriveSubfolders;
-
-    if (loan.workDriveFolderId && subfolders) {
-      const targetFolderId = subfolders['APPROVALS'] || subfolders['CLOSING'] || loan.workDriveFolderId;
-      try {
-        const uploaded = await uploadFile(fileBlob, file.name, targetFolderId, true);
-        fileUrl = uploaded.url || `workdrive://${uploaded.id}`;
-      } catch (wdError) {
-        console.error('WorkDrive upload failed, falling back to Blob:', wdError?.message);
-        const blob = await put(`loans/${id}/approvals/${file.name}`, fileBlob, {
-          access: 'public',
-          addRandomSuffix: true,
-        });
-        fileUrl = blob.url;
-      }
-    } else {
-      const blob = await put(`loans/${id}/approvals/${file.name}`, fileBlob, {
+    try {
+      const blob = await put(`loans/${id}/approvals/${file.name}`, new Blob([fileBuffer], { type: 'application/pdf' }), {
         access: 'public',
         addRandomSuffix: true,
       });
       fileUrl = blob.url;
+    } catch (blobErr) {
+      return NextResponse.json({ error: `File storage failed: ${blobErr.message}` }, { status: 500 });
     }
 
     // ─── Create Document record ───
-    const doc = await prisma.document.create({
-      data: {
-        loanId: id,
-        docType: 'approval',
-        label: file.name.replace(/\.[^.]+$/, ''),
-        status: 'uploaded',
-        requestedById: session.user.id,
-        fileUrl,
-        fileName: file.name,
-        fileSize: file.size,
-        uploadedAt: new Date(),
-      },
-    });
+    let doc;
+    try {
+      doc = await prisma.document.create({
+        data: {
+          loanId: id,
+          docType: 'approval',
+          label: file.name.replace(/\.[^.]+$/, ''),
+          status: 'uploaded',
+          requestedById: session.user.id,
+          fileUrl,
+          fileName: file.name,
+          fileSize: file.size,
+          uploadedAt: new Date(),
+        },
+      });
+    } catch (dbErr) {
+      return NextResponse.json({ error: `Document record failed: ${dbErr.message}` }, { status: 500 });
+    }
 
     // ─── Extract via Claude ───
-    const borrower = await prisma.borrower.findUnique({ where: { id: loan.borrowerId } });
-    const loanContext = {
-      borrowerName: borrower ? `${borrower.firstName} ${borrower.lastName}` : undefined,
-      loanNumber: loan.loanNumber || undefined,
-      propertyAddress: loan.propertyAddress || undefined,
-    };
-
-    const extraction = await extractApprovalData({ fileBuffer, loanContext });
+    let extraction;
+    try {
+      const borrower = await prisma.borrower.findUnique({ where: { id: loan.borrowerId } });
+      const loanContext = {
+        borrowerName: borrower ? `${borrower.firstName} ${borrower.lastName}` : undefined,
+        loanNumber: loan.loanNumber || undefined,
+        propertyAddress: loan.propertyAddress || undefined,
+      };
+      extraction = await extractApprovalData({ fileBuffer, loanContext });
+    } catch (extractErr) {
+      return NextResponse.json({ error: `Extraction failed: ${extractErr.message}` }, { status: 500 });
+    }
 
     // Store extraction result on document notes
-    await prisma.document.update({
-      where: { id: doc.id },
-      data: { notes: JSON.stringify(extraction) },
-    });
+    try {
+      await prisma.document.update({
+        where: { id: doc.id },
+        data: { notes: JSON.stringify(extraction) },
+      });
+    } catch (noteErr) {
+      console.error('Failed to save extraction notes:', noteErr.message);
+    }
 
     // Audit
     await prisma.loanEvent.create({
@@ -402,11 +406,11 @@ export async function PUT(request, { params }) {
           conditionsFound: extraction.data?.conditions?.length || 0,
         },
       },
-    });
+    }).catch(() => {});
 
     return NextResponse.json({ document: doc, extraction });
   } catch (error) {
     console.error('Approval upload error:', error);
-    return NextResponse.json({ error: 'Failed to process approval' }, { status: 500 });
+    return NextResponse.json({ error: `Failed to process approval: ${error.message}` }, { status: 500 });
   }
 }
