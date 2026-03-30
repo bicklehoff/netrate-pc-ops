@@ -501,6 +501,17 @@ export async function POST(request, { params }) {
     const propState = freshLoan.propertyAddress?.state || null;
 
     // Build TrackerPortal payload
+    // Pull reimbursement data from CD extraction
+    const cdData = freshLoan.cdExtractedData?.data || {};
+    const grossComp = freshLoan.brokerCompensation ? Number(freshLoan.brokerCompensation) : null;
+    const appraisalReimb = cdData.appraisalReimb || 0;
+    const creditReimb = cdData.creditReimb || 0;
+    const miscReimb = cdData.miscReimb || 0;
+    // Use totalDueToBroker from CD if available, otherwise sum components
+    const wireTotal = cdData.totalDueToBroker
+      ? Number(cdData.totalDueToBroker)
+      : (grossComp || 0) + appraisalReimb + creditReimb + miscReimb;
+
     const trackerPayload = {
       borrowerName: `${freshLoan.borrower.firstName} ${freshLoan.borrower.lastName}`,
       loanNumber: freshLoan.lenderLoanNumber || freshLoan.loanNumber,
@@ -514,8 +525,11 @@ export async function POST(request, { params }) {
       loanPurpose: freshLoan.purpose ? freshLoan.purpose.charAt(0).toUpperCase() + freshLoan.purpose.slice(1) : null,
       interestRate: freshLoan.interestRate ? Number(freshLoan.interestRate) : null,
       loanTerm: freshLoan.loanTerm ? Math.round(freshLoan.loanTerm / 12) : null,
-      grossComp: freshLoan.brokerCompensation ? Number(freshLoan.brokerCompensation) : null,
-      wireTotal: freshLoan.brokerCompensation ? Number(freshLoan.brokerCompensation) : null,
+      grossComp,
+      appraisalReimb: appraisalReimb || null,
+      creditReimb: creditReimb || null,
+      miscReimb: miscReimb || null,
+      wireTotal,
       closingDate: freshLoan.closingDate?.toISOString()?.split('T')[0] || null,
       fundingDate: freshLoan.fundingDate?.toISOString()?.split('T')[0] || null,
       loName: freshLoan.mlo ? `${freshLoan.mlo.firstName} ${freshLoan.mlo.lastName}` : null,
