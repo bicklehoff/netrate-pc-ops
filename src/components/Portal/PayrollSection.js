@@ -72,6 +72,7 @@ export default function PayrollSection({ loan, onRefresh }) {
   const [dragOver, setDragOver] = useState(false);
   const [relatedLoans, setRelatedLoans] = useState(loan?.relatedLoans || []);
   const [nicknameConfirmed, setNicknameConfirmed] = useState(false);
+  const [unmatchedPersons, setUnmatchedPersons] = useState([]); // { firstName, lastName, role, email, phone, saveAsContact }
 
   if (!loan || loan.status !== 'funded') return null;
 
@@ -144,7 +145,11 @@ export default function PayrollSection({ loan, onRefresh }) {
       const res = await fetch(`/api/portal/mlo/loans/${loan.id}/payroll`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'approve', nicknameConfirmed }),
+        body: JSON.stringify({
+          action: 'approve',
+          nicknameConfirmed,
+          unmatchedPersons: unmatchedPersons.filter(p => p.role),
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Approval failed');
@@ -247,6 +252,39 @@ export default function PayrollSection({ loan, onRefresh }) {
     { label: 'Funding Date', ...compareValues(extraction.data.disbursementDate, loan.fundingDate?.split('T')[0] || null, 'text') },
     { label: 'Loan Type', ...compareValues(extraction.data.loanType, loan.loanType, 'text') },
   ] : [];
+
+  // Detect unmatched persons from CD — people on the CD but not on the loan
+  const cdPersons = isExtracted && Array.isArray(extraction.data.borrowerNames)
+    ? extraction.data.borrowerNames : [];
+  const knownNames = new Set();
+  if (loan.borrower) {
+    const norm = (s) => (s || '').toLowerCase().trim();
+    knownNames.add(`${norm(loan.borrower.firstName)}|${norm(loan.borrower.lastName)}`);
+    // Also match legal name if set
+    if (loan.borrower.legalFirstName) {
+      knownNames.add(`${norm(loan.borrower.legalFirstName)}|${norm(loan.borrower.legalLastName || loan.borrower.lastName)}`);
+    }
+  }
+  // TODO: also check existing loanBorrowers for co-borrowers already on file
+  const detectedUnmatched = cdPersons.filter(p => {
+    const key = `${(p.firstName || '').toLowerCase().trim()}|${(p.lastName || '').toLowerCase().trim()}`;
+    return !knownNames.has(key);
+  });
+
+  // Initialize unmatched state on first detection
+  if (detectedUnmatched.length > 0 && unmatchedPersons.length === 0 && isExtracted && !isApproved) {
+    // Use setTimeout to avoid setState during render
+    setTimeout(() => {
+      setUnmatchedPersons(detectedUnmatched.map(p => ({
+        firstName: p.firstName,
+        lastName: p.lastName,
+        role: '', // 'co_borrower' or 'nbs'
+        email: '',
+        phone: '',
+        saveAsContact: true,
+      })));
+    }, 0);
+  }
 
   return (
     <div className="bg-white rounded-xl border-2 border-green-200 shadow-sm overflow-hidden">
@@ -473,11 +511,108 @@ export default function PayrollSection({ loan, onRefresh }) {
               return null;
             })()}
 
+            {/* Unmatched persons from CD */}
+            {unmatchedPersons.length > 0 && (
+              <div className="bg-purple-50 border border-purple-200 rounded-lg px-4 py-3 space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">👤</span>
+                  <p className="text-sm font-semibold text-purple-800">
+                    {unmatchedPersons.length} additional person{unmatchedPersons.length > 1 ? 's' : ''} on CD
+                  </p>
+                </div>
+                {unmatchedPersons.map((person, idx) => (
+                  <div key={idx} className="bg-white rounded-lg border border-purple-100 px-4 py-3 space-y-2">
+                    <p className="text-sm font-medium text-gray-900">
+                      {person.firstName} {person.lastName}
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          const updated = [...unmatchedPersons];
+                          updated[idx] = { ...person, role: 'co_borrower' };
+                          setUnmatchedPersons(updated);
+                        }}
+                        className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
+                          person.role === 'co_borrower'
+                            ? 'bg-purple-600 text-white border-purple-600'
+                            : 'text-purple-700 border-purple-300 hover:bg-purple-50'
+                        }`}
+                      >
+                        Co-Borrower
+                      </button>
+                      <button
+                        onClick={() => {
+                          const updated = [...unmatchedPersons];
+                          updated[idx] = { ...person, role: 'nbs' };
+                          setUnmatchedPersons(updated);
+                        }}
+                        className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
+                          person.role === 'nbs'
+                            ? 'bg-purple-600 text-white border-purple-600'
+                            : 'text-purple-700 border-purple-300 hover:bg-purple-50'
+                        }`}
+                      >
+                        Non-Borrowing Spouse
+                      </button>
+                    </div>
+                    {person.role && (
+                      <div className="space-y-1.5">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={person.saveAsContact}
+                            onChange={(e) => {
+                              const updated = [...unmatchedPersons];
+                              updated[idx] = { ...person, saveAsContact: e.target.checked };
+                              setUnmatchedPersons(updated);
+                            }}
+                            className="rounded border-purple-300 text-purple-600 focus:ring-purple-500"
+                          />
+                          <span className="text-xs text-purple-700">Save as contact</span>
+                        </label>
+                        {person.saveAsContact && (
+                          <div className="flex gap-2">
+                            <input
+                              type="email"
+                              placeholder="Email (optional)"
+                              value={person.email}
+                              onChange={(e) => {
+                                const updated = [...unmatchedPersons];
+                                updated[idx] = { ...person, email: e.target.value };
+                                setUnmatchedPersons(updated);
+                              }}
+                              className="flex-1 text-xs border border-gray-200 rounded-lg px-3 py-1.5 focus:ring-purple-500 focus:border-purple-500"
+                            />
+                            <input
+                              type="tel"
+                              placeholder="Phone (optional)"
+                              value={person.phone}
+                              onChange={(e) => {
+                                const updated = [...unmatchedPersons];
+                                updated[idx] = { ...person, phone: e.target.value };
+                                setUnmatchedPersons(updated);
+                              }}
+                              className="flex-1 text-xs border border-gray-200 rounded-lg px-3 py-1.5 focus:ring-purple-500 focus:border-purple-500"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {unmatchedPersons.some(p => !p.role) && (
+                  <p className="text-xs text-purple-500">
+                    Select a role for each person before approving.
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* Action buttons */}
             <div className="flex gap-3">
               <button
                 onClick={handleApprove}
-                disabled={approving || disputing}
+                disabled={approving || disputing || unmatchedPersons.some(p => !p.role)}
                 className="flex-1 bg-green-600 text-white py-3 rounded-xl text-sm font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {approving ? (

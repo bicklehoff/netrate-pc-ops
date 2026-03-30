@@ -260,7 +260,7 @@ export async function PATCH(request, { params }) {
     }
 
     const body = await request.json();
-    const { action, notes, nicknameConfirmed } = body;
+    const { action, notes, nicknameConfirmed, unmatchedPersons } = body;
 
     if (action === 'approve') {
       if (!loan.cdExtractedData || loan.cdExtractedData.status !== 'success') {
@@ -318,6 +318,65 @@ export async function PATCH(request, { params }) {
         });
       }
 
+      // Process unmatched persons from CD — create contacts and loan borrower links
+      const personsCreated = [];
+      if (unmatchedPersons && unmatchedPersons.length > 0) {
+        for (const person of unmatchedPersons) {
+          if (!person.role || !person.firstName || !person.lastName) continue;
+
+          let contactId = null;
+
+          // Create contact if requested
+          if (person.saveAsContact) {
+            const contact = await prisma.contact.create({
+              data: {
+                firstName: person.firstName,
+                lastName: person.lastName,
+                email: person.email || null,
+                phone: person.phone || null,
+                source: 'cd_extraction',
+                contactType: person.role === 'nbs' ? 'nbs' : 'borrower',
+                tags: [person.role === 'nbs' ? 'non-borrowing-spouse' : 'co-borrower'],
+              },
+            });
+            contactId = contact.id;
+          }
+
+          // Create borrower record for co-borrowers (NBS don't get borrower records)
+          if (person.role === 'co_borrower') {
+            // Create a minimal borrower record
+            const borrower = await prisma.borrower.create({
+              data: {
+                firstName: person.firstName,
+                lastName: person.lastName,
+                legalFirstName: person.firstName,
+                legalLastName: person.lastName,
+                email: person.email || `${person.firstName.toLowerCase()}.${person.lastName.toLowerCase()}@placeholder.local`,
+                dobEncrypted: '',
+                ssnEncrypted: '',
+                ssnLastFour: '0000',
+                ...(contactId ? { contact: { connect: { id: contactId } } } : {}),
+              },
+            });
+
+            // Link to loan as co-borrower
+            await prisma.loanBorrower.create({
+              data: {
+                loanId: id,
+                borrowerId: borrower.id,
+                borrowerType: 'co_borrower',
+                ordinal: 1,
+              },
+            });
+
+            personsCreated.push({ ...person, borrowerId: borrower.id, contactId });
+          } else {
+            // NBS — just the contact, no borrower/loan link
+            personsCreated.push({ ...person, contactId });
+          }
+        }
+      }
+
       await prisma.loanEvent.create({
         data: {
           loanId: id,
@@ -329,6 +388,7 @@ export async function PATCH(request, { params }) {
             extractedData: cd,
             fieldsUpdated: Object.keys(loanUpdate).filter(k => k !== 'cdApprovedAt' && k !== 'cdApprovedBy'),
             ...(nicknameUpdate ? { nicknameUpdate } : {}),
+            ...(personsCreated.length > 0 ? { personsCreated } : {}),
             ...(notes ? { notes } : {}),
           },
         },
@@ -338,6 +398,7 @@ export async function PATCH(request, { params }) {
         success: true,
         cdApprovedAt: now.toISOString(),
         fieldsUpdated: Object.keys(loanUpdate).filter(k => k !== 'cdApprovedAt' && k !== 'cdApprovedBy'),
+        personsCreated,
       });
     }
 
