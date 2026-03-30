@@ -41,8 +41,11 @@ export default function CompensationSection({ loan }) {
   const creditReimb = cd.creditReimb || payload.creditReimb;
   const miscReimb = cd.miscReimb || payload.miscReimb;
   const wireTotal = cd.totalDueToBroker || payload.wireTotal;
-  const loComp = tracker.loCompAmount;
-  const houseFee = tracker.houseFee;
+  const loComp = tracker.loCompAmount ? Number(tracker.loCompAmount) : null;
+  // Calculate house fee if not explicitly returned: gross comp - LO comp
+  const houseFee = tracker.houseFee
+    ? Number(tracker.houseFee)
+    : (loComp && grossComp ? Number(grossComp) - loComp : null);
   const cdNumber = tracker.cdNumber;
   const status = tracker.status;
 

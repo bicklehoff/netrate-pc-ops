@@ -113,15 +113,22 @@ export default function PayrollSection({ loan, onRefresh }) {
     }
 
     setUploading(true);
+    setError('');
     try {
       const formData = new FormData();
       formData.append('file', file);
 
+      // Allow up to 60s for upload + Claude extraction
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 60000);
+
       const res = await fetch(`/api/portal/mlo/loans/${loan.id}/payroll`, {
         method: 'PUT',
         body: formData,
+        signal: controller.signal,
       });
 
+      clearTimeout(timeout);
       const data = await res.json();
 
       if (!res.ok) {
@@ -132,6 +139,8 @@ export default function PayrollSection({ loan, onRefresh }) {
         setRelatedLoans(data.relatedLoans);
       }
 
+      // Small delay to ensure DB write is committed before refetch
+      await new Promise(r => setTimeout(r, 500));
       onRefresh();
     } catch (err) {
       setError(err.message || 'Upload failed');
