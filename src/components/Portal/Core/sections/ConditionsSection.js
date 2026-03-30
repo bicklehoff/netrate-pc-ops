@@ -7,9 +7,7 @@ import SectionCard from '../SectionCard';
 import {
   CONDITION_STAGE_ORDER,
   CONDITION_STAGE_LABELS,
-  CONDITION_STATUS_COLORS,
   CONDITION_STATUS_LABELS,
-  CONDITION_TYPE_LABELS,
   CONDITION_OWNER_LABELS,
 } from '@/lib/constants/conditions';
 
@@ -27,13 +25,9 @@ const EMPTY_FORM = {
 
 export default function ConditionsSection({ loan, onRefresh }) {
   const conditions = loan.conditions || [];
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState(EMPTY_FORM);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [uploading, setUploading] = useState(false);
-  const [extraction, setExtraction] = useState(null); // { document, extraction }
+  const [extraction, setExtraction] = useState(null);
   const [confirming, setConfirming] = useState(false);
   const fileInputRef = useRef(null);
 
@@ -42,36 +36,38 @@ export default function ConditionsSection({ loan, onRefresh }) {
     .filter((d) => d.docType === 'approval')
     .sort((a, b) => new Date(b.uploadedAt || b.createdAt) - new Date(a.uploadedAt || a.createdAt));
 
-  // Counts
-  const needed = conditions.filter((c) => c.status === 'needed').length;
-  const received = conditions.filter((c) => c.status === 'received').length;
-  const cleared = conditions.filter((c) => c.status === 'cleared' || c.status === 'waived').length;
+  const apiCall = useCallback(async (method, body) => {
+    const res = await fetch(`/api/portal/mlo/loans/${loan.id}/conditions`, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'Request failed');
+    }
+    return res.json();
+  }, [loan.id]);
 
   // ─── Upload approval doc + extract ───
   const handleApprovalUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     setUploading(true);
     setError('');
     setExtraction(null);
     try {
       const fd = new FormData();
       fd.append('file', file);
-
-      const res = await fetch(`/api/portal/mlo/loans/${loan.id}/conditions`, {
-        method: 'PUT',
-        body: fd,
-      });
+      const res = await fetch(`/api/portal/mlo/loans/${loan.id}/conditions`, { method: 'PUT', body: fd });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || 'Upload failed');
       }
       const result = await res.json();
-
       if (result.extraction?.status === 'error') {
         setError(`Extraction failed: ${result.extraction.error}`);
-        onRefresh(); // Still refresh to show the uploaded doc
+        onRefresh();
       } else {
         setExtraction(result);
       }
@@ -102,96 +98,6 @@ export default function ConditionsSection({ loan, onRefresh }) {
     } finally {
       setConfirming(false);
     }
-  };
-
-  const apiCall = useCallback(async (method, body) => {
-    const res = await fetch(`/api/portal/mlo/loans/${loan.id}/conditions`, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      throw new Error(data.error || 'Request failed');
-    }
-    return res.json();
-  }, [loan.id]);
-
-  // ─── Quick status change ───
-  const updateStatus = async (conditionId, newStatus) => {
-    setLoading(true);
-    setError('');
-    try {
-      await apiCall('PATCH', { conditionId, status: newStatus });
-      onRefresh();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ─── Create condition ───
-  const handleCreate = async () => {
-    if (!formData.title.trim()) {
-      setError('Title is required');
-      return;
-    }
-    setLoading(true);
-    setError('');
-    try {
-      await apiCall('POST', formData);
-      setShowAddForm(false);
-      setFormData(EMPTY_FORM);
-      onRefresh();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ─── Edit condition ───
-  const startEdit = (cond) => {
-    setEditingId(cond.id);
-    setFormData({
-      conditionNumber: cond.conditionNumber || '',
-      title: cond.title,
-      description: cond.description || '',
-      conditionType: cond.conditionType,
-      stage: cond.stage,
-      ownerRole: cond.ownerRole || 'mlo',
-      borrowerFacing: cond.borrowerFacing,
-      blockingProgress: cond.blockingProgress,
-      dueDate: cond.dueDate ? cond.dueDate.split('T')[0] : '',
-    });
-    setShowAddForm(false);
-  };
-
-  const handleUpdate = async () => {
-    if (!formData.title.trim()) {
-      setError('Title is required');
-      return;
-    }
-    setLoading(true);
-    setError('');
-    try {
-      await apiCall('PATCH', { conditionId: editingId, ...formData });
-      setEditingId(null);
-      setFormData(EMPTY_FORM);
-      onRefresh();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const cancelForm = () => {
-    setShowAddForm(false);
-    setEditingId(null);
-    setFormData(EMPTY_FORM);
-    setError('');
   };
 
   return (
@@ -340,7 +246,6 @@ export default function ConditionsSection({ loan, onRefresh }) {
       {/* ─── Conditions Spreadsheet ─── */}
       <ConditionsTable
         conditions={conditions}
-        loanId={loan.id}
         apiCall={apiCall}
         onRefresh={onRefresh}
         error={error}
@@ -361,7 +266,7 @@ function SummaryPill({ color, label, count }) {
 }
 
 // ─── Conditions Table (Spreadsheet Mode) ───
-function ConditionsTable({ conditions, loanId, apiCall, onRefresh, error, setError }) {
+function ConditionsTable({ conditions, apiCall, onRefresh, error, setError }) {
   // Local editable copy — initialized from server data
   const [localRows, setLocalRows] = useState(() => conditions.map((c) => ({ ...c })));
   const [dirtyIds, setDirtyIds] = useState(new Set());
@@ -607,7 +512,7 @@ function ConditionsTable({ conditions, loanId, apiCall, onRefresh, error, setErr
                   <tr key={row.id} className={`border-b border-gray-100 hover:bg-gray-50/50 ${dirty ? 'bg-amber-50/30' : ''} ${selected.has(row.id) ? 'bg-brand/5' : ''}`}>
                     <td className="px-2 py-1.5">
                       <input type="checkbox" checked={selected.has(row.id)}
-                        onChange={() => setSelected((prev) => { const n = new Set(prev); n.has(row.id) ? n.delete(row.id) : n.add(row.id); return n; })}
+                        onChange={() => setSelected((prev) => { const n = new Set(prev); if (n.has(row.id)) { n.delete(row.id); } else { n.add(row.id); } return n; })}
                         className="rounded border-gray-300 text-brand focus:ring-brand/30" />
                     </td>
                     <td className="px-2 py-1.5 text-gray-400 font-mono">{row.conditionNumber || '—'}</td>
