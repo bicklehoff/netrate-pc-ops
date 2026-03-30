@@ -32,7 +32,7 @@ function buildExtractionPrompt(loanContext) {
   "lenderCredits": "<number — total lender credits>",
   "brokerCompensation": "<number — broker/loan originator compensation>",
   "propertyAddress": "<string — full property address>",
-  "borrowerNames": "<string — all borrower names as shown>",
+  "borrowerNames": "<array of objects — each person listed on the CD, e.g. [{\"firstName\": \"TOMMY\", \"lastName\": \"PIPER\"}, {\"firstName\": \"SKYLAR\", \"lastName\": \"PIPER\"}]>",
   "closingDate": "<string — closing date in YYYY-MM-DD format>",
   "disbursementDate": "<string — disbursement date in YYYY-MM-DD format if shown>",
   "loanNumber": "<string — loan number as shown on CD>",

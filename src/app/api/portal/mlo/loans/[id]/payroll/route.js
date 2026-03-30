@@ -260,7 +260,7 @@ export async function PATCH(request, { params }) {
     }
 
     const body = await request.json();
-    const { action, notes } = body;
+    const { action, notes, nicknameConfirmed } = body;
 
     if (action === 'approve') {
       if (!loan.cdExtractedData || loan.cdExtractedData.status !== 'success') {
@@ -303,6 +303,21 @@ export async function PATCH(request, { params }) {
 
       await prisma.loan.update({ where: { id }, data: loanUpdate });
 
+      // Handle nickname — if MLO confirmed, store legal name from CD on borrower
+      let nicknameUpdate = null;
+      if (nicknameConfirmed && loan.borrowerId && Array.isArray(cd.borrowerNames) && cd.borrowerNames.length > 0) {
+        const primaryCd = cd.borrowerNames[0];
+        nicknameUpdate = {
+          legalFirstName: primaryCd.firstName,
+          legalLastName: primaryCd.lastName,
+          nickname: loan.borrower.firstName,
+        };
+        await prisma.borrower.update({
+          where: { id: loan.borrowerId },
+          data: nicknameUpdate,
+        });
+      }
+
       await prisma.loanEvent.create({
         data: {
           loanId: id,
@@ -313,6 +328,7 @@ export async function PATCH(request, { params }) {
           details: {
             extractedData: cd,
             fieldsUpdated: Object.keys(loanUpdate).filter(k => k !== 'cdApprovedAt' && k !== 'cdApprovedBy'),
+            ...(nicknameUpdate ? { nicknameUpdate } : {}),
             ...(notes ? { notes } : {}),
           },
         },

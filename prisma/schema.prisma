@@ -26,6 +26,9 @@ model Borrower {
   email          String         @unique
   firstName      String         @map("first_name")
   lastName       String         @map("last_name")
+  legalFirstName String?        @map("legal_first_name")
+  legalLastName  String?        @map("legal_last_name")
+  nickname       String?
   phone          String?
   dobEncrypted   String         @map("dob_encrypted")
   ssnEncrypted   String         @map("ssn_encrypted")

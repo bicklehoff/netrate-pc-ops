@@ -71,6 +71,7 @@ export default function PayrollSection({ loan, onRefresh }) {
   const [error, setError] = useState('');
   const [dragOver, setDragOver] = useState(false);
   const [relatedLoans, setRelatedLoans] = useState(loan?.relatedLoans || []);
+  const [nicknameConfirmed, setNicknameConfirmed] = useState(false);
 
   if (!loan || loan.status !== 'funded') return null;
 
@@ -143,7 +144,7 @@ export default function PayrollSection({ loan, onRefresh }) {
       const res = await fetch(`/api/portal/mlo/loans/${loan.id}/payroll`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'approve' }),
+        body: JSON.stringify({ action: 'approve', nicknameConfirmed }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Approval failed');
@@ -233,7 +234,14 @@ export default function PayrollSection({ loan, onRefresh }) {
     { label: 'Lender Credits', ...compareValues(extraction.data.lenderCredits, loan.lenderCredits, 'currency') },
     { label: 'Lender', ...compareValues(extraction.data.lenderName, loan.lenderName, 'text') },
     { label: 'Loan Number', ...compareValues(extraction.data.loanNumber, loan.loanNumber, 'text') },
-    { label: 'Borrower', ...compareValues(extraction.data.borrowerNames, loan.borrower ? `${loan.borrower.firstName} ${loan.borrower.lastName}` : null, 'text') },
+    { label: 'Borrower', ...(() => {
+      // Handle both array (new) and string (old) format from extraction
+      const cdNames = Array.isArray(extraction.data.borrowerNames)
+        ? extraction.data.borrowerNames.map(n => `${n.firstName} ${n.lastName}`).join(', ')
+        : extraction.data.borrowerNames;
+      const onFile = loan.borrower ? `${loan.borrower.firstName} ${loan.borrower.lastName}` : null;
+      return compareValues(cdNames, onFile, 'text');
+    })() },
     { label: 'Property', ...compareValues(extraction.data.propertyAddress, fullAddress, 'text') },
     { label: 'Closing Date', ...compareValues(extraction.data.closingDate, loan.closingDate?.split('T')[0] || null, 'text') },
     { label: 'Funding Date', ...compareValues(extraction.data.disbursementDate, loan.fundingDate?.split('T')[0] || null, 'text') },
@@ -425,6 +433,45 @@ export default function PayrollSection({ loan, onRefresh }) {
                 ))}
               </div>
             </div>
+
+            {/* Borrower name mismatch — nickname prompt */}
+            {(() => {
+              if (!isExtracted || !loan.borrower) return null;
+              const cdNames = Array.isArray(extraction.data.borrowerNames)
+                ? extraction.data.borrowerNames
+                : null;
+              if (!cdNames || cdNames.length === 0) return null;
+              const onFileFirst = loan.borrower.firstName?.toLowerCase();
+              const onFileLast = loan.borrower.lastName?.toLowerCase();
+              const primaryCd = cdNames[0];
+              const cdFirst = primaryCd.firstName?.toLowerCase();
+              const cdLast = primaryCd.lastName?.toLowerCase();
+              // Same last name but different first name = likely nickname
+              if (cdLast === onFileLast && cdFirst !== onFileFirst) {
+                return (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
+                    <p className="text-sm font-medium text-blue-800 mb-1">Name mismatch detected</p>
+                    <p className="text-xs text-blue-700">
+                      CD shows <span className="font-semibold">{primaryCd.firstName} {primaryCd.lastName}</span> but
+                      loan has <span className="font-semibold">{loan.borrower.firstName} {loan.borrower.lastName}</span>.
+                    </p>
+                    <label className="mt-2 flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={nicknameConfirmed}
+                        onChange={(e) => setNicknameConfirmed(e.target.checked)}
+                        className="rounded border-blue-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-xs text-blue-700">
+                        Yes, <span className="font-semibold">{loan.borrower.firstName}</span> is a nickname
+                        for <span className="font-semibold">{primaryCd.firstName}</span>
+                      </span>
+                    </label>
+                  </div>
+                );
+              }
+              return null;
+            })()}
 
             {/* Action buttons */}
             <div className="flex gap-3">
