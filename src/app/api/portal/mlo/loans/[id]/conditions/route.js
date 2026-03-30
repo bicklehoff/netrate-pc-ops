@@ -10,7 +10,6 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { put } from '@vercel/blob';
-import { uploadFile } from '@/lib/zoho-workdrive';
 import { extractApprovalData } from '@/lib/approval-extractor';
 
 export const maxDuration = 60; // Claude extraction can take 20-30s on multi-page PDFs
