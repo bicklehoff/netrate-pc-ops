@@ -502,45 +502,68 @@ export default function PayrollSection({ loan }) {
               </div>
             </div>
 
-            {/* Compensation summary from CD */}
-            {isExtracted && extraction.data.brokerCompensation != null && (
-              <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3">
-                <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-2">Compensation from CD</p>
-                <div className="space-y-1">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Broker Compensation</span>
-                    <span className="font-medium text-gray-900">{formatCurrency(extraction.data.brokerCompensation)}</span>
+            {/* Compensation breakdown from CD */}
+            {isExtracted && extraction.data.brokerCompensation != null && (() => {
+              const HOUSE_FEE_RATE = 0.12948857;
+              const gross = Number(extraction.data.brokerCompensation);
+              const house = gross * HOUSE_FEE_RATE;
+              const lo = gross - house;
+              return (
+                <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3">
+                  <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-2">Compensation Breakdown</p>
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Broker Compensation</span>
+                      <span className="font-medium text-gray-900">{formatCurrency(gross)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-500 pl-2">NetRate House Fee (12.95%)</span>
+                      <span className="text-gray-700">-{formatCurrency(house)}</span>
+                    </div>
+                    <div className="border-t border-emerald-300 my-1.5" />
+                    <div className="flex justify-between text-sm font-bold">
+                      <span className="text-emerald-800">Your Commission</span>
+                      <span className="text-emerald-700">{formatCurrency(lo)}</span>
+                    </div>
+
+                    {(extraction.data.appraisalReimb > 0 || extraction.data.creditReimb > 0 || extraction.data.miscReimb > 0) && (
+                      <>
+                        <div className="border-t border-emerald-200 my-1.5" />
+                        <p className="text-xs text-gray-500 font-medium">Reimbursements (pass-through)</p>
+                        {extraction.data.appraisalReimb > 0 && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-gray-500 pl-2">Appraisal</span>
+                            <span className="text-gray-700">{formatCurrency(extraction.data.appraisalReimb)}</span>
+                          </div>
+                        )}
+                        {extraction.data.creditReimb > 0 && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-gray-500 pl-2">Credit Report</span>
+                            <span className="text-gray-700">{formatCurrency(extraction.data.creditReimb)}</span>
+                          </div>
+                        )}
+                        {extraction.data.miscReimb > 0 && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-gray-500 pl-2">Other</span>
+                            <span className="text-gray-700">{formatCurrency(extraction.data.miscReimb)}</span>
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {extraction.data.totalDueToBroker != null && (
+                      <>
+                        <div className="border-t border-emerald-200 my-1.5" />
+                        <div className="flex justify-between text-sm font-semibold">
+                          <span className="text-gray-700">Expected Wire Total</span>
+                          <span className="text-gray-900">{formatCurrency(extraction.data.totalDueToBroker)}</span>
+                        </div>
+                      </>
+                    )}
                   </div>
-                  {extraction.data.appraisalReimb > 0 && (
-                    <div className="flex justify-between text-xs">
-                      <span className="text-gray-500 pl-2">Appraisal Reimb</span>
-                      <span className="text-gray-700">{formatCurrency(extraction.data.appraisalReimb)}</span>
-                    </div>
-                  )}
-                  {extraction.data.creditReimb > 0 && (
-                    <div className="flex justify-between text-xs">
-                      <span className="text-gray-500 pl-2">Credit Report Reimb</span>
-                      <span className="text-gray-700">{formatCurrency(extraction.data.creditReimb)}</span>
-                    </div>
-                  )}
-                  {extraction.data.miscReimb > 0 && (
-                    <div className="flex justify-between text-xs">
-                      <span className="text-gray-500 pl-2">Other Reimb</span>
-                      <span className="text-gray-700">{formatCurrency(extraction.data.miscReimb)}</span>
-                    </div>
-                  )}
-                  {extraction.data.totalDueToBroker != null && (
-                    <>
-                      <div className="border-t border-emerald-200 my-1" />
-                      <div className="flex justify-between text-sm font-semibold">
-                        <span className="text-gray-700">Expected Wire</span>
-                        <span className="text-gray-900">{formatCurrency(extraction.data.totalDueToBroker)}</span>
-                      </div>
-                    </>
-                  )}
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Borrower name mismatch — nickname prompt */}
             {(() => {

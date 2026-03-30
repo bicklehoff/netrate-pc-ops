@@ -36,16 +36,16 @@ export default function CompensationSection({ loan }) {
   const tracker = payrollDetails?.trackerResult || {};
   const payload = payrollDetails?.trackerPayload || {};
 
+  const HOUSE_FEE_RATE = 0.12948857;
+
   const grossComp = cd.brokerCompensation || payload.grossComp;
   const appraisalReimb = cd.appraisalReimb || payload.appraisalReimb;
   const creditReimb = cd.creditReimb || payload.creditReimb;
   const miscReimb = cd.miscReimb || payload.miscReimb;
   const wireTotal = cd.totalDueToBroker || payload.wireTotal;
-  const loComp = tracker.loCompAmount ? Number(tracker.loCompAmount) : null;
-  // Calculate house fee if not explicitly returned: gross comp - LO comp
-  const houseFee = tracker.houseFee
-    ? Number(tracker.houseFee)
-    : (loComp && grossComp ? Number(grossComp) - loComp : null);
+  // Calculate comp split locally — no TrackerPortal dependency
+  const houseFee = grossComp ? Number(grossComp) * HOUSE_FEE_RATE : null;
+  const loComp = grossComp && houseFee != null ? Number(grossComp) - houseFee : null;
   const cdNumber = tracker.cdNumber;
   const status = tracker.status;
 
