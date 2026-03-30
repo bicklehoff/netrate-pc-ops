@@ -549,7 +549,7 @@ export async function POST(request, { params }) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-tracker-api-key': 'agent',
+          'x-tracker-api-key': process.env.TRACKER_API_KEY || 'agent',
         },
         body: JSON.stringify(trackerPayload),
       });
