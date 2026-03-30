@@ -78,7 +78,20 @@ export async function GET(request, { params }) {
       isApproved: !!loan.cdApprovedAt,
       isSent: !!loan.payrollSentAt,
       relatedLoans,
-    });
+      // Include payroll event details if sent
+      payrollDetails: null,
+    };
+
+    if (loan.payrollSentAt) {
+      const payrollEvent = await prisma.loanEvent.findFirst({
+        where: { loanId: id, eventType: 'payroll_sent' },
+        orderBy: { createdAt: 'desc' },
+        select: { details: true, createdAt: true },
+      });
+      response.payrollDetails = payrollEvent?.details || null;
+    }
+
+    return NextResponse.json(response);
   } catch (error) {
     console.error('Payroll status error:', error);
     return NextResponse.json({ error: 'Failed to get payroll status' }, { status: 500 });
