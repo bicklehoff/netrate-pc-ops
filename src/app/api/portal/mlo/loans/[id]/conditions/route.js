@@ -212,7 +212,7 @@ export async function POST(request, { params }) {
   }
 }
 
-// ─── Update condition ───────────────────────────────────────
+// ─── Update condition(s) — single or batch ─────────────────
 export async function PATCH(request, { params }) {
   try {
     const session = await getServerSession(authOptions);
@@ -223,6 +223,51 @@ export async function PATCH(request, { params }) {
     }
 
     const body = await request.json();
+
+    // ─── Batch update ───
+    if (Array.isArray(body.batch)) {
+      let updated = 0;
+      for (const item of body.batch) {
+        const existing = await prisma.condition.findFirst({
+          where: { id: item.conditionId, loanId: id },
+        });
+        if (!existing) continue;
+
+        const updateData = {};
+        if (item.status !== undefined) updateData.status = item.status;
+        if (typeof item.blockingProgress === 'boolean') updateData.blockingProgress = item.blockingProgress;
+        if (typeof item.borrowerFacing === 'boolean') updateData.borrowerFacing = item.borrowerFacing;
+        if (item.title !== undefined) updateData.title = item.title;
+        if (item.description !== undefined) updateData.description = item.description || null;
+        if (item.stage !== undefined) updateData.stage = item.stage;
+        if (item.conditionType !== undefined) updateData.conditionType = item.conditionType;
+        if (item.ownerRole !== undefined) updateData.ownerRole = item.ownerRole;
+        if (item.conditionNumber !== undefined) updateData.conditionNumber = item.conditionNumber ? parseInt(item.conditionNumber, 10) : null;
+        if (item.dueDate !== undefined) updateData.dueDate = item.dueDate ? new Date(item.dueDate) : null;
+
+        if (item.status === 'received' && !existing.receivedAt) updateData.receivedAt = new Date();
+        if (item.status === 'cleared' && !existing.clearedAt) updateData.clearedAt = new Date();
+
+        if (Object.keys(updateData).length > 0) {
+          await prisma.condition.update({ where: { id: item.conditionId }, data: updateData });
+          updated++;
+        }
+      }
+
+      await prisma.loanEvent.create({
+        data: {
+          loanId: id,
+          eventType: 'conditions_batch_updated',
+          actorType: 'mlo',
+          actorId: session.user.id,
+          details: { count: updated },
+        },
+      });
+
+      return NextResponse.json({ success: true, updated });
+    }
+
+    // ─── Single update ───
     const {
       conditionId, status, notes, blockingProgress,
       title, description, stage, conditionType, ownerRole,
