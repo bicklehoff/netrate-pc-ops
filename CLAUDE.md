@@ -32,7 +32,7 @@ All devices share context via the **MCP knowledge layer** (Neon Postgres).
 | `dev` | Mac Dev department |
 | `pc-dev` | PC Dev department (all code — website, tools, calculators, integrations, APIs) |
 | `pc-setup` | PC Setup department |
-| `pc-marketing` | PC Marketing department (strategy owned by Claw; PC executes from briefs) |
+| `pc-publisher` | PC Publisher department (content page deployment, SEO markup) |
 | `claw` | Claw (Lenovo Legion / Ubuntu device) |
 
 Use these identifiers in MCP tool calls (`source` fields), RELAY entries, and completion reports.
@@ -89,7 +89,7 @@ All departments launch from the same place: **this repo root** (`netrate-pc-ops/
 | Department | Docs Folder | Responsibilities |
 |------------|-------------|------------------|
 | Dev | `Work/Dev/` (+ `Products/`, `Integrations/` subfolders) | All code — website, tools, calculators, integrations, APIs, CRM hooks |
-| Marketing | `Work/Marketing/` | Implementation of content, copy, lead capture, trust signals. Strategy owned by Claw — PC executes from briefs. |
+| Publisher | `Work/Publisher/` | Takes finished markdown from Claw, builds Next.js page components with SEO markup/schema/meta tags, deploys to Vercel. Does NOT write content, make strategy decisions, or touch pricing engine/calculators/API code. |
 | Admin | `Work/Admin/` | PC-side admin (minimal — process docs only, NO trackers) |
 | Setup | Root files | CLAUDE.md, Work/SESSION-LOG.md, folder structure |
 
@@ -99,18 +99,29 @@ All departments have full access to code and docs. Ownership rules apply to **do
 
 **Ownership rules:**
 - All departments may freely edit code (`src/`, `prisma/`, `scripts/`, etc.)
-- Only modify files in YOUR department's **docs folder** (e.g. `Work/Dev/`, `Work/Marketing/`)
+- Only modify files in YOUR department's **docs folder** (e.g. `Work/Dev/`, `Work/Publisher/`)
 - You may READ other departments' docs but not edit them
 - All departments may write their own entries to `Work/SESSION-LOG.md`
 - If you need something from another department, note it as an "open item"
 
 **If David doesn't assign a department:**
-Ask: "Which department should I work as? (Dev, Marketing, Admin, or Setup)"
+Ask: "Which department should I work as? (Dev, Publisher, Admin, or Setup)"
 
 **Critical Dev Rules:**
 - **Commit often** with descriptive messages. Push to main = Vercel auto-deploys.
 - **No tracker writes.** All trackers live on Mac. Log your work in SESSION-LOG; David relays to Mac.
 - **Read DEV-PLAYBOOK.md** for hard-won patterns (Prisma, deployment, etc.)
+
+**Publisher Workflow:**
+1. Claw commits finished markdown to `netrate-claw-ops/Work/Marketing/publish-queue/`
+2. Claw sends relay to PC: `type: "action"`, content includes the file path to publish
+3. David opens PC as Publisher
+4. Publisher pulls `netrate-claw-ops`, reads the markdown from `publish-queue/`
+5. Builds Next.js page component with SEO markup, schema, meta tags
+6. Commits, pushes → Vercel auto-deploys
+7. Sends relay back to Claw confirming publication with live URL
+- **Publisher does NOT** write content, edit copy, make strategy decisions, or touch Dev code
+- **Publisher DOES** add schema markup, Open Graph tags, canonical URLs, internal links, and page-level SEO
 
 ---
 
@@ -221,6 +232,7 @@ This structured format lets Mac's enforcement system validate the completion.
 
 ```
 Mac writes marketing copy → pushes to netrate-ops → PC reads from GitHub
+Claw writes content pages → pushes to netrate-claw-ops/Work/Marketing/publish-queue/ → PC Publisher reads from GitHub → builds page → deploys
 Mac writes rate tool source → pushes to netrate-ops → PC reads for porting
 Mac updates trackers → Neon Postgres reflects changes → TrackerPortal dashboard
 PC builds website → pushes to netrate-pc-ops → Vercel auto-deploys from repo root
@@ -310,7 +322,7 @@ netrate-pc-ops/
 │   ├── Dev/                 ← Docs: architecture plans, specs
 │   │   ├── Products/        ← Calculator specs, borrower tools
 │   │   └── Integrations/    ← Twilio, Zoho, GCS reference
-│   ├── Marketing/           ← Docs: playbook, brand, dev briefs (strategy owned by Claw)
+│   ├── Publisher/            ← Docs: published page logs, SEO notes
 │   └── Admin/               ← PC-side admin (process docs only)
 ```
 

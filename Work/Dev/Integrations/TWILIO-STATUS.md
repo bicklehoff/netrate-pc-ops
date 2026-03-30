@@ -1,7 +1,8 @@
 # Twilio Integration — Status Tracker
 
-**Last Updated:** 2026-03-24
-**Status:** A2P CAMPAIGN UNDER REVIEW — submitted 3/23, Twilio reviewing (may take several weeks)
+**Last Updated:** 2026-03-28
+**Status:** A2P CAMPAIGN UNDER REVIEW — Attempt 7 submitted 2026-03-26, IN_PROGRESS. SID: QE2c6890da8086d771620e9b13fadeba0b
+**Last Checked:** 2026-03-30 — still IN_PROGRESS, no errors, date_updated unchanged since submission (2026-03-26T21:25:25Z)
 
 ---
 
@@ -159,16 +160,23 @@ Note: There was originally a SECOND phone number purchased during early campaign
 - **Status:** FAILED
 - **Details:** Two additional submission attempts were charged ($10.70 each) but details not recorded. These may have been duplicate submissions or earlier attempts before Attempt 1.
 
-#### Attempt 6 — March 23, 2026 (CURRENT)
+#### Attempt 7 — March 26, 2026 (CURRENT — IN_PROGRESS)
 - **Status:** IN_PROGRESS
+- **Campaign SID:** QE2c6890da8086d771620e9b13fadeba0b (same SID reused after delete+create)
+- **Submitted:** 2026-03-26
+- **Key change:** Rewrote USE_CASE_DESCRIPTION to lead with explicit opt-in mechanism (checkbox on Contact form, URL, consent language). Removed embedded phone number from message sample 2.
+- **Submission method:** Official Twilio Node.js SDK (raw curl was returning misleading "Unable to process JSON" error for validation failures — SDK surfaces real error messages)
+- **Expected review:** Days to a few weeks
+
+#### Attempt 6 — March 23, 2026 (FAILED)
+- **Status:** FAILED
 - **Campaign SID:** QE2c6890da8086d771620e9b13fadeba0b
-- **Submitted:** 2026-03-23T20:36:14Z
-- **Account Status:** ACTIVE (funds added, auto-recharge enabled)
-- **All pages verified accessible:** /contact (200), /privacy (200), /terms (200)
-- **Privacy policy has required SMS verbiage:** confirmed in source code
-- **Changes from attempt 5:** Account funded and active during review (was suspended before). No content changes needed — privacy policy was already compliant.
-- **Expected review time:** A few days to 3-4 weeks
-- **CHECK STATUS:** `curl -s -u "ACc65dbcde3c13ff402fcf2b68903921d0:32d4d0af844adc0a9923b885d51f4e9e" "https://messaging.twilio.com/v1/Services/MG0eb6cca59bd54081d648905dbe9ce469/Compliance/Usa2p" | node -e "const d=require('fs').readFileSync(0,'utf8');const j=JSON.parse(d);console.log('Status:',j.compliance[0].campaign_status,'Errors:',JSON.stringify(j.compliance[0].errors))"`
+- **Submitted:** 2026-03-23T20:36:14Z — rejected same day
+- **Error:** 30896 — opt-in information rejected
+- **Field flagged:** USE_CASE_DESCRIPTION (new — previous attempts failed on MESSAGE_FLOW)
+- **Root cause:** USE_CASE_DESCRIPTION did not mention opt-in method. Text said only what messages are sent, not how users consent. Twilio reviewers need opt-in language in the description itself.
+- **Fix needed:** Rewrite USE_CASE_DESCRIPTION to explicitly mention: explicit opt-in via unchecked checkbox on Contact form, URL, and consent mechanism. Remove embedded phone number from message samples (303-444-5251 in sample 2 triggers has_embedded_phone:true flag).
+- **Suggested description:** "NetRate Mortgage LLC (NMLS #1111861) sends SMS to mortgage borrowers and leads who have explicitly opted in via an unchecked checkbox on the Contact form at netratemortgage.com/contact. Use cases: loan status updates, document requests, closing reminders, 2FA verification codes, rate alerts, and customer service. All recipients provide explicit written consent prior to receiving messages."
 
 ### Campaign Configuration (current submission)
 ```
@@ -206,7 +214,7 @@ Opt-out keywords: OPTOUT, CANCEL, END, QUIT, UNSUBSCRIBE, REVOKE, STOP, STOPALL
 
 - **Monthly recurring:** ~$10.70/mo A2P registration fee + $1.15/mo phone number = ~$11.85/mo
 - **Account suspended 2026-03-23** due to $0 balance. Funds added to reactivate.
-- **Total spent on failed campaign submissions:** $53.50 (5 × $10.70)
+- **Total spent on failed campaign submissions:** $74.90 (7 × $10.70)
 - **Auto-recharge:** CHECK IF ENABLED — set up auto-recharge to prevent future suspension
 
 ---

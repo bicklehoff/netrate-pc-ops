@@ -20,8 +20,9 @@ export default function ScenarioForm({ scenario, onChange, onSubmit, loading }) 
 
     if (lastEdited === 'pct') {
       downPct = scenario.downPaymentPct || 0;
-      downDollars = Math.round(pv * downPct / 100);
-      loanAmount = Math.floor(pv - downDollars);
+      // Calculate loan from LTV directly (not pv - down) to match LoanSifter
+      loanAmount = Math.floor(pv * (1 - downPct / 100));
+      downDollars = pv - loanAmount;
     } else if (lastEdited === 'dollars') {
       downDollars = scenario.downPaymentDollars || 0;
       downPct = pv > 0 ? Math.round((downDollars / pv) * 10000) / 100 : 0;
