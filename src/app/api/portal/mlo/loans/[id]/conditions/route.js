@@ -9,7 +9,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
-import { put } from '@vercel/blob';
+import { uploadFile } from '@/lib/zoho-workdrive';
 import { extractApprovalData } from '@/lib/approval-extractor';
 
 export const maxDuration = 60; // Claude extraction can take 20-30s on multi-page PDFs
@@ -335,16 +335,19 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ error: `Buffer read failed: ${bufErr.message}` }, { status: 500 });
     }
 
-    // ─── Upload to Vercel Blob (skip WorkDrive for now — simpler, always works) ───
-    let fileUrl;
-    try {
-      const blob = await put(`loans/${id}/approvals/${file.name}`, new Blob([fileBuffer], { type: 'application/pdf' }), {
-        access: 'public',
-        addRandomSuffix: true,
-      });
-      fileUrl = blob.url;
-    } catch (blobErr) {
-      return NextResponse.json({ error: `File storage failed: ${blobErr.message}` }, { status: 500 });
+    // ─── Upload to WorkDrive (if available) ───
+    let fileUrl = null;
+    const subfolders = loan.workDriveSubfolders;
+    if (loan.workDriveFolderId && subfolders) {
+      const targetFolderId = subfolders['APPROVALS'] || subfolders['CLOSING'] || loan.workDriveFolderId;
+      try {
+        const fileBlob = new Blob([fileBuffer], { type: 'application/pdf' });
+        const uploaded = await uploadFile(fileBlob, file.name, targetFolderId, true);
+        fileUrl = uploaded.url || `workdrive://${uploaded.id}`;
+      } catch (wdErr) {
+        console.error('WorkDrive upload failed (continuing without file storage):', wdErr?.message);
+        // Continue without file URL — extraction is more important than storage
+      }
     }
 
     // ─── Create Document record ───
