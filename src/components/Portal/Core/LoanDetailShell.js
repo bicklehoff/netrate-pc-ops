@@ -19,6 +19,7 @@ import ProcessingSection from './sections/ProcessingSection';
 import DocumentsSection from './sections/DocumentsSection';
 import NotesActivitySection from './sections/NotesActivitySection';
 import PostCloseSection from './sections/PostCloseSection';
+import ConditionsSection from './sections/ConditionsSection';
 import PrequalLetterModal from '../PrequalLetter/PrequalLetterModal';
 
 export default function LoanDetailShell({ loan, onRefresh }) {
@@ -100,6 +101,13 @@ export default function LoanDetailShell({ loan, onRefresh }) {
           <ProcessingSection
             loan={loan}
             updateDates={updateDates}
+          />
+        );
+      case 'conditions':
+        return (
+          <ConditionsSection
+            loan={loan}
+            onRefresh={onRefresh}
           />
         );
       case 'documents':

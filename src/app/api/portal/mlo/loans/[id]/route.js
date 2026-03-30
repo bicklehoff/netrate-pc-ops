@@ -45,6 +45,8 @@ const EDITABLE_FIELDS = [
   'referralSource', 'leadSource', 'applicationChannel',
   // Pre-qual letter
   'prequalLetterData',
+  // Universal approval fields
+  'appraisedValue', 'loanProgram', 'underwriterName', 'accountExec', 'brokerProcessor',
 ];
 
 // Fields that need Decimal conversion
@@ -52,6 +54,7 @@ const DECIMAL_FIELDS = [
   'loanAmount', 'interestRate', 'purchasePrice', 'downPayment',
   'estimatedValue', 'currentBalance', 'cashOutAmount',
   'monthlyBaseIncome', 'otherMonthlyIncome', 'presentHousingExpense',
+  'appraisedValue',
 ];
 
 // Fields that need Integer conversion
@@ -92,6 +95,11 @@ export async function GET(request, { params }) {
         },
         // ─── New includes for Core UI ───
         dates: true,
+        fha: true,
+        hecm: true,
+        va: true,
+        dscr: true,
+        conv: true,
         conditions: {
           orderBy: [{ stage: 'asc' }, { createdAt: 'asc' }],
         },
@@ -115,6 +123,18 @@ export async function GET(request, { params }) {
 
     // All MLOs can view all loans (LO filter handles scoping in pipeline)
 
+    // Helper: convert all Decimal fields in an object to Number
+    const serializeDecimals = (obj) => {
+      if (!obj) return null;
+      const result = { ...obj };
+      for (const [key, val] of Object.entries(result)) {
+        if (val && typeof val === 'object' && typeof val.toNumber === 'function') {
+          result[key] = Number(val);
+        }
+      }
+      return result;
+    };
+
     // Convert Decimal fields to numbers
     const serialized = {
       ...loan,
@@ -128,12 +148,19 @@ export async function GET(request, { params }) {
       monthlyBaseIncome: loan.monthlyBaseIncome ? Number(loan.monthlyBaseIncome) : null,
       otherMonthlyIncome: loan.otherMonthlyIncome ? Number(loan.otherMonthlyIncome) : null,
       presentHousingExpense: loan.presentHousingExpense ? Number(loan.presentHousingExpense) : null,
+      appraisedValue: loan.appraisedValue ? Number(loan.appraisedValue) : null,
       // LoanBorrower decimal fields
       loanBorrowers: (loan.loanBorrowers || []).map((lb) => ({
         ...lb,
         monthlyBaseIncome: lb.monthlyBaseIncome ? Number(lb.monthlyBaseIncome) : null,
         otherMonthlyIncome: lb.otherMonthlyIncome ? Number(lb.otherMonthlyIncome) : null,
       })),
+      // Satellite table decimal fields
+      fha: serializeDecimals(loan.fha),
+      hecm: serializeDecimals(loan.hecm),
+      va: serializeDecimals(loan.va),
+      dscr: serializeDecimals(loan.dscr),
+      conv: serializeDecimals(loan.conv),
     };
 
     return NextResponse.json({ loan: serialized });

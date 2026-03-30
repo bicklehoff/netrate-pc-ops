@@ -25,6 +25,7 @@ function getSections(loanStatus) {
       group: 'Processing',
       items: [
         { key: 'processing', label: 'Processing', icon: '⚙️' },
+        { key: 'conditions', label: 'Conditions', icon: '✅' },
         { key: 'documents', label: 'Documents', icon: '📁' },
       ],
     },

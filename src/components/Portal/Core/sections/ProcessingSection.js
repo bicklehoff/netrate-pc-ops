@@ -89,22 +89,8 @@ const PROCESSING_TASKS = [
   },
 ];
 
-const CONDITION_STAGES = [
-  { key: 'prior_to_docs', label: 'Prior to Docs' },
-  { key: 'prior_to_funding', label: 'Prior to Funding' },
-  { key: 'at_closing', label: 'At Closing' },
-];
-
-const CONDITION_STATUS_COLORS = {
-  needed: 'bg-amber-100 text-amber-700',
-  received: 'bg-blue-100 text-blue-700',
-  cleared: 'bg-green-100 text-green-700',
-  waived: 'bg-gray-100 text-gray-600',
-};
-
 export default function ProcessingSection({ loan, updateDates }) {
   const dates = loan.dates || {};
-  const conditions = loan.conditions || [];
 
   return (
     <div className="space-y-6">
@@ -121,65 +107,6 @@ export default function ProcessingSection({ loan, updateDates }) {
             />
           ))}
         </div>
-      </SectionCard>
-
-      {/* ─── Conditions ─── */}
-      <SectionCard
-        title="Conditions"
-        icon="📋"
-        badge={conditions.length > 0 ? `${conditions.length}` : null}
-        defaultOpen={true}
-      >
-        {conditions.length === 0 ? (
-          <p className="text-sm text-gray-400">No conditions tracked yet.</p>
-        ) : (
-          <div className="space-y-6">
-            {CONDITION_STAGES.map((stage) => {
-              const stageConds = conditions.filter((c) => c.stage === stage.key);
-              if (stageConds.length === 0) return null;
-
-              return (
-                <div key={stage.key}>
-                  <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                    {stage.label}
-                  </h4>
-                  <div className="space-y-1.5">
-                    {stageConds.map((cond) => (
-                      <div
-                        key={cond.id}
-                        className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50 transition-colors"
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                            cond.status === 'needed' ? 'bg-amber-400' :
-                            cond.status === 'cleared' || cond.status === 'waived' ? 'bg-green-400' :
-                            'bg-blue-400'
-                          }`} />
-                          <div>
-                            <span className="text-sm text-gray-700">{cond.title}</span>
-                            {cond.description && (
-                              <span className="block text-xs text-gray-400">{cond.description}</span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {cond.blockingProgress && (
-                            <span className="text-xs text-red-500 font-medium">🚫 Blocking</span>
-                          )}
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                            CONDITION_STATUS_COLORS[cond.status] || 'bg-gray-100 text-gray-600'
-                          }`}>
-                            {cond.status}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
       </SectionCard>
     </div>
   );

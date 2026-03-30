@@ -6,6 +6,8 @@ export const LOAN_TYPES = {
   FHA: 'fha',
   VA: 'va',
   USDA: 'usda',
+  HECM: 'hecm',
+  DSCR: 'dscr',
   OTHER: 'other',
 };
 
@@ -14,6 +16,8 @@ export const LOAN_TYPE_LABELS = {
   fha: 'FHA',
   va: 'VA',
   usda: 'USDA Rural',
+  hecm: 'HECM (Reverse)',
+  dscr: 'DSCR',
   other: 'Other',
 };
 
@@ -32,5 +36,6 @@ export const LOAN_TERM_LABELS = {
 export const LOAN_PURPOSES = {
   PURCHASE: 'purchase',
   REFINANCE: 'refinance',
-  // Future: construction, const_perm, heloc, reverse
+  CASH_OUT: 'cash_out',
+  // Future: construction, const_perm, heloc
 };

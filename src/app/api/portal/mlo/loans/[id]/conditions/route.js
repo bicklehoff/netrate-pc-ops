@@ -51,7 +51,7 @@ export async function POST(request, { params }) {
     }
 
     const body = await request.json();
-    const { title, description, conditionType, stage, borrowerFacing, blockingProgress, dueDate } = body;
+    const { title, description, conditionType, stage, borrowerFacing, blockingProgress, dueDate, conditionNumber, ownerRole } = body;
 
     if (!title || !conditionType) {
       return NextResponse.json({ error: 'title and conditionType are required' }, { status: 400 });
@@ -63,12 +63,13 @@ export async function POST(request, { params }) {
         title,
         description: description || null,
         conditionType,
-        stage: stage || 'prior_to_docs',
+        stage: stage || 'prior_to_close',
         status: 'needed',
         borrowerFacing: borrowerFacing || false,
         blockingProgress: blockingProgress || false,
         dueDate: dueDate ? new Date(dueDate) : null,
-        ownerRole: 'mlo',
+        ownerRole: ownerRole || 'mlo',
+        conditionNumber: conditionNumber ? parseInt(conditionNumber, 10) : null,
         requestedDate: new Date(),
       },
     });
@@ -102,7 +103,11 @@ export async function PATCH(request, { params }) {
     }
 
     const body = await request.json();
-    const { conditionId, status, notes, blockingProgress } = body;
+    const {
+      conditionId, status, notes, blockingProgress,
+      title, description, stage, conditionType, ownerRole,
+      dueDate, borrowerFacing, conditionNumber,
+    } = body;
 
     if (!conditionId) {
       return NextResponse.json({ error: 'conditionId is required' }, { status: 400 });
@@ -119,6 +124,14 @@ export async function PATCH(request, { params }) {
     const updateData = {};
     if (status) updateData.status = status;
     if (typeof blockingProgress === 'boolean') updateData.blockingProgress = blockingProgress;
+    if (typeof borrowerFacing === 'boolean') updateData.borrowerFacing = borrowerFacing;
+    if (title !== undefined) updateData.title = title;
+    if (description !== undefined) updateData.description = description || null;
+    if (stage !== undefined) updateData.stage = stage;
+    if (conditionType !== undefined) updateData.conditionType = conditionType;
+    if (ownerRole !== undefined) updateData.ownerRole = ownerRole;
+    if (conditionNumber !== undefined) updateData.conditionNumber = conditionNumber ? parseInt(conditionNumber, 10) : null;
+    if (dueDate !== undefined) updateData.dueDate = dueDate ? new Date(dueDate) : null;
 
     // Append note to internal notes array
     if (notes) {
@@ -133,9 +146,12 @@ export async function PATCH(request, { params }) {
       ];
     }
 
-    // Set received timestamp
+    // Auto-set timestamps on status transitions
     if (status === 'received' && !existing.receivedAt) {
       updateData.receivedAt = new Date();
+    }
+    if (status === 'cleared' && !existing.clearedAt) {
+      updateData.clearedAt = new Date();
     }
 
     const condition = await prisma.condition.update({
