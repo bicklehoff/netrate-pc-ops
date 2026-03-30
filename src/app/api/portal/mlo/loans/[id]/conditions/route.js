@@ -328,6 +328,10 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ error: 'File size exceeds 25 MB limit' }, { status: 400 });
     }
 
+    // Read file buffer upfront (stream can only be read once)
+    const fileBuffer = await file.arrayBuffer();
+    const fileBlob = new Blob([fileBuffer], { type: 'application/pdf' });
+
     // ─── Upload to WorkDrive APPROVALS subfolder (or Blob fallback) ───
     let fileUrl;
     const subfolders = loan.workDriveSubfolders;
@@ -335,18 +339,18 @@ export async function PUT(request, { params }) {
     if (loan.workDriveFolderId && subfolders) {
       const targetFolderId = subfolders['APPROVALS'] || subfolders['CLOSING'] || loan.workDriveFolderId;
       try {
-        const uploaded = await uploadFile(file, file.name, targetFolderId, true);
+        const uploaded = await uploadFile(fileBlob, file.name, targetFolderId, true);
         fileUrl = uploaded.url || `workdrive://${uploaded.id}`;
       } catch (wdError) {
         console.error('WorkDrive upload failed, falling back to Blob:', wdError?.message);
-        const blob = await put(`loans/${id}/approvals/${file.name}`, file, {
+        const blob = await put(`loans/${id}/approvals/${file.name}`, fileBlob, {
           access: 'public',
           addRandomSuffix: true,
         });
         fileUrl = blob.url;
       }
     } else {
-      const blob = await put(`loans/${id}/approvals/${file.name}`, file, {
+      const blob = await put(`loans/${id}/approvals/${file.name}`, fileBlob, {
         access: 'public',
         addRandomSuffix: true,
       });
@@ -376,7 +380,6 @@ export async function PUT(request, { params }) {
       propertyAddress: loan.propertyAddress || undefined,
     };
 
-    const fileBuffer = await file.arrayBuffer();
     const extraction = await extractApprovalData({ fileBuffer, loanContext });
 
     // Store extraction result on document notes
