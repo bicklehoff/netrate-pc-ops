@@ -37,13 +37,27 @@ export function parseStatementHtml(html) {
   // Remove newlines and normalize whitespace
   const clean = html.replace(/\r?\n/g, ' ').replace(/\s+/g, ' ');
 
+  // Narrow to the article content area — Fed uses <div id="article"> or col-xs-12 col-sm-8
+  let content = clean;
+  const articleMatch = clean.match(/<div[^>]*id="article"[^>]*>(.*)/i);
+  if (articleMatch) {
+    content = articleMatch[1];
+  } else {
+    // Fallback: find the content column
+    const colMatch = clean.match(/<div[^>]*class="[^"]*col-xs-12 col-sm-8[^"]*"[^>]*>(.*)/i);
+    if (colMatch) content = colMatch[1];
+  }
+
   // Extract paragraphs — Fed uses <p> tags for statement content
   const paragraphs = [];
   const pRegex = /<p[^>]*>(.*?)<\/p>/gi;
   let match;
-  while ((match = pRegex.exec(clean)) !== null) {
+  while ((match = pRegex.exec(content)) !== null) {
     // Strip HTML tags from within paragraphs
     let text = match[1].replace(/<[^>]+>/g, '').trim();
+    // Decode HTML entities
+    text = text.replace(/&#x27;/g, "'").replace(/&amp;/g, '&').replace(/&quot;/g, '"')
+      .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#(\d+);/g, (_, n) => String.fromCharCode(n));
     if (!text) continue;
 
     // Stop at voting record
@@ -51,9 +65,12 @@ export function parseStatementHtml(html) {
       || text.startsWith('Voting for this action')
       || text.startsWith('For release at')) continue;
 
-    // Skip metadata lines (date, "For immediate release", etc.)
+    // Skip metadata lines
     if (text.match(/^(For immediate release|Release Date|Last Update|Implementation Note)/i)) continue;
-    if (text.match(/^\w+ \d{1,2}, \d{4}$/)) continue; // date line like "January 28, 2026"
+    if (text.match(/^\w+ \d{1,2}, \d{4}$/)) continue;
+
+    // Skip government banner / nav text
+    if (text.match(/official website|\.gov website|United States Government|HTTPSA? lock|padlock icon/i)) continue;
 
     // Skip very short lines that are likely headers/links
     if (text.length < 30) continue;
