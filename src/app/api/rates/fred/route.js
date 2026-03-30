@@ -19,11 +19,13 @@ const SERIES_CONFIG = {
   DGS30: { label: '30yr Treasury', frequency: 'daily' },
 };
 
-// Fallback data when FRED API key is not set or API is down.
-// IMPORTANT: Update these periodically — they're shown when the live feed fails.
-// Last updated: 2026-03-20
+// Fallback data when FRED API key is not set, API is down, or no data for date range
+// (weekends/holidays return empty). IMPORTANT: Update after each Thursday PMMS release.
+// Last updated: 2026-03-28
 const FALLBACK_DATA = {
   MORTGAGE30US: [
+    { date: '2026-03-26', value: 6.38 },
+    { date: '2026-03-20', value: 6.22 },
     { date: '2026-03-13', value: 6.65 },
     { date: '2026-03-06', value: 6.63 },
     { date: '2026-02-27', value: 6.76 },
@@ -39,15 +41,17 @@ const FALLBACK_DATA = {
     { date: '2025-12-19', value: 6.72 },
   ],
   MORTGAGE15US: [
+    { date: '2026-03-26', value: 5.75 },
+    { date: '2026-03-20', value: 5.59 },
     { date: '2026-03-13', value: 5.89 },
   ],
-  DGS2: [{ date: '2026-03-18', value: 3.97 }],
-  DGS5: [{ date: '2026-03-18', value: 4.08 }],
-  DGS10: [{ date: '2026-03-18', value: 4.264 }],
-  DGS30: [{ date: '2026-03-18', value: 4.883 }],
+  DGS2: [{ date: '2026-03-27', value: 3.919 }, { date: '2026-03-26', value: 3.978 }],
+  DGS5: [{ date: '2026-03-27', value: 4.076 }, { date: '2026-03-26', value: 4.099 }],
+  DGS10: [{ date: '2026-03-27', value: 4.434 }, { date: '2026-03-26', value: 4.42 }],
+  DGS30: [{ date: '2026-03-27', value: 4.97 }, { date: '2026-03-26', value: 4.936 }],
 };
 
-const FALLBACK_DATE = '2026-03-20';
+const FALLBACK_DATE = '2026-03-28';
 
 async function fetchFredSeries(seriesId, days = 365) {
   const apiKey = process.env.FRED_API_KEY;
@@ -100,9 +104,10 @@ export async function GET(request) {
     const results = {};
     let usedFallback = false;
     for (const [seriesId, data] of fetchResults) {
-      if (data) {
+      if (data && data.length > 0) {
         results[seriesId] = data;
       } else {
+        // API failed OR returned empty (weekends/holidays) — use fallback
         results[seriesId] = FALLBACK_DATA[seriesId] || [];
         usedFallback = true;
       }
