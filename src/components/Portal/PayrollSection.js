@@ -279,25 +279,33 @@ export default function PayrollSection({ loan, onRefresh }) {
       knownNames.add(`${norm(loan.borrower.legalFirstName)}|${norm(loan.borrower.legalLastName || loan.borrower.lastName)}`);
     }
   }
+  // If nickname confirmed, the first CD person IS the primary borrower (legal name)
+  if (nicknameConfirmed && cdPersons.length > 0) {
+    const norm = (s) => (s || '').toLowerCase().trim();
+    knownNames.add(`${norm(cdPersons[0].firstName)}|${norm(cdPersons[0].lastName)}`);
+  }
   // TODO: also check existing loanBorrowers for co-borrowers already on file
   const detectedUnmatched = cdPersons.filter(p => {
     const key = `${(p.firstName || '').toLowerCase().trim()}|${(p.lastName || '').toLowerCase().trim()}`;
     return !knownNames.has(key);
   });
 
-  // Initialize unmatched state on first detection
-  if (detectedUnmatched.length > 0 && unmatchedPersons.length === 0 && isExtracted && !isApproved) {
-    // Use setTimeout to avoid setState during render
-    setTimeout(() => {
-      setUnmatchedPersons(detectedUnmatched.map(p => ({
-        firstName: p.firstName,
-        lastName: p.lastName,
-        role: '', // 'co_borrower' or 'nbs'
-        email: '',
-        phone: '',
-        saveAsContact: true,
-      })));
-    }, 0);
+  // Initialize or update unmatched state when detection changes
+  const unmatchedKey = detectedUnmatched.map(p => `${p.firstName}|${p.lastName}`).join(',');
+  if (isExtracted && !isApproved) {
+    const currentKey = unmatchedPersons.map(p => `${p.firstName}|${p.lastName}`).join(',');
+    if (unmatchedKey !== currentKey) {
+      setTimeout(() => {
+        setUnmatchedPersons(detectedUnmatched.map(p => ({
+          firstName: p.firstName,
+          lastName: p.lastName,
+          role: '', // 'co_borrower' or 'nbs'
+          email: '',
+          phone: '',
+          saveAsContact: true,
+        })));
+      }, 0);
+    }
   }
 
   return (
