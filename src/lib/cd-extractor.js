@@ -1,5 +1,8 @@
-// CD Extractor — Download Closing Disclosure from WorkDrive, extract data via Claude
+// CD Extractor — Extract structured data from a Closing Disclosure PDF via Claude
 // Used by: payroll route after CD upload
+//
+// Accepts either a file buffer (from upload) or a WorkDrive file ID (for re-extraction).
+// Prefer passing the buffer directly to avoid a WorkDrive round-trip.
 
 import { downloadFile } from '@/lib/zoho-workdrive';
 import { askClaudeWithDocs } from '@/lib/anthropic';
@@ -44,36 +47,47 @@ ${ctx.length > 0 ? `\nLoan context for verification:\n${ctx.join('\n')}` : ''}`;
 }
 
 /**
- * Download a CD PDF from WorkDrive and extract structured data via Claude.
+ * Extract structured data from a Closing Disclosure PDF via Claude.
  *
- * @param {string} cdWorkDriveFileId — WorkDrive file ID of the CD
- * @param {object} loanContext — { borrowerName, loanNumber, propertyAddress }
+ * @param {object} params
+ * @param {ArrayBuffer|Buffer} [params.fileBuffer] — PDF bytes (preferred, avoids WorkDrive round-trip)
+ * @param {string} [params.workDriveFileId] — WorkDrive file ID (fallback if no buffer)
+ * @param {object} [params.loanContext] — { borrowerName, loanNumber, propertyAddress }
  * @returns {Promise<{ status: 'success'|'error', data?: object, error?: string, extractedAt: string }>}
  */
-export async function extractCdData(cdWorkDriveFileId, loanContext = {}) {
+export async function extractCdData({ fileBuffer, workDriveFileId, loanContext = {} }) {
   const extractedAt = new Date().toISOString();
 
   try {
-    // Download from WorkDrive (same pattern as corebot/processor.js)
-    const { stream } = await downloadFile(cdWorkDriveFileId);
+    let base64;
 
-    const chunks = [];
-    const reader = stream.getReader();
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      chunks.push(value);
+    if (fileBuffer) {
+      // Use the buffer directly (from upload — no WorkDrive round-trip needed)
+      base64 = Buffer.from(fileBuffer).toString('base64');
+    } else if (workDriveFileId) {
+      // Fallback: download from WorkDrive
+      const { stream } = await downloadFile(workDriveFileId);
+
+      const chunks = [];
+      const reader = stream.getReader();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+      }
+
+      const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+      const buffer = new Uint8Array(totalLength);
+      let offset = 0;
+      for (const chunk of chunks) {
+        buffer.set(chunk, offset);
+        offset += chunk.length;
+      }
+
+      base64 = Buffer.from(buffer).toString('base64');
+    } else {
+      throw new Error('Either fileBuffer or workDriveFileId is required');
     }
-
-    const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
-    const buffer = new Uint8Array(totalLength);
-    let offset = 0;
-    for (const chunk of chunks) {
-      buffer.set(chunk, offset);
-      offset += chunk.length;
-    }
-
-    const base64 = Buffer.from(buffer).toString('base64');
 
     // Build content blocks: PDF document + extraction prompt
     const content = [

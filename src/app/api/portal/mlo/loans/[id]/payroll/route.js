@@ -159,7 +159,7 @@ export async function PUT(request, { params }) {
       },
     });
 
-    // Trigger CD extraction via Claude
+    // Trigger CD extraction via Claude — pass file bytes directly to avoid WorkDrive round-trip
     const loanContext = {
       borrowerName: loan.borrower
         ? `${loan.borrower.firstName} ${loan.borrower.lastName}`
@@ -168,7 +168,8 @@ export async function PUT(request, { params }) {
       propertyAddress: loan.propertyAddress,
     };
 
-    const extraction = await extractCdData(uploaded.id, loanContext);
+    const fileBuffer = await file.arrayBuffer();
+    const extraction = await extractCdData({ fileBuffer, loanContext });
 
     await prisma.loan.update({
       where: { id },
