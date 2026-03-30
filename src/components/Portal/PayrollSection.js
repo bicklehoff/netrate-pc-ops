@@ -9,7 +9,7 @@
 
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 function formatDate(dateStr) {
   if (!dateStr) return '';
@@ -73,6 +73,20 @@ export default function PayrollSection({ loan, onRefresh }) {
   const [relatedLoans, setRelatedLoans] = useState(loan?.relatedLoans || []);
   const [nicknameConfirmed, setNicknameConfirmed] = useState(false);
   const [unmatchedPersons, setUnmatchedPersons] = useState([]); // { firstName, lastName, role, email, phone, saveAsContact }
+  const [payrollDetails, setPayrollDetails] = useState(null);
+
+  const isSentCheck = !!loan?.payrollSentAt;
+
+  useEffect(() => {
+    if (!isSentCheck || !loan?.id) return;
+    fetch(`/api/portal/mlo/loans/${loan.id}/payroll`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.payrollDetails) setPayrollDetails(data.payrollDetails);
+        if (data.relatedLoans?.length > 0) setRelatedLoans(data.relatedLoans);
+      })
+      .catch(() => {});
+  }, [isSentCheck, loan?.id]);
 
   if (!loan || loan.status !== 'funded') return null;
 
@@ -742,48 +756,48 @@ export default function PayrollSection({ loan, onRefresh }) {
             </div>
 
             {/* Payroll details — what was sent + what came back */}
-            {loan.payrollDetails && (
+            {payrollDetails && (
               <>
                 {/* TrackerPortal response */}
-                {loan.payrollDetails.trackerResult?.success && (
+                {payrollDetails.trackerResult?.success && (
                   <div className="bg-gray-50 rounded-lg px-4 py-3">
                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
                       Payroll Confirmation
                     </p>
                     <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
-                      {loan.payrollDetails.trackerResult.cdNumber && (
+                      {payrollDetails.trackerResult.cdNumber && (
                         <div className="flex justify-between">
                           <span className="text-gray-500">CD #</span>
-                          <span className="text-gray-800 font-medium">{loan.payrollDetails.trackerResult.cdNumber}</span>
+                          <span className="text-gray-800 font-medium">{payrollDetails.trackerResult.cdNumber}</span>
                         </div>
                       )}
-                      {loan.payrollDetails.trackerResult.wireTotal && (
+                      {payrollDetails.trackerResult.wireTotal && (
                         <div className="flex justify-between">
                           <span className="text-gray-500">Wire Total</span>
-                          <span className="text-gray-800 font-medium">{formatCurrency(loan.payrollDetails.trackerResult.wireTotal)}</span>
+                          <span className="text-gray-800 font-medium">{formatCurrency(payrollDetails.trackerResult.wireTotal)}</span>
                         </div>
                       )}
-                      {loan.payrollDetails.trackerResult.loCompAmount && (
+                      {payrollDetails.trackerResult.loCompAmount && (
                         <div className="flex justify-between">
                           <span className="text-gray-500">LO Comp</span>
-                          <span className="text-gray-800 font-medium">{formatCurrency(loan.payrollDetails.trackerResult.loCompAmount)}</span>
+                          <span className="text-gray-800 font-medium">{formatCurrency(payrollDetails.trackerResult.loCompAmount)}</span>
                         </div>
                       )}
-                      {loan.payrollDetails.trackerResult.loName && (
+                      {payrollDetails.trackerResult.loName && (
                         <div className="flex justify-between">
                           <span className="text-gray-500">LO</span>
-                          <span className="text-gray-800 font-medium">{loan.payrollDetails.trackerResult.loName}</span>
+                          <span className="text-gray-800 font-medium">{payrollDetails.trackerResult.loName}</span>
                         </div>
                       )}
-                      {loan.payrollDetails.trackerResult.status && (
+                      {payrollDetails.trackerResult.status && (
                         <div className="flex justify-between">
                           <span className="text-gray-500">Status</span>
-                          <span className="text-gray-800 font-medium capitalize">{loan.payrollDetails.trackerResult.status}</span>
+                          <span className="text-gray-800 font-medium capitalize">{payrollDetails.trackerResult.status}</span>
                         </div>
                       )}
-                      {loan.payrollDetails.trackerResult.message && (
+                      {payrollDetails.trackerResult.message && (
                         <div className="col-span-2 text-gray-600 italic mt-1">
-                          {loan.payrollDetails.trackerResult.message}
+                          {payrollDetails.trackerResult.message}
                         </div>
                       )}
                     </div>
@@ -791,7 +805,7 @@ export default function PayrollSection({ loan, onRefresh }) {
                 )}
 
                 {/* What was sent */}
-                {loan.payrollDetails.trackerPayload && (
+                {payrollDetails.trackerPayload && (
                   <div className="bg-gray-50 rounded-lg px-4 py-3">
                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
                       Submitted Data
@@ -799,35 +813,35 @@ export default function PayrollSection({ loan, onRefresh }) {
                     <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                       <div className="flex justify-between">
                         <span className="text-gray-500">Borrower</span>
-                        <span className="text-gray-800 font-medium">{loan.payrollDetails.trackerPayload.borrowerName}</span>
+                        <span className="text-gray-800 font-medium">{payrollDetails.trackerPayload.borrowerName}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Loan #</span>
-                        <span className="text-gray-800 font-medium">{loan.payrollDetails.trackerPayload.loanNumber}</span>
+                        <span className="text-gray-800 font-medium">{payrollDetails.trackerPayload.loanNumber}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Lender</span>
-                        <span className="text-gray-800 font-medium">{loan.payrollDetails.trackerPayload.lender}</span>
+                        <span className="text-gray-800 font-medium">{payrollDetails.trackerPayload.lender}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Amount</span>
-                        <span className="text-gray-800 font-medium">{formatCurrency(loan.payrollDetails.trackerPayload.loanAmount)}</span>
+                        <span className="text-gray-800 font-medium">{formatCurrency(payrollDetails.trackerPayload.loanAmount)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Rate</span>
-                        <span className="text-gray-800 font-medium">{formatRate(loan.payrollDetails.trackerPayload.interestRate)}</span>
+                        <span className="text-gray-800 font-medium">{formatRate(payrollDetails.trackerPayload.interestRate)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Gross Comp</span>
-                        <span className="text-gray-800 font-medium">{formatCurrency(loan.payrollDetails.trackerPayload.grossComp)}</span>
+                        <span className="text-gray-800 font-medium">{formatCurrency(payrollDetails.trackerPayload.grossComp)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Closing</span>
-                        <span className="text-gray-800 font-medium">{loan.payrollDetails.trackerPayload.closingDate}</span>
+                        <span className="text-gray-800 font-medium">{payrollDetails.trackerPayload.closingDate}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Funding</span>
-                        <span className="text-gray-800 font-medium">{loan.payrollDetails.trackerPayload.fundingDate}</span>
+                        <span className="text-gray-800 font-medium">{payrollDetails.trackerPayload.fundingDate}</span>
                       </div>
                     </div>
                   </div>
