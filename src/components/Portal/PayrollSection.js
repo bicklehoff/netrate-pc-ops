@@ -49,8 +49,9 @@ function compareValues(cdVal, loanVal, type = 'currency') {
   if (type === 'rate') {
     return { cdDisplay, loanDisplay, match: Math.abs(Number(cdVal) - Number(loanVal)) < 0.001 ? 'yes' : 'no' };
   }
-  // Text
-  return { cdDisplay, loanDisplay, match: String(cdVal).toLowerCase() === String(loanVal).toLowerCase() ? 'yes' : 'no' };
+  // Text — normalize whitespace, punctuation, and case for comparison
+  const normalize = (s) => String(s).toLowerCase().replace(/[,.\s]+/g, ' ').trim();
+  return { cdDisplay, loanDisplay, match: normalize(cdVal) === normalize(loanVal) ? 'yes' : 'no' };
 }
 
 function MatchBadge({ match }) {
