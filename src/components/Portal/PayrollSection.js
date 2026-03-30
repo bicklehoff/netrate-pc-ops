@@ -61,7 +61,7 @@ function MatchBadge({ match }) {
   return <span className="text-gray-400 text-xs">--</span>;
 }
 
-export default function PayrollSection({ loan, onRefresh }) {
+export default function PayrollSection({ loan }) {
   const fileInputRef = useRef(null);
   const retryInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
@@ -310,7 +310,7 @@ export default function PayrollSection({ loan, onRefresh }) {
           role: '', // 'co_borrower' or 'nbs'
           email: '',
           phone: '',
-          saveAsContact: true,
+          saveAsContact: false,
         })));
       }, 0);
     }
