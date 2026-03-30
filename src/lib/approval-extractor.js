@@ -149,7 +149,7 @@ export async function extractApprovalData({ fileBuffer, workDriveFileId, loanCon
     const response = await askClaudeWithDocs({
       system: SYSTEM_PROMPT,
       content,
-      maxTokens: 8192,
+      maxTokens: 4096,
     });
 
     // Parse JSON — strip markdown fences if present

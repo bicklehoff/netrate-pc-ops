@@ -12,7 +12,7 @@ import prisma from '@/lib/prisma';
 import { uploadFile } from '@/lib/zoho-workdrive';
 import { extractApprovalData } from '@/lib/approval-extractor';
 
-export const maxDuration = 60; // Claude extraction can take 20-30s on multi-page PDFs
+export const maxDuration = 120; // Claude extraction on multi-page approval PDFs
 
 async function verifyMloAccess(loanId, session) {
   if (!session || session.user.userType !== 'mlo') return null;
