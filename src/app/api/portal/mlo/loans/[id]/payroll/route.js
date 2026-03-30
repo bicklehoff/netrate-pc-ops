@@ -25,7 +25,7 @@ async function verifyMloAccess(loanId, session) {
         select: { id: true, firstName: true, lastName: true, email: true },
       },
       mlo: {
-        select: { id: true, firstName: true, lastName: true, email: true },
+        select: { id: true, firstName: true, lastName: true, email: true, nmls: true },
       },
     },
   });
@@ -235,13 +235,29 @@ export async function PATCH(request, { params }) {
       }
 
       const now = new Date();
-      await prisma.loan.update({
-        where: { id },
-        data: {
-          cdApprovedAt: now,
-          cdApprovedBy: session.user.id,
-        },
-      });
+      const cd = loan.cdExtractedData.data;
+
+      // Write CD data back to the loan record — CD is source of truth at closing
+      const loanUpdate = {
+        cdApprovedAt: now,
+        cdApprovedBy: session.user.id,
+      };
+
+      // Update loan fields from CD extraction
+      if (cd.loanAmount != null) loanUpdate.loanAmount = cd.loanAmount;
+      if (cd.interestRate != null) loanUpdate.interestRate = cd.interestRate;
+      if (cd.loanTerm != null) loanUpdate.loanTerm = cd.loanTerm;
+      if (cd.loanType && cd.loanType !== 'other') loanUpdate.loanType = cd.loanType;
+      if (cd.loanNumber) loanUpdate.lenderLoanNumber = cd.loanNumber;
+      if (cd.monthlyPI != null) loanUpdate.monthlyPayment = cd.monthlyPI;
+      if (cd.brokerCompensation != null) loanUpdate.brokerCompensation = cd.brokerCompensation;
+      if (cd.totalClosingCosts != null) loanUpdate.totalClosingCosts = cd.totalClosingCosts;
+      if (cd.cashToClose != null) loanUpdate.cashToClose = cd.cashToClose;
+      if (cd.lenderCredits != null) loanUpdate.lenderCredits = cd.lenderCredits;
+      if (cd.closingDate) loanUpdate.closingDate = new Date(cd.closingDate);
+      if (cd.disbursementDate) loanUpdate.fundingDate = new Date(cd.disbursementDate);
+
+      await prisma.loan.update({ where: { id }, data: loanUpdate });
 
       await prisma.loanEvent.create({
         data: {
@@ -251,7 +267,8 @@ export async function PATCH(request, { params }) {
           actorId: session.user.id,
           newValue: 'approved',
           details: {
-            extractedData: loan.cdExtractedData.data,
+            extractedData: cd,
+            fieldsUpdated: Object.keys(loanUpdate).filter(k => k !== 'cdApprovedAt' && k !== 'cdApprovedBy'),
             ...(notes ? { notes } : {}),
           },
         },
@@ -260,6 +277,7 @@ export async function PATCH(request, { params }) {
       return NextResponse.json({
         success: true,
         cdApprovedAt: now.toISOString(),
+        fieldsUpdated: Object.keys(loanUpdate).filter(k => k !== 'cdApprovedAt' && k !== 'cdApprovedBy'),
       });
     }
 
@@ -337,31 +355,63 @@ export async function POST(request, { params }) {
 
     const now = new Date();
 
-    const payrollData = {
-      loanId: loan.id,
-      borrowerName: `${loan.borrower.firstName} ${loan.borrower.lastName}`,
-      borrowerEmail: loan.borrower.email,
-      mloName: loan.mlo ? `${loan.mlo.firstName} ${loan.mlo.lastName}` : null,
-      mloEmail: loan.mlo?.email || null,
-      loanNumber: loan.loanNumber,
-      lenderName: loan.lenderName,
-      loanType: loan.loanType,
-      loanAmount: loan.loanAmount ? Number(loan.loanAmount) : null,
-      interestRate: loan.interestRate ? Number(loan.interestRate) : null,
-      loanTerm: loan.loanTerm,
-      purpose: loan.purpose,
-      propertyAddress: loan.propertyAddress,
-      cdWorkDriveFileId: loan.cdWorkDriveFileId,
-      cdFileName: loan.cdFileName,
-      cdExtractedData: loan.cdExtractedData,
-      cdApprovedAt: loan.cdApprovedAt?.toISOString() || null,
-      workDriveFolderId: loan.workDriveFolderId,
-      closingFolderId: loan.workDriveSubfolders?.CLOSING || null,
-      workDriveSubfolders: loan.workDriveSubfolders || null,
-      sentAt: now.toISOString(),
-      sentBy: session.user.id,
+    // Re-read loan with fresh data (approval may have updated fields)
+    const freshLoan = await prisma.loan.findUnique({
+      where: { id },
+      include: {
+        borrower: { select: { firstName: true, lastName: true, email: true } },
+        mlo: { select: { firstName: true, lastName: true, email: true, nmls: true } },
+      },
+    });
+
+    // Parse state from property address
+    const propState = freshLoan.propertyAddress?.state || null;
+
+    // Build TrackerPortal payload
+    const trackerPayload = {
+      borrowerName: `${freshLoan.borrower.firstName} ${freshLoan.borrower.lastName}`,
+      loanNumber: freshLoan.lenderLoanNumber || freshLoan.loanNumber,
+      propertyAddress: freshLoan.propertyAddress
+        ? `${freshLoan.propertyAddress.street}, ${freshLoan.propertyAddress.city}, ${freshLoan.propertyAddress.state} ${freshLoan.propertyAddress.zipCode}`
+        : null,
+      propertyState: propState,
+      lender: freshLoan.lenderName,
+      loanAmount: freshLoan.loanAmount ? Number(freshLoan.loanAmount) : null,
+      loanType: freshLoan.loanType,
+      loanPurpose: freshLoan.purpose ? freshLoan.purpose.charAt(0).toUpperCase() + freshLoan.purpose.slice(1) : null,
+      interestRate: freshLoan.interestRate ? Number(freshLoan.interestRate) : null,
+      loanTerm: freshLoan.loanTerm ? Math.round(freshLoan.loanTerm / 12) : null,
+      grossComp: freshLoan.brokerCompensation ? Number(freshLoan.brokerCompensation) : null,
+      wireTotal: freshLoan.brokerCompensation ? Number(freshLoan.brokerCompensation) : null,
+      closingDate: freshLoan.closingDate?.toISOString()?.split('T')[0] || null,
+      fundingDate: freshLoan.fundingDate?.toISOString()?.split('T')[0] || null,
+      loName: freshLoan.mlo ? `${freshLoan.mlo.firstName} ${freshLoan.mlo.lastName}` : null,
+      loNmls: freshLoan.mlo?.nmls || null,
+      confirmedBy: freshLoan.mlo ? freshLoan.mlo.firstName.toLowerCase() : session.user.id,
+      confirmedAt: freshLoan.cdApprovedAt?.toISOString() || now.toISOString(),
     };
 
+    // POST to TrackerPortal
+    let trackerResult = null;
+    try {
+      const trackerRes = await fetch('https://tracker.netratemortgage.com/api/payroll/commission-confirmed', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tracker-api-key': 'agent',
+        },
+        body: JSON.stringify(trackerPayload),
+      });
+      trackerResult = await trackerRes.json();
+      if (!trackerRes.ok) {
+        console.error('TrackerPortal error:', trackerResult);
+      }
+    } catch (trackerErr) {
+      console.error('TrackerPortal POST failed:', trackerErr);
+      trackerResult = { error: trackerErr.message };
+    }
+
+    // Mark loan as sent regardless of TrackerPortal result
     await prisma.loan.update({
       where: { id },
       data: { payrollSentAt: now },
@@ -374,14 +424,19 @@ export async function POST(request, { params }) {
         actorType: 'mlo',
         actorId: session.user.id,
         newValue: 'Sent to payroll',
-        details: payrollData,
+        details: {
+          trackerPayload,
+          trackerResult,
+          sentAt: now.toISOString(),
+          sentBy: session.user.id,
+        },
       },
     });
 
     return NextResponse.json({
       success: true,
       payrollSentAt: now.toISOString(),
-      payrollData,
+      trackerResult,
     });
   } catch (error) {
     console.error('Send to payroll error:', error);

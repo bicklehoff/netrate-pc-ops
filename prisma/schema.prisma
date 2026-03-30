@@ -113,6 +113,7 @@ model Loan {
   lenderName            String?        @map("lender_name")
   loanAmount            Decimal?       @map("loan_amount") @db.Decimal(12, 2)
   loanNumber            String?        @map("loan_number")
+  lenderLoanNumber      String?        @map("lender_loan_number")
   loanTerm              Int?           @map("loan_term")
   loanType              String?        @map("loan_type")
   numBorrowers          Int            @default(1) @map("num_borrowers")
@@ -124,6 +125,13 @@ model Loan {
   cdProcessedAt         DateTime?      @map("cd_processed_at") @db.Timestamptz(6)
   cdApprovedAt          DateTime?      @map("cd_approved_at") @db.Timestamptz(6)
   cdApprovedBy          String?        @map("cd_approved_by") @db.Uuid
+  closingDate           DateTime?      @map("closing_date") @db.Date
+  fundingDate           DateTime?      @map("funding_date") @db.Date
+  brokerCompensation    Decimal?       @map("broker_compensation") @db.Decimal(12, 2)
+  monthlyPayment        Decimal?       @map("monthly_payment") @db.Decimal(10, 2)
+  totalClosingCosts     Decimal?       @map("total_closing_costs") @db.Decimal(12, 2)
+  cashToClose           Decimal?       @map("cash_to_close") @db.Decimal(12, 2)
+  lenderCredits         Decimal?       @map("lender_credits") @db.Decimal(12, 2)
   payrollSentAt         DateTime?      @map("payroll_sent_at") @db.Timestamptz(6)
   actionTaken           String?        @map("action_taken")
   actionTakenDate       DateTime?      @map("action_taken_date") @db.Timestamptz(6)
@@ -135,10 +143,20 @@ model Loan {
   ldoxLoanId            String?        @unique @map("ldox_loan_id")
   creditScore           Int?           @map("credit_score")
   prequalLetterData     Json?          @map("prequal_letter_data")
+  appraisedValue        Decimal?       @map("appraised_value") @db.Decimal(12, 2)
+  loanProgram           String?        @map("loan_program")
+  underwriterName       String?        @map("underwriter_name")
+  accountExec           String?        @map("account_exec")
+  brokerProcessor       String?        @map("broker_processor")
   conditions            Condition[]
   documents             Document[]
   loanBorrowers         LoanBorrower[]
   dates                 LoanDates?
+  fha                   LoanFha?
+  hecm                  LoanHecm?
+  va                    LoanVa?
+  dscr                  LoanDscr?
+  conv                  LoanConv?
   events                LoanEvent[]
   loanNotes             LoanNote[]
   tasks                 LoanTask[]
@@ -219,6 +237,97 @@ model LoanDates {
   @@map("loan_dates")
 }
 
+// =============================================================================
+// LOAN-TYPE SATELLITE TABLES (1:1 with Loan)
+// =============================================================================
+
+model LoanFha {
+  id                        String    @id @default(uuid()) @db.Uuid
+  loanId                    String    @unique @map("loan_id") @db.Uuid
+  caseNumber                String?   @map("case_number")
+  caseAssignedDate          DateTime? @map("case_assigned_date")
+  ufmip                     Decimal?  @map("ufmip") @db.Decimal(12, 2)
+  monthlyMip                Decimal?  @map("monthly_mip") @db.Decimal(12, 2)
+  mipPercent                Decimal?  @map("mip_percent") @db.Decimal(5, 4)
+  financialAssessmentResult String?   @map("financial_assessment_result")
+  lesaResult                String?   @map("lesa_result")
+  createdAt                 DateTime  @default(now()) @map("created_at")
+  updatedAt                 DateTime  @updatedAt @map("updated_at")
+  loan                      Loan      @relation(fields: [loanId], references: [id], onDelete: Cascade)
+
+  @@map("loan_fha")
+}
+
+model LoanHecm {
+  id                       String    @id @default(uuid()) @db.Uuid
+  loanId                   String    @unique @map("loan_id") @db.Uuid
+  margin                   Decimal?  @map("margin") @db.Decimal(5, 4)
+  maxClaimAmount           Decimal?  @map("max_claim_amount") @db.Decimal(12, 2)
+  principalLimit           Decimal?  @map("principal_limit") @db.Decimal(12, 2)
+  initialInterestRateIndex Decimal?  @map("initial_interest_rate_index") @db.Decimal(5, 4)
+  initialInterestRate      Decimal?  @map("initial_interest_rate") @db.Decimal(5, 4)
+  expectedInterestRate     Decimal?  @map("expected_interest_rate") @db.Decimal(5, 4)
+  lifetimeCap              Decimal?  @map("lifetime_cap") @db.Decimal(5, 4)
+  pllExpiration            DateTime? @map("pll_expiration")
+  counselingExpiration     DateTime? @map("counseling_expiration")
+  counselingDate           DateTime? @map("counseling_date")
+  paymentPlan              String?   @map("payment_plan")
+  locLimit                 Decimal?  @map("loc_limit") @db.Decimal(12, 2)
+  locGrowthRate            Decimal?  @map("loc_growth_rate") @db.Decimal(5, 4)
+  mandatoryObligations     Decimal?  @map("mandatory_obligations") @db.Decimal(12, 2)
+  cashAvailableAtClosing   Decimal?  @map("cash_available_at_closing") @db.Decimal(12, 2)
+  pluPercent               Decimal?  @map("plu_percent") @db.Decimal(5, 4)
+  createdAt                DateTime  @default(now()) @map("created_at")
+  updatedAt                DateTime  @updatedAt @map("updated_at")
+  loan                     Loan      @relation(fields: [loanId], references: [id], onDelete: Cascade)
+
+  @@map("loan_hecm")
+}
+
+model LoanVa {
+  id                       String   @id @default(uuid()) @db.Uuid
+  loanId                   String   @unique @map("loan_id") @db.Uuid
+  entitlementAmount        Decimal? @map("entitlement_amount") @db.Decimal(12, 2)
+  fundingFee               Decimal? @map("funding_fee") @db.Decimal(12, 2)
+  fundingFeeExempt         Boolean  @default(false) @map("funding_fee_exempt")
+  certificateOfEligibility String?  @map("certificate_of_eligibility")
+  serviceType              String?  @map("service_type")
+  createdAt                DateTime @default(now()) @map("created_at")
+  updatedAt                DateTime @updatedAt @map("updated_at")
+  loan                     Loan     @relation(fields: [loanId], references: [id], onDelete: Cascade)
+
+  @@map("loan_va")
+}
+
+model LoanDscr {
+  id                 String   @id @default(uuid()) @db.Uuid
+  loanId             String   @unique @map("loan_id") @db.Uuid
+  dscrRatio          Decimal? @map("dscr_ratio") @db.Decimal(5, 3)
+  pppTerm            Int?     @map("ppp_term")
+  interestOnly       Boolean  @default(false) @map("interest_only")
+  interestOnlyTerm   Int?     @map("interest_only_term")
+  prepayPenaltyType  String?  @map("prepay_penalty_type")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+  loan               Loan     @relation(fields: [loanId], references: [id], onDelete: Cascade)
+
+  @@map("loan_dscr")
+}
+
+model LoanConv {
+  id              String   @id @default(uuid()) @db.Uuid
+  loanId          String   @unique @map("loan_id") @db.Uuid
+  pmiRequired     Boolean  @default(false) @map("pmi_required")
+  pmiMonthly      Decimal? @map("pmi_monthly") @db.Decimal(12, 2)
+  pmiRemovalLtv   Decimal? @map("pmi_removal_ltv") @db.Decimal(5, 4)
+  pmiCompany      String?  @map("pmi_company")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  loan            Loan     @relation(fields: [loanId], references: [id], onDelete: Cascade)
+
+  @@map("loan_conv")
+}
+
 model LoanEvent {
   id        String   @id @default(uuid()) @db.Uuid
   loanId    String   @map("loan_id") @db.Uuid
@@ -259,6 +368,9 @@ model Condition {
   chaseCount       Int?      @map("chase_count")
   lastChasedAt     DateTime? @map("last_chased_at") @db.Timestamptz(6)
   nextChaseAt      DateTime? @map("next_chase_at") @db.Timestamptz(6)
+  conditionNumber  Int?      @map("condition_number")
+  clearedAt        DateTime? @map("cleared_at") @db.Timestamptz(6)
+  receivedAt       DateTime? @map("received_at") @db.Timestamptz(6)
   dependsOnId      String?   @map("depends_on_id") @db.Uuid
   borrowerMessage  String?   @map("borrower_message")
   document         Document?  @relation(fields: [documentId], references: [id])
