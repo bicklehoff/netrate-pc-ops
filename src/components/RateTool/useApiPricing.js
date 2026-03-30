@@ -44,7 +44,7 @@ export function useApiPricing(scenario) {
           propertyValue: scenario.propertyValue,
           propertyType: scenario.propertyType,
           term: 30,
-          productType: 'fixed',
+          productType: scenario.productType || 'fixed',
           lockDays: 30,
           state: scenario.state,
         }),

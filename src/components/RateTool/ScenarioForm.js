@@ -103,6 +103,14 @@ export default function ScenarioForm({ scenario, onChange, onSubmit, loading }) 
           </select>
         </div>
         <div>
+          <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Amortization Type</label>
+          <select value={scenario.productType || 'fixed'} onChange={e => update("productType", e.target.value)}
+            className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm bg-white">
+            <option value="fixed">Fixed</option>
+            <option value="arm">ARM</option>
+          </select>
+        </div>
+        <div>
           <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Property Type</label>
           <select value={scenario.propertyType} onChange={e => update("propertyType", e.target.value)}
             className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm bg-white">
