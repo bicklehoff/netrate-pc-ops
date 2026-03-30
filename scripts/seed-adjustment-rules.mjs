@@ -331,6 +331,56 @@ function seedLenderConfig() {
   }
 }
 
+// ─── Product Loan Amount LLPAs (master per-product adjusters) ───────
+
+function seedProductLoanAmountLlpas() {
+  const data = loadJson('product-loan-amount-llpas.json');
+  if (!data) return;
+
+  const SRC = 'product-loan-amount-llpas.json';
+
+  /** Map term string from sheet to { termMin, termMax } */
+  function parseTerm(t) {
+    if (t === '10Yr') return { termMin: 10, termMax: 10 };
+    if (t === '15Yr' || t === '10/15Yr' || t === '10/15Yr Streamline') return { termMin: 10, termMax: 15 };
+    if (t === '20Yr') return { termMin: 20, termMax: 20 };
+    if (t === '25/30Yr') return { termMin: 25, termMax: 30 };
+    if (t === '30Yr') return { termMin: 30, termMax: 30 };
+    // ARMs — use 30yr term range
+    if (t.includes('ARM')) return { termMin: 30, termMax: 30 };
+    return null;
+  }
+
+  for (const p of data.products) {
+    // Skip occupancy, state, and non-owner rows for now — handle separately later
+    if (p.isOccupancy || p.isState || p.isNonOwner) continue;
+    // Skip non-conventional for now (DSCR, Jumbo, NonQM, VA, FHA have their own seeding)
+    if (!['conventional'].includes(p.loanType)) continue;
+
+    const term = parseTerm(p.term);
+    if (!term) continue;
+
+    // Loan amount adjustments — per product/tier/agency/term/amount band
+    for (const [bandKey, value] of Object.entries(p.loanAmountAdj)) {
+      if (value === 0) continue; // Skip zero adjustments
+      const amt = parseAmount(bandKey);
+      if (!amt) continue;
+
+      addRow({
+        adjustmentType: 'productLoanAmount',
+        tier: p.tier,
+        agency: p.agency,
+        loanType: p.loanType,
+        productGroup: p.productType, // 'fixed' or 'arm'
+        ...amt,
+        ...term,
+        value,
+        sourceFile: SRC,
+      });
+    }
+  }
+}
+
 // ─── Execute ────────────────────────────────────────────────────────
 
 async function main() {
@@ -346,6 +396,7 @@ async function main() {
   seedFhaLlpa();
   seedFhaSrp();
   seedLenderConfig();
+  seedProductLoanAmountLlpas();
 
   // Count by type
   const counts = {};

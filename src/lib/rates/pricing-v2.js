@@ -407,6 +407,24 @@ export function priceRate(rateEntry, product, scenario, lenderAdj, brokerConfig,
     }
   }
 
+  // Step 5a: Per-product loan amount adjustment (from "Product Loan Amount LLPAs" sheet)
+  // These are product-specific credits/costs based on tier + agency + productType + term + loan amount
+  if (lenderAdj?.productLoanAmount?.length) {
+    for (const pla of lenderAdj.productLoanAmount) {
+      if (pla.tier && pla.tier !== tier) continue;
+      if (pla.agency && pla.agency !== investor) continue;
+      if (pla.productType && pla.productType !== productType) continue;
+      if (pla.termMin != null && term < pla.termMin) continue;
+      if (pla.termMax != null && term > pla.termMax) continue;
+      if (pla.loanAmountMin != null && effectiveLoanAmount < pla.loanAmountMin) continue;
+      if (pla.loanAmountMax != null && effectiveLoanAmount > pla.loanAmountMax) continue;
+
+      price += pla.value;
+      breakdown.push({ label: 'Product loan amt adj', value: pla.value });
+      break; // Only one match per product — most specific wins
+    }
+  }
+
   // Step 5b: Product feature adjustments (FICO band, purpose, state, tier)
   if (lenderAdj?.productFeatures?.length) {
     const scenarioPropertyType = scenario.propertyType || 'sfr';

@@ -64,6 +64,9 @@ function buildAdjObject(allRows) {
     investorAdj: { fnma: {}, fhlmc: {} },
     fhlmcSpecial: [],
     productFeatures: [],
+    // Per-product loan amount adjustments from "Product Loan Amount LLPAs" sheet
+    // Array of { tier, agency, termMin, termMax, loanAmountMin, loanAmountMax, value }
+    productLoanAmount: [],
   };
 
   for (const row of allRows) {
@@ -175,6 +178,20 @@ function buildAdjObject(allRows) {
           productGroup: row.productGroup,
           ficoMin: row.ficoMin,
           ficoMax: row.ficoMax,
+          value: val,
+        });
+        break;
+      }
+
+      case 'productLoanAmount': {
+        adj.productLoanAmount.push({
+          tier: row.tier,
+          agency: row.agency,
+          productType: row.productGroup, // 'fixed' or 'arm'
+          termMin: row.termMin,
+          termMax: row.termMax,
+          loanAmountMin: row.loanAmountMin,
+          loanAmountMax: row.loanAmountMax,
           value: val,
         });
         break;
