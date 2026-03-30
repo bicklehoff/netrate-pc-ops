@@ -71,6 +71,10 @@ const EVENT_ICONS = {
   doc_uploaded: '📎',
   doc_deleted: '🗑',
   cd_uploaded: '📕',
+  cd_extracted: '🔍',
+  cd_extraction_failed: '⚠️',
+  cd_approved: '✅',
+  cd_disputed: '❌',
   payroll_sent: '💰',
   field_updated: '✏️',
   note_added: '💬',
@@ -627,6 +631,14 @@ function formatEventMessage(event) {
       return `Document deleted: ${event.newValue || 'Unknown'}`;
     case 'cd_uploaded':
       return `Closing Disclosure uploaded: ${event.newValue || 'Unknown'}`;
+    case 'cd_extracted':
+      return 'CD data extracted successfully';
+    case 'cd_extraction_failed':
+      return `CD extraction failed: ${event.details?.error || 'Unknown error'}`;
+    case 'cd_approved':
+      return 'CD data approved by MLO';
+    case 'cd_disputed':
+      return `CD data disputed: ${event.details?.reason || ''}`;
     case 'payroll_sent':
       return 'Sent to payroll for commission processing';
     case 'note_added':

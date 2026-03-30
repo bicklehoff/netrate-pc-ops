@@ -1,17 +1,17 @@
-// API: Payroll — CD Upload + Send to Payroll
-// PUT  /api/portal/mlo/loans/:id/payroll — Upload/replace the final Closing Disclosure PDF
-// POST /api/portal/mlo/loans/:id/payroll — Send CD + loan data to payroll (marks loan)
-// GET  /api/portal/mlo/loans/:id/payroll — Get payroll status for this loan
+// API: Payroll — CD Upload + Extraction + Approval + Send to Payroll
+// PUT   /api/portal/mlo/loans/:id/payroll — Upload CD, trigger extraction via Claude
+// PATCH /api/portal/mlo/loans/:id/payroll — Approve or dispute extracted CD data
+// POST  /api/portal/mlo/loans/:id/payroll — Send approved CD + loan data to payroll
+// GET   /api/portal/mlo/loans/:id/payroll — Get payroll/extraction status
 //
-// The CD PDF is uploaded to WorkDrive's CLOSING subfolder. "Send to Payroll" marks
-// the loan with payrollSentAt timestamp. Mac queries for funded loans with payrollSentAt
-// set, fetches the CD from WorkDrive, and runs it through GCS OCR.
+// Flow: Upload CD → auto-extract via Claude → MLO reviews → MLO approves → Send to Payroll
 
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { uploadFile, createLoanFolder } from '@/lib/zoho-workdrive';
+import { extractCdData } from '@/lib/cd-extractor';
 
 async function verifyMloAccess(loanId, session) {
   if (!session || session.user.userType !== 'mlo') return null;
@@ -32,7 +32,7 @@ async function verifyMloAccess(loanId, session) {
   return loan;
 }
 
-// ─── GET: Payroll status ─────────────────────────────────────
+// ─── GET: Payroll + extraction status ───────────────────────
 export async function GET(request, { params }) {
   try {
     const session = await getServerSession(authOptions);
@@ -47,9 +47,15 @@ export async function GET(request, { params }) {
       status: loan.status,
       cdWorkDriveFileId: loan.cdWorkDriveFileId,
       cdFileName: loan.cdFileName,
+      cdExtractedData: loan.cdExtractedData,
+      cdProcessedAt: loan.cdProcessedAt,
+      cdApprovedAt: loan.cdApprovedAt,
+      cdApprovedBy: loan.cdApprovedBy,
       payrollSentAt: loan.payrollSentAt,
       isFunded: loan.status === 'funded',
       hasCD: !!loan.cdWorkDriveFileId,
+      isExtracted: loan.cdExtractedData?.status === 'success',
+      isApproved: !!loan.cdApprovedAt,
       isSent: !!loan.payrollSentAt,
     });
   } catch (error) {
@@ -58,7 +64,7 @@ export async function GET(request, { params }) {
   }
 }
 
-// ─── PUT: Upload/replace the final CD ────────────────────────
+// ─── PUT: Upload CD + trigger extraction ────────────────────
 export async function PUT(request, { params }) {
   try {
     const session = await getServerSession(authOptions);
@@ -82,7 +88,6 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    // Must be a PDF
     if (!file.name.toLowerCase().endsWith('.pdf')) {
       return NextResponse.json({ error: 'Closing Disclosure must be a PDF file' }, { status: 400 });
     }
@@ -95,7 +100,6 @@ export async function PUT(request, { params }) {
     let closingFolderId = loan.workDriveSubfolders?.CLOSING;
 
     if (!closingFolderId) {
-      // Auto-create WorkDrive folder structure for this loan
       const loName = loan.mlo
         ? `${loan.mlo.firstName} ${loan.mlo.lastName}`
         : 'David Burson';
@@ -107,7 +111,6 @@ export async function PUT(request, { params }) {
         loName,
       });
 
-      // Save the folder IDs on the loan for future use
       await prisma.loan.update({
         where: { id },
         data: {
@@ -121,18 +124,21 @@ export async function PUT(request, { params }) {
 
     const uploaded = await uploadFile(file, file.name, closingFolderId, true);
 
-    // Store the CD reference on the loan
+    // Store CD reference + clear any previous extraction/approval/payroll state
     await prisma.loan.update({
       where: { id },
       data: {
         cdWorkDriveFileId: uploaded.id,
         cdFileName: file.name,
-        // Clear payrollSentAt if replacing CD after already sending
+        cdExtractedData: null,
+        cdProcessedAt: null,
+        cdApprovedAt: null,
+        cdApprovedBy: null,
         payrollSentAt: null,
       },
     });
 
-    // Audit
+    // Audit: CD uploaded
     await prisma.loanEvent.create({
       data: {
         loanId: id,
@@ -150,10 +156,45 @@ export async function PUT(request, { params }) {
       },
     });
 
+    // Trigger CD extraction via Claude
+    const loanContext = {
+      borrowerName: loan.borrower
+        ? `${loan.borrower.firstName} ${loan.borrower.lastName}`
+        : null,
+      loanNumber: loan.loanNumber,
+      propertyAddress: loan.propertyAddress,
+    };
+
+    const extraction = await extractCdData(uploaded.id, loanContext);
+
+    await prisma.loan.update({
+      where: { id },
+      data: {
+        cdExtractedData: extraction,
+        cdProcessedAt: new Date(),
+      },
+    });
+
+    // Audit: extraction result
+    await prisma.loanEvent.create({
+      data: {
+        loanId: id,
+        eventType: extraction.status === 'success' ? 'cd_extracted' : 'cd_extraction_failed',
+        actorType: 'system',
+        actorId: 'cd-extractor',
+        newValue: extraction.status,
+        details: extraction.status === 'success'
+          ? { fields: Object.keys(extraction.data) }
+          : { error: extraction.error },
+      },
+    });
+
     return NextResponse.json({
       success: true,
       cdWorkDriveFileId: uploaded.id,
       cdFileName: file.name,
+      cdExtractedData: extraction,
+      cdProcessedAt: new Date().toISOString(),
     });
   } catch (error) {
     console.error('CD upload error:', error);
@@ -161,7 +202,101 @@ export async function PUT(request, { params }) {
   }
 }
 
-// ─── POST: Send to Payroll ───────────────────────────────────
+// ─── PATCH: Approve or dispute extracted CD data ────────────
+export async function PATCH(request, { params }) {
+  try {
+    const session = await getServerSession(authOptions);
+    const { id } = await params;
+    const loan = await verifyMloAccess(id, session);
+    if (!loan) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { action, notes } = body;
+
+    if (action === 'approve') {
+      if (!loan.cdExtractedData || loan.cdExtractedData.status !== 'success') {
+        return NextResponse.json(
+          { error: 'No successful CD extraction to approve' },
+          { status: 400 }
+        );
+      }
+
+      if (loan.cdApprovedAt) {
+        return NextResponse.json(
+          { error: 'CD data already approved' },
+          { status: 400 }
+        );
+      }
+
+      const now = new Date();
+      await prisma.loan.update({
+        where: { id },
+        data: {
+          cdApprovedAt: now,
+          cdApprovedBy: session.user.id,
+        },
+      });
+
+      await prisma.loanEvent.create({
+        data: {
+          loanId: id,
+          eventType: 'cd_approved',
+          actorType: 'mlo',
+          actorId: session.user.id,
+          newValue: 'approved',
+          details: {
+            extractedData: loan.cdExtractedData.data,
+            ...(notes ? { notes } : {}),
+          },
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        cdApprovedAt: now.toISOString(),
+      });
+    }
+
+    if (action === 'dispute') {
+      // Clear CD + extraction — MLO needs to re-upload
+      await prisma.loan.update({
+        where: { id },
+        data: {
+          cdWorkDriveFileId: null,
+          cdFileName: null,
+          cdExtractedData: null,
+          cdProcessedAt: null,
+          cdApprovedAt: null,
+          cdApprovedBy: null,
+        },
+      });
+
+      await prisma.loanEvent.create({
+        data: {
+          loanId: id,
+          eventType: 'cd_disputed',
+          actorType: 'mlo',
+          actorId: session.user.id,
+          newValue: 'disputed',
+          details: {
+            reason: notes || 'MLO disputed extracted CD data',
+          },
+        },
+      });
+
+      return NextResponse.json({ success: true, cleared: true });
+    }
+
+    return NextResponse.json({ error: 'Invalid action. Use "approve" or "dispute".' }, { status: 400 });
+  } catch (error) {
+    console.error('CD approve/dispute error:', error);
+    return NextResponse.json({ error: 'Failed to process CD action' }, { status: 500 });
+  }
+}
+
+// ─── POST: Send to Payroll ──────────────────────────────────
 export async function POST(request, { params }) {
   try {
     const session = await getServerSession(authOptions);
@@ -182,6 +317,13 @@ export async function POST(request, { params }) {
       );
     }
 
+    if (!loan.cdApprovedAt) {
+      return NextResponse.json(
+        { error: 'CD data must be reviewed and approved before sending to payroll' },
+        { status: 400 }
+      );
+    }
+
     if (loan.payrollSentAt) {
       return NextResponse.json(
         { error: 'Already sent to payroll. Upload a new CD to re-send.' },
@@ -191,7 +333,6 @@ export async function POST(request, { params }) {
 
     const now = new Date();
 
-    // Build the payroll data snapshot
     const payrollData = {
       loanId: loan.id,
       borrowerName: `${loan.borrower.firstName} ${loan.borrower.lastName}`,
@@ -206,10 +347,10 @@ export async function POST(request, { params }) {
       loanTerm: loan.loanTerm,
       purpose: loan.purpose,
       propertyAddress: loan.propertyAddress,
-      // CD file reference — Mac/Tracker uses this to fetch from WorkDrive
       cdWorkDriveFileId: loan.cdWorkDriveFileId,
       cdFileName: loan.cdFileName,
-      // WorkDrive folder locations
+      cdExtractedData: loan.cdExtractedData,
+      cdApprovedAt: loan.cdApprovedAt?.toISOString() || null,
       workDriveFolderId: loan.workDriveFolderId,
       closingFolderId: loan.workDriveSubfolders?.CLOSING || null,
       workDriveSubfolders: loan.workDriveSubfolders || null,
@@ -217,13 +358,11 @@ export async function POST(request, { params }) {
       sentBy: session.user.id,
     };
 
-    // Mark loan as sent to payroll
     await prisma.loan.update({
       where: { id },
       data: { payrollSentAt: now },
     });
 
-    // Audit event with full payroll snapshot
     await prisma.loanEvent.create({
       data: {
         loanId: id,

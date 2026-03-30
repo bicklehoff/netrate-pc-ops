@@ -120,6 +120,10 @@ model Loan {
   workDriveSubfolders   Json?          @map("work_drive_subfolders")
   cdWorkDriveFileId     String?        @map("cd_work_drive_file_id")
   cdFileName            String?        @map("cd_file_name")
+  cdExtractedData       Json?          @map("cd_extracted_data")
+  cdProcessedAt         DateTime?      @map("cd_processed_at") @db.Timestamptz(6)
+  cdApprovedAt          DateTime?      @map("cd_approved_at") @db.Timestamptz(6)
+  cdApprovedBy          String?        @map("cd_approved_by") @db.Uuid
   payrollSentAt         DateTime?      @map("payroll_sent_at") @db.Timestamptz(6)
   actionTaken           String?        @map("action_taken")
   actionTakenDate       DateTime?      @map("action_taken_date") @db.Timestamptz(6)
