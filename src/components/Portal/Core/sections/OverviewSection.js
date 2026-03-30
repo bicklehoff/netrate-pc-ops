@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import SectionCard from '../SectionCard';
 import PayrollSection from '../../PayrollSection';
+import CompensationSection from '../../CompensationSection';
 import PrequalLetterModal from '../../PrequalLetter/PrequalLetterModal';
 
 const MILESTONES = [
@@ -106,6 +107,7 @@ export default function OverviewSection({ loan, onRefresh }) {
 
       {loan.status === 'funded' && (
         <PayrollSection loan={loan} onRefresh={onRefresh} />
+        <CompensationSection loan={loan} />
       )}
 
       {/* ─── Borrower & Property (side by side) ─── */}
