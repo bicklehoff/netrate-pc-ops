@@ -5,6 +5,62 @@
 
 ---
 
+## 2026-03-30 — Dev — CD Upload + Payroll Pipeline (Epic Session)
+**Actor:** pc-dev
+
+### What was built
+- **CD Extraction via Claude** — Upload CD PDF → Claude auto-extracts 20+ fields (loan amount, rate, broker comp, reimbursements, borrower names, lender, dates, wire total). File buffer passed directly to Claude (no WorkDrive re-download).
+- **MLO Review/Approval Flow** — 6-phase PayrollSection: Upload → Extracting → Error/Review → Approved → Send → Sent. Comparison table ("From CD" vs "On File") with Match/New/Mismatch badges. Approve blocked until all items resolved.
+- **Comp Split Calculation** — 12.948857% house fee, LO gets remainder. Calculated locally from CD data, no TrackerPortal dependency. Shows in review phase and standalone Compensation section.
+- **TrackerPortal Integration** — POST to `/api/payroll/commission-confirmed` on Send to Payroll. Sends gross comp, reimbursements (appraisal, credit, misc), wireTotal, borrower/lender/loan details, LO NMLS.
+- **Compensation Section** — Standalone component on loan overview. Shows broker comp → house fee → LO commission → reimbursements → wire total. TrackerPortal status badge.
+- **Payroll Details Display** — Sent phase shows Payroll Confirmation (CD#, wire total, LO comp) and Submitted Data (all fields sent to TrackerPortal).
+- **Nickname Detection** — Same last name, different first name → "Is Jay a nickname for Tommy?" Stores legalFirstName/legalLastName/nickname on borrower.
+- **Co-Borrower/NBS Detection** — Extra people on CD classified as Co-Borrower (gets borrower record + loan link) or Non-Borrowing Spouse (contact only). Approve blocked until all classified.
+- **Duplicate Loan Check** — On CD upload, searches for other loans with same borrower not settled/cancelled. Warning banner with MCR compliance note.
+- **CD Data → Loan Record** — On approval, extracted values written to loan: lenderLoanNumber, closingDate, fundingDate, brokerCompensation, monthlyPayment, totalClosingCosts, cashToClose, lenderCredits, loanType, lenderName.
+- **core-payroll Skill** — Full reference for any dev session: DB fields, queries, API endpoints, comp plan, UI phases, audit events.
+
+### Schema changes (via prisma db push)
+- Loan: lenderLoanNumber, closingDate, fundingDate, brokerCompensation, monthlyPayment, totalClosingCosts, cashToClose, lenderCredits, cdExtractedData, cdProcessedAt, cdApprovedAt, cdApprovedBy
+- Borrower: legalFirstName, legalLastName, nickname
+
+### New files
+- `src/lib/cd-extractor.js` — Claude PDF extraction
+- `src/components/Portal/CompensationSection.js` — Standalone comp display
+- `.claude/skills/core-payroll/SKILL.md` — Payroll skill reference
+
+### Key decisions
+- Comp split: house 12.948857%, LO gets remainder (David confirmed, Mac relayed exact %)
+- CD is source of truth — on approval, CD values overwrite loan record
+- Calculate comp locally, don't depend on TrackerPortal for the split
+- borrowerNames extracted as array of {firstName, lastName} for person reconciliation
+- TrackerPortal API key via TRACKER_API_KEY env var (ntk_e269...)
+
+### MCR governance relay sent
+- Quotes vs Applications: need to distinguish for MCR disposition
+- Lender change detection: each lender submission = separate MCR application
+- Dup check on funded: force MLO to classify other loans for same borrower
+- Awaiting Mac + Claw governance input
+
+### Bugs fixed
+- False "CD upload failed" — upload succeeds but response times out. Now verifies server state before showing error.
+- Address comparison false mismatch — normalized case/punctuation/whitespace
+- WorkDrive re-download 404 — pass file buffer directly to Claude instead
+- Vercel timeout — maxDuration 30s on payroll route
+- JSX sibling elements — wrapped in fragment
+- Unused onRefresh prop — lint error
+
+### Open items
+- [ ] LDox always pushes loanType as "other" — fix ingest or require manual entry
+- [ ] Move house fee rate to broker_config DB table (currently hardcoded constant)
+- [ ] Contact dedup before "Save as contact" for co-borrowers/NBS
+- [ ] Funded → Settled transition after payroll confirmed
+- [ ] MCR quote vs application status model (awaiting governance)
+- [ ] Lender change detection and old-lender disposition
+
+---
+
 ## 2026-03-30 — Dev — Rate Watch UX Overhaul, Contact Bar, Market Pipeline
 **Actor:** pc-dev
 
