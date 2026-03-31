@@ -57,8 +57,17 @@ function parseLtv(band) {
 
 /** "0-50000" → { loanAmountMin: 0, loanAmountMax: 50000 } */
 function parseAmount(band) {
+  // "300001-400000"
   const range = band.match(/(\d+)-(\d+)/);
   if (range) return { loanAmountMin: parseInt(range[1]), loanAmountMax: parseInt(range[2]) };
+  // "<=110000"
+  const le = band.match(/<=\s*(\d+)/);
+  if (le) return { loanAmountMin: 0, loanAmountMax: parseInt(le[1]) };
+  // "700001+" or ">700000"
+  const gt = band.match(/(\d+)\+/);
+  if (gt) return { loanAmountMin: parseInt(gt[1]), loanAmountMax: 99999999 };
+  const gtOnly = band.match(/>\s*(\d+)/);
+  if (gtOnly) return { loanAmountMin: parseInt(gtOnly[1]) + 1, loanAmountMax: 99999999 };
   console.warn(`  ⚠ Amount: "${band}"`);
   return null;
 }
@@ -249,6 +258,112 @@ function seedFhaSrp() {
   }
 }
 
+// ─── Elite FHA LLPAs ────────────────────────────────────────────────
+
+function seedEliteFhaLlpa() {
+  const data = loadJson('elite-fha-llpa.json');
+  if (!data) return;
+
+  const SRC = 'elite-fha-llpa.json';
+
+  // 1. FICO/Loan Amount grid — these are credits/costs based on FICO × base loan amount
+  for (const row of data.ficoLoanAmountGrid) {
+    for (const [bandKey, value] of Object.entries(row.values)) {
+      if (value === 0) continue;
+      const amt = parseAmount(bandKey);
+      if (!amt) continue;
+      addRow({
+        adjustmentType: 'eliteFhaFicoLoanAmt',
+        loanType: 'fha', tier: 'elite',
+        ficoMin: row.ficoMin, ficoMax: row.ficoMax,
+        ...amt, value, sourceFile: SRC,
+      });
+    }
+  }
+
+  // 2. Purpose/StateTier/FICO/LTV grids — expand state tiers to individual states
+  const purposes = [
+    { key: 'purchaseGrid', purpose: 'purchase' },
+    { key: 'cashoutGrid', purpose: 'cashout' },
+    { key: 'refiGrid', purpose: 'refinance' },
+  ];
+
+  // Build reverse map: state → tier
+  const stateTiers = data.stateTiers;
+
+  for (const { key, purpose } of purposes) {
+    const grid = data[key];
+    if (!grid) continue;
+
+    for (const [tierStr, ficoRows] of Object.entries(grid)) {
+      const tier = Number(tierStr);
+      // Find all states in this tier
+      const statesInTier = Object.entries(stateTiers)
+        .filter(([_, t]) => t === tier)
+        .map(([st]) => st);
+
+      for (const ficoRow of ficoRows) {
+        for (const [ltvKey, value] of Object.entries(ficoRow.values)) {
+          if (value === 0) continue;
+          // Parse LTV band
+          let ltvMin, ltvMax;
+          if (ltvKey === '<=80') { ltvMin = 0; ltvMax = 80; }
+          else if (ltvKey === '80.01-85') { ltvMin = 80.01; ltvMax = 85; }
+          else if (ltvKey === '85.01-90') { ltvMin = 85.01; ltvMax = 90; }
+          else if (ltvKey === '90.01-95') { ltvMin = 90.01; ltvMax = 95; }
+          else if (ltvKey === '>95') { ltvMin = 95.01; ltvMax = 100; }
+          else continue;
+
+          // Seed one row per state in this tier
+          for (const state of statesInTier) {
+            addRow({
+              adjustmentType: 'eliteFhaPurposeLtv',
+              loanType: 'fha', tier: 'elite',
+              purpose, state,
+              ficoMin: ficoRow.ficoMin, ficoMax: ficoRow.ficoMax,
+              ltvMin, ltvMax, value,
+              sourceFile: SRC,
+            });
+          }
+        }
+      }
+    }
+  }
+}
+
+// ─── Elite FHA SRP (from Elite Govt SRP sheet) ─────────────────────
+
+function seedEliteFhaSrp() {
+  // Elite FHA SRP is in the same JSON structure as elite-conv-srp but from Govt SRP sheet
+  // It's amount-banded per state, same as Elite Conv SRP
+  const data = loadJson('elite-fha-srp.json');
+  if (!data) return;
+
+  const SRC = 'elite-fha-srp.json';
+  for (const [productGroup, states] of Object.entries(data)) {
+    if (productGroup.startsWith('_')) continue; // skip meta
+    if (typeof states !== 'object') continue;
+
+    for (const [state, bands] of Object.entries(states)) {
+      if (typeof bands !== 'object') continue;
+
+      for (const [bandKey, value] of Object.entries(bands)) {
+        if (typeof value !== 'number' || value === 0) continue;
+        const amt = parseAmount(bandKey);
+        if (!amt) continue;
+
+        addRow({
+          adjustmentType: 'srp',
+          loanType: 'fha', tier: 'elite',
+          state, escrowType: 'withImpounds',
+          productGroup,
+          ...amt, value, sourceFile: SRC,
+        });
+      }
+    }
+  }
+}
+
 // ─── Lender Config (investor adj, FHLMC specials, purpose credits, FHA additional) ──
 
 function seedLenderConfig() {
@@ -395,6 +510,8 @@ async function main() {
   seedEliteConvSrp();
   seedFhaLlpa();
   seedFhaSrp();
+  seedEliteFhaLlpa();
+  seedEliteFhaSrp();
   seedLenderConfig();
   seedProductLoanAmountLlpas();
 

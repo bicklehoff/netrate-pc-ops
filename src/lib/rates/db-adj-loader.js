@@ -69,6 +69,10 @@ function buildAdjObject(allRows) {
     // Per-product loan amount adjustments from "Product Loan Amount LLPAs" sheet
     // Array of { tier, agency, termMin, termMax, loanAmountMin, loanAmountMax, value }
     productLoanAmount: [],
+    // Elite FHA: FICO × Loan Amount grid
+    eliteFhaFicoLoanAmt: [],
+    // Elite FHA: Purpose × State × FICO × LTV grid
+    eliteFhaPurposeLtv: [],
   };
 
   for (const row of allRows) {
@@ -194,6 +198,30 @@ function buildAdjObject(allRows) {
           termMax: row.termMax,
           loanAmountMin: row.loanAmountMin,
           loanAmountMax: row.loanAmountMax,
+          value: val,
+        });
+        break;
+      }
+
+      case 'eliteFhaFicoLoanAmt': {
+        adj.eliteFhaFicoLoanAmt.push({
+          ficoMin: row.ficoMin,
+          ficoMax: row.ficoMax,
+          loanAmountMin: row.loanAmountMin,
+          loanAmountMax: row.loanAmountMax,
+          value: val,
+        });
+        break;
+      }
+
+      case 'eliteFhaPurposeLtv': {
+        adj.eliteFhaPurposeLtv.push({
+          purpose: row.purpose,
+          state: row.state,
+          ficoMin: row.ficoMin,
+          ficoMax: row.ficoMax,
+          ltvMin: Number(row.ltvMin),
+          ltvMax: Number(row.ltvMax),
           value: val,
         });
         break;

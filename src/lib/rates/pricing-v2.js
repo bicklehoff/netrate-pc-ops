@@ -182,9 +182,10 @@ function getFicoBand(score) {
  * Core: flat value per state/product (e.g., CO Fixed 20/25/30yr → 1.830)
  * Elite: amount-banded per state/product (e.g., CO $400K Fixed 20/25/30yr → 1.628)
  */
-function getSRP(state, term, productType, tier, lenderAdj, loanAmount) {
+function getSRP(state, term, productType, tier, lenderAdj, loanAmount, loanType) {
   if (!lenderAdj?.srp) return 0;
 
+  const isFha = loanType === 'fha';
   const isArm = productType === 'arm';
   const escrowKey = 'withImpounds';
 
@@ -195,12 +196,13 @@ function getSRP(state, term, productType, tier, lenderAdj, loanAmount) {
 
   if (!srpTable?.[state]) return 0;
 
-  // Elite uses different product group names than Core
+  // Product group key varies by tier and loan type
   let productKey;
   if (tier === 'elite') {
+    const prefix = isFha ? 'FHA' : 'Conventional';
     productKey = isArm
-      ? (term >= 10 ? 'Conventional 10/6 ARM' : term >= 7 ? 'Conventional 7/6 ARM' : 'Conventional 5/6 ARM')
-      : (term <= 15 ? 'Conventional 10/15 Year Fixed' : 'Conventional 20/25/30 Year Fixed');
+      ? (term >= 10 ? `${prefix} 10/6 ARM` : term >= 7 ? `${prefix} 7/6 ARM` : `${prefix} 5/6 ARM`)
+      : (term <= 15 ? `${prefix} 10/15 Year Fixed` : `${prefix} 20/25/30 Year Fixed`);
   } else {
     productKey = isArm ? 'ARMs' : (term <= 15 ? 'Fixed 10/15 Yr' : 'Fixed 20/25/30 Yr');
   }
@@ -365,25 +367,57 @@ export function priceRate(rateEntry, product, scenario, lenderAdj, brokerConfig,
   breakdown.push({ label: 'Base price', value: price });
 
   // Step 2: FICO/LTV adjustment — resolve tier/agency/term-specific grids
-  const ficoGrids = resolveGrids(tier, investor, term, lenderAdj, llpaGrids);
-  if (isConventional) {
-    // Conventional: values are costs (negative in grid) → subtract
-    const ficoLtvCost = getFicoLtvAdjustment(creditScore, ltv, loanPurpose, ficoGrids);
-    if (ficoLtvCost !== 0) {
-      price -= ficoLtvCost;
-      breakdown.push({ label: `FICO/LTV (${getFicoBand(creditScore)}, ${ltv}%)`, value: -ficoLtvCost });
+  // Elite FHA uses a completely different adjustment path (see Step 2b below)
+  const isEliteFha = isFha && tier === 'elite';
+
+  if (!isEliteFha) {
+    const ficoGrids = resolveGrids(tier, investor, term, lenderAdj, llpaGrids);
+    if (isConventional) {
+      // Conventional: values are costs (negative in grid) → subtract
+      const ficoLtvCost = getFicoLtvAdjustment(creditScore, ltv, loanPurpose, ficoGrids);
+      if (ficoLtvCost !== 0) {
+        price -= ficoLtvCost;
+        breakdown.push({ label: `FICO/LTV (${getFicoBand(creditScore)}, ${ltv}%)`, value: -ficoLtvCost });
+      }
+    } else {
+      // Core FHA: values are signed — positive = credit, negative = cost
+      const ficoLtvVal = getFicoLtvRawValue(creditScore, ltv, loanPurpose, ficoGrids);
+      if (ficoLtvVal !== 0) {
+        price += ficoLtvVal;
+        breakdown.push({ label: `FICO/LTV (${getFicoBand(creditScore)}, ${ltv}%)`, value: ficoLtvVal });
+      }
     }
-  } else {
-    // FHA: values are signed — positive = credit, negative = cost
-    const ficoLtvVal = getFicoLtvRawValue(creditScore, ltv, loanPurpose, ficoGrids);
-    if (ficoLtvVal !== 0) {
-      price += ficoLtvVal;
-      breakdown.push({ label: `FICO/LTV (${getFicoBand(creditScore)}, ${ltv}%)`, value: ficoLtvVal });
+  }
+
+  // Step 2b: Elite FHA — FICO/Loan Amount grid + Purpose/State/FICO/LTV grid
+  if (isEliteFha) {
+    // FICO × Loan Amount adjustment (uses BASE loan amount, not effective)
+    if (lenderAdj?.eliteFhaFicoLoanAmt?.length) {
+      for (const row of lenderAdj.eliteFhaFicoLoanAmt) {
+        if (creditScore < row.ficoMin || creditScore > row.ficoMax) continue;
+        if (loanAmount < row.loanAmountMin || loanAmount > row.loanAmountMax) continue;
+        price += row.value;
+        breakdown.push({ label: `FHA FICO/Amt adj`, value: row.value });
+        break;
+      }
+    }
+
+    // Purpose × State × FICO × LTV adjustment (uses BASE LTV, not effective)
+    if (lenderAdj?.eliteFhaPurposeLtv?.length) {
+      for (const row of lenderAdj.eliteFhaPurposeLtv) {
+        if (row.purpose !== loanPurpose) continue;
+        if (row.state !== state) continue;
+        if (creditScore < row.ficoMin || creditScore > row.ficoMax) continue;
+        if (ltv < row.ltvMin || ltv > row.ltvMax) continue;
+        price += row.value;
+        breakdown.push({ label: `FHA state/LTV adj`, value: row.value });
+        break;
+      }
     }
   }
 
   // Step 3: SRP — CREDIT → add (pass loanAmount for Elite banded lookup)
-  const srp = getSRP(state, term, productType, tier, lenderAdj, loanAmount);
+  const srp = getSRP(state, term, productType, tier, lenderAdj, loanAmount, loanType);
   if (srp !== 0) {
     price += srp;
     breakdown.push({ label: `SRP (${state})`, value: +srp });
@@ -426,7 +460,8 @@ export function priceRate(rateEntry, product, scenario, lenderAdj, brokerConfig,
   }
 
   // Step 5b: Product feature adjustments (FICO band, purpose, state, tier)
-  if (lenderAdj?.productFeatures?.length) {
+  // Elite FHA has its own adjustment path — skip generic product features
+  if (lenderAdj?.productFeatures?.length && !isEliteFha) {
     const scenarioPropertyType = scenario.propertyType || 'sfr';
     for (const pf of lenderAdj.productFeatures) {
       // Check filters
