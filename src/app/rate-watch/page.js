@@ -204,23 +204,23 @@ export default async function RateWatchPage() {
       <PredictionDataProvider>
         <div className="max-w-7xl mx-auto px-4 py-4 space-y-4">
 
-          {/* Row 1: Hero (2col) + Treasury Yields (1col) */}
+          {/* Row 1: Hero (2col) + Fed Prediction (1col) */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div className="lg:col-span-2">
               <HeroStrip todayRate={todayRate} rateChange={rateChange} />
             </div>
             <div>
-              <TreasuryYields fredLatest={fredData.latest} />
+              <FedPanelSection />
             </div>
           </div>
 
-          {/* Row 2: Commentary (2col) + Fed Prediction (1col) */}
+          {/* Row 2: Commentary (2col) + Treasury Yields (1col) */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div className="lg:col-span-2">
               <Commentary />
             </div>
             <div>
-              <FedPanelSection />
+              <TreasuryYields fredLatest={fredData.latest} />
             </div>
           </div>
 
@@ -243,7 +243,7 @@ export default async function RateWatchPage() {
             <RateChart rateHistory={rateHistory} fredData={fredData.series} />
           </div>
 
-          {/* Row 5: Fed Statement Diff (1col) + empty / future widget (1col) */}
+          {/* Row 5: Fed Statement Diff + future widget */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <FedStatementDiff />
           </div>

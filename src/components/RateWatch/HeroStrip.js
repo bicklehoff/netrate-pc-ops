@@ -88,32 +88,29 @@ export default function HeroStrip({ todayRate, rateChange }) {
   const dateStr = today.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-6 md:p-8 shadow-sm relative overflow-hidden">
+    <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm relative overflow-hidden">
       {/* Ambient glow */}
-      <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/5 blur-[100px] rounded-full pointer-events-none" />
+      <div className="absolute -top-20 -right-20 w-48 h-48 bg-primary/5 blur-[80px] rounded-full pointer-events-none" />
 
       <div className="relative z-10">
         {/* Label */}
         <span className="text-[10px] text-primary font-bold tracking-widest uppercase">Live Benchmark</span>
 
         {/* Rate header */}
-        <div className="mt-2 mb-1">
-          <div className="flex items-baseline gap-3 flex-wrap">
-            <span className="text-5xl md:text-7xl font-extrabold tracking-tighter text-slate-900 tabular-nums">
+        <div className="mt-1 mb-1">
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <span className="text-4xl md:text-5xl font-extrabold tracking-tighter text-slate-900 tabular-nums">
               {todayRate ? todayRate.toFixed(3) + '%' : '—'}
             </span>
-            <span className={`text-lg font-bold tabular-nums ${changeClass}`}>{changeText}</span>
+            <span className={`text-sm font-bold tabular-nums ${changeClass}`}>{changeText}</span>
           </div>
-          <div className="text-sm text-slate-500 mt-1">
+          <div className="text-xs text-slate-500 mt-0.5">
             30-Yr Fixed · 780+ FICO · {dateStr}
           </div>
-          <p className="text-[10px] text-slate-400 italic mt-1">
-            Scenario: $400k loan, 75% LTV, SFR, Primary Residence, Colorado
-          </p>
         </div>
 
         {/* Rate Trend Gauge */}
-        <div className="mt-6 mb-6">
+        <div className="mt-3 mb-2">
           <RateTrendGauge rateChange={rateChange} />
         </div>
 

@@ -4,7 +4,6 @@ import { useState, useEffect, createContext, useContext } from 'react';
 import FedPanel from './FedPanel';
 import PredictionCard from './PredictionCard';
 
-// Shared data context so both components fetch once
 const PredictionDataContext = createContext(null);
 
 export function PredictionDataProvider({ children }) {
@@ -25,16 +24,15 @@ export function PredictionDataProvider({ children }) {
   );
 }
 
-// Fed Panel — compact, for above-fold right column
 export function FedPanelSection() {
   const { data, loading } = useContext(PredictionDataContext);
 
   if (loading) {
     return (
-      <div className="bg-surface rounded-xl border border-white/10 p-3">
+      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
         <div className="animate-pulse space-y-3">
-          <div className="h-5 w-32 bg-white/10 rounded" />
-          <div className="h-24 bg-white/5 rounded-lg" />
+          <div className="h-4 w-32 bg-slate-100 rounded" />
+          <div className="h-20 bg-slate-50 rounded-lg" />
         </div>
       </div>
     );
@@ -43,34 +41,32 @@ export function FedPanelSection() {
   if (!data?.fedEvents?.length) return null;
 
   return (
-    <div className="bg-surface rounded-xl border border-white/10 p-3">
+    <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
       <FedPanel fedEvents={data.fedEvents} />
     </div>
   );
 }
 
-// Market Predictions — full-width, for below fold
 export function MarketPredictions() {
   const { data, loading } = useContext(PredictionDataContext);
 
   if (loading || !data?.markets?.length) return null;
 
   return (
-    <div className="bg-surface rounded-xl border border-white/10 p-3 flex flex-col">
-      <h2 className="text-white text-sm font-bold mb-2">Market Predictions</h2>
-      <div className="grid grid-cols-1 gap-2 flex-1">
+    <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+      <h2 className="text-base font-bold text-slate-900 mb-3">Market Predictions</h2>
+      <div className="grid grid-cols-1 gap-2">
         {data.markets.slice(0, 6).map(market => (
           <PredictionCard key={market.id} market={market} />
         ))}
       </div>
-      <p className="text-slate-600 text-[9px] mt-2 leading-snug">
+      <p className="text-slate-400 text-[9px] mt-2">
         Polymarket · Updates hourly
       </p>
     </div>
   );
 }
 
-// Default export for backwards compat (not used in new layout)
 export default function Predictions() {
   return (
     <PredictionDataProvider>
