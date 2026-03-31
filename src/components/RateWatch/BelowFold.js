@@ -24,14 +24,6 @@ const FALLBACK_EVENTS = [
   },
 ];
 
-const FALLBACK_NARRATIVE = {
-  paragraphs: [
-    'Markets are digesting the latest economic data and Fed commentary. Treasury yields have been volatile as investors weigh inflation concerns against signs of economic cooling. <strong class="text-slate-900">The path forward depends on upcoming data releases.</strong>',
-    'Mortgage rates track the 10-year Treasury closely, and both have been range-bound over the past few weeks. The next major catalyst will be the April jobs report — a weaker number could push rates back toward February lows, while a strong print would keep them elevated.',
-    '<strong class="text-slate-900">Bottom line:</strong> Rates are in a holding pattern. The next few weeks of economic data will determine whether we break lower or push higher. If you\'re in the market, this is a reasonable time to lock — but there\'s no urgency unless you have a closing deadline.',
-  ],
-};
-
 export default function BelowFold() {
   const [summary, setSummary] = useState(null);
 
@@ -43,9 +35,6 @@ export default function BelowFold() {
   }, []);
 
   const events = summary?.upcomingEvents?.length ? summary.upcomingEvents : FALLBACK_EVENTS;
-  const narrativeParagraphs = summary?.commentary
-    ? [summary.commentary]
-    : FALLBACK_NARRATIVE.paragraphs;
 
   return (
     <div className="space-y-8">
