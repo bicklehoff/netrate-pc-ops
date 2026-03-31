@@ -606,7 +606,7 @@ function seedProductLoanAmountLlpas() {
     // Skip occupancy, state, and non-owner rows for now — handle separately later
     if (p.isOccupancy || p.isState || p.isNonOwner) continue;
     // Skip non-conventional for now (DSCR, Jumbo, NonQM, VA, FHA have their own seeding)
-    if (!['conventional'].includes(p.loanType)) continue;
+    if (!['conventional', 'fha', 'va'].includes(p.loanType)) continue;
 
     const term = parseTerm(p.term);
     if (!term) continue;

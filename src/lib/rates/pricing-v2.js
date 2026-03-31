@@ -463,11 +463,24 @@ export function priceRate(rateEntry, product, scenario, lenderAdj, brokerConfig,
     }
   }
 
-  // Step 5b: Product feature adjustments (FICO band, purpose, state, tier)
-  // Elite FHA has its own adjustment path — skip generic product features
+  // Step 5b: Purchase credit — applies to ALL tiers/loan types
+  if (loanPurpose === 'purchase' && lenderAdj?.productFeatures?.length) {
+    const purchaseCredit = lenderAdj.productFeatures.find(pf =>
+      pf.featureName === 'purposeAdj' && pf.purpose === 'purchase' && !pf.tier
+    );
+    if (purchaseCredit) {
+      price += purchaseCredit.value;
+      breakdown.push({ label: 'purchase adj', value: purchaseCredit.value });
+    }
+  }
+
+  // Step 5c: Other product feature adjustments (FICO band, state, tier)
+  // Elite Govt has its own adjustment path — skip generic features (but purchase credit above still applies)
   if (lenderAdj?.productFeatures?.length && !isEliteGovt) {
     const scenarioPropertyType = scenario.propertyType || 'sfr';
     for (const pf of lenderAdj.productFeatures) {
+      // Skip purchase credit — already handled in Step 5b above
+      if (pf.featureName === 'purposeAdj' && pf.purpose === 'purchase' && !pf.tier) continue;
       // Check filters
       if (pf.tier && pf.tier !== tier) continue;
       if (pf.ficoMin != null && creditScore < pf.ficoMin) continue;
