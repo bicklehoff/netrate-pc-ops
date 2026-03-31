@@ -468,7 +468,23 @@ function seedCoreVaLlpa() {
   if (!data?.features) return;
 
   const SRC = 'core-va-llpa.json';
+
+  // Core VA features are scenario-specific (second home, manual UW, high balance, etc.)
+  // Only seed features that apply to standard scenarios we can filter on:
+  // - VA Refinance: applies when purpose = refinance
+  // - VA Cashout Refinance: applies when purpose = cashout
+  // Skip: Second Home/Investment, Manual UW, High Balance ≥$1M, IRRRL, Buydowns, LTV>100
+  // These require scenario inputs we don't have yet (occupancy, UW type, etc.)
+  const allowedFeatures = ['VA Refinance **', 'VA Cashout Refinance', 'VA Streamline/IRRRL'];
+
   for (const feature of data.features) {
+    if (!allowedFeatures.includes(feature.label)) continue;
+
+    const purpose = feature.label.includes('Cashout') ? 'cashout'
+      : feature.label.includes('Refinance') ? 'refinance'
+      : feature.label.includes('IRRRL') ? 'irrrl'
+      : null;
+
     for (const [ficoBand, value] of Object.entries(feature.values)) {
       if (value === 0) continue;
       const fico = parseFico(ficoBand);
@@ -477,7 +493,7 @@ function seedCoreVaLlpa() {
         adjustmentType: 'productFeature',
         loanType: 'va', tier: 'core',
         featureName: feature.label,
-        productGroup: feature.dti || null,
+        purpose,
         ...fico, value, sourceFile: SRC,
       });
     }
