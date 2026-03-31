@@ -75,9 +75,10 @@ function parseProductName(name) {
   let loanAmountMax = null;
 
   // Elite patterns: "175k < Bal <= 200k", "Bal <= 85k", "Bal > 400k"
+  // Max is exclusive: "Bal <= 400k" means up to 399999 (so $400K goes to the next bucket)
   const eliteBalMatch = s.match(/[-–]\s*(?:(\d+)k?\s*<\s*)?Bal\s*(?:<=?\s*(\d+)k)?/i);
   if (eliteBalMatch) {
-    if (eliteBalMatch[1]) loanAmountMin = parseInt(eliteBalMatch[1], 10) * 1000;
+    if (eliteBalMatch[1]) loanAmountMin = parseInt(eliteBalMatch[1], 10) * 1000 + 1;
     if (eliteBalMatch[2]) loanAmountMax = parseInt(eliteBalMatch[2], 10) * 1000;
     s = s.replace(/[-–]\s*(?:\d+k?\s*<\s*)?Bal\s*(?:<=?\s*\d+k)?/gi, '').trim();
   }
@@ -85,15 +86,16 @@ function parseProductName(name) {
   // Check for "Bal > Xk" (no upper bound)
   const balGtMatch = s.match(/[-–]\s*Bal\s*>\s*(\d+)k/i);
   if (balGtMatch) {
-    loanAmountMin = parseInt(balGtMatch[1], 10) * 1000;
+    loanAmountMin = parseInt(balGtMatch[1], 10) * 1000 + 1;
     loanAmountMax = null;
     s = s.replace(/[-–]\s*Bal\s*>\s*\d+k/gi, '').trim();
   }
 
   // Core patterns: "> 175K <= 200K", "> 400K", "<= 85K"
+  // Min is exclusive ("> 375K" means 375001+), Max is inclusive ("<= 400K" means up to 400000)
   const coreBalMatch = s.match(/>\s*(\d+)K\s*(?:<=?\s*(\d+)K)?/i);
   if (coreBalMatch && !eliteBalMatch && !balGtMatch) {
-    loanAmountMin = parseInt(coreBalMatch[1], 10) * 1000;
+    loanAmountMin = parseInt(coreBalMatch[1], 10) * 1000 + 1;
     if (coreBalMatch[2]) loanAmountMax = parseInt(coreBalMatch[2], 10) * 1000;
     s = s.replace(/>\s*\d+K\s*(?:<=?\s*\d+K)?/gi, '').trim();
   }
