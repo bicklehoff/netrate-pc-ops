@@ -18,13 +18,13 @@ const STATUS_LABELS = {
 };
 
 const STATUS_COLORS = {
-  prospect: 'bg-gray-100 text-gray-700', applied: 'bg-blue-100 text-blue-800',
-  processing: 'bg-yellow-100 text-yellow-800', submitted_uw: 'bg-purple-100 text-purple-800',
-  cond_approved: 'bg-orange-100 text-orange-800', suspended: 'bg-red-50 text-red-700',
-  ctc: 'bg-green-100 text-green-800', docs_out: 'bg-green-100 text-green-800',
-  funded: 'bg-emerald-100 text-emerald-800', settled: 'bg-green-200 text-green-900',
-  withdrawn: 'bg-gray-200 text-gray-500', denied: 'bg-red-100 text-red-800',
-  archived: 'bg-gray-200 text-gray-500',
+  prospect: 'bg-slate-200 text-slate-800', applied: 'bg-blue-500 text-white',
+  processing: 'bg-amber-500 text-white', submitted_uw: 'bg-purple-500 text-white',
+  cond_approved: 'bg-orange-500 text-white', suspended: 'bg-red-500 text-white',
+  ctc: 'bg-emerald-500 text-white', docs_out: 'bg-teal-500 text-white',
+  funded: 'bg-emerald-600 text-white', settled: 'bg-green-700 text-white',
+  withdrawn: 'bg-gray-400 text-white', denied: 'bg-red-600 text-white',
+  archived: 'bg-gray-400 text-white',
 };
 
 const ALL_STATUSES = [
@@ -34,7 +34,7 @@ const ALL_STATUSES = [
 ];
 
 const PURPOSE_LABELS = { purchase: 'Purch', refinance: 'Refi', cash_out: 'C/O', heloc: 'HELOC', hecm: 'HECM' };
-const PURPOSE_COLORS = { purchase: 'bg-blue-50 text-blue-700', refinance: 'bg-purple-50 text-purple-700', cash_out: 'bg-orange-50 text-orange-700', heloc: 'bg-teal-50 text-teal-700', hecm: 'bg-pink-50 text-pink-700' };
+const PURPOSE_COLORS = { purchase: 'bg-blue-100 text-blue-800 font-bold', refinance: 'bg-purple-100 text-purple-800 font-bold', cash_out: 'bg-orange-100 text-orange-800 font-bold', heloc: 'bg-teal-100 text-teal-800 font-bold', hecm: 'bg-pink-100 text-pink-800 font-bold', construction: 'bg-yellow-100 text-yellow-800 font-bold' };
 const TYPE_LABELS = { conventional: 'Conv', fha: 'FHA', va: 'VA', usda: 'USDA', jumbo: 'Jumbo', Conventional: 'Conv' };
 
 const STORAGE_KEY = 'netrate_pipeline_state';
@@ -560,7 +560,7 @@ export default function PipelineTable({ loans, allLoans, mloList, selectedIds, o
       case 'borrowerName':
         return (
           <Link href={`/portal/mlo/loans/${loan.id}`} className="block">
-            <span className="font-medium text-gray-900">{loan.borrowerName}</span>
+            <span className="font-bold text-slate-900">{loan.borrowerName}</span>
             <span className="block text-xs text-gray-400 mt-0.5 truncate">
               ···{loan.ssnLastFour}{loan.propertyStreet ? ` · ${loan.propertyStreet}` : ''}
             </span>
@@ -583,7 +583,7 @@ export default function PipelineTable({ loans, allLoans, mloList, selectedIds, o
           </span>
         ) : <span className="text-xs text-gray-300">—</span>;
       case 'interestRate':
-        return <span className="text-xs text-gray-700">{loan.interestRate ? `${loan.interestRate}%` : '—'}</span>;
+        return <span className="text-sm font-semibold text-slate-800 tabular-nums">{loan.interestRate ? `${loan.interestRate}%` : '—'}</span>;
       case 'loanTerm':
         return <span className="text-xs text-gray-600">{loan.loanTerm ? `${loan.loanTerm}yr` : '—'}</span>;
       case 'mloName':
@@ -602,14 +602,14 @@ export default function PipelineTable({ loans, allLoans, mloList, selectedIds, o
           <EditableSelect value={loan.status} options={statusOptions}
             onSave={val => onLoanUpdate(loan.id, { status: val })}
             renderValue={val => (
-              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[val] || 'bg-gray-100 text-gray-700'}`}>
+              <span className={`inline-flex items-center px-3 py-1 rounded-md text-xs font-bold shadow-sm ${STATUS_COLORS[val] || 'bg-gray-200 text-gray-800'}`}>
                 {STATUS_LABELS[val] || val}
               </span>
             )}
           />
         );
       case 'loanAmount':
-        return <span className="text-gray-700">{formatCurrency(loan.loanAmount || loan.purchasePrice || loan.estimatedValue)}</span>;
+        return <span className="text-slate-900 font-semibold tabular-nums">{formatCurrency(loan.loanAmount || loan.purchasePrice || loan.estimatedValue)}</span>;
       case 'lockExpiration':
         return loan.lockExpiration ? (
           <span className={`text-xs ${isExpired(loan.lockExpiration) ? 'text-red-600 font-medium' : isExpiringSoon(loan.lockExpiration) ? 'text-amber-600 font-medium' : 'text-gray-600'}`}>
@@ -690,7 +690,7 @@ export default function PipelineTable({ loans, allLoans, mloList, selectedIds, o
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-gray-100 bg-gray-50/50">
+            <tr className="border-b border-gray-200 bg-slate-50">
               <th className="w-6"></th>
               <th className="px-3 py-3 w-10">
                 <input type="checkbox" checked={allSelected}
@@ -703,12 +703,12 @@ export default function PipelineTable({ loans, allLoans, mloList, selectedIds, o
                 const isSorted = sortKey === col.key;
                 const hasFilter = columnFilters[col.key] != null;
                 return (
-                  <th key={col.key} className={`px-3 py-3 font-medium text-xs uppercase tracking-wider ${col.minW || ''} ${col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'}`}>
+                  <th key={col.key} className={`px-3 py-3 font-bold text-xs uppercase tracking-wider text-slate-700 ${col.minW || ''} ${col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'}`}>
                     <div className={`flex items-center gap-1 ${col.align === 'right' ? 'justify-end' : col.align === 'center' ? 'justify-center' : ''}`}>
                       {/* Sort button */}
                       {col.sortable ? (
                         <button onClick={() => handleSort(col.key)}
-                          className={`flex items-center gap-0.5 transition-colors ${isSorted ? 'text-brand' : 'text-gray-500 hover:text-gray-700'}`}>
+                          className={`flex items-center gap-0.5 transition-colors ${isSorted ? 'text-primary font-black' : 'text-slate-700 hover:text-slate-900'}`}>
                           {col.label}
                           {isSorted && (
                             <span className="text-[10px]">{sortDir === 'asc' ? '▲' : '▼'}</span>
@@ -722,7 +722,7 @@ export default function PipelineTable({ loans, allLoans, mloList, selectedIds, o
                       {col.filterable && (
                         <div className="relative">
                           <button onClick={e => { e.stopPropagation(); setActiveFilterCol(activeFilterCol === col.key ? null : col.key); }}
-                            className={`ml-0.5 p-0.5 rounded transition-colors ${hasFilter ? 'text-orange-500' : 'text-gray-300 hover:text-gray-500'}`}
+                            className={`ml-0.5 p-0.5 rounded transition-colors ${hasFilter ? 'text-orange-600 bg-orange-50' : 'text-slate-400 hover:text-slate-600'}`}
                             title={`Filter ${col.label}`}>
                             <svg className="w-3 h-3" fill={hasFilter ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                               <path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
