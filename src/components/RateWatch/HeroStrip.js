@@ -73,6 +73,8 @@ export default function HeroStrip({ todayRate, rateChange }) {
       .catch(() => {});
   }, []);
 
+  // Only used for sentiment badge — full commentary is in Commentary component
+
   const changeClass =
     rateChange > 0 ? 'text-red-500' : rateChange < 0 ? 'text-emerald-600' : 'text-amber-500';
   const changeText =
@@ -115,54 +117,21 @@ export default function HeroStrip({ todayRate, rateChange }) {
           <RateTrendGauge rateChange={rateChange} />
         </div>
 
-        {/* Commentary preview */}
-        <div className="border-t border-slate-100 pt-4">
-          <div className="flex items-center gap-2 mb-2">
+        {/* Sentiment badge */}
+        {commentary?.sentiment && (
+          <div className="border-t border-slate-100 pt-3 flex items-center gap-2">
             <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
-            <span className="text-[10px] font-bold uppercase tracking-widest text-primary">Commentary</span>
-            {commentary?.sentiment && (
-              <span className={`text-[10px] font-bold uppercase ${
-                commentary.sentiment === 'bearish' ? 'text-red-500' :
-                commentary.sentiment === 'bullish' ? 'text-emerald-600' : 'text-slate-400'
-              }`}>
-                {commentary.sentiment}
-              </span>
+            <span className={`text-xs font-bold uppercase ${
+              commentary.sentiment === 'bearish' ? 'text-red-500' :
+              commentary.sentiment === 'bullish' ? 'text-emerald-600' : 'text-slate-400'
+            }`}>
+              {commentary.sentiment}
+            </span>
+            {commentary.headline && (
+              <span className="text-slate-500 text-xs truncate">{commentary.headline}</span>
             )}
           </div>
-
-          {commentary?.headline ? (
-            <>
-              <h2 className="text-slate-900 text-sm font-bold leading-snug mb-1">
-                {commentary.headline}
-              </h2>
-              {commentary.treasury10yr && (
-                <div className="text-xs text-slate-500 mb-1">
-                  10yr: {commentary.treasury10yr}%
-                  {commentary.treasury10yrChg != null && (
-                    <span className={commentary.treasury10yrChg > 0 ? 'text-red-500 ml-1' : 'text-emerald-600 ml-1'}>
-                      ({commentary.treasury10yrChg > 0 ? '+' : ''}{commentary.treasury10yrChg})
-                    </span>
-                  )}
-                </div>
-              )}
-              <p className="text-slate-500 text-xs leading-relaxed line-clamp-3">
-                {commentary.commentary}
-              </p>
-              <a href="#full-commentary" className="text-primary text-xs font-medium hover:text-cyan-700 transition-colors inline-block mt-1">
-                Read more &darr;
-              </a>
-            </>
-          ) : (
-            <>
-              <h2 className="text-slate-900 text-sm font-bold leading-snug mb-1">
-                Daily Mortgage Rate Snapshot
-              </h2>
-              <p className="text-slate-500 text-xs leading-relaxed">
-                Live wholesale rates updated every business day.
-              </p>
-            </>
-          )}
-        </div>
+        )}
       </div>
     </div>
   );
