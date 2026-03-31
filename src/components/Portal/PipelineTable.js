@@ -43,9 +43,9 @@ const VIEWS_KEY = 'netrate_pipeline_views';
 // ─── Column Definitions ─────────────────────────────────────
 
 const COLUMNS = [
-  { key: 'borrowerName', label: 'Borrower', align: 'left', sortable: true, filterable: 'text', defaultVisible: true, minW: 'min-w-[160px]' },
-  { key: 'loanNumber', label: 'Loan #', align: 'left', sortable: true, filterable: 'text', defaultVisible: true, editable: true },
-  { key: 'lenderName', label: 'Lender', align: 'left', sortable: true, filterable: 'text', defaultVisible: true, editable: true },
+  { key: 'borrowerName', label: 'Borrower', align: 'left', sortable: true, filterable: 'select', defaultVisible: true, minW: 'min-w-[160px]' },
+  { key: 'loanNumber', label: 'Loan #', align: 'left', sortable: true, filterable: 'select', defaultVisible: true, editable: true },
+  { key: 'lenderName', label: 'Lender', align: 'left', sortable: true, filterable: 'select', defaultVisible: true, editable: true },
   { key: 'purpose', label: 'Purpose', align: 'center', sortable: true, filterable: 'select', defaultVisible: true },
   { key: 'loanType', label: 'Type', align: 'center', sortable: true, filterable: 'select', defaultVisible: false },
   { key: 'interestRate', label: 'Rate', align: 'right', sortable: true, filterable: false, defaultVisible: true },
@@ -201,32 +201,13 @@ function EditableSelect({ value, options, onSave, renderValue }) {
 
 function ColumnFilterDropdown({ column, allLoans, filter, onFilterChange, onClose }) {
   const ref = useRef(null);
-  const [textVal, setTextVal] = useState(filter || '');
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     function handleClick(e) { if (ref.current && !ref.current.contains(e.target)) onClose(); }
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, [onClose]);
-
-  if (column.filterable === 'text') {
-    return (
-      <div ref={ref} className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl p-2 z-50 min-w-[180px]">
-        <input type="text" value={textVal} onChange={e => setTextVal(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') { onFilterChange(textVal || null); onClose(); } }}
-          placeholder={`Filter ${column.label}...`}
-          className="w-full text-sm border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-brand/30 focus:border-brand outline-none"
-          autoFocus
-        />
-        <div className="flex gap-1 mt-1.5">
-          <button onClick={() => { onFilterChange(textVal || null); onClose(); }}
-            className="flex-1 text-xs bg-brand text-white rounded px-2 py-1 hover:bg-brand-dark">Apply</button>
-          <button onClick={() => { onFilterChange(null); onClose(); }}
-            className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1">Clear</button>
-        </div>
-      </div>
-    );
-  }
 
   if (column.filterable === 'select') {
     const options = getFilterOptions(allLoans, column.key);
@@ -242,15 +223,28 @@ function ColumnFilterDropdown({ column, allLoans, filter, onFilterChange, onClos
       onFilterChange(next.size > 0 ? Array.from(next) : null);
     };
 
+    const filteredOptions = search
+      ? options.filter(o => ((labelMap && labelMap[o]) || o).toString().toLowerCase().includes(search.toLowerCase()))
+      : options;
+
     return (
-      <div ref={ref} className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl p-2 z-50 min-w-[160px] max-h-64 overflow-y-auto">
-        {options.map(opt => (
-          <label key={opt} className="flex items-center gap-2 px-2 py-1 hover:bg-gray-50 rounded cursor-pointer">
-            <input type="checkbox" checked={selected.has(opt)} onChange={() => toggle(opt)}
-              className="rounded border-gray-300 text-brand focus:ring-brand/30" />
-            <span className="text-xs text-gray-700">{(labelMap && labelMap[opt]) || opt}</span>
-          </label>
-        ))}
+      <div ref={ref} className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl p-2 z-50 min-w-[180px]">
+        {/* Search box for long lists */}
+        {options.length > 6 && (
+          <input type="text" value={search} onChange={e => setSearch(e.target.value)}
+            placeholder={`Search ${column.label}...`}
+            className="w-full text-xs border border-gray-200 rounded px-2 py-1 mb-1.5 focus:ring-2 focus:ring-brand/30 focus:border-brand outline-none"
+            autoFocus
+          />
+        )}
+        <div className="max-h-52 overflow-y-auto">
+          {filteredOptions.map(opt => (
+            <label key={opt} className="flex items-center gap-2 px-2 py-1 hover:bg-gray-50 rounded cursor-pointer">
+              <input type="checkbox" checked={selected.has(opt)} onChange={() => toggle(opt)}
+                className="rounded border-gray-300 text-brand focus:ring-brand/30" />
+              <span className="text-xs text-gray-700">{(labelMap && labelMap[opt]) || opt}</span>
+            </label>
+          ))}
         <div className="border-t border-gray-100 mt-1 pt-1">
           <button onClick={() => { onFilterChange(null); onClose(); }}
             className="w-full text-xs text-gray-500 hover:text-gray-700 px-2 py-1 text-left">Clear filter</button>
@@ -448,10 +442,7 @@ export default function PipelineTable({ loans, allLoans, mloList, selectedIds, o
         const col = COLUMNS.find(c => c.key === key);
         if (!col) continue;
 
-        if (col.filterable === 'text') {
-          const val = (loan[key] || '').toString().toLowerCase();
-          if (!val.includes(filter.toLowerCase())) return false;
-        } else if (col.filterable === 'select' && Array.isArray(filter)) {
+        if (Array.isArray(filter)) {
           const val = loan[key];
           if (!filter.includes(val)) return false;
         }
