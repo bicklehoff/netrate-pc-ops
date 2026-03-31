@@ -28,7 +28,7 @@ export default function RateGrid({ netRates, nationalRates, date }) {
   if (!netRates) return null;
 
   return (
-    <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200">
+    <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200 h-full flex flex-col">
       {/* Header */}
       <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
         <h3 className="text-base font-bold text-slate-900">Daily Rate Sheet</h3>

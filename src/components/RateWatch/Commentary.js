@@ -40,7 +40,7 @@ export default function Commentary() {
     : null;
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+    <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm h-full flex flex-col overflow-hidden">
       <div className="flex justify-between items-center mb-4">
         <div className="flex items-center gap-3">
           <span className="material-symbols-outlined text-primary text-xl">forum</span>
@@ -84,9 +84,13 @@ export default function Commentary() {
         </div>
       )}
 
-      <p className="text-slate-600 text-sm leading-relaxed">
+      <p className="text-slate-600 text-sm leading-relaxed flex-1 overflow-hidden line-clamp-5">
         {commentary}
       </p>
+
+      <a href="#full-commentary" className="text-primary text-xs font-medium hover:text-cyan-700 transition-colors mt-2 shrink-0">
+        Read more &darr;
+      </a>
 
       {!loaded && (
         <div className="animate-pulse mt-3 space-y-2">

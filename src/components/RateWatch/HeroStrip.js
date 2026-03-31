@@ -88,7 +88,7 @@ export default function HeroStrip({ todayRate, rateChange }) {
   const dateStr = today.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm relative overflow-hidden">
+    <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm relative overflow-hidden h-full">
       {/* Ambient glow */}
       <div className="absolute -top-20 -right-20 w-48 h-48 bg-primary/5 blur-[80px] rounded-full pointer-events-none" />
 

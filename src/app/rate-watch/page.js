@@ -204,48 +204,50 @@ export default async function RateWatchPage() {
       <PredictionDataProvider>
         <div className="max-w-7xl mx-auto px-4 py-4 space-y-4">
 
-          {/* Row 1: Hero (2col) + Fed Prediction (1col) */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-2">
+          {/* Row 1: Hero (2col) + Fed Prediction (1col) — fixed height */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:h-[280px]">
+            <div className="lg:col-span-2 min-h-0">
               <HeroStrip todayRate={todayRate} rateChange={rateChange} />
             </div>
-            <div>
+            <div className="min-h-0">
               <FedPanelSection />
             </div>
           </div>
 
-          {/* Row 2: Commentary (2col) + Treasury Yields (1col) */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-2">
+          {/* Row 2: Commentary (2col) + Treasury Yields (1col) — fixed height */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:h-[250px]">
+            <div className="lg:col-span-2 min-h-0">
               <Commentary />
             </div>
-            <div>
+            <div className="min-h-0">
               <TreasuryYields fredLatest={fredData.latest} />
             </div>
           </div>
 
-          {/* Row 3: Rate Table (2col) + Economic Calendar (1col) */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-2">
+          {/* Row 3: Rate Table (2col) + Economic Calendar (1col) — fixed height */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:h-[280px]">
+            <div className="lg:col-span-2 min-h-0">
               <RateGrid
                 netRates={liveRates}
                 nationalRates={natRates}
                 date={natDate}
               />
             </div>
-            <div>
+            <div className="min-h-0">
               <EconomicCalendar />
             </div>
           </div>
 
-          {/* Row 4: Rate History Chart — full width */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-6 shadow-sm overflow-hidden">
+          {/* Row 4: Rate History Chart — full width, fixed height */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-6 shadow-sm overflow-hidden lg:h-[400px]">
             <RateChart rateHistory={rateHistory} fredData={fredData.series} />
           </div>
 
-          {/* Row 5: Fed Statement Diff + future widget */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <FedStatementDiff />
+          {/* Row 5: Fed Statement Diff — fixed height */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:h-[280px]">
+            <div className="min-h-0">
+              <FedStatementDiff />
+            </div>
           </div>
 
           {/* Below fold: narrative, events, CTA, SEO */}

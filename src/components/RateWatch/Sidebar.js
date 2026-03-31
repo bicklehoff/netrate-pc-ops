@@ -11,7 +11,7 @@ const ECONOMIC_EVENTS = [
 
 export function TreasuryYields({ fredLatest }) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+    <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm h-full flex flex-col">
       <h3 className="text-base font-bold text-slate-900 mb-4">Treasury Yields</h3>
       <div className="space-y-3">
         {['DGS2', 'DGS5', 'DGS10', 'DGS30'].map((key) => {
@@ -40,7 +40,7 @@ export function TreasuryYields({ fredLatest }) {
 
 export function EconomicCalendar() {
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+    <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm h-full flex flex-col overflow-hidden">
       <h3 className="text-base font-bold text-slate-900 mb-4">Economic Calendar</h3>
       <div className="space-y-3">
         {ECONOMIC_EVENTS.map((ev, i) => (
