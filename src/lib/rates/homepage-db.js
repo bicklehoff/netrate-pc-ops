@@ -13,7 +13,7 @@ import { DEFAULT_SCENARIO } from './defaults';
 
 const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-const DEFAULT_COMP_RATE = 0.02;
+const FALLBACK_COMP_RATE = 0.02;
 
 function calculatePI(rate, amount, termYears = 30) {
   const monthlyRate = rate / 100 / 12;
@@ -63,7 +63,7 @@ async function priceProduct(loanType, termYears) {
 
   // Build broker config from DB lender data
   const brokerConfig = {
-    compRate: DEFAULT_COMP_RATE,
+    compRate: lender.compRate ? Number(lender.compRate) : FALLBACK_COMP_RATE,
     compCapPurchase: Number(lender.maxCompCapPurchase) || 3595,
     compCapRefi: Number(lender.maxCompCapRefi) || 3595,
   };

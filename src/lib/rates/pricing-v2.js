@@ -357,7 +357,9 @@ export function priceRate(rateEntry, product, scenario, lenderAdj, brokerConfig,
   const isFha = loanType === 'fha';
 
   // FHA: UFMIP (1.75%) is financed into the loan
-  const ufmip = isFha ? Math.round(loanAmount * 0.0175) : 0;
+  // FHA: UFMIP rate from lender config (default 1.75% if not set)
+  const ufmipRate = brokerConfig?.fhaUfmip || 0.0175;
+  const ufmip = isFha ? Math.round(loanAmount * ufmipRate) : 0;
   const effectiveLoanAmount = loanAmount + ufmip;
 
   const breakdown = [];

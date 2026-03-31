@@ -100,6 +100,8 @@ export async function loadRateDataFromDB() {
           purchase: Number(lender.maxCompCapPurchase) || null,
           refinance: Number(lender.maxCompCapRefi) || null,
         },
+        compRate: lender.compRate ? Number(lender.compRate) : 0.02,
+        fhaUfmip: lender.fhaUfmip ? Number(lender.fhaUfmip) : 0.0175,
         priceFormat: lender.priceFormat || '100-based',
         programs: [],
       };

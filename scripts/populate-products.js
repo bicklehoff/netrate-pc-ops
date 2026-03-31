@@ -1,3 +1,8 @@
+/**
+ * DEPRECATED — db-writer.js now auto-upserts rate_products.
+ * Use writeRatesToDB() directly — it handles both products and prices in one step.
+ * This script is kept for reference only.
+ */
 const { Client } = require('pg');
 const data = require('../src/data/parsed-rates.json');
 

@@ -69,8 +69,8 @@ async function getEffectiveDate() {
   return null;
 }
 
-// Default comp rate — comp caps come from rate_lenders table per lender
-const DEFAULT_COMP_RATE = 0.02;
+// Fallback comp rate — actual rate comes from rate_lenders table per lender
+const FALLBACK_COMP_RATE = 0.02;
 
 export async function POST(request) {
   try {
@@ -106,11 +106,12 @@ export async function POST(request) {
     for (const lenderData of allLenders) {
       const lenderId = lenderData.lenderId;
 
-      // Build broker config from DB lender data (comp caps, fees)
+      // Build broker config from DB lender data (comp rate, caps, fees)
       const brokerConfig = {
-        compRate: DEFAULT_COMP_RATE,
+        compRate: lenderData.compRate || FALLBACK_COMP_RATE,
         compCapPurchase: lenderData.compCap?.purchase || 3595,
         compCapRefi: lenderData.compCap?.refinance || 3595,
+        fhaUfmip: lenderData.fhaUfmip || 0.0175,
       };
 
       // Load adjustments from DB for this loan type — skip lenders with no rules

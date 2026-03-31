@@ -893,10 +893,19 @@ model RateLender {
   originationFee  Decimal?  @default(0) @map("origination_fee") @db.Decimal(10, 2)
   otherFees       Json?     @map("other_fees")
 
-  // Lender max comp caps (David's actual caps are in BrokerConfig)
+  // Lender max comp caps
   maxCompCapPurchase Decimal? @map("max_comp_cap_purchase") @db.Decimal(10, 2)
   maxCompCapRefi     Decimal? @map("max_comp_cap_refi") @db.Decimal(10, 2)
   maxCompRate        Decimal? @map("max_comp_rate") @db.Decimal(5, 4)
+
+  // Broker comp rate (e.g., 0.02 = 2%)
+  compRate        Decimal?  @map("comp_rate") @db.Decimal(5, 4)
+
+  // FHA UFMIP rate (e.g., 0.0175 = 1.75%) — null means use GSE default 1.75%
+  fhaUfmip        Decimal?  @map("fha_ufmip") @db.Decimal(6, 4)
+
+  // State variants to exclude when parsing (e.g., ["FL", "TX"])
+  excludedStateVariants Json? @map("excluded_state_variants")
 
   // Pricing format of source data
   priceFormat     String    @default("100-based") @map("price_format")

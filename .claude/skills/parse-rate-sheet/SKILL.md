@@ -18,7 +18,7 @@ When given a rate sheet file (or a zip containing multiple):
 1. Extract if zip
 2. For each file, identify the lender
 3. Parse using the appropriate parser
-4. Merge all results into `src/data/parsed-rates.json`
+4. Write to DB using `writeRatesToDB()` — auto-creates products + inserts prices in one step
 5. Report what worked and what failed
 6. If a parser failed, debug and fix it
 
@@ -162,7 +162,7 @@ Rate Sheet File → Parser → DB Writer → rate_prices table → Pricing API �
 |------|---------|
 | `src/lib/rates/db-writer.js` | Takes parser output, matches to rate_products, writes to rate_sheets + rate_prices |
 | `src/lib/rates/db-loader.js` | Loads rate data from DB in the shape the pricing engine expects |
-| `scripts/populate-products.js` | One-time script to populate rate_products taxonomy from parsed data |
+| `scripts/populate-products.js` | DEPRECATED — db-writer.js now auto-upserts products |
 | `scripts/migrate-to-pc-db.js` | Data migration script (CRM + rate data) |
 
 ### Database Tables
@@ -217,7 +217,7 @@ The DB writer matches parsed programs to `rate_products` rows by `raw_name`. The
 - `"FNMA 30yr Fixed Core"` (no loan amount range)
 - `"FNMA 30yr Fixed Core [375000-400000]"` (with range)
 
-If a new product appears in a rate sheet that doesn't have a `rate_products` row, the writer reports it as unmatched. Run `scripts/populate-products.js` to add new products.
+New products are auto-created by `writeRatesToDB()`. No separate step needed — the writer upserts `rate_products` before inserting prices. The return value includes `productsCreated` count.
 
 ### Static Adjustments (LenderAdjustment)
 
@@ -343,7 +343,7 @@ If validation fails, warn but still save — partial data is better than no data
 
 1. Write to DB using `writeRatesToDB(lenderCode, programs, sheetDate, sourceFile)`
 2. Report summary: lender, products matched/unmatched, prices inserted, date
-3. If unmatched products > 0, run `scripts/populate-products.js` to add new products, then re-run the writer
+3. New products are auto-created — check `productsCreated` in the result
 4. Verify on website: check /rates page shows updated rates for this lender
 5. Log via `capture_thought` if anything unusual happened (new products, format changes)
 
