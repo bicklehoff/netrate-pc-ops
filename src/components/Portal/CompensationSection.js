@@ -124,24 +124,41 @@ export default function CompensationSection({ loan }) {
               )}
             </div>
 
-            {/* LO comp from TrackerPortal */}
-            {loComp && (
-              <>
-                <div className="border-t-2 border-emerald-200 my-3" />
-                <div className="bg-emerald-50 rounded-lg px-4 py-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-semibold text-emerald-800">Your Commission</span>
-                    <span className="text-lg font-bold text-emerald-700">{fmt$(loComp)}</span>
-                  </div>
-                  {houseFee && (
-                    <div className="flex justify-between text-xs text-emerald-600 mt-1">
-                      <span>House fee</span>
-                      <span>{fmt$(houseFee)}</span>
+            {/* LO comp + anticipated payment */}
+            {loComp && (() => {
+              const totalReimb = (appraisalReimb || 0) + (creditReimb || 0) + (miscReimb || 0);
+              const anticipatedPayment = loComp + totalReimb;
+              return (
+                <>
+                  <div className="border-t-2 border-emerald-200 my-3" />
+                  <div className="bg-emerald-50 rounded-lg px-4 py-3 space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-semibold text-emerald-800">Your Commission</span>
+                      <span className="text-sm font-bold text-emerald-700">{fmt$(loComp)}</span>
                     </div>
-                  )}
-                </div>
-              </>
-            )}
+                    {houseFee && (
+                      <div className="flex justify-between text-xs text-emerald-600">
+                        <span>House fee</span>
+                        <span>{fmt$(houseFee)}</span>
+                      </div>
+                    )}
+                    {totalReimb > 0 && (
+                      <>
+                        <div className="flex justify-between text-xs text-emerald-600">
+                          <span>Reimbursements</span>
+                          <span>+{fmt$(totalReimb)}</span>
+                        </div>
+                        <div className="border-t border-emerald-300 my-1" />
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-bold text-emerald-900">Anticipated Payment</span>
+                          <span className="text-lg font-bold text-emerald-800">{fmt$(anticipatedPayment)}</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </>
+              );
+            })()}
 
             {/* Status message */}
             {tracker.message && (
