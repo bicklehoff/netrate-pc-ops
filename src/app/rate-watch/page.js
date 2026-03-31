@@ -8,7 +8,6 @@ import { PredictionDataProvider, FedPanelSection } from '@/components/RateWatch/
 import RateGrid from '@/components/RateWatch/RateGrid';
 import FedStatementDiff from '@/components/RateWatch/FedStatementDiff';
 import Commentary from '@/components/RateWatch/Commentary';
-import SectionNav from '@/components/RateWatch/SectionNav';
 import { getHomepageRatesFromDB } from '@/lib/rates/homepage-db';
 
 export const revalidate = 300; // ISR: 5 minutes
@@ -201,70 +200,57 @@ export default async function RateWatchPage() {
         </div>
       </div>
 
-      {/* Main content with sidebar */}
+      {/* Bento grid layout */}
       <PredictionDataProvider>
-        <div className="max-w-7xl mx-auto px-4 py-4 flex gap-8">
-          {/* Sidebar nav — desktop only */}
-          <SectionNav />
+        <div className="max-w-7xl mx-auto px-4 py-4 space-y-4">
 
-          {/* Main content */}
-          <main className="flex-1 min-w-0 space-y-8">
+          {/* Row 1: Hero (2col) + Treasury Yields (1col) */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="lg:col-span-2">
+              <HeroStrip todayRate={todayRate} rateChange={rateChange} />
+            </div>
+            <div>
+              <TreasuryYields fredLatest={fredData.latest} />
+            </div>
+          </div>
 
-            {/* === SECTION: Dashboard (hero + commentary + yields) === */}
-            <section id="section-dashboard">
-              {/* Hero row: rate + comparison */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2">
-                  <HeroStrip todayRate={todayRate} rateChange={rateChange} />
-                </div>
-                <div>
-                  <TreasuryYields fredLatest={fredData.latest} />
-                </div>
-              </div>
+          {/* Row 2: Commentary (2col) + Fed Prediction (1col) */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="lg:col-span-2">
+              <Commentary />
+            </div>
+            <div>
+              <FedPanelSection />
+            </div>
+          </div>
 
-              {/* Commentary row */}
-              <div className="mt-6">
-                <Commentary />
-              </div>
-            </section>
+          {/* Row 3: Rate Table (2col) + Economic Calendar (1col) */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="lg:col-span-2">
+              <RateGrid
+                netRates={liveRates}
+                nationalRates={natRates}
+                date={natDate}
+              />
+            </div>
+            <div>
+              <EconomicCalendar />
+            </div>
+          </div>
 
-            {/* === SECTION: Rates Analysis === */}
-            <section id="section-rates" className="scroll-mt-24">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2">
-                  <RateGrid
-                    netRates={liveRates}
-                    nationalRates={natRates}
-                    date={natDate}
-                  />
-                </div>
-                <div>
-                  <FedPanelSection />
-                </div>
-              </div>
+          {/* Row 4: Rate History Chart — full width */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-6 shadow-sm overflow-hidden">
+            <RateChart rateHistory={rateHistory} fredData={fredData.series} />
+          </div>
 
-              {/* Rate History Chart — full width */}
-              <div className="mt-6">
-                <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-6 shadow-sm overflow-hidden">
-                  <RateChart rateHistory={rateHistory} fredData={fredData.series} />
-                </div>
-              </div>
-            </section>
+          {/* Row 5: Fed Statement Diff (1col) + empty / future widget (1col) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <FedStatementDiff />
+          </div>
 
-            {/* === SECTION: Fed Watch === */}
-            <section id="section-fed" className="scroll-mt-24">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <FedStatementDiff />
-                <EconomicCalendar />
-              </div>
-            </section>
+          {/* Below fold: narrative, events, CTA, SEO */}
+          <BelowFold />
 
-            {/* === SECTION: Calendar / Below fold === */}
-            <section id="section-calendar" className="scroll-mt-24">
-              <BelowFold />
-            </section>
-
-          </main>
         </div>
       </PredictionDataProvider>
     </div>
