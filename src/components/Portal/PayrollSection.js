@@ -74,6 +74,7 @@ export default function PayrollSection({ loan }) {
   const [nicknameConfirmed, setNicknameConfirmed] = useState(false);
   const [unmatchedPersons, setUnmatchedPersons] = useState([]); // { firstName, lastName, role, email, phone, saveAsContact }
   const [payrollDetails, setPayrollDetails] = useState(null);
+  const [showStartOver, setShowStartOver] = useState(false);
 
   const isSentCheck = !!loan?.payrollSentAt;
 
@@ -953,20 +954,40 @@ export default function PayrollSection({ loan }) {
               </button>
             </div>
 
-            <p className="text-xs text-gray-400 text-center">
-              Need to re-send? Upload a new CD to reset and send again.
-            </p>
-            <div className="text-center">
-              <label className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-500 hover:text-gray-700 cursor-pointer hover:bg-gray-100 rounded-lg transition-colors">
-                Upload new CD
-                <input
-                  type="file"
-                  accept=".pdf"
-                  className="hidden"
-                  onChange={handleFileInput}
-                />
-              </label>
-            </div>
+            {/* Start over — prominent but requires confirmation */}
+            {!showStartOver ? (
+              <button
+                onClick={() => setShowStartOver(true)}
+                className="w-full text-center py-2 text-xs font-medium text-orange-500 hover:text-orange-700 hover:bg-orange-50 rounded-lg transition-colors"
+              >
+                Need to start over? Upload a corrected CD
+              </button>
+            ) : (
+              <div className="bg-orange-50 border border-orange-300 rounded-lg px-4 py-3 space-y-2">
+                <p className="text-sm font-semibold text-orange-800">This will reset payroll</p>
+                <p className="text-xs text-orange-700">
+                  Uploading a new CD will clear the current approval and payroll submission.
+                  You{"'"}ll need to review and approve the new CD before re-sending to payroll.
+                </p>
+                <div className="flex gap-2">
+                  <label className="flex-1 bg-orange-500 text-white py-2 rounded-lg text-xs font-semibold text-center cursor-pointer hover:bg-orange-600 transition-colors">
+                    Upload New CD
+                    <input
+                      type="file"
+                      accept=".pdf"
+                      className="hidden"
+                      onChange={handleFileInput}
+                    />
+                  </label>
+                  <button
+                    onClick={() => setShowStartOver(false)}
+                    className="px-4 py-2 text-xs font-medium text-gray-500 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
