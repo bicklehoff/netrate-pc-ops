@@ -245,6 +245,7 @@ function ColumnFilterDropdown({ column, allLoans, filter, onFilterChange, onClos
               <span className="text-xs text-gray-700">{(labelMap && labelMap[opt]) || opt}</span>
             </label>
           ))}
+        </div>
         <div className="border-t border-gray-100 mt-1 pt-1">
           <button onClick={() => { onFilterChange(null); onClose(); }}
             className="w-full text-xs text-gray-500 hover:text-gray-700 px-2 py-1 text-left">Clear filter</button>
