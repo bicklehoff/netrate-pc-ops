@@ -15,12 +15,6 @@ function formatMeetingDate(dateStr) {
   return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 }
 
-function formatShortDate(dateStr) {
-  if (!dateStr) return 'TBD';
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
-
 function daysUntil(dateStr) {
   if (!dateStr) return null;
   const days = Math.ceil((new Date(dateStr) - new Date()) / 86400000);
@@ -80,41 +74,10 @@ function ProbBox({ label, pct, type, primary = false }) {
   );
 }
 
-function FutureMeetingRow({ event }) {
-  const hold = event.outcomes.find(o => o.type === 'hold');
-  const cuts = event.outcomes.filter(o => o.type === 'cut');
-  const hikes = event.outcomes.filter(o => o.type === 'hike');
-  const cutPct = cuts.reduce((sum, o) => sum + o.probability, 0);
-  const hikePct = hikes.reduce((sum, o) => sum + o.probability, 0);
-  const holdPct = hold?.probability || 0;
-
-  return (
-    <div className="flex items-center gap-3 py-1.5 border-b border-slate-100 last:border-0">
-      <span className="text-xs text-slate-700 w-20 font-medium">{formatShortDate(event.endDate)}</span>
-      <div className="flex-1 flex gap-1.5 items-center">
-        <PctPill pct={cutPct} type="cut" label="Cut" />
-        <PctPill pct={holdPct} type="hold" label="Hold" />
-        <PctPill pct={hikePct} type="hike" label="Hike" />
-      </div>
-    </div>
-  );
-}
-
-function PctPill({ pct, type, label }) {
-  const colors = TYPE_COLORS[type];
-  const display = (pct * 100).toFixed(0);
-  if (pct < 0.005) return null;
-  return (
-    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${colors.bg} ${colors.text}`}>
-      {display}% {label}
-    </span>
-  );
-}
-
 export default function FedPanel({ fedEvents = [] }) {
   if (!fedEvents.length) return null;
 
-  const [next, ...future] = fedEvents;
+  const [next] = fedEvents;
 
   return (
     <div>
