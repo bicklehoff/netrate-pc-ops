@@ -49,18 +49,6 @@ export default function BelowFold() {
 
   return (
     <div className="space-y-8">
-      {/* What Happened Today */}
-      <div id="full-commentary" className="bg-white rounded-2xl p-6 md:p-8 border border-slate-200 border-l-4 border-l-primary shadow-sm scroll-mt-24">
-        <h2 className="text-slate-900 text-2xl font-extrabold leading-tight mb-4">
-          What Happened Today
-        </h2>
-        <div className="space-y-3 text-slate-600 text-sm leading-relaxed">
-          {narrativeParagraphs.map((p, i) => (
-            <p key={i} dangerouslySetInnerHTML={{ __html: p }} />
-          ))}
-        </div>
-      </div>
-
       {/* What Could Move Rates Next */}
       <div>
         <h3 className="text-slate-900 text-lg font-bold mb-4">What Could Move Rates Next</h3>

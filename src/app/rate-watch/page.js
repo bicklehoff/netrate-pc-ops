@@ -8,6 +8,7 @@ import { PredictionDataProvider, FedPanelSection } from '@/components/RateWatch/
 import RateGrid from '@/components/RateWatch/RateGrid';
 import FedStatementDiff from '@/components/RateWatch/FedStatementDiff';
 import Commentary from '@/components/RateWatch/Commentary';
+import WhatHappenedToday from '@/components/RateWatch/WhatHappenedToday';
 import { getHomepageRatesFromDB } from '@/lib/rates/homepage-db';
 
 export const revalidate = 300; // ISR: 5 minutes
@@ -243,14 +244,24 @@ export default async function RateWatchPage() {
             <RateChart rateHistory={rateHistory} fredData={fredData.series} />
           </div>
 
-          {/* Row 5: Fed Statement Diff — fixed height */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:h-[280px]">
+          {/* Row 5: What Happened Today (2col) + Fed Statement Diff (1col) */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:h-[320px]">
+            <div className="lg:col-span-2 min-h-0" id="full-commentary">
+              <div className="bg-white rounded-2xl border border-slate-200 border-l-4 border-l-primary p-6 shadow-sm h-full flex flex-col overflow-hidden">
+                <h2 className="text-slate-900 text-xl font-extrabold leading-tight mb-3 shrink-0">
+                  What Happened Today
+                </h2>
+                <div className="text-slate-600 text-sm leading-relaxed flex-1 overflow-hidden">
+                  <WhatHappenedToday />
+                </div>
+              </div>
+            </div>
             <div className="min-h-0">
               <FedStatementDiff />
             </div>
           </div>
 
-          {/* Below fold: narrative, events, CTA, SEO */}
+          {/* Below fold: events, CTA, SEO */}
           <BelowFold />
 
         </div>
