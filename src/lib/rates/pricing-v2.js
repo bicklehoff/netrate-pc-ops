@@ -186,6 +186,7 @@ function getSRP(state, term, productType, tier, lenderAdj, loanAmount, loanType)
   if (!lenderAdj?.srp) return 0;
 
   const isFha = loanType === 'fha';
+  const isVa = loanType === 'va';
   const isArm = productType === 'arm';
   const escrowKey = 'withImpounds';
 
@@ -199,7 +200,7 @@ function getSRP(state, term, productType, tier, lenderAdj, loanAmount, loanType)
   // Product group key varies by tier and loan type
   let productKey;
   if (tier === 'elite') {
-    const prefix = isFha ? 'FHA' : 'Conventional';
+    const prefix = isFha ? 'FHA' : isVa ? 'VA' : 'Conventional';
     productKey = isArm
       ? (term >= 10 ? `${prefix} 10/6 ARM` : term >= 7 ? `${prefix} 7/6 ARM` : `${prefix} 5/6 ARM`)
       : (term <= 15 ? `${prefix} 10/15 Year Fixed` : `${prefix} 20/25/30 Year Fixed`);
@@ -370,9 +371,10 @@ export function priceRate(rateEntry, product, scenario, lenderAdj, brokerConfig,
 
   // Step 2: FICO/LTV adjustment — resolve tier/agency/term-specific grids
   // Elite FHA uses a completely different adjustment path (see Step 2b below)
-  const isEliteFha = isFha && tier === 'elite';
+  const isVa = loanType === 'va';
+  const isEliteGovt = (isFha || isVa) && tier === 'elite';
 
-  if (!isEliteFha) {
+  if (!isEliteGovt) {
     const ficoGrids = resolveGrids(tier, investor, term, lenderAdj, llpaGrids);
     if (isConventional) {
       // Conventional: values are costs (negative in grid) → subtract
@@ -392,7 +394,7 @@ export function priceRate(rateEntry, product, scenario, lenderAdj, brokerConfig,
   }
 
   // Step 2b: Elite FHA — FICO/Loan Amount grid + Purpose/State/FICO/LTV grid
-  if (isEliteFha) {
+  if (isEliteGovt) {
     // FICO × Loan Amount adjustment (uses BASE loan amount, not effective)
     if (lenderAdj?.eliteFhaFicoLoanAmt?.length) {
       for (const row of lenderAdj.eliteFhaFicoLoanAmt) {
@@ -463,7 +465,7 @@ export function priceRate(rateEntry, product, scenario, lenderAdj, brokerConfig,
 
   // Step 5b: Product feature adjustments (FICO band, purpose, state, tier)
   // Elite FHA has its own adjustment path — skip generic product features
-  if (lenderAdj?.productFeatures?.length && !isEliteFha) {
+  if (lenderAdj?.productFeatures?.length && !isEliteGovt) {
     const scenarioPropertyType = scenario.propertyType || 'sfr';
     for (const pf of lenderAdj.productFeatures) {
       // Check filters
