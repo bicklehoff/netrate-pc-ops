@@ -80,83 +80,74 @@ export default function CompensationSection({ loan }) {
             <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto" />
           </div>
         ) : (
-          <div className="space-y-3">
-            {/* Comp breakdown */}
-            <div className="space-y-1">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Broker Compensation</span>
-                <span className="font-medium text-gray-900">{fmt$(grossComp)}</span>
-              </div>
-
-              {(appraisalReimb > 0 || creditReimb > 0 || miscReimb > 0) && (
-                <>
-                  <div className="border-t border-gray-100 my-2" />
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Reimbursements</p>
-                  {appraisalReimb > 0 && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Appraisal</span>
-                      <span className="text-gray-700">{fmt$(appraisalReimb)}</span>
-                    </div>
-                  )}
-                  {creditReimb > 0 && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Credit Report</span>
-                      <span className="text-gray-700">{fmt$(creditReimb)}</span>
-                    </div>
-                  )}
-                  {miscReimb > 0 && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Other</span>
-                      <span className="text-gray-700">{fmt$(miscReimb)}</span>
-                    </div>
-                  )}
-                </>
-              )}
-
-              {wireTotal && (
-                <>
-                  <div className="border-t border-gray-200 my-2" />
-                  <div className="flex justify-between text-sm font-semibold">
-                    <span className="text-gray-700">Expected Wire</span>
-                    <span className="text-gray-900">{fmt$(wireTotal)}</span>
+          <div className="space-y-4">
+            {/* Wire Info */}
+            <div>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Wire Info</p>
+              <div className="space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Broker Compensation</span>
+                  <span className="font-medium text-gray-900">{fmt$(grossComp)}</span>
+                </div>
+                {appraisalReimb > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Appraisal Reimb</span>
+                    <span className="text-gray-700">{fmt$(appraisalReimb)}</span>
                   </div>
-                </>
-              )}
+                )}
+                {creditReimb > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Credit Report Reimb</span>
+                    <span className="text-gray-700">{fmt$(creditReimb)}</span>
+                  </div>
+                )}
+                {miscReimb > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Other Reimb</span>
+                    <span className="text-gray-700">{fmt$(miscReimb)}</span>
+                  </div>
+                )}
+                {wireTotal && (
+                  <>
+                    <div className="border-t border-gray-200 my-1.5" />
+                    <div className="flex justify-between text-sm font-semibold">
+                      <span className="text-gray-700">Expected Wire</span>
+                      <span className="text-gray-900">{fmt$(wireTotal)}</span>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
 
-            {/* LO comp + anticipated payment */}
+            {/* Payment Info */}
             {loComp && (() => {
               const totalReimb = (appraisalReimb || 0) + (creditReimb || 0) + (miscReimb || 0);
               const anticipatedPayment = loComp + totalReimb;
               return (
-                <>
-                  <div className="border-t-2 border-emerald-200 my-3" />
-                  <div className="bg-emerald-50 rounded-lg px-4 py-3 space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-semibold text-emerald-800">Your Commission</span>
-                      <span className="text-sm font-bold text-emerald-700">{fmt$(loComp)}</span>
+                <div className="bg-emerald-50 rounded-lg px-4 py-3">
+                  <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wider mb-2">Payment Info</p>
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-emerald-700">Broker Compensation</span>
+                      <span className="text-emerald-900 font-medium">{fmt$(grossComp)}</span>
                     </div>
-                    {houseFee && (
-                      <div className="flex justify-between text-xs text-emerald-600">
-                        <span>House fee</span>
-                        <span>{fmt$(houseFee)}</span>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-emerald-600">House Fee (12.95%)</span>
+                      <span className="text-red-500 font-medium">-{fmt$(houseFee)}</span>
+                    </div>
+                    {totalReimb > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-emerald-600">Reimbursements</span>
+                        <span className="text-emerald-700 font-medium">+{fmt$(totalReimb)}</span>
                       </div>
                     )}
-                    {totalReimb > 0 && (
-                      <>
-                        <div className="flex justify-between text-xs text-emerald-600">
-                          <span>Reimbursements</span>
-                          <span>+{fmt$(totalReimb)}</span>
-                        </div>
-                        <div className="border-t border-emerald-300 my-1" />
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm font-bold text-emerald-900">Anticipated Payment</span>
-                          <span className="text-lg font-bold text-emerald-800">{fmt$(anticipatedPayment)}</span>
-                        </div>
-                      </>
-                    )}
+                    <div className="border-t border-emerald-300 my-1.5" />
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-bold text-emerald-900">Anticipated Payment</span>
+                      <span className="text-lg font-bold text-emerald-800">{fmt$(anticipatedPayment)}</span>
+                    </div>
                   </div>
-                </>
+                </div>
               );
             })()}
 
