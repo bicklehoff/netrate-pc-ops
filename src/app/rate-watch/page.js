@@ -208,7 +208,7 @@ export default async function RateWatchPage() {
           {/* Row 1: Hero (2col) + Fed Prediction (1col) — fixed height */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:h-[280px]">
             <div className="lg:col-span-2 min-h-0">
-              <HeroStrip todayRate={todayRate} rateChange={rateChange} />
+              <HeroStrip todayRate={todayRate} rateChange={rateChange} apr={liveRates?.conv30?.apr || null} />
             </div>
             <div className="min-h-0">
               <FedPanelSection />

@@ -63,7 +63,7 @@ function RateTrendGauge({ rateChange }) {
   );
 }
 
-export default function HeroStrip({ todayRate, rateChange }) {
+export default function HeroStrip({ todayRate, rateChange, apr }) {
   const [commentary, setCommentary] = useState(null);
 
   useEffect(() => {
@@ -94,7 +94,7 @@ export default function HeroStrip({ todayRate, rateChange }) {
 
       <div className="relative z-10">
         {/* Label */}
-        <span className="text-[10px] text-primary font-bold tracking-widest uppercase">Live Benchmark</span>
+        <span className="text-[10px] text-primary font-bold tracking-widest uppercase">NetRate Wholesale Rate</span>
 
         {/* Rate header */}
         <div className="mt-1 mb-1">
@@ -102,6 +102,11 @@ export default function HeroStrip({ todayRate, rateChange }) {
             <span className="text-4xl md:text-5xl font-extrabold tracking-tighter text-slate-900 tabular-nums">
               {todayRate ? todayRate.toFixed(3) + '%' : '—'}
             </span>
+            {apr && (
+              <span className="text-lg text-slate-400 font-medium tabular-nums">
+                / {apr.toFixed(3)}% APR
+              </span>
+            )}
             <span className={`text-sm font-bold tabular-nums ${changeClass}`}>{changeText}</span>
           </div>
           <div className="text-xs text-slate-500 mt-0.5">
