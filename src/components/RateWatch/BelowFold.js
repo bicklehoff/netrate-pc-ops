@@ -26,9 +26,9 @@ const FALLBACK_EVENTS = [
 
 const FALLBACK_NARRATIVE = {
   paragraphs: [
-    'Markets are digesting the latest economic data and Fed commentary. Treasury yields have been volatile as investors weigh inflation concerns against signs of economic cooling. <strong class="text-white">The path forward depends on upcoming data releases.</strong>',
+    'Markets are digesting the latest economic data and Fed commentary. Treasury yields have been volatile as investors weigh inflation concerns against signs of economic cooling. <strong class="text-slate-900">The path forward depends on upcoming data releases.</strong>',
     'Mortgage rates track the 10-year Treasury closely, and both have been range-bound over the past few weeks. The next major catalyst will be the April jobs report — a weaker number could push rates back toward February lows, while a strong print would keep them elevated.',
-    '<strong class="text-white">Bottom line:</strong> Rates are in a holding pattern. The next few weeks of economic data will determine whether we break lower or push higher. If you\'re in the market, this is a reasonable time to lock — but there\'s no urgency unless you have a closing deadline.',
+    '<strong class="text-slate-900">Bottom line:</strong> Rates are in a holding pattern. The next few weeks of economic data will determine whether we break lower or push higher. If you\'re in the market, this is a reasonable time to lock — but there\'s no urgency unless you have a closing deadline.',
   ],
 };
 
@@ -43,21 +43,18 @@ export default function BelowFold() {
   }, []);
 
   const events = summary?.upcomingEvents?.length ? summary.upcomingEvents : FALLBACK_EVENTS;
-
-  // If we have a live summary, use its commentary for the narrative.
-  // Otherwise use the hardcoded fallback.
   const narrativeParagraphs = summary?.commentary
     ? [summary.commentary]
     : FALLBACK_NARRATIVE.paragraphs;
 
   return (
-    <div className="px-5">
+    <div className="space-y-8">
       {/* What Happened Today */}
-      <div id="full-commentary" className="bg-surface rounded-xl px-9 py-8 border border-white/10 border-l-4 border-l-red-500 scroll-mt-4">
-        <h2 className="text-white text-[26px] font-extrabold leading-tight mb-4">
+      <div id="full-commentary" className="bg-white rounded-2xl p-6 md:p-8 border border-slate-200 border-l-4 border-l-primary shadow-sm scroll-mt-24">
+        <h2 className="text-slate-900 text-2xl font-extrabold leading-tight mb-4">
           What Happened Today
         </h2>
-        <div className="space-y-3 text-slate-300 text-[15px] leading-[1.8]">
+        <div className="space-y-3 text-slate-600 text-sm leading-relaxed">
           {narrativeParagraphs.map((p, i) => (
             <p key={i} dangerouslySetInnerHTML={{ __html: p }} />
           ))}
@@ -65,28 +62,28 @@ export default function BelowFold() {
       </div>
 
       {/* What Could Move Rates Next */}
-      <div className="mt-6">
-        <h3 className="text-white text-lg font-bold mb-4">What Could Move Rates Next</h3>
+      <div>
+        <h3 className="text-slate-900 text-lg font-bold mb-4">What Could Move Rates Next</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {events.map((ev, i) => (
             <div
               key={i}
-              className={`bg-surface rounded-xl px-6 py-5 border border-white/10 ${
-                ev.big ? 'border-l-[3px] border-l-amber-500' : ''
+              className={`bg-white rounded-2xl px-6 py-5 border border-slate-200 shadow-sm ${
+                ev.big ? 'border-l-4 border-l-amber-500' : ''
               }`}
             >
-              <div className="text-amber-500 text-xs font-bold uppercase tracking-wide mb-1.5">
+              <div className="text-primary text-[10px] font-bold uppercase tracking-widest mb-1.5">
                 {ev.date}
               </div>
-              <div className="text-white text-base font-bold mb-2">{ev.name}</div>
-              <div className="text-slate-400 text-[13px] leading-relaxed">{ev.impact}</div>
+              <div className="text-slate-900 text-base font-bold mb-2">{ev.name}</div>
+              <div className="text-slate-500 text-sm leading-relaxed">{ev.impact}</div>
             </div>
           ))}
         </div>
       </div>
 
       {/* CTA Banner */}
-      <div className="bg-gradient-to-br from-brand to-cyan-700 rounded-xl px-8 py-7 mt-8 flex flex-col sm:flex-row items-center justify-between gap-6">
+      <div className="bg-gradient-to-br from-primary to-cyan-700 rounded-2xl px-8 py-7 flex flex-col sm:flex-row items-center justify-between gap-6">
         <div>
           <h3 className="text-white text-xl font-bold mb-1.5">
             Ready to see your actual rate?
@@ -98,19 +95,19 @@ export default function BelowFold() {
         </div>
         <a
           href="/rates"
-          className="bg-white text-cyan-700 px-8 py-3.5 rounded-lg text-base font-bold whitespace-nowrap hover:bg-cyan-50 transition-all hover:-translate-y-0.5"
+          className="bg-white text-cyan-700 px-8 py-3.5 rounded-xl text-base font-bold whitespace-nowrap hover:bg-cyan-50 transition-all hover:-translate-y-0.5 shadow-lg"
         >
           Get Your Rate
         </a>
       </div>
 
       {/* SEO Text */}
-      <div className="mt-12 pt-8 border-t border-white/10">
-        <h2 className="text-slate-500 text-base font-semibold mb-4">
+      <div className="pt-8 border-t border-slate-100">
+        <h2 className="text-slate-400 text-base font-semibold mb-4">
           About NetRate&apos;s Rate Watch
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-3 text-slate-600 text-[13px] leading-[1.7]">
+          <div className="space-y-3 text-slate-500 text-xs leading-relaxed">
             <p>
               NetRate tracks daily wholesale mortgage rates sourced directly from our lending
               partners. Unlike survey-based averages from Freddie Mac or Bankrate, our data reflects
@@ -123,7 +120,7 @@ export default function BelowFold() {
               consumers by banks and lenders.
             </p>
           </div>
-          <div className="space-y-3 text-slate-600 text-[13px] leading-[1.7]">
+          <div className="space-y-3 text-slate-500 text-xs leading-relaxed">
             <p>
               The spread between wholesale and retail rates exists because retail lenders build their
               margin, overhead, and profit into the rate they quote you. When you work with a
@@ -140,8 +137,8 @@ export default function BelowFold() {
       </div>
 
       {/* Disclaimer */}
-      <div className="mt-8 pt-5 pb-10 border-t border-white/10">
-        <p className="text-slate-600 text-[11px] leading-relaxed max-w-[900px]">
+      <div className="pt-5 pb-10 border-t border-slate-100">
+        <p className="text-slate-400 text-[10px] leading-relaxed max-w-[900px]">
           Market commentary is for informational purposes only and does not constitute financial
           advice. Rates shown are wholesale par rates (zero discount points) and are subject to
           change without notice. Actual rates depend on individual borrower qualifications including

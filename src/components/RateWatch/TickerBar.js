@@ -3,11 +3,11 @@
 function TickerStat({ label, value, change, changeColor }) {
   return (
     <div className="flex flex-col">
-      <span className="text-slate-400 text-xs uppercase tracking-wide font-medium">{label}</span>
-      <span className="text-slate-200 text-base font-bold">
+      <span className="text-slate-400 text-[10px] uppercase tracking-wider font-bold">{label}</span>
+      <span className="text-slate-900 text-sm font-bold tabular-nums">
         {value}
         {change && (
-          <span className={`text-[13px] ml-1 ${changeColor || 'text-slate-500'}`}>{change}</span>
+          <span className={`text-xs ml-1 font-medium ${changeColor || 'text-slate-400'}`}>{change}</span>
         )}
       </span>
     </div>
@@ -15,11 +15,10 @@ function TickerStat({ label, value, change, changeColor }) {
 }
 
 function Separator() {
-  return <div className="w-px h-7 bg-slate-700" />;
+  return <div className="w-px h-6 bg-slate-200" />;
 }
 
 export default function TickerBar({ fredLatest, todayRate, rateHistory }) {
-  // Compute 90-day low/high from rate history (apply offset to align with pricing engine)
   const now = new Date();
   const cutoff90 = new Date(now);
   cutoff90.setDate(cutoff90.getDate() - 90);
@@ -39,10 +38,7 @@ export default function TickerBar({ fredLatest, todayRate, rateHistory }) {
     }
     if (high90 === null || rate > high90) {
       high90 = rate;
-      high90Date = new Date(r.date).toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-      });
+      high90Date = new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     }
   }
 
@@ -50,10 +46,10 @@ export default function TickerBar({ fredLatest, todayRate, rateHistory }) {
   const spread = fm30 && todayRate ? (fm30.value - todayRate).toFixed(3) : null;
 
   const chgColor = (val) =>
-    val > 0 ? 'text-red-500' : val < 0 ? 'text-green-500' : 'text-slate-500';
+    val > 0 ? 'text-red-500' : val < 0 ? 'text-emerald-600' : 'text-slate-400';
 
   return (
-    <div className="flex items-center gap-7 px-7 py-3.5 border-b border-slate-800 overflow-x-auto">
+    <div className="flex items-center gap-5 px-4 py-2.5 bg-white/60 backdrop-blur-sm rounded-xl border border-slate-100 overflow-x-auto scrollbar-hide">
       {fredLatest?.MORTGAGE15US && (
         <>
           <TickerStat
@@ -108,7 +104,7 @@ export default function TickerBar({ fredLatest, todayRate, rateHistory }) {
             label="90-Day Low"
             value={low90.toFixed(3) + '%'}
             change={low90Date}
-            changeColor="text-slate-500"
+            changeColor="text-slate-400"
           />
           <Separator />
         </>
@@ -119,7 +115,7 @@ export default function TickerBar({ fredLatest, todayRate, rateHistory }) {
             label="90-Day High"
             value={high90.toFixed(3) + '%'}
             change={high90Date}
-            changeColor="text-slate-500"
+            changeColor="text-slate-400"
           />
           <Separator />
         </>

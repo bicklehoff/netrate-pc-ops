@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Lucid Analyst | Mortgage Market Intelligence</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#0891b2",
+              "primary-container": "#cffafe",
+              "on-primary-container": "#083344",
+              "secondary": "#0e7490",
+              "tertiary": "#059669",
+              "tertiary-container": "#d1fae5",
+              "background": "#f8fafc",
+              "surface": "#ffffff",
+              "on-surface": "#1e293b",
+              "on-surface-variant": "#64748b",
+              "outline-variant": "#e2e8f0",
+              "surface-container-low": "#ffffff",
+              "surface-container": "#ffffff",
+              "surface-container-high": "#ffffff",
+              "surface-container-highest": "#f1f5f9",
+              "error": "#dc2626",
+              "error-container": "#fee2e2",
+            },
+            fontFamily: {
+              "headline": ["Inter"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+      body { font-family: 'Inter', sans-serif; color: #475569; }
+      .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+      .glass-card { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(226, 232, 240, 0.5); }
+      h1, h2, h3, h4, .font-bold { color: #1e293b; }
+    </style>
+</head>
+<body class="bg-background text-slate-600 selection:bg-primary/20 selection:text-primary">
+<!-- TopNavBar -->
+<header class="bg-white/80 backdrop-blur-xl border-b border-slate-200 font-inter tracking-tight shadow-sm top-0 sticky z-50">
+<div class="flex justify-between items-center w-full px-8 py-4 max-w-screen-2xl mx-auto">
+<div class="text-2xl font-black tracking-tighter text-slate-900">Lucid Analyst</div>
+<nav class="hidden md:flex items-center gap-8">
+<a class="text-primary border-b-2 border-primary pb-1 font-semibold" href="#">Market Watch</a>
+<a class="text-slate-500 hover:text-primary transition-colors" href="#">Fed Tracker</a>
+<a class="text-slate-500 hover:text-primary transition-colors" href="#">Yields</a>
+<a class="text-slate-500 hover:text-primary transition-colors" href="#">Calendar</a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-slate-500 hover:bg-slate-100 transition-all p-2 rounded-full active:scale-95 duration-200" data-icon="notifications">notifications</button>
+<button class="material-symbols-outlined text-slate-500 hover:bg-slate-100 transition-all p-2 rounded-full active:scale-95 duration-200" data-icon="account_circle">account_circle</button>
+</div>
+</div>
+</header>
+<div class="flex min-h-screen">
+<!-- SideNavBar -->
+<aside class="bg-white h-screen w-64 fixed left-0 top-0 pt-20 flex flex-col gap-2 p-4 border-r border-slate-200 z-40">
+<div class="px-4 mb-6">
+<div class="text-lg font-bold text-slate-900">Market Tools</div>
+<div class="text-[10px] text-slate-400 uppercase tracking-widest font-semibold">Analytical Suite</div>
+</div>
+<nav class="space-y-1">
+<a class="flex items-center gap-3 text-primary bg-primary/5 font-bold rounded-lg px-4 py-3 ml-2 transition-all duration-300 ease-in-out" href="#">
+<span class="material-symbols-outlined" data-icon="show_chart">show_chart</span>
+<span>Dashboard</span>
+</a>
+<a class="flex items-center gap-3 text-slate-500 px-4 py-3 hover:translate-x-1 hover:bg-slate-50 transition-all duration-300 ease-in-out" href="#">
+<span class="material-symbols-outlined" data-icon="account_balance">account_balance</span>
+<span>Rates Analysis</span>
+</a>
+<a class="flex items-center gap-3 text-slate-500 px-4 py-3 hover:translate-x-1 hover:bg-slate-50 transition-all duration-300 ease-in-out" href="#">
+<span class="material-symbols-outlined" data-icon="calendar_month">calendar_month</span>
+<span>Economic Data</span>
+</a>
+<a class="flex items-center gap-3 text-slate-500 px-4 py-3 hover:translate-x-1 hover:bg-slate-50 transition-all duration-300 ease-in-out" href="#">
+<span class="material-symbols-outlined" data-icon="receipt_long">receipt_long</span>
+<span>Fed Watch</span>
+</a>
+<a class="flex items-center gap-3 text-slate-500 px-4 py-3 hover:translate-x-1 hover:bg-slate-50 transition-all duration-300 ease-in-out" href="#">
+<span class="material-symbols-outlined" data-icon="speed">speed</span>
+<span>Settings</span>
+</a>
+</nav>
+<div class="mt-auto p-4">
+<button class="w-full py-3 px-4 bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary/20 active:scale-95 transition-all text-sm">
+                    Get Expert Rate
+                </button>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="ml-64 flex-1 p-8 space-y-8 max-w-7xl mx-auto">
+<!-- Hero Section -->
+<section class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+<div class="lg:col-span-2 bg-white rounded-2xl p-8 flex flex-col justify-between relative overflow-hidden shadow-sm border border-slate-200">
+<div class="relative z-10">
+<span class="text-[10px] text-primary font-bold tracking-widest uppercase">Live Benchmark</span>
+<div class="mt-2 mb-1 text-xs font-bold text-slate-500 uppercase tracking-tight">Lucid Analyst Rate</div>
+<h1 class="text-7xl font-extrabold tracking-tighter text-slate-900 mb-2">6.250% <span class="text-3xl font-medium text-slate-400">/ 6.381% APR</span></h1>
+<p class="text-[10px] text-slate-400 font-medium mb-8 italic">Scenario: $400k loan amount, 75% LTV, 780+ credit, SFR, Conventional loan</p>
+<div class="space-y-4">
+<div class="flex justify-between text-[10px] text-slate-400 font-bold">
+<span>90-DAY LOW: 5.85%</span>
+<span>90-DAY HIGH: 6.95%</span>
+</div>
+<div class="h-3 w-full bg-slate-100 rounded-full relative">
+<div class="absolute inset-y-0 left-[20%] right-[40%] bg-gradient-to-r from-teal-400 to-primary rounded-full"></div>
+<div class="absolute top-1/2 left-[36%] -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-lg border-2 border-primary"></div>
+</div>
+</div>
+</div>
+<!-- Ambient Glow -->
+<div class="absolute -top-24 -right-24 w-64 h-64 bg-primary/5 blur-[100px] rounded-full"></div>
+</div>
+<!-- Lucid vs Market Comparison -->
+<div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+<h3 class="text-lg font-bold mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" data-icon="compare_arrows">compare_arrows</span>
+                        Lucid vs. Market
+                    </h3>
+<div class="space-y-4">
+<div class="flex items-center justify-between p-3 bg-primary/5 rounded-xl border border-primary/10">
+<span class="text-sm font-semibold text-slate-700">Lucid Analyst Rate</span>
+<span class="text-xl font-bold text-primary">6.25% <span class="text-xs font-medium opacity-70 ml-1">/ 6.38% APR</span></span>
+</div>
+<div class="flex items-center justify-between p-3">
+<span class="text-sm font-medium">National Average</span>
+<span class="text-lg font-semibold text-slate-900">6.85%</span>
+</div>
+<div class="flex items-center justify-between p-3 border-b border-slate-100 pb-4">
+<span class="text-sm font-medium">Big Banks Avg.</span>
+<span class="text-lg font-semibold text-slate-900">7.12%</span>
+</div>
+<div class="pt-2 text-center">
+<div class="text-primary font-black text-2xl tracking-tight">SAVE $245/MO+</div>
+<div class="text-[10px] text-slate-400 mt-1 italic font-medium">Based on $450k loan amount</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Commentary & Market Pulse -->
+<section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+<!-- Market Commentary -->
+<div class="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
+<h3 class="text-lg font-bold mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" data-icon="forum">forum</span>
+                        Market Commentary
+                    </h3>
+<ul class="space-y-5">
+<li class="flex gap-4 group">
+<div class="w-1 h-auto bg-primary rounded-full group-hover:scale-y-110 transition-transform"></div>
+<div>
+<p class="text-sm font-bold text-slate-900">Fed's dovish tone provides tailwind</p>
+<p class="text-xs text-slate-500 mt-1 leading-relaxed">FOMC minutes suggest readiness for H2 cuts if inflation persists on current trajectory.</p>
+</div>
+</li>
+<li class="flex gap-4 group">
+<div class="w-1 h-auto bg-teal-500 rounded-full group-hover:scale-y-110 transition-transform"></div>
+<div>
+<p class="text-sm font-bold text-slate-900">Cooling labor data may lower rates</p>
+<p class="text-xs text-slate-500 mt-1 leading-relaxed">NFP miss triggers short-term bond rally, putting downward pressure on conventional rates.</p>
+</div>
+</li>
+<li class="flex gap-4 group">
+<div class="w-1 h-auto bg-slate-300 rounded-full group-hover:scale-y-110 transition-transform"></div>
+<div>
+<p class="text-sm font-bold text-slate-900">Inventory levels remains historic low</p>
+<p class="text-xs text-slate-500 mt-1 leading-relaxed">Supply constraints continue to prop up home values despite rate volatility.</p>
+</div>
+</li>
+</ul>
+</div>
+<!-- Rate Trend Gauge -->
+<div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
+<h3 class="text-lg font-bold mb-6">Market Sentiment</h3>
+<div class="relative h-32 flex items-end justify-center">
+<div class="absolute bottom-0 w-48 h-24 border-[12px] border-b-0 border-t-slate-100 border-l-slate-100 border-r-primary rounded-t-full opacity-100"></div>
+<div class="relative z-10 text-center pb-2">
+<div class="text-3xl font-black text-primary">BULLISH</div>
+<div class="text-[10px] tracking-widest text-slate-400 font-bold uppercase">Rate Trajectory</div>
+</div>
+</div>
+<div class="mt-4 flex justify-between px-2">
+<span class="text-[10px] text-slate-400 font-bold">HAWKISH</span>
+<span class="text-[10px] text-primary font-bold">DOVISH</span>
+</div>
+</div>
+<!-- Treasury Yields Sidebar -->
+<div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
+<h3 class="text-lg font-bold mb-4">Treasury Yields</h3>
+<div class="space-y-4">
+<div class="flex justify-between items-center group cursor-default">
+<span class="text-xs font-bold text-slate-500">US 10YR</span>
+<div class="text-right">
+<div class="text-sm font-bold text-slate-900">4.215%</div>
+<div class="text-[10px] text-error font-bold">-0.042</div>
+</div>
+</div>
+<div class="flex justify-between items-center group cursor-default">
+<span class="text-xs font-bold text-slate-500">US 5YR</span>
+<div class="text-right">
+<div class="text-sm font-bold text-slate-900">4.180%</div>
+<div class="text-[10px] text-error font-bold">-0.021</div>
+</div>
+</div>
+<div class="flex justify-between items-center group cursor-default">
+<span class="text-xs font-bold text-slate-500">US 2YR</span>
+<div class="text-right">
+<div class="text-sm font-bold text-slate-900">4.522%</div>
+<div class="text-[10px] text-primary font-bold">+0.008</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Detailed Grid -->
+<section class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+<!-- Market Comparison Table -->
+<div class="lg:col-span-2 bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200">
+<div class="p-6 bg-slate-50 border-b border-slate-100">
+<h3 class="text-lg font-bold">Daily Rate Sheets</h3>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead class="text-[10px] text-slate-400 border-b border-slate-100 uppercase tracking-wider font-bold">
+<tr>
+<th class="px-6 py-4">Product</th>
+<th class="px-6 py-4">Rate / APR</th>
+<th class="px-6 py-4">Change</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100">
+<tr class="hover:bg-slate-50 transition-colors">
+<td class="px-6 py-4 text-sm font-bold text-slate-900">30-Yr Fixed</td>
+<td class="px-6 py-4 text-sm font-medium">6.250% <span class="text-slate-400 text-xs font-normal ml-1">/ 6.381% APR</span></td>
+<td class="px-6 py-4 text-xs text-error font-bold">-0.125</td>
+</tr>
+<tr class="hover:bg-slate-50 transition-colors">
+<td class="px-6 py-4 text-sm font-bold text-slate-900">15-Yr Fixed</td>
+<td class="px-6 py-4 text-sm font-medium">5.750% <span class="text-slate-400 text-xs font-normal ml-1">/ 5.922% APR</span></td>
+<td class="px-6 py-4 text-xs text-error font-bold">-0.050</td>
+</tr>
+<tr class="hover:bg-slate-50 transition-colors">
+<td class="px-6 py-4 text-sm font-bold text-slate-900">FHA 30-Yr</td>
+<td class="px-6 py-4 text-sm font-medium">5.875% <span class="text-slate-400 text-xs font-normal ml-1">/ 6.712% APR</span></td>
+<td class="px-6 py-4 text-xs text-primary font-bold">+0.125</td>
+</tr>
+<tr class="hover:bg-slate-50 transition-colors">
+<td class="px-6 py-4 text-sm font-bold text-slate-900">VA 30-Yr</td>
+<td class="px-6 py-4 text-sm font-medium">5.875% <span class="text-slate-400 text-xs font-normal ml-1">/ 6.124% APR</span></td>
+<td class="px-6 py-4 text-xs text-slate-400 font-bold">0.000</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Fed Rate Prediction -->
+<div class="bg-white rounded-2xl p-6 flex flex-col shadow-sm border border-slate-200">
+<h3 class="text-lg font-bold mb-6">Fed Prediction (Sept)</h3>
+<div class="flex-1 flex flex-col justify-center space-y-6">
+<div class="space-y-2">
+<div class="flex justify-between text-[11px] mb-1">
+<span class="font-bold text-slate-700">Pause (5.25 - 5.50)</span>
+<span class="text-slate-400 font-bold">12%</span>
+</div>
+<div class="h-2 bg-slate-100 rounded-full overflow-hidden">
+<div class="h-full bg-slate-300 w-[12%]"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-[11px] mb-1">
+<span class="font-bold text-primary">25bps Cut (5.00 - 5.25)</span>
+<span class="text-primary font-black">78%</span>
+</div>
+<div class="h-2 bg-slate-100 rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[78%] shadow-sm"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-[11px] mb-1">
+<span class="font-bold text-slate-700">50bps Cut (4.75 - 5.00)</span>
+<span class="text-slate-400 font-bold">10%</span>
+</div>
+<div class="h-2 bg-slate-100 rounded-full overflow-hidden">
+<div class="h-full bg-slate-300 w-[10%]"></div>
+</div>
+</div>
+</div>
+<div class="mt-6 pt-4 border-t border-slate-100 text-[10px] text-slate-400 font-bold uppercase text-center">
+                        Source: CME FedWatch Tool
+                    </div>
+</div>
+</section>
+<!-- Bottom Row Bento -->
+<section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+<!-- Market News Feed -->
+<div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
+<h3 class="text-lg font-bold mb-6">Market News</h3>
+<div class="space-y-6">
+<div class="group cursor-pointer">
+<div class="flex items-center gap-2 mb-1">
+<span class="text-[10px] font-bold text-primary uppercase">Bloomberg</span>
+<span class="text-[10px] text-slate-400 font-bold">• 2h ago</span>
+</div>
+<p class="text-sm font-bold text-slate-800 group-hover:text-primary transition-colors line-clamp-2">Treasury 10-year yields slide as cooling labor market boosts Fed cut bets</p>
+</div>
+<div class="group cursor-pointer">
+<div class="flex items-center gap-2 mb-1">
+<span class="text-[10px] font-bold text-teal-600 uppercase">Reuters</span>
+<span class="text-[10px] text-slate-400 font-bold">• 5h ago</span>
+</div>
+<p class="text-sm font-bold text-slate-800 group-hover:text-primary transition-colors line-clamp-2">US Housing starts fall more than expected in June, hitting 4-year low</p>
+</div>
+<div class="group cursor-pointer">
+<div class="flex items-center gap-2 mb-1">
+<span class="text-[10px] font-bold text-slate-500 uppercase">Analyst</span>
+<span class="text-[10px] text-slate-400 font-bold">• 1d ago</span>
+</div>
+<p class="text-sm font-bold text-slate-800 group-hover:text-primary transition-colors line-clamp-2">Why the 'Lock-in' effect may be permanent: A study on 3% fixed mortgages</p>
+</div>
+</div>
+</div>
+<!-- Statement Diff Viewer -->
+<div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
+<h3 class="text-lg font-bold mb-4">FOMC Statement Diff</h3>
+<div class="text-xs space-y-3 leading-relaxed">
+<div class="p-3 bg-red-50 border-l-2 border-red-500 rounded-r-lg">
+<span class="text-red-700 line-through font-medium">Economic activity has been expanding at a solid pace.</span>
+</div>
+<div class="p-3 bg-teal-50 border-l-2 border-teal-500 rounded-r-lg">
+<span class="text-teal-700 font-bold">Economic activity has been expanding at a moderate pace, but inflation remains elevated.</span>
+</div>
+<p class="text-[10px] text-slate-400 font-bold italic pt-2">Analysis: The shift from "solid" to "moderate" signaling the cooling necessary for a pivot.</p>
+</div>
+</div>
+<!-- Market Calendar -->
+<div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
+<h3 class="text-lg font-bold mb-6">Economic Calendar</h3>
+<div class="space-y-4">
+<div class="flex gap-4 items-start">
+<div class="w-12 text-center">
+<div class="text-[10px] font-bold text-slate-400">AUG</div>
+<div class="text-xl font-black text-primary">14</div>
+</div>
+<div class="flex-1 border-b border-slate-100 pb-4">
+<div class="text-sm font-bold text-slate-900">CPI Report (July)</div>
+<div class="text-[10px] text-slate-500 font-medium">Core CPI expected +0.2% MoM</div>
+</div>
+</div>
+<div class="flex gap-4 items-start">
+<div class="w-12 text-center">
+<div class="text-[10px] font-bold text-slate-400">AUG</div>
+<div class="text-xl font-black text-primary">15</div>
+</div>
+<div class="flex-1 border-b border-slate-100 pb-4">
+<div class="text-sm font-bold text-slate-900">Initial Jobless Claims</div>
+<div class="text-[10px] text-slate-500 font-medium">Expected: 235k | Prev: 233k</div>
+</div>
+</div>
+<div class="flex gap-4 items-start">
+<div class="w-12 text-center opacity-50">
+<div class="text-[10px] font-bold text-slate-400">AUG</div>
+<div class="text-xl font-black text-slate-400">22</div>
+</div>
+<div class="flex-1 pb-4 opacity-50">
+<div class="text-sm font-bold text-slate-900">Jackson Hole Symposium</div>
+<div class="text-[10px] text-slate-500 font-medium">Global central bank policy forum</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Competitive Rate Performance Section -->
+<section class="bg-white rounded-2xl p-8 relative overflow-hidden shadow-sm border border-slate-200">
+<div class="flex justify-between items-start mb-12 relative z-10">
+<div>
+<h3 class="text-lg font-bold">Competitive Rate Performance: Lucid vs. National Average</h3>
+<p class="text-xs text-slate-400 font-bold uppercase tracking-wider">Historical Comparison | 30-Year Fixed | Data since Dec 2025</p>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 bg-primary rounded-full"></div>
+<span class="text-xs font-bold text-slate-700">Lucid Rate</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 bg-slate-300 rounded-full"></div>
+<span class="text-xs font-bold text-slate-700">National Avg</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 bg-primary/10 border border-primary/20 rounded"></div>
+<span class="text-xs font-bold text-primary">The Lucid Spread (25 bps)</span>
+</div>
+</div>
+</div>
+<div class="relative h-[300px] w-full flex items-end">
+<!-- Y-Axis Labels -->
+<div class="absolute left-0 h-full flex flex-col justify-between text-[10px] font-bold text-slate-400 pb-8 pr-4 text-right w-10">
+<span>7.5%</span>
+<span>7.0%</span>
+<span>6.5%</span>
+<span>6.0%</span>
+<span>5.5%</span>
+<span class="text-slate-600 mt-2">Rate %</span>
+</div>
+<!-- Chart Area -->
+<div class="flex-1 h-full ml-12 relative">
+<!-- Grid Lines -->
+<div class="absolute inset-0 flex flex-col justify-between border-b border-slate-100">
+<div class="w-full border-t border-slate-50"></div>
+<div class="w-full border-t border-slate-50"></div>
+<div class="w-full border-t border-slate-50"></div>
+<div class="w-full border-t border-slate-50"></div>
+<div class="w-full border-t border-slate-50"></div>
+</div>
+<!-- SVG Chart -->
+<svg class="absolute inset-0 w-full h-full" preserveaspectratio="none" viewbox="0 0 1000 300">
+<!-- Vertical Grid/Date Markers (conceptual) -->
+<!-- Shaded Area: The Lucid Spread -->
+<!-- National Avg (Gray) Data: 6.8 -> 6.5 -> 6.9 -> 6.4 -> 6.6 -> 6.5 (Approx px heights for 0-300 range where 300 is bottom, 0 is top) -->
+<!-- Map 5.5-7.5 range: 7.5% = 0px, 5.5% = 300px. So 1% = 150px. 0.1% = 15px. -->
+<!-- 6.5% = 150px. 6.75% = 112.5px. 6.25% = 187.5px. -->
+<path d="M0 105 L 200 135 L 400 90 L 600 165 L 800 135 L 1000 150 L 1000 187.5 L 800 172.5 L 600 202.5 L 400 127.5 L 200 172.5 L 0 142.5 Z" fill="rgba(8, 145, 178, 0.08)"></path>
+<!-- National Average Line (Gray Dash) -->
+<polyline fill="none" points="0,105 200,135 400,90 600,165 800,135 1000,150" stroke="#cbd5e1" stroke-dasharray="8,4" stroke-width="2.5"></polyline>
+<!-- Lucid Rate Line (Primary Blue) -->
+<polyline fill="none" points="0,142.5 200,172.5 400,127.5 600,202.5 800,172.5 1000,187.5" stroke="#0891b2" stroke-width="4"></polyline>
+<!-- Points for Lucid Rate -->
+<circle cx="0" cy="142.5" fill="#0891b2" r="3"></circle>
+<circle cx="200" cy="172.5" fill="#0891b2" r="3"></circle>
+<circle cx="400" cy="127.5" fill="#0891b2" r="3"></circle>
+<circle cx="600" cy="202.5" fill="#0891b2" r="3"></circle>
+<circle cx="800" cy="172.5" fill="#0891b2" r="3"></circle>
+<circle cx="1000" cy="187.5" fill="white" r="5" stroke="#0891b2" stroke-width="2"></circle>
+</svg>
+<!-- X-Axis Labels -->
+<div class="absolute bottom-[-32px] w-full flex justify-between text-[10px] font-bold text-slate-400 px-2">
+<span class="w-0 text-left whitespace-nowrap">DEC 25</span>
+<span class="w-0 text-center whitespace-nowrap">JAN 26</span>
+<span class="w-0 text-center whitespace-nowrap">FEB 26</span>
+<span class="w-0 text-center whitespace-nowrap">MAR 26</span>
+<span class="w-0 text-center whitespace-nowrap">APR 26</span>
+<span class="w-0 text-right whitespace-nowrap">MAY 26</span>
+</div>
+</div>
+</div>
+<!-- Spread Value Indicators -->
+<div class="mt-12 grid grid-cols-6 ml-12 text-center bg-slate-50/50 rounded-lg py-2 border border-slate-100">
+<div class="text-[9px] font-black text-primary">-25 BPS</div>
+<div class="text-[9px] font-black text-primary">-25 BPS</div>
+<div class="text-[9px] font-black text-primary">-25 BPS</div>
+<div class="text-[9px] font-black text-primary">-25 BPS</div>
+<div class="text-[9px] font-black text-primary">-25 BPS</div>
+<div class="text-[9px] font-black text-primary">-25 BPS</div>
+</div>
+</section>
+</main>
+</div>
+<!-- Floating Action Button (FAB) -->
+<button class="fixed bottom-8 right-8 w-16 h-16 bg-primary shadow-2xl shadow-primary/40 rounded-full flex items-center justify-center text-white z-50 hover:scale-110 active:scale-95 transition-all">
+<span class="material-symbols-outlined text-2xl" data-icon="rocket_launch">rocket_launch</span>
+</button>
+</body></html>

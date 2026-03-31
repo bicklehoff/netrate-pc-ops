@@ -7,6 +7,8 @@ import BelowFold from '@/components/RateWatch/BelowFold';
 import { PredictionDataProvider, FedPanelSection } from '@/components/RateWatch/Predictions';
 import RateGrid from '@/components/RateWatch/RateGrid';
 import FedStatementDiff from '@/components/RateWatch/FedStatementDiff';
+import Commentary from '@/components/RateWatch/Commentary';
+import SectionNav from '@/components/RateWatch/SectionNav';
 import { getHomepageRatesFromDB } from '@/lib/rates/homepage-db';
 
 export const revalidate = 300; // ISR: 5 minutes
@@ -157,74 +159,114 @@ export default async function RateWatchPage() {
     natDate = fl.MORTGAGE30US?.date || null;
   }
 
-  // Rate change: use MND's daily change (reliable day-over-day comparison)
-  // Falls back to FRED weekly change, then 0
   const rateChange = natRates?.conv30?.change
     || fredData.latest?.MORTGAGE30US?.change
     || 0;
 
   return (
-    <div className="bg-deep text-slate-200 min-h-screen">
+    <div className="bg-slate-50 min-h-screen">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
+      {/* Google Material Symbols for icons */}
+      <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet"
+      />
+
       {/* Stale data warning */}
       {fredData.stale && (
-        <div className="mx-5 mt-4 px-4 py-2.5 bg-amber-900/30 border border-amber-700/40 rounded-lg text-amber-300 text-xs">
-          Market data may be delayed — live feed temporarily unavailable. Showing data from {fredData.fallbackDate || 'cache'}.
+        <div className="max-w-7xl mx-auto px-4 mt-4">
+          <div className="px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-xs">
+            Market data may be delayed — live feed temporarily unavailable. Showing data from {fredData.fallbackDate || 'cache'}.
+          </div>
         </div>
       )}
 
-      {/* Header row — title + ticker inline */}
-      <div className="flex items-center gap-4 px-3 pt-3 pb-1">
-        <h1 className="text-white text-xl font-extrabold tracking-tight whitespace-nowrap">
-          Rate <span className="text-brand">Watch</span>
-        </h1>
-        <div className="flex-1 min-w-0">
-          <TickerBar
-            fredLatest={fredData.latest}
-            todayRate={todayRate}
-            rateHistory={rateHistory}
-          />
-        </div>
-      </div>
-
-      {/* === Masonry dashboard — blocks flow top-to-bottom, no gaps === */}
-      <PredictionDataProvider>
-        <div className="px-3 py-2 lg:columns-3 md:columns-2 columns-1 gap-2 [&>*]:mb-2 [&>*]:break-inside-avoid">
-          <HeroStrip
-            todayRate={todayRate}
-            rateChange={rateChange}
-          />
-          <RateGrid
-            netRates={liveRates}
-            nationalRates={natRates}
-            date={natDate}
-          />
-          <FedPanelSection />
-          <TreasuryYields fredLatest={fredData.latest} />
-          <FedStatementDiff />
-          <EconomicCalendar />
-        </div>
-
-        {/* Rate History Chart — full width below masonry */}
-        <div className="px-3 py-2">
-          <div className="bg-surface rounded-xl border border-white/10 p-4 overflow-hidden">
-            <RateChart rateHistory={rateHistory} fredData={fredData.series} />
+      {/* Header row — title + ticker */}
+      <div className="max-w-7xl mx-auto px-4 pt-4 pb-2">
+        <div className="flex items-center gap-4">
+          <h1 className="text-slate-900 text-xl font-extrabold tracking-tight whitespace-nowrap">
+            Rate <span className="text-primary">Watch</span>
+          </h1>
+          <div className="flex-1 min-w-0">
+            <TickerBar
+              fredLatest={fredData.latest}
+              todayRate={todayRate}
+              rateHistory={rateHistory}
+            />
           </div>
         </div>
-      </PredictionDataProvider>
-
-      {/* Narrative + events + CTA */}
-      <BelowFold />
-
-      {/* Disclaimer */}
-      <div className="px-3 py-2 border-t border-white/10 text-[10px] text-slate-500 leading-relaxed">
-        Market commentary is for informational purposes only and does not constitute financial advice.
-        Rates shown are wholesale par rates and are subject to change. NMLS #1111861. Equal Housing Lender.
       </div>
+
+      {/* Main content with sidebar */}
+      <PredictionDataProvider>
+        <div className="max-w-7xl mx-auto px-4 py-4 flex gap-8">
+          {/* Sidebar nav — desktop only */}
+          <SectionNav />
+
+          {/* Main content */}
+          <main className="flex-1 min-w-0 space-y-8">
+
+            {/* === SECTION: Dashboard (hero + commentary + yields) === */}
+            <section id="section-dashboard">
+              {/* Hero row: rate + comparison */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2">
+                  <HeroStrip todayRate={todayRate} rateChange={rateChange} />
+                </div>
+                <div>
+                  <TreasuryYields fredLatest={fredData.latest} />
+                </div>
+              </div>
+
+              {/* Commentary row */}
+              <div className="mt-6">
+                <Commentary />
+              </div>
+            </section>
+
+            {/* === SECTION: Rates Analysis === */}
+            <section id="section-rates" className="scroll-mt-24">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2">
+                  <RateGrid
+                    netRates={liveRates}
+                    nationalRates={natRates}
+                    date={natDate}
+                  />
+                </div>
+                <div>
+                  <FedPanelSection />
+                </div>
+              </div>
+
+              {/* Rate History Chart — full width */}
+              <div className="mt-6">
+                <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-6 shadow-sm overflow-hidden">
+                  <RateChart rateHistory={rateHistory} fredData={fredData.series} />
+                </div>
+              </div>
+            </section>
+
+            {/* === SECTION: Fed Watch === */}
+            <section id="section-fed" className="scroll-mt-24">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <FedStatementDiff />
+                <EconomicCalendar />
+              </div>
+            </section>
+
+            {/* === SECTION: Calendar / Below fold === */}
+            <section id="section-calendar" className="scroll-mt-24">
+              <BelowFold />
+            </section>
+
+          </main>
+        </div>
+      </PredictionDataProvider>
     </div>
   );
 }

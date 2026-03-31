@@ -27,9 +27,9 @@ export default function Commentary() {
   });
 
   const sentimentColors = {
-    bullish: 'text-green-400',
-    bearish: 'text-red-400',
-    neutral: 'text-brand',
+    bullish: 'text-emerald-600 bg-emerald-50',
+    bearish: 'text-red-600 bg-red-50',
+    neutral: 'text-primary bg-primary/5',
   };
 
   const headline = summary?.headline;
@@ -40,34 +40,33 @@ export default function Commentary() {
     : null;
 
   return (
-    <div className="border-l-4 border-l-brand pl-5">
-      <div className="flex justify-between items-center mb-2.5">
+    <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+      <div className="flex justify-between items-center mb-4">
         <div className="flex items-center gap-3">
-          <span className="text-brand text-[13px] font-bold uppercase tracking-wide">
-            Market Commentary
-          </span>
+          <span className="material-symbols-outlined text-primary text-xl">forum</span>
+          <span className="text-base font-bold text-slate-900">Market Commentary</span>
           {summary && (
-            <span className={`text-[11px] font-semibold uppercase tracking-wide ${sentimentColors[sentiment]}`}>
+            <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${sentimentColors[sentiment]}`}>
               {sentiment}
             </span>
           )}
         </div>
-        <span className="text-slate-400 text-[13px]">
-          {dateLabel ? `${dateLabel}` : `Updated ${timeStr} MT`}
+        <span className="text-xs text-slate-400">
+          {dateLabel ? dateLabel : `Updated ${timeStr} MT`}
         </span>
       </div>
 
       {headline && (
-        <h3 className="text-white text-lg font-bold mb-2">{headline}</h3>
+        <h3 className="text-slate-900 text-lg font-bold mb-3">{headline}</h3>
       )}
 
       {/* MBS snapshot strip */}
       {summary?.treasury10yr && (
-        <div className="flex items-center gap-4 text-[13px] mb-3 text-slate-300">
+        <div className="flex items-center gap-4 text-xs mb-3 text-slate-600">
           <span>
             10yr: {summary.treasury10yr}%
             {summary.treasury10yrChg != null && (
-              <span className={summary.treasury10yrChg < 0 ? 'text-green-400 ml-1' : summary.treasury10yrChg > 0 ? 'text-red-400 ml-1' : 'ml-1'}>
+              <span className={summary.treasury10yrChg < 0 ? 'text-emerald-600 ml-1 font-bold' : summary.treasury10yrChg > 0 ? 'text-red-500 ml-1 font-bold' : 'ml-1'}>
                 ({summary.treasury10yrChg > 0 ? '+' : ''}{summary.treasury10yrChg})
               </span>
             )}
@@ -76,7 +75,7 @@ export default function Commentary() {
             <span>
               MBS 6.0: {summary.mbs6Coupon}
               {summary.mbs6Change != null && (
-                <span className={summary.mbs6Change > 0 ? 'text-green-400 ml-1' : summary.mbs6Change < 0 ? 'text-red-400 ml-1' : 'ml-1'}>
+                <span className={summary.mbs6Change > 0 ? 'text-emerald-600 ml-1 font-bold' : summary.mbs6Change < 0 ? 'text-red-500 ml-1 font-bold' : 'ml-1'}>
                   ({summary.mbs6Change > 0 ? '+' : ''}{summary.mbs6Change})
                 </span>
               )}
@@ -85,12 +84,15 @@ export default function Commentary() {
         </div>
       )}
 
-      <p className="text-slate-200 text-[15px] leading-[1.7]">
+      <p className="text-slate-600 text-sm leading-relaxed">
         {commentary}
       </p>
 
       {!loaded && (
-        <div className="animate-pulse mt-2 h-4 w-3/4 bg-white/5 rounded" />
+        <div className="animate-pulse mt-3 space-y-2">
+          <div className="h-4 w-3/4 bg-slate-100 rounded" />
+          <div className="h-4 w-1/2 bg-slate-100 rounded" />
+        </div>
       )}
     </div>
   );

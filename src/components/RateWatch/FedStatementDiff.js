@@ -16,10 +16,10 @@ export default function FedStatementDiff() {
 
   if (loading) {
     return (
-      <div className="bg-surface rounded-xl border border-white/10 p-3">
-        <div className="animate-pulse space-y-2">
-          <div className="h-4 w-48 bg-white/10 rounded" />
-          <div className="h-32 bg-white/5 rounded" />
+      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+        <div className="animate-pulse space-y-3">
+          <div className="h-5 w-48 bg-slate-100 rounded" />
+          <div className="h-32 bg-slate-50 rounded" />
         </div>
       </div>
     );
@@ -29,7 +29,6 @@ export default function FedStatementDiff() {
 
   const { diff, current, previous } = data;
 
-  // Estimate visible length — show first ~500 chars when collapsed
   let charCount = 0;
   let cutoffIndex = diff.length;
   if (!expanded) {
@@ -46,12 +45,12 @@ export default function FedStatementDiff() {
   const hasMore = cutoffIndex < diff.length;
 
   return (
-    <div className="bg-surface rounded-xl border border-white/10 p-3">
+    <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
       {/* Header */}
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-white text-sm font-bold">What Changed in the Fed Statement</h3>
-          <p className="text-slate-500 text-[10px] mt-0.5">
+          <h3 className="text-base font-bold text-slate-900">FOMC Statement Diff</h3>
+          <p className="text-[10px] text-slate-400 mt-0.5">
             {current.dateFormatted} vs {previous.dateFormatted}
           </p>
         </div>
@@ -59,32 +58,32 @@ export default function FedStatementDiff() {
           href={current.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-brand text-[10px] hover:text-cyan-400 transition-colors"
+          className="text-primary text-xs font-medium hover:text-cyan-700 transition-colors"
         >
           Full statement &rarr;
         </a>
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-3 mb-2 text-[10px]">
-        <span className="flex items-center gap-1">
-          <span className="inline-block w-3 h-0.5 bg-red-400/60" />
-          <span className="text-red-400">Removed</span>
+      <div className="flex items-center gap-4 mb-3 text-[10px]">
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block w-3 h-0.5 bg-red-400" />
+          <span className="text-red-500 font-medium">Removed</span>
         </span>
-        <span className="flex items-center gap-1">
-          <span className="inline-block w-3 h-0.5 bg-green-400/60" />
-          <span className="text-green-400">Added</span>
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block w-3 h-0.5 bg-emerald-500" />
+          <span className="text-emerald-600 font-medium">Added</span>
         </span>
       </div>
 
       {/* Diff text */}
-      <div className="text-[12px] leading-relaxed text-slate-300">
+      <div className="text-xs leading-relaxed text-slate-600">
         {visibleDiff.map((part, i) => {
           if (part.type === 'removed') {
             return (
               <span
                 key={i}
-                className="text-red-400/80 line-through decoration-red-400/50 bg-red-400/10 rounded-sm px-0.5"
+                className="text-red-600 line-through decoration-red-300 bg-red-50 rounded-sm px-0.5"
               >
                 {part.text}
               </span>
@@ -94,7 +93,7 @@ export default function FedStatementDiff() {
             return (
               <span
                 key={i}
-                className="text-green-400 underline decoration-green-400/50 underline-offset-2 bg-green-400/10 rounded-sm px-0.5"
+                className="text-emerald-700 font-medium underline decoration-emerald-300 underline-offset-2 bg-emerald-50 rounded-sm px-0.5"
               >
                 {part.text}
               </span>
@@ -103,7 +102,7 @@ export default function FedStatementDiff() {
           return <span key={i}>{part.text}</span>;
         })}
         {hasMore && !expanded && (
-          <span className="text-slate-500">...</span>
+          <span className="text-slate-300">...</span>
         )}
       </div>
 
@@ -111,7 +110,7 @@ export default function FedStatementDiff() {
       {(hasMore || expanded) && (
         <button
           onClick={() => setExpanded(!expanded)}
-          className="text-brand text-[11px] font-medium hover:text-cyan-400 transition-colors mt-2"
+          className="text-primary text-xs font-medium hover:text-cyan-700 transition-colors mt-3"
         >
           {expanded ? 'Show less' : 'Show full statement diff'}
         </button>
