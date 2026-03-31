@@ -5,6 +5,82 @@
 
 ---
 
+## 2026-03-30 — Dev — Rate Watch UX Overhaul, Contact Bar, Market Pipeline
+**Actor:** pc-dev
+
+### What was done
+
+**Contact Utility Bar (Backlog #33)**
+- Built dark utility bar above nav on every public page — call, email, text, schedule
+- GA4 events: click_call, click_email, click_text, click_schedule
+- NMLS numbers on desktop, collapses to icons on mobile
+- David refined styling: teal icons on light teal background (not dark theme)
+
+**Rate Watch Page — Major UX Overhaul**
+- Redesigned to 3-column masonry layout (CSS columns) — eliminates dead space
+- Tightened padding, fonts, gaps — trading terminal density
+- Rate chart moved to full-width below masonry for maximum horizontal space
+- Removed general Polymarket predictions, kept only Fed panel
+- Renamed "Fed Rate Decision" → "Fed Rate Prediction"
+
+**Rate Trend Gauge**
+- Visual spectrum bar (POSITIVE ← MINIMAL → NEGATIVE) replaces text badge
+- Auto-generated plain English impact sentence from rate change data
+- MND daily change used instead of unreliable rate sheet diff (-0.240% bug fixed)
+
+**FOMC Statement Diff**
+- Built skill + API to fetch/cache Fed statements from federalreserve.gov
+- Word-level diff: red strikethrough (removed), green underline (added)
+- Fixed parser: was grabbing entire page HTML (nav, banner) — now targets article content only
+- DB caching for statements, scheduled task for next FOMC meeting (May 6-7)
+
+**MND National Rate Scraper**
+- Built `/api/market/national-rates/scrape` — scrapes MortgageNewsDaily.com hourly
+- Parses conv30 + conv15 rates + changes
+- Feeds "NetRate vs National Avg" comparison grid
+- National avg fallback to FRED/Freddie Mac when MND empty
+
+**FRED API Weekend Fix**
+- FRED API returns empty arrays on weekends/holidays — was showing blank Treasury Yields
+- Fixed fallback: uses cached data (March 27) when API returns zero observations
+- Updated fallback values to current levels
+
+**Homepage + Rate Tool Fixes**
+- Homepage now uses DB-driven pricing engine (same as Rate Watch)
+- Rate tool shows DB effective date instead of stale GCS date
+- LTV rounding fix: always round loan amount DOWN to avoid higher-tier pricing
+- Property value back to $533,334 — keeps $400K loan at 74.999% LTV
+
+**Market Content Pipeline Decision**
+- Two-layer model agreed with Marketing (Claw):
+  - PC = Live Pulse (automated, hourly): MND scrape + FRED + Polymarket data
+  - Claw = Market Analysis (curated, 3x/day): original commentary in David's voice at open/midday/close
+- Claw's hourly market-page-update task dropped — redundant with PC MND scrape
+- Copyright issue flagged: MND text was being displayed verbatim — relayed to Claw to write original content
+- Source attribution added to commentary block
+
+### Key decisions
+- Market content: PC handles automated data, Claw handles editorial (3x/day: open, midday, close)
+- No MBS Live data on website — licensing/redistribution constraint (David's personal tool only)
+- Editorial guardrails for auto-generated text: no "lock/float" advice, no "crashing/soaring", neutral tone
+- CSS columns masonry layout for Rate Watch (not CSS Grid) — eliminates dead space naturally
+- Rate change sourced from MND daily change, not rate sheet diff (which was unreliable across non-consecutive days)
+
+### Open items
+- [ ] Build "Live Pulse" auto-generated line from MND scrape data (factual, no editorial)
+- [ ] Treasury Yields block — verify it shows values after FRED fallback fix
+- [ ] Economic Calendar — interactive version with actual/forecast/previous data (MBS Live style)
+- [ ] Fed Statement Diff — verify clean output after parser fix
+- [ ] Rate Watch: "NetRate vs National Avg" missing FHA/VA/Jumbo national data (MND scrape only gets conv30/conv15)
+- [ ] Market Watch skill — orchestrate full market content refresh pipeline
+- [ ] CoreCRM build (Claw relay — data files on PC, schema ready)
+- [ ] Contact bar above fold — Backlog #33 done, needs David's final visual approval
+- [ ] 9 content pages from Claw — publishing in progress (Publisher handling)
+- [ ] VA product support for pricing engine
+- [ ] Wire other 5 lenders into DB-driven pricing
+
+---
+
 ## 2026-03-27 — Dev — EverStream Exact Match Confirmed, Data-Driven Engine Decision
 **Actor:** pc-dev
 
