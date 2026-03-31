@@ -515,6 +515,7 @@ export default function MloDashboardPage() {
         <>
           <PipelineTable
             loans={filteredLoans.slice(page * pageSize, (page + 1) * pageSize)}
+            allLoans={loans}
             mloList={mloList}
             selectedIds={selectedIds}
             onSelectionChange={setSelectedIds}
