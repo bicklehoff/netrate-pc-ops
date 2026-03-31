@@ -59,28 +59,7 @@ function NextMeetingPanel({ event }) {
         <ProbBox label="Hike" pct={hikePct} type="hike" />
       </div>
 
-      {/* Detailed breakdown */}
-      <div className="space-y-1.5">
-        {event.outcomes.map((o, i) => {
-          const colors = TYPE_COLORS[o.type] || TYPE_COLORS.hold;
-          const pct = (o.probability * 100).toFixed(1);
-          return (
-            <div key={i} className="flex items-center gap-2">
-              <span className="text-[10px] text-slate-500 w-20 truncate">{o.label}</span>
-              <div className="flex-1 bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                <div
-                  className={`h-full ${colors.bar} transition-all duration-500`}
-                  style={{ width: `${Math.max(1, o.probability * 100)}%` }}
-                />
-              </div>
-              <span className={`text-[10px] font-bold tabular-nums w-10 text-right ${colors.text}`}>
-                {pct}%
-              </span>
-            </div>
-          );
-        })}
-      </div>
-
+      {/* Volume */}
       {event.volume > 0 && (
         <div className="text-[9px] text-slate-400 mt-2">
           ${event.volume >= 1e6 ? `${(event.volume / 1e6).toFixed(1)}M` : `${(event.volume / 1e3).toFixed(0)}k`} trading volume
@@ -139,28 +118,19 @@ export default function FedPanel({ fedEvents = [] }) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-3">
+      <div className="mb-3">
         <h3 className="text-base font-bold text-slate-900">Fed Rate Prediction</h3>
         <a
           href="https://polymarket.com/predictions/fed"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-primary text-[10px] font-medium hover:text-cyan-700 transition-colors"
+          className="text-[10px] text-slate-400 hover:text-primary transition-colors"
         >
-          Polymarket
+          Powered by <span className="font-bold text-slate-500">Polymarket</span> prediction markets
         </a>
       </div>
 
       <NextMeetingPanel event={next} />
-
-      {future.length > 0 && (
-        <div className="mt-3">
-          <div className="text-[9px] uppercase tracking-widest text-slate-400 font-bold mb-1.5">Future Meetings</div>
-          {future.map(event => (
-            <FutureMeetingRow key={event.id} event={event} />
-          ))}
-        </div>
-      )}
     </div>
   );
 }

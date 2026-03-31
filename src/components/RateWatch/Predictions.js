@@ -41,7 +41,7 @@ export function FedPanelSection() {
   if (!data?.fedEvents?.length) return null;
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm h-full overflow-y-auto">
+    <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm h-full overflow-hidden">
       <FedPanel fedEvents={data.fedEvents} />
     </div>
   );
