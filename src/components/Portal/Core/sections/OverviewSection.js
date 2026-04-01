@@ -191,8 +191,8 @@ export default function OverviewSection({ loan, onRefresh, updateLoanField, upda
         </div>
       </div>
 
-      {/* Borrower + Property + Loan Terms + Rate Lock — 4 columns */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2">
+      {/* Borrower + Property + Loan Terms — 2 wide columns, stacked */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
         {/* Borrower */}
         <div className="bg-white rounded-lg border border-slate-200 shadow-sm px-3 py-2">
           <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">Borrower</div>
@@ -234,7 +234,7 @@ export default function OverviewSection({ loan, onRefresh, updateLoanField, upda
           </div>
         </div>
 
-        {/* Loan Terms */}
+        {/* Loan Terms + Rate Lock (combined) */}
         <div className="bg-white rounded-lg border border-slate-200 shadow-sm px-3 py-2">
           <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">Loan Terms</div>
           <div className="grid grid-cols-3 gap-x-2 gap-y-0.5">
@@ -249,21 +249,18 @@ export default function OverviewSection({ loan, onRefresh, updateLoanField, upda
             <RF label="BIC" value={loan.ballInCourt} />
           </div>
           {(loan.purpose === 'refinance' || loan.purpose === 'cash_out') && (
-            <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 mt-1 pt-1 border-t border-slate-100">
+            <div className="grid grid-cols-3 gap-x-2 gap-y-0.5 mt-1 pt-1 border-t border-slate-100">
               <EF label="Refi Purpose" value={loan.refiPurpose} type="text" onSave={v => save({ refiPurpose: v })} />
               <EF label="Cash Out" value={loan.cashOutAmount} type="currency" onSave={v => save({ cashOutAmount: v })} />
             </div>
           )}
-        </div>
-
-        {/* Rate Lock */}
-        <div className="bg-white rounded-lg border border-slate-200 shadow-sm px-3 py-2">
-          <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">Rate Lock</div>
-          <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
-            <EF label="Lock Date" value={dates.lockedDate} type="date" onSave={v => saveDates({ lockedDate: v })} />
-            <EF label="Lock Exp" value={dates.lockExpiration} type="date" onSave={v => saveDates({ lockExpiration: v })} />
-            <EF label="Lock Term" value={dates.lockTerm} type="text" onSave={v => saveDates({ lockTerm: v })} />
-            <RF label="# Borrowers" value={loan.numBorrowers} />
+          <div className="mt-1.5 pt-1.5 border-t border-slate-100">
+            <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">Rate Lock</div>
+            <div className="grid grid-cols-3 gap-x-2 gap-y-0.5">
+              <EF label="Lock Date" value={dates.lockedDate} type="date" onSave={v => saveDates({ lockedDate: v })} />
+              <EF label="Lock Exp" value={dates.lockExpiration} type="date" onSave={v => saveDates({ lockExpiration: v })} />
+              <EF label="Lock Term" value={dates.lockTerm} type="text" onSave={v => saveDates({ lockTerm: v })} />
+            </div>
           </div>
         </div>
       </div>
