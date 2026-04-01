@@ -88,6 +88,8 @@ export default function ApplicationSection({ loan }) {
   const [error, setError] = useState(null);
   const [activeBorrowerTab, setActiveBorrowerTab] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [exportResult, setExportResult] = useState(null);
 
   // Fetch all 1003 data
   const fetchData = useCallback(async () => {
@@ -205,8 +207,21 @@ export default function ApplicationSection({ loan }) {
       {/* Section header */}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold text-gray-900">1003 Application</h2>
-        {saving && <span className="text-xs text-gray-400 animate-pulse">Saving...</span>}
+        <div className="flex items-center gap-3">
+          {saving && <span className="text-xs text-gray-400 animate-pulse">Saving...</span>}
+          <ExportXmlButton loanId={loan.id} exporting={exporting} setExporting={setExporting} setExportResult={setExportResult} />
+        </div>
       </div>
+
+      {/* Export result banner */}
+      {exportResult && (
+        <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-2 flex items-center justify-between">
+          <div className="text-xs text-green-800">
+            <span className="font-medium">Snapshot saved</span> — {exportResult.filename}
+          </div>
+          <button onClick={() => setExportResult(null)} className="text-xs text-green-600 hover:underline">Dismiss</button>
+        </div>
+      )}
 
       {/* ─── Borrower Tabs ─── */}
       {borrowers.length > 1 && (
@@ -890,6 +905,78 @@ function LoanDetailsCard({ appData, onSave }) {
 // ═══════════════════════════════════════════════════════════════════════
 // Inline Edit Components (lightweight, for table rows)
 // ═══════════════════════════════════════════════════════════════════════
+
+function ExportXmlButton({ loanId, exporting, setExporting, setExportResult }) {
+  const [showMenu, setShowMenu] = useState(false);
+
+  const handleDownload = () => {
+    setShowMenu(false);
+    window.open(`/api/portal/mlo/loans/${loanId}/xml`, '_blank');
+  };
+
+  const handleSnapshot = async (lender) => {
+    setShowMenu(false);
+    setExporting(true);
+    try {
+      const res = await fetch(`/api/portal/mlo/loans/${loanId}/xml`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lender }),
+      });
+      if (!res.ok) throw new Error('Export failed');
+      const data = await res.json();
+      setExportResult(data);
+    } catch (err) {
+      console.error('Export error:', err);
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setShowMenu(!showMenu)}
+        disabled={exporting}
+        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-brand rounded-lg hover:bg-brand-dark disabled:opacity-50 transition-colors"
+      >
+        {exporting ? (
+          <span className="animate-pulse">Exporting...</span>
+        ) : (
+          <>
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Export XML
+          </>
+        )}
+      </button>
+      {showMenu && (
+        <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 w-56 z-10">
+          <button
+            onClick={handleDownload}
+            className="w-full text-left px-4 py-2 text-xs text-gray-700 hover:bg-gray-50"
+          >
+            Download XML File
+          </button>
+          <hr className="my-1 border-gray-100" />
+          <button
+            onClick={() => handleSnapshot('LenDox')}
+            className="w-full text-left px-4 py-2 text-xs text-gray-700 hover:bg-gray-50"
+          >
+            Export to LenDox + Save Snapshot
+          </button>
+          <button
+            onClick={() => handleSnapshot(null)}
+            className="w-full text-left px-4 py-2 text-xs text-gray-700 hover:bg-gray-50"
+          >
+            Save Submission Snapshot
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function InlineEdit({ value, onSave, format }) {
   const [editing, setEditing] = useState(false);
