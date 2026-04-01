@@ -44,6 +44,19 @@
   ],
   "purposeCredits": [
     {
+      "loanType": "conventional",
+      "purpose": "purchase",
+      "featureName": "purposeAdj",
+      "value": 0.1
+    },
+    {
+      "loanType": "fha",
+      "purpose": "purchase",
+      "featureName": "purposeAdj",
+      "value": 0.1
+    },
+    {
+      "loanType": "va",
       "purpose": "purchase",
       "featureName": "purposeAdj",
       "value": 0.1
@@ -56,7 +69,7 @@
       "640-699": -0.1
     },
     "purposeAdj": {
-      "purchase": 0.1
+      "purchase": 0
     },
     "stateAdj": {
       "states": [
