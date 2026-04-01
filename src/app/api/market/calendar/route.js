@@ -12,6 +12,7 @@
 // Cache: 5-min CDN, 1-min browser
 
 import { NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import prisma from '@/lib/prisma';
 
 export async function GET(request) {
@@ -126,6 +127,9 @@ export async function POST(request) {
 
       results.push({ id: record.id, name: record.name, date: record.date });
     }
+
+    // Bust ISR cache so Rate Watch shows new events immediately
+    revalidatePath('/rate-watch');
 
     return NextResponse.json({ ok: true, upserted: results.length, results });
   } catch (error) {

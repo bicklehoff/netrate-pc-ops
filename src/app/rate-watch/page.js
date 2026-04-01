@@ -15,7 +15,7 @@ export const revalidate = 300; // ISR: 5 minutes
 
 async function getRateHistory() {
   try {
-    const sql = neon(process.env.DATABASE_URL);
+    const sql = neon(process.env.PC_DATABASE_URL || process.env.DATABASE_URL);
     const rows = await sql`
       SELECT date, rate, apr, credit_score_tier, loan_type
       FROM rate_history
@@ -36,7 +36,7 @@ async function getRateHistory() {
 
 async function getNationalRates() {
   try {
-    const sql = neon(process.env.DATABASE_URL);
+    const sql = neon(process.env.PC_DATABASE_URL || process.env.DATABASE_URL);
     const rows = await sql`
       SELECT date, loan_type, rate, lender AS change_str
       FROM rate_history
@@ -86,7 +86,7 @@ async function getFredData() {
 export async function generateMetadata() {
   let rateStr = '';
   try {
-    const sql = neon(process.env.DATABASE_URL);
+    const sql = neon(process.env.PC_DATABASE_URL || process.env.DATABASE_URL);
     const rows = await sql`
       SELECT rate FROM rate_history
       WHERE loan_type = '30yr_fixed' AND credit_score_tier = '760+'

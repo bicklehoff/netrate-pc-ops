@@ -11,7 +11,7 @@ import { NextResponse } from 'next/server';
 import { neon } from '@neondatabase/serverless';
 
 function getSql() {
-  return neon(process.env.DATABASE_URL);
+  return neon(process.env.PC_DATABASE_URL || process.env.DATABASE_URL);
 }
 
 // MND product keys → DB loan_type mapping

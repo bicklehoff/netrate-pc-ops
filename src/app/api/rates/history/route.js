@@ -71,7 +71,7 @@ export async function GET(request) {
     }
 
     // Query database
-    const sql = neon(process.env.DATABASE_URL);
+    const sql = neon(process.env.PC_DATABASE_URL || process.env.DATABASE_URL);
 
     const rows = await sql`
       SELECT

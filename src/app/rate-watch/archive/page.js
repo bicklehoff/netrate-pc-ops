@@ -10,7 +10,7 @@ export const metadata = {
 
 async function getAllCommentaries() {
   try {
-    const sql = neon(process.env.DATABASE_URL);
+    const sql = neon(process.env.PC_DATABASE_URL || process.env.DATABASE_URL);
     const rows = await sql`
       SELECT date, headline, sentiment, treasury_10yr, treasury_10yr_chg, author
       FROM rate_watch_commentaries

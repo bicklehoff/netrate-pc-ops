@@ -89,7 +89,7 @@ export async function GET(request) {
     }
 
     // Store in database
-    const sql = neon(process.env.DATABASE_URL);
+    const sql = neon(process.env.PC_DATABASE_URL || process.env.DATABASE_URL);
     const today = new Date().toISOString().split('T')[0];
     let inserted = 0;
     let updated = 0;

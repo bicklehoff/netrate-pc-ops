@@ -22,7 +22,7 @@ import { NextResponse } from 'next/server';
 import { neon } from '@neondatabase/serverless';
 import crypto from 'crypto';
 
-const sql = neon(process.env.DATABASE_URL);
+const sql = neon(process.env.PC_DATABASE_URL || process.env.DATABASE_URL);
 
 // Validate email format
 function isValidEmail(email) {

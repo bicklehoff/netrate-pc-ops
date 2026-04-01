@@ -6,7 +6,7 @@ export const revalidate = 3600; // ISR: 1 hour
 
 async function getCommentary(dateStr) {
   try {
-    const sql = neon(process.env.DATABASE_URL);
+    const sql = neon(process.env.PC_DATABASE_URL || process.env.DATABASE_URL);
     const rows = await sql`
       SELECT date, headline, commentary, sentiment, treasury_10yr, treasury_10yr_chg,
              mbs_6_coupon, mbs_6_change, author, published_at
@@ -22,7 +22,7 @@ async function getCommentary(dateStr) {
 
 async function getAdjacentDates(dateStr) {
   try {
-    const sql = neon(process.env.DATABASE_URL);
+    const sql = neon(process.env.PC_DATABASE_URL || process.env.DATABASE_URL);
     const prev = await sql`
       SELECT date FROM rate_watch_commentaries WHERE date < ${dateStr} ORDER BY date DESC LIMIT 1
     `;
