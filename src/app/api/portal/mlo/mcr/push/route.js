@@ -38,7 +38,7 @@ function mapStatusToMcrEvent(status, actionTaken) {
 }
 
 // ─── POST: Push MCR snapshot to TrackerPortal ─────────────────
-export async function POST(request) {
+export async function POST() {
   try {
     const session = await getServerSession(authOptions);
     if (!session || session.user.userType !== 'mlo' || session.user.role !== 'admin') {
@@ -174,7 +174,7 @@ export async function POST(request) {
 }
 
 // ─── GET: Preview what would be pushed ────────────────────────
-export async function GET(request) {
+export async function GET() {
   try {
     const session = await getServerSession(authOptions);
     if (!session || session.user.userType !== 'mlo' || session.user.role !== 'admin') {
