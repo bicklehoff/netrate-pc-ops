@@ -42,6 +42,16 @@
       "value": 0.05
     }
   ],
+  "cashoutCredits": [
+    {
+      "adjustmentType": "productFeature",
+      "loanType": "conventional",
+      "tier": "core",
+      "purpose": "cashout",
+      "featureName": "cashoutAdditional",
+      "value": 0.05
+    }
+  ],
   "purposeCredits": [
     {
       "loanType": "conventional",

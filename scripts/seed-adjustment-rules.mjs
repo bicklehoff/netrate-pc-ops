@@ -529,6 +529,13 @@ function seedLenderConfig() {
     }
   }
 
+  // Cashout credits (Core conv only — cashout LTV additional)
+  if (cfg.cashoutCredits) {
+    for (const credit of cfg.cashoutCredits) {
+      addRow({ ...credit, sourceFile: 'lender-config.json' });
+    }
+  }
+
   // FHA additional adjustments
   if (cfg.fhaAdditional) {
     const fha = cfg.fhaAdditional;

@@ -36,9 +36,15 @@ function resolveGrids(tier, investor, term, lenderAdj, fallbackGrids) {
     const agency = investor || 'fnma';
     const termGroup = term > 15 ? '>15yr' : 'allTerms';
     const agencyGrids = grids.elite?.[agency]?.[termGroup];
-    // If we have Elite grids and they have data, use them
-    if (agencyGrids && Object.keys(agencyGrids.purchase || {}).length > 0) {
-      return agencyGrids;
+    // Elite grids: >15yr has purchase + refi, allTerms has cashout + attributes
+    // Merge both so cashout lookups work on >15yr products
+    const allTermsGrids = grids.elite?.[agency]?.allTerms;
+    if (agencyGrids || allTermsGrids) {
+      return {
+        purchase: agencyGrids?.purchase || allTermsGrids?.purchase || {},
+        refinance: agencyGrids?.refinance || allTermsGrids?.refinance || {},
+        cashout: agencyGrids?.cashout || allTermsGrids?.cashout || {},
+      };
     }
   }
 
