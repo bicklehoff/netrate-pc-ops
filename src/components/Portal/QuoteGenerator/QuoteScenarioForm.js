@@ -66,9 +66,10 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
           if (fccCounty) {
             // Match against our county data (FCC returns "Boulder" not "Boulder County")
             const countyList = getCountiesByState(st).map(c => c.name);
+            const fccClean = fccCounty.toLowerCase().replace(' county', '').replace(' parish', '');
             countyName = countyList.find(c =>
               c.toLowerCase() === fccCounty.toLowerCase() ||
-              c.toLowerCase().replace(' county', '') === fccCounty.toLowerCase()
+              c.toLowerCase() === fccClean
             ) || '';
           }
         }
