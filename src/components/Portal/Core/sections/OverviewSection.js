@@ -194,75 +194,67 @@ export default function OverviewSection({ loan, updateLoanField, updateDates }) 
         </div>
       </div>
 
-      {/* Info cards — single column, stacked */}
-      <div className="space-y-1.5">
-        {/* Borrower */}
-        <div className="bg-white rounded-md border border-slate-200 px-2 py-1">
-          <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">Borrower</div>
-          <div className="text-sm font-bold text-slate-900 leading-tight">{borrower.firstName} {borrower.lastName}
-            {borrower.ssnLastFour && <span className="text-[10px] font-medium text-slate-400 ml-1">···{borrower.ssnLastFour}</span>}
-          </div>
-          {borrower.email && <a href={`mailto:${borrower.email}`} className="block text-xs text-primary font-semibold truncate">{borrower.email}</a>}
-          {borrower.phone && <a href={`tel:${borrower.phone}`} className="block text-xs text-primary font-semibold">{borrower.phone}</a>}
-          <div className="grid grid-cols-3 sm:grid-cols-5 gap-x-3 gap-y-0.5 mt-1 pt-1 border-t border-slate-100">
-            <EF label="FICO" value={loan.creditScore} type="text" onSave={v => save({ creditScore: v })} />
-            <EF label="Income" value={loan.monthlyBaseIncome} type="currency" onSave={v => save({ monthlyBaseIncome: v })} />
-            <EF label="Employment" value={loan.employmentStatus} type="text" onSave={v => save({ employmentStatus: v })} />
-            <EF label="Employer" value={loan.employerName} type="text" onSave={v => save({ employerName: v })} />
-            <EF label="Housing" value={loan.presentHousingExpense} type="currency" onSave={v => save({ presentHousingExpense: v })} />
-          </div>
-          {coBorrowers.length > 0 && (
-            <div className="mt-1 pt-1 border-t border-slate-100 text-[10px]">
-              <span className="font-bold text-slate-400 uppercase">Co-Borr: </span>
-              {coBorrowers.map((lb, i) => <span key={i} className="font-semibold text-slate-700">{lb.borrower?.firstName} {lb.borrower?.lastName}{i < coBorrowers.length - 1 ? ', ' : ''}</span>)}
-            </div>
-          )}
+      {/* Borrower — inline strip */}
+      <div className="bg-white rounded-md border border-slate-200 px-2 py-1">
+        <div className="flex flex-wrap items-baseline gap-x-1 text-xs">
+          <span className="text-[9px] font-bold uppercase text-slate-400 mr-1">Borrower</span>
+          <span className="font-bold text-slate-900">{borrower.firstName} {borrower.lastName}</span>
+          {borrower.ssnLastFour && <><span className="text-slate-300">|</span><span className="text-slate-500">···{borrower.ssnLastFour}</span></>}
+          {borrower.email && <><span className="text-slate-300">|</span><a href={`mailto:${borrower.email}`} className="text-primary font-semibold">{borrower.email}</a></>}
+          {borrower.phone && <><span className="text-slate-300">|</span><a href={`tel:${borrower.phone}`} className="text-primary font-semibold">{borrower.phone}</a></>}
+          {coBorrowers.length > 0 && <><span className="text-slate-300">|</span><span className="text-slate-500">Co: {coBorrowers.map(lb => `${lb.borrower?.firstName} ${lb.borrower?.lastName}`).join(', ')}</span></>}
         </div>
-
-        {/* Property */}
-        <div className="bg-white rounded-md border border-slate-200 px-2 py-1">
-          <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">Property</div>
-          <div className="text-sm font-bold text-slate-900 leading-tight">{addr.street}</div>
-          {addr.csz && <div className="text-xs text-slate-500">{addr.csz}</div>}
-          <div className="grid grid-cols-3 sm:grid-cols-7 gap-x-3 gap-y-0.5 mt-1 pt-1 border-t border-slate-100">
-            <EF label="Type" value={loan.propertyType} type="select" options={PROPERTY_TYPE_OPTIONS} onSave={v => save({ propertyType: v })} />
-            <EF label="Occup" value={loan.occupancy} type="select" options={OCCUPANCY_OPTIONS} onSave={v => save({ occupancy: v })} />
-            <EF label="Units" value={loan.numUnits} type="text" onSave={v => save({ numUnits: v })} />
-            <EF label="Purchase" value={loan.purchasePrice} type="currency" onSave={v => save({ purchasePrice: v })} />
-            <EF label="Appraised" value={loan.estimatedValue} type="currency" onSave={v => save({ estimatedValue: v })} />
-            <EF label="Down Pmt" value={loan.downPayment} type="currency" onSave={v => save({ downPayment: v })} />
-            <EF label="Cur Bal" value={loan.currentBalance} type="currency" onSave={v => save({ currentBalance: v })} />
-          </div>
+        <div className="grid grid-cols-5 sm:grid-cols-10 gap-x-3 gap-y-0.5 mt-1 pt-1 border-t border-slate-100">
+          <EF label="FICO" value={loan.creditScore} type="text" onSave={v => save({ creditScore: v })} />
+          <EF label="Income" value={loan.monthlyBaseIncome} type="currency" onSave={v => save({ monthlyBaseIncome: v })} />
+          <EF label="Employment" value={loan.employmentStatus} type="text" onSave={v => save({ employmentStatus: v })} />
+          <EF label="Employer" value={loan.employerName} type="text" onSave={v => save({ employerName: v })} />
+          <EF label="Housing" value={loan.presentHousingExpense} type="currency" onSave={v => save({ presentHousingExpense: v })} />
         </div>
+      </div>
 
-        {/* Loan Terms + Rate Lock (combined) */}
-        <div className="bg-white rounded-md border border-slate-200 px-2 py-1">
-          <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">Loan Terms</div>
-          <div className="grid grid-cols-3 gap-x-2 gap-y-0.5">
-            <EF label="Amount" value={loan.loanAmount} type="currency" onSave={v => save({ loanAmount: v })} />
-            <EF label="Rate" value={loan.interestRate} type="text" onSave={v => save({ interestRate: v })} />
-            <EF label="Term" value={loan.loanTerm} type="text" onSave={v => save({ loanTerm: v })} />
-            <EF label="Type" value={loan.loanType} type="select" options={LOAN_TYPE_OPTIONS} onSave={v => save({ loanType: v })} />
-            <EF label="Purpose" value={loan.purpose} type="select" options={PURPOSE_OPTIONS} onSave={v => save({ purpose: v })} />
-            <EF label="Lender" value={loan.lenderName} type="text" onSave={v => save({ lenderName: v })} />
-            <EF label="Loan #" value={loan.loanNumber} type="text" onSave={v => save({ loanNumber: v })} />
-            <EF label="Lien" value={loan.lienStatus} type="text" onSave={v => save({ lienStatus: v })} />
-            <RF label="BIC" value={loan.ballInCourt} />
+      {/* Property — inline strip */}
+      <div className="bg-white rounded-md border border-slate-200 px-2 py-1">
+        <div className="flex flex-wrap items-baseline gap-x-1 text-xs">
+          <span className="text-[9px] font-bold uppercase text-slate-400 mr-1">Property</span>
+          <span className="font-bold text-slate-900">{addr.street}</span>
+          {addr.csz && <><span className="text-slate-300">|</span><span className="text-slate-600">{addr.csz}</span></>}
+        </div>
+        <div className="grid grid-cols-4 sm:grid-cols-7 gap-x-3 gap-y-0.5 mt-1 pt-1 border-t border-slate-100">
+          <EF label="Type" value={loan.propertyType} type="select" options={PROPERTY_TYPE_OPTIONS} onSave={v => save({ propertyType: v })} />
+          <EF label="Occup" value={loan.occupancy} type="select" options={OCCUPANCY_OPTIONS} onSave={v => save({ occupancy: v })} />
+          <EF label="Units" value={loan.numUnits} type="text" onSave={v => save({ numUnits: v })} />
+          <EF label="Purchase" value={loan.purchasePrice} type="currency" onSave={v => save({ purchasePrice: v })} />
+          <EF label="Appraised" value={loan.estimatedValue} type="currency" onSave={v => save({ estimatedValue: v })} />
+          <EF label="Down Pmt" value={loan.downPayment} type="currency" onSave={v => save({ downPayment: v })} />
+          <EF label="Cur Bal" value={loan.currentBalance} type="currency" onSave={v => save({ currentBalance: v })} />
+        </div>
+      </div>
+
+      {/* Loan Terms + Rate Lock — inline strip */}
+      <div className="bg-white rounded-md border border-slate-200 px-2 py-1">
+        <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">Loan Terms</div>
+        <div className="grid grid-cols-3 sm:grid-cols-9 gap-x-2 gap-y-0.5">
+          <EF label="Amount" value={loan.loanAmount} type="currency" onSave={v => save({ loanAmount: v })} />
+          <EF label="Rate" value={loan.interestRate} type="text" onSave={v => save({ interestRate: v })} />
+          <EF label="Term" value={loan.loanTerm} type="text" onSave={v => save({ loanTerm: v })} />
+          <EF label="Type" value={loan.loanType} type="select" options={LOAN_TYPE_OPTIONS} onSave={v => save({ loanType: v })} />
+          <EF label="Purpose" value={loan.purpose} type="select" options={PURPOSE_OPTIONS} onSave={v => save({ purpose: v })} />
+          <EF label="Lender" value={loan.lenderName} type="text" onSave={v => save({ lenderName: v })} />
+          <EF label="Loan #" value={loan.loanNumber} type="text" onSave={v => save({ loanNumber: v })} />
+          <EF label="Lien" value={loan.lienStatus} type="text" onSave={v => save({ lienStatus: v })} />
+          <RF label="BIC" value={loan.ballInCourt} />
+        </div>
+        {(loan.purpose === 'refinance' || loan.purpose === 'cash_out') && (
+          <div className="grid grid-cols-3 sm:grid-cols-9 gap-x-2 gap-y-0.5 mt-0.5 pt-0.5 border-t border-slate-100">
+            <EF label="Refi Purpose" value={loan.refiPurpose} type="text" onSave={v => save({ refiPurpose: v })} />
+            <EF label="Cash Out" value={loan.cashOutAmount} type="currency" onSave={v => save({ cashOutAmount: v })} />
           </div>
-          {(loan.purpose === 'refinance' || loan.purpose === 'cash_out') && (
-            <div className="grid grid-cols-3 gap-x-2 gap-y-0.5 mt-1 pt-1 border-t border-slate-100">
-              <EF label="Refi Purpose" value={loan.refiPurpose} type="text" onSave={v => save({ refiPurpose: v })} />
-              <EF label="Cash Out" value={loan.cashOutAmount} type="currency" onSave={v => save({ cashOutAmount: v })} />
-            </div>
-          )}
-          <div className="mt-1.5 pt-1.5 border-t border-slate-100">
-            <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">Rate Lock</div>
-            <div className="grid grid-cols-3 gap-x-2 gap-y-0.5">
-              <EF label="Lock Date" value={dates.lockedDate} type="date" onSave={v => saveDates({ lockedDate: v })} />
-              <EF label="Lock Exp" value={dates.lockExpiration} type="date" onSave={v => saveDates({ lockExpiration: v })} />
-              <EF label="Lock Term" value={dates.lockTerm} type="text" onSave={v => saveDates({ lockTerm: v })} />
-            </div>
-          </div>
+        )}
+        <div className="grid grid-cols-3 sm:grid-cols-9 gap-x-2 gap-y-0.5 mt-0.5 pt-0.5 border-t border-slate-100">
+          <EF label="Lock Date" value={dates.lockedDate} type="date" onSave={v => saveDates({ lockedDate: v })} />
+          <EF label="Lock Exp" value={dates.lockExpiration} type="date" onSave={v => saveDates({ lockExpiration: v })} />
+          <EF label="Lock Term" value={dates.lockTerm} type="text" onSave={v => saveDates({ lockTerm: v })} />
         </div>
       </div>
 
