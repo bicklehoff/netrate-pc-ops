@@ -5,6 +5,67 @@
 
 ---
 
+## 2026-04-01 — Dev — Full 1003 Application Build (All 3 Spec Sessions)
+**Actor:** pc-dev
+
+### What was built
+
+**Session 1: Schema + API + UI**
+- 7 new Prisma models: `LoanEmployment`, `LoanIncome`, `LoanAsset`, `LoanLiability`, `LoanREO`, `LoanDeclaration`, `LoanTransaction`
+- `LoanBorrower` updated: +citizenship, housingType, monthlyRent, previousAddress, previousAddressYears/Months, cellPhone, suffix, dobEncrypted
+- `Loan` updated: +amortizationType, titleHeldAs, estateHeldIn, 6 ARM fields, applicationDate, isApplication, contactId
+- Full CRUD API at `/api/portal/mlo/loans/[id]/application` (GET/PUT/POST/DELETE) with audit trail
+- Loan GET updated to include all new 1003 relations with decimal serialization
+- "1003" nav item added to LoanSidebar under People
+
+**Session 2: MISMO XML Import Enhancement**
+- Enhanced `mismo-parser.js` to extract all 1003 data from MISMO 3.4 XML: all employments per borrower, detailed income breakdown (8 categories), citizenship, housing type, monthly rent, cell phone, previous addresses, structured declarations, assets (financial + REO), liabilities, transaction details, amortization type
+- Import route (`/api/portal/mlo/loans/import`) now creates all 7 new 1003 model records on XML import
+- Verified against real LenDox export (Joaquin Flores 2-borrower loan)
+
+**Session 3: MISMO XML Export + Submission Snapshots**
+- New `mismo-builder.js` — full MISMO 3.4 XML generator from all Core data (borrowers, employment, income, declarations, assets, liabilities, REO, transaction, ARM, company/originator parties)
+- Export route rewritten: GET = download XML, POST = export + save immutable snapshot to Vercel Blob + create LoanDocument record (type: submission_package)
+- Export XML button on 1003 page with dropdown (Download / Export to LenDox + Snapshot / Save Snapshot)
+
+**UI: Precision Curator Rebuild**
+- Rebuilt ApplicationSection as Stitch-matched extreme density 4-column grid
+- Design: background-shift panels on #f2f4f5 canvas, Manrope for amounts, accent-border financial boxes, status dots for declarations, teal Total Cash Needed highlight, tabbed borrower details, dark footer bar
+- No collapsible cards — everything visible at once
+
+### Schema changes (via prisma db push)
+- 7 new tables: loan_employments, loan_incomes, loan_assets, loan_liabilities, loan_reos, loan_declarations, loan_transactions
+- LoanBorrower: +dob_encrypted, citizenship, housing_type, monthly_rent, previous_address, previous_address_years, previous_address_months, cell_phone, suffix
+- Loan: +amortization_type, title_held_as, estate_held_in, arm_index, arm_margin, arm_initial_cap, arm_periodic_cap, arm_lifetime_cap, arm_adjustment_period, application_date, is_application, contact_id
+- Contact model: named relations (LoanContact, LoanContactLink) to resolve Prisma validation
+
+### New files
+- `src/lib/mismo-builder.js` — MISMO 3.4 XML generator
+- `src/app/api/portal/mlo/loans/[id]/application/route.js` — 1003 CRUD API
+
+### Key decisions
+- Full data flow: XML import → Core DB (all models) → Edit in UI → Export XML → Immutable Blob snapshot
+- Submission snapshots saved as LoanDocument (type: submission_package) with lender/date metadata
+- 1003 UI follows Stitch Precision Curator design system
+- Contact relations named explicitly to resolve Prisma ambiguity
+
+### Commits
+- `d5e685a` — Session 1: Schema + API + UI
+- `5e3900c` — Session 2: MISMO import enhancement
+- `1b0bcdf` — Session 3: XML export + snapshots
+- `f62ba0f` — Precision Curator UI rebuild
+- `b6093e7` — Lint fix
+
+### Open items
+- [ ] 1003 UI refinement — David reviewing in Stitch, may send updated mockup
+- [ ] PITI breakdown needs housing expense fields (hazard ins, RE taxes, HOA, PMI)
+- [ ] Credit scores per bureau per borrower (currently only loan-level)
+- [ ] Inline editing removed during Precision Curator rebuild — add back if needed
+- [ ] Material Symbols Outlined font not loaded in portal — icon prop won't render
+- [ ] Rate lock date/expiration not on Loan Terms panel
+
+---
+
 ## 2026-03-30 — Dev — CD Upload + Payroll Pipeline (Epic Session)
 **Actor:** pc-dev
 
