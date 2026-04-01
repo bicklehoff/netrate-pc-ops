@@ -204,12 +204,12 @@ export default function OverviewSection({ loan, updateLoanField, updateDates }) 
           {borrower.phone && <><span className="text-slate-300">|</span><a href={`tel:${borrower.phone}`} className="text-primary font-semibold">{borrower.phone}</a></>}
           {coBorrowers.length > 0 && <><span className="text-slate-300">|</span><span className="text-slate-500">Co: {coBorrowers.map(lb => `${lb.borrower?.firstName} ${lb.borrower?.lastName}`).join(', ')}</span></>}
         </div>
-        <div className="grid grid-cols-5 sm:grid-cols-10 gap-x-3 gap-y-0.5 mt-1 pt-1 border-t border-slate-100">
-          <EF label="FICO" value={loan.creditScore} type="text" onSave={v => save({ creditScore: v })} />
-          <EF label="Income" value={loan.monthlyBaseIncome} type="currency" onSave={v => save({ monthlyBaseIncome: v })} />
-          <EF label="Employment" value={loan.employmentStatus} type="text" onSave={v => save({ employmentStatus: v })} />
-          <EF label="Employer" value={loan.employerName} type="text" onSave={v => save({ employerName: v })} />
-          <EF label="Housing" value={loan.presentHousingExpense} type="currency" onSave={v => save({ presentHousingExpense: v })} />
+        <div className="flex gap-x-6 mt-1 pt-1 border-t border-slate-100">
+          <div className="flex-1"><EF label="FICO" value={loan.creditScore} type="text" onSave={v => save({ creditScore: v })} /></div>
+          <div className="flex-1"><EF label="Income" value={loan.monthlyBaseIncome} type="currency" onSave={v => save({ monthlyBaseIncome: v })} /></div>
+          <div className="flex-1"><EF label="Employment" value={loan.employmentStatus} type="text" onSave={v => save({ employmentStatus: v })} /></div>
+          <div className="flex-1"><EF label="Employer" value={loan.employerName} type="text" onSave={v => save({ employerName: v })} /></div>
+          <div className="flex-1"><EF label="Housing" value={loan.presentHousingExpense} type="currency" onSave={v => save({ presentHousingExpense: v })} /></div>
         </div>
       </div>
 
@@ -220,41 +220,43 @@ export default function OverviewSection({ loan, updateLoanField, updateDates }) 
           <span className="font-bold text-slate-900">{addr.street}</span>
           {addr.csz && <><span className="text-slate-300">|</span><span className="text-slate-600">{addr.csz}</span></>}
         </div>
-        <div className="grid grid-cols-4 sm:grid-cols-7 gap-x-3 gap-y-0.5 mt-1 pt-1 border-t border-slate-100">
-          <EF label="Type" value={loan.propertyType} type="select" options={PROPERTY_TYPE_OPTIONS} onSave={v => save({ propertyType: v })} />
-          <EF label="Occup" value={loan.occupancy} type="select" options={OCCUPANCY_OPTIONS} onSave={v => save({ occupancy: v })} />
-          <EF label="Units" value={loan.numUnits} type="text" onSave={v => save({ numUnits: v })} />
-          <EF label="Purchase" value={loan.purchasePrice} type="currency" onSave={v => save({ purchasePrice: v })} />
-          <EF label="Appraised" value={loan.estimatedValue} type="currency" onSave={v => save({ estimatedValue: v })} />
-          <EF label="Down Pmt" value={loan.downPayment} type="currency" onSave={v => save({ downPayment: v })} />
-          <EF label="Cur Bal" value={loan.currentBalance} type="currency" onSave={v => save({ currentBalance: v })} />
+        <div className="flex gap-x-6 mt-1 pt-1 border-t border-slate-100">
+          <div className="flex-1"><EF label="Type" value={loan.propertyType} type="select" options={PROPERTY_TYPE_OPTIONS} onSave={v => save({ propertyType: v })} /></div>
+          <div className="flex-1"><EF label="Occup" value={loan.occupancy} type="select" options={OCCUPANCY_OPTIONS} onSave={v => save({ occupancy: v })} /></div>
+          <div className="flex-1"><EF label="Units" value={loan.numUnits} type="text" onSave={v => save({ numUnits: v })} /></div>
+          <div className="flex-1"><EF label="Purchase" value={loan.purchasePrice} type="currency" onSave={v => save({ purchasePrice: v })} /></div>
+          <div className="flex-1"><EF label="Appraised" value={loan.estimatedValue} type="currency" onSave={v => save({ estimatedValue: v })} /></div>
+          <div className="flex-1"><EF label="Down Pmt" value={loan.downPayment} type="currency" onSave={v => save({ downPayment: v })} /></div>
+          <div className="flex-1"><EF label="Cur Bal" value={loan.currentBalance} type="currency" onSave={v => save({ currentBalance: v })} /></div>
         </div>
       </div>
 
       {/* Loan Terms + Rate Lock — inline strip */}
       <div className="bg-white rounded-md border border-slate-200 px-2 py-1">
         <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">Loan Terms</div>
-        <div className="grid grid-cols-3 sm:grid-cols-9 gap-x-2 gap-y-0.5">
-          <EF label="Amount" value={loan.loanAmount} type="currency" onSave={v => save({ loanAmount: v })} />
-          <EF label="Rate" value={loan.interestRate} type="text" onSave={v => save({ interestRate: v })} />
-          <EF label="Term" value={loan.loanTerm} type="text" onSave={v => save({ loanTerm: v })} />
-          <EF label="Type" value={loan.loanType} type="select" options={LOAN_TYPE_OPTIONS} onSave={v => save({ loanType: v })} />
-          <EF label="Purpose" value={loan.purpose} type="select" options={PURPOSE_OPTIONS} onSave={v => save({ purpose: v })} />
-          <EF label="Lender" value={loan.lenderName} type="text" onSave={v => save({ lenderName: v })} />
-          <EF label="Loan #" value={loan.loanNumber} type="text" onSave={v => save({ loanNumber: v })} />
-          <EF label="Lien" value={loan.lienStatus} type="text" onSave={v => save({ lienStatus: v })} />
-          <RF label="BIC" value={loan.ballInCourt} />
+        <div className="flex gap-x-6">
+          <div className="flex-1"><EF label="Amount" value={loan.loanAmount} type="currency" onSave={v => save({ loanAmount: v })} /></div>
+          <div className="flex-1"><EF label="Rate" value={loan.interestRate} type="text" onSave={v => save({ interestRate: v })} /></div>
+          <div className="flex-1"><EF label="Term" value={loan.loanTerm} type="text" onSave={v => save({ loanTerm: v })} /></div>
+          <div className="flex-1"><EF label="Type" value={loan.loanType} type="select" options={LOAN_TYPE_OPTIONS} onSave={v => save({ loanType: v })} /></div>
+          <div className="flex-1"><EF label="Purpose" value={loan.purpose} type="select" options={PURPOSE_OPTIONS} onSave={v => save({ purpose: v })} /></div>
+          <div className="flex-1"><EF label="Lender" value={loan.lenderName} type="text" onSave={v => save({ lenderName: v })} /></div>
+          <div className="flex-1"><EF label="Loan #" value={loan.loanNumber} type="text" onSave={v => save({ loanNumber: v })} /></div>
+          <div className="flex-1"><EF label="Lien" value={loan.lienStatus} type="text" onSave={v => save({ lienStatus: v })} /></div>
+          <div className="flex-1"><RF label="BIC" value={loan.ballInCourt} /></div>
         </div>
         {(loan.purpose === 'refinance' || loan.purpose === 'cash_out') && (
-          <div className="grid grid-cols-3 sm:grid-cols-9 gap-x-2 gap-y-0.5 mt-0.5 pt-0.5 border-t border-slate-100">
-            <EF label="Refi Purpose" value={loan.refiPurpose} type="text" onSave={v => save({ refiPurpose: v })} />
-            <EF label="Cash Out" value={loan.cashOutAmount} type="currency" onSave={v => save({ cashOutAmount: v })} />
+          <div className="flex gap-x-6 mt-0.5 pt-0.5 border-t border-slate-100">
+            <div className="flex-1"><EF label="Refi Purpose" value={loan.refiPurpose} type="text" onSave={v => save({ refiPurpose: v })} /></div>
+            <div className="flex-1"><EF label="Cash Out" value={loan.cashOutAmount} type="currency" onSave={v => save({ cashOutAmount: v })} /></div>
+            <div className="flex-1" /><div className="flex-1" /><div className="flex-1" /><div className="flex-1" /><div className="flex-1" /><div className="flex-1" /><div className="flex-1" />
           </div>
         )}
-        <div className="grid grid-cols-3 sm:grid-cols-9 gap-x-2 gap-y-0.5 mt-0.5 pt-0.5 border-t border-slate-100">
-          <EF label="Lock Date" value={dates.lockedDate} type="date" onSave={v => saveDates({ lockedDate: v })} />
-          <EF label="Lock Exp" value={dates.lockExpiration} type="date" onSave={v => saveDates({ lockExpiration: v })} />
-          <EF label="Lock Term" value={dates.lockTerm} type="text" onSave={v => saveDates({ lockTerm: v })} />
+        <div className="flex gap-x-6 mt-0.5 pt-0.5 border-t border-slate-100">
+          <div className="flex-1"><EF label="Lock Date" value={dates.lockedDate} type="date" onSave={v => saveDates({ lockedDate: v })} /></div>
+          <div className="flex-1"><EF label="Lock Exp" value={dates.lockExpiration} type="date" onSave={v => saveDates({ lockExpiration: v })} /></div>
+          <div className="flex-1"><EF label="Lock Term" value={dates.lockTerm} type="text" onSave={v => saveDates({ lockTerm: v })} /></div>
+          <div className="flex-1" /><div className="flex-1" /><div className="flex-1" /><div className="flex-1" /><div className="flex-1" /><div className="flex-1" />
         </div>
       </div>
 
