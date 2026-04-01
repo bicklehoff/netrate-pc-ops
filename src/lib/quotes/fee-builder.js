@@ -75,7 +75,7 @@ function toNum(val) {
  *
  * @returns {Object|null} { sectionA, sectionB, sectionC, sectionE, sectionF, sectionG, totalClosingCosts }
  */
-export async function buildFeeBreakdown({ state, county, purpose, lenderFeeUw = 0, loanAmount, propertyValue }) {
+export async function buildFeeBreakdown({ state, county, purpose, lenderFeeUw = 0 }) {
   const mappedPurpose = purpose === 'cashout' ? 'refinance' : purpose;
   const template = await loadTemplate(state, county, mappedPurpose);
 
