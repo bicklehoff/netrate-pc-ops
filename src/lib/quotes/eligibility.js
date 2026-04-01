@@ -154,9 +154,12 @@ export async function checkEligibility(scenario) {
 
     // FICO check against product minimums
     if (lenderProducts.length > 0) {
-      const minFico = Math.min(...lenderProducts.map(p => p.ficoMin ?? 0).filter(Boolean));
-      if (minFico > 0 && creditScore < minFico) {
-        reasons.push(`FICO ${creditScore} below minimum ${minFico}`);
+      const ficoMins = lenderProducts.map(p => Number(p.ficoMin ?? 0)).filter(v => v > 0);
+      if (ficoMins.length > 0) {
+        const minFico = Math.min(...ficoMins);
+        if (creditScore < minFico) {
+          reasons.push(`FICO ${creditScore} below minimum ${minFico}`);
+        }
       }
     }
 
