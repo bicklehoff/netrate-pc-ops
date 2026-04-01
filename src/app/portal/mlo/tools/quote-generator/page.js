@@ -1,8 +1,52 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { Suspense } from 'react';
+import { Suspense, Component } from 'react';
 import QuoteWizard from '@/components/Portal/QuoteGenerator/QuoteWizard';
+
+class QuoteErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null, errorInfo: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    this.setState({ errorInfo });
+    console.error('QuoteGenerator crash:', error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-6 max-w-4xl mx-auto">
+          <div className="bg-red-50 border border-red-200 rounded-xl p-6">
+            <h2 className="text-lg font-bold text-red-800 mb-2">Quote Generator Error</h2>
+            <p className="text-red-700 mb-4">{this.state.error?.message || 'Unknown error'}</p>
+            <details className="text-xs text-red-600">
+              <summary className="cursor-pointer font-medium mb-2">Stack trace</summary>
+              <pre className="whitespace-pre-wrap bg-red-100 p-3 rounded overflow-auto max-h-64">
+                {this.state.error?.stack}
+              </pre>
+              {this.state.errorInfo?.componentStack && (
+                <pre className="whitespace-pre-wrap bg-red-100 p-3 rounded mt-2 overflow-auto max-h-64">
+                  {this.state.errorInfo.componentStack}
+                </pre>
+              )}
+            </details>
+            <button
+              onClick={() => this.setState({ hasError: false, error: null, errorInfo: null })}
+              className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 function QuoteGeneratorContent() {
   const params = useSearchParams();
@@ -34,7 +78,9 @@ function QuoteGeneratorContent() {
           Price a scenario against all lenders, select rates, and build a quote for the borrower.
         </p>
       </div>
-      <QuoteWizard prefill={prefill} />
+      <QuoteErrorBoundary>
+        <QuoteWizard prefill={prefill} />
+      </QuoteErrorBoundary>
     </div>
   );
 }
