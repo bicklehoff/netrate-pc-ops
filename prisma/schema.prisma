@@ -179,9 +179,16 @@ model Loan {
   armPeriodicCap        Decimal?       @map("arm_periodic_cap") @db.Decimal(5, 4)
   armLifetimeCap        Decimal?       @map("arm_lifetime_cap") @db.Decimal(5, 4)
   armAdjustmentPeriod   Int?           @map("arm_adjustment_period")
+  // Application gate — loan becomes MCR application when all 5 Reg B fields present
+  applicationDate       DateTime?      @map("application_date") @db.Timestamptz(6)
+  isApplication         Boolean        @default(false) @map("is_application")
+  // Contact link — the person behind this deal
+  contactId             String?        @map("contact_id") @db.Uuid
   borrower              Borrower       @relation(fields: [borrowerId], references: [id])
   mlo                   Mlo?           @relation(fields: [mloId], references: [id])
+  contact               Contact?       @relation("LoanContact", fields: [contactId], references: [id])
 
+  @@index([contactId], map: "idx_loans_contact_id")
   @@map("loans")
 }
 
@@ -454,7 +461,7 @@ model LoanTask {
 model LoanContact {
   id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   loanId     String    @map("loan_id") @db.Uuid
-  contact_id String    @db.Uuid
+  contactId  String    @map("contact_id") @db.Uuid
   role       String    @default("borrower")
   isPrimary  Boolean?  @default(false) @map("is_primary")
   notes      String?
@@ -465,8 +472,9 @@ model LoanContact {
   phone      String?
   updatedAt  DateTime? @updatedAt @map("updated_at") @db.Timestamptz(6)
   loan       Loan      @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  contact    Contact   @relation("LoanContactLink", fields: [contactId], references: [id])
 
-  @@unique([loanId, contact_id])
+  @@unique([loanId, contactId])
   @@map("loan_contacts")
 }
 
@@ -696,6 +704,8 @@ model Contact {
   leads             Lead[]
   contactNotes      ContactNote[]
   smsMessages       SmsMessage[]
+  loans             Loan[]         @relation("LoanContact")
+  loanContacts      LoanContact[]  @relation("LoanContactLink")
 
   @@index([phone])
   @@index([email])

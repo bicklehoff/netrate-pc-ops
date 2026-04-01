@@ -13,6 +13,7 @@ import prisma from '@/lib/prisma';
 import { getBallInCourt, EMAIL_TRIGGERS } from '@/lib/loan-states';
 import { sendEmail } from '@/lib/resend';
 import { statusChangeTemplate } from '@/lib/email-templates/borrower';
+import { checkApplicationGate } from '@/lib/application-gate';
 import { updateContactFromLoanStatus } from '@/lib/contact-status';
 
 // Status → LoanDates field mapping for MCR-aware auto-date capture
@@ -386,6 +387,27 @@ export async function PATCH(request, { params }) {
             }).catch(() => {});
           }
         }).catch(() => {});
+      }
+
+      // Application gate — check if loan just became a real MCR application (non-blocking)
+      if (!updated.isApplication) {
+        const gatePassed = checkApplicationGate(updated, loan.borrower);
+        if (gatePassed) {
+          prisma.loan.update({
+            where: { id },
+            data: { isApplication: true, applicationDate: new Date() },
+          }).then(() =>
+            prisma.loanEvent.create({
+              data: {
+                loanId: id,
+                eventType: 'application_gate_passed',
+                actorType: 'system',
+                actorId: 'application-gate',
+                newValue: 'Loan meets all 5 Reg B fields — now an MCR application',
+              },
+            })
+          ).catch(() => {});
+        }
       }
 
       return NextResponse.json({ loan: updated });

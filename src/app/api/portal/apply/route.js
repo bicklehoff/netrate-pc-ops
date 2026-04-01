@@ -11,6 +11,7 @@ import { headers } from 'next/headers';
 import prisma from '@/lib/prisma';
 import { encrypt, ssnLastFour } from '@/lib/encryption';
 import { createLoanFolder } from '@/lib/zoho-workdrive';
+import { checkApplicationGate } from '@/lib/application-gate';
 
 // ─── Rate Limiting (in-memory, per IP) ──────────────────────
 // 5 submissions per hour per IP. Map auto-cleans expired entries.
@@ -387,6 +388,55 @@ export async function POST(request) {
         },
       },
     });
+
+    // ─── Link Contact + Application Gate (non-blocking) ───
+    try {
+      // Find or create Contact for this borrower
+      let contact = await prisma.contact.findUnique({ where: { borrowerId: borrower.id } });
+      if (!contact) {
+        contact = await prisma.contact.create({
+          data: {
+            firstName: sanitize(body.firstName),
+            lastName: sanitize(body.lastName),
+            email: body.email?.toLowerCase(),
+            phone: body.phone?.replace(/\D/g, ''),
+            borrowerId: borrower.id,
+            source: 'application',
+            status: 'applicant',
+          },
+        });
+      }
+
+      // Link loan to contact
+      await prisma.loan.update({
+        where: { id: loan.id },
+        data: { contactId: contact.id },
+      });
+
+      // Create LoanContact bridge
+      await prisma.loanContact.create({
+        data: {
+          loanId: loan.id,
+          contactId: contact.id,
+          role: 'borrower',
+          isPrimary: true,
+          name: `${sanitize(body.firstName)} ${sanitize(body.lastName)}`,
+          email: body.email?.toLowerCase(),
+          phone: body.phone,
+        },
+      });
+
+      // Check application gate — full applications from the portal usually pass
+      const gatePassed = checkApplicationGate(loan, borrower);
+      if (gatePassed) {
+        await prisma.loan.update({
+          where: { id: loan.id },
+          data: { isApplication: true, applicationDate: new Date() },
+        });
+      }
+    } catch (contactErr) {
+      console.error('Contact linking failed (non-fatal):', contactErr?.message);
+    }
 
     // ─── WorkDrive Folder Creation (non-blocking) ──────────
     // Create loan folder in Zoho WorkDrive for document storage.
