@@ -143,7 +143,7 @@ export default function OverviewSection({ loan, updateLoanField, updateDates }) 
         <button onClick={() => setShowPrequalModal(true)}
           className="px-3 py-1.5 text-xs font-bold text-white bg-primary rounded-md hover:bg-cyan-700 transition-colors">Pre-Qual Letter</button>
         {(loan.status === 'funded' || loan.status === 'settled') && (
-          <a href={`?section=post-close`}
+          <a href={`?section=payroll`}
             className="px-3 py-1.5 text-xs font-bold text-white bg-emerald-600 rounded-md hover:bg-emerald-700 transition-colors">
             Payroll / CD →
           </a>

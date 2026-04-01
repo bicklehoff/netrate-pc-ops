@@ -37,10 +37,11 @@ function getSections(loanStatus) {
     },
   ];
 
-  if (['funded', 'archived'].includes(loanStatus)) {
+  if (['funded', 'settled', 'archived'].includes(loanStatus)) {
     sections.push({
-      group: 'Post-Close',
+      group: 'Closing',
       items: [
+        { key: 'payroll', label: 'Payroll / CD', icon: '💰' },
         { key: 'post-close', label: 'Post-Close', icon: '✅' },
       ],
     });

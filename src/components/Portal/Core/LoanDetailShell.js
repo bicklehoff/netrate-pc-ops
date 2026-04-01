@@ -20,6 +20,8 @@ import DocumentsSection from './sections/DocumentsSection';
 import NotesActivitySection from './sections/NotesActivitySection';
 import PostCloseSection from './sections/PostCloseSection';
 import ConditionsSection from './sections/ConditionsSection';
+import PayrollSection from '../PayrollSection';
+import CompensationSection from '../CompensationSection';
 import PrequalLetterModal from '../PrequalLetter/PrequalLetterModal';
 
 export default function LoanDetailShell({ loan, onRefresh }) {
@@ -125,6 +127,13 @@ export default function LoanDetailShell({ loan, onRefresh }) {
             loan={loan}
             updateLoanField={updateLoanField}
           />
+        );
+      case 'payroll':
+        return (
+          <div className="space-y-4">
+            <PayrollSection loan={loan} onRefresh={onRefresh} />
+            <CompensationSection loan={loan} />
+          </div>
         );
       case 'post-close':
         return (
