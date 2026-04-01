@@ -116,7 +116,41 @@ Sections on the page:
 - Show diff of what will change before saving
 - Merge logic: new fields fill in, existing fields show conflict
 
+## Audit Trail — Submission Snapshots
+When exporting XML to a lender or LenDox:
+1. Generate MISMO 3.4 XML from all Core data
+2. Save a copy to Vercel Blob as an immutable document
+3. Attach to loan as LoanDocument (type: "submission_package")
+4. Metadata: { lender, exportDate, format: "MISMO_3.4", exportedBy }
+
+For audits: pull up any loan → Documents → "Submission Package 3/15/2026" → download exact XML that was sent. Immutable, timestamped, matches what the lender received.
+
+## Field Count
+Per borrower: ~25 identity/employment fields + ~15 declaration booleans + ~5 HMDA = ~45
+Per loan: ~20 loan/property fields
+Assets: ~5 fields × N accounts
+REO: ~9 fields × N properties
+Income: ~8 fields per borrower
+
+For a typical 2-borrower loan: ~180 data points total on the page.
+
+All fields required for clean AUS (DU/LP) submission — missing fields = AUS errors.
+
+## Data Flow (updated)
+```
+Borrower applies on website → Core DB (basic fields)
+MLO opens Core → fills in 1003 page (all AUS-required fields)
+Core → Export XML → LenDox (for AUS + credit)
+   → XML snapshot saved as immutable audit document
+LenDox → run AUS/credit → results
+Core → Export XML → Lender submission
+   → XML snapshot saved as immutable audit document
+Lender processes → status updates to Core (manual/email)
+Loan funds → CD uploaded → Core extracts final numbers
+Core keeps: submission snapshots + CD + all docs for audit
+```
+
 ## Build Order
-Session 1: Schema + migration + basic UI (field display)
-Session 2: Editable fields + XML file import parser
-Session 3: XML export to LenDox + polish
+Session 1: Schema + migration + basic 1003 UI page (all fields editable)
+Session 2: XML file import parser (MISMO 3.4 → Core models)
+Session 3: XML export (Core → MISMO 3.4) + submission snapshot + LenDox push
