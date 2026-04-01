@@ -358,11 +358,7 @@ export async function PATCH(request, { params }) {
           if (result.enriched) {
             await prisma.loan.update({
               where: { id },
-              data: {
-                propertyAddress: result.address,
-                propertyState: result.address.state || undefined,
-                propertyCounty: result.address.county || undefined,
-              },
+              data: { propertyAddress: result.address },
             }).catch(() => {});
           }
         }).catch(() => {});

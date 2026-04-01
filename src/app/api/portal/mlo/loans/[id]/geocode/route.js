@@ -19,7 +19,6 @@ export async function POST(request, { params }) {
 
     const loan = await prisma.loan.findUnique({
       where: { id },
-      select: { id: true, propertyAddress: true, propertyState: true, propertyCounty: true },
     });
 
     if (!loan) {
@@ -48,8 +47,6 @@ export async function POST(request, { params }) {
         where: { id },
         data: {
           propertyAddress: newAddr,
-          propertyState: newAddr.state || loan.propertyState,
-          propertyCounty: newAddr.county || loan.propertyCounty,
         },
       });
 

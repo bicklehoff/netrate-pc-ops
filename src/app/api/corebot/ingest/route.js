@@ -351,12 +351,8 @@ async function processLoan(loanData) {
       if (result.enriched) {
         await prisma.loan.update({
           where: { id: loan.id },
-          data: {
-            propertyAddress: result.address,
-            propertyState: result.address.state || undefined,
-            propertyCounty: result.address.county || undefined,
-          },
-        }).catch(() => {}); // Non-blocking — don't fail import on geocode error
+          data: { propertyAddress: result.address },
+        }).catch(() => {});
       }
     }).catch(() => {});
   }
