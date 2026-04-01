@@ -47,6 +47,7 @@ export function useApiPricing(scenario) {
           productType: scenario.productType || 'fixed',
           lockDays: 30,
           state: scenario.state,
+          county: scenario.county || null,
           vaFundingFeeExempt: scenario.vaFundingFeeExempt || false,
           vaSubsequentUse: scenario.vaSubsequentUse || false,
         }),
@@ -115,7 +116,7 @@ export function useApiPricing(scenario) {
       if (err.name !== 'AbortError') setResults(null);
     }
     setLoading(false);
-  }, [scenario.loanAmount, scenario.fico, scenario.propertyValue, scenario.purpose, scenario.loanType, scenario.propertyType, scenario.productType, scenario.term, scenario.state, scenario.currentRate, scenario.vaFundingFeeExempt, scenario.vaSubsequentUse]);
+  }, [scenario.loanAmount, scenario.fico, scenario.propertyValue, scenario.purpose, scenario.loanType, scenario.propertyType, scenario.productType, scenario.term, scenario.state, scenario.county, scenario.currentRate, scenario.vaFundingFeeExempt, scenario.vaSubsequentUse]);
 
   return { results, loading, fetchRates, effectiveDate };
 }

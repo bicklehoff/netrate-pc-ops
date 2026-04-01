@@ -3,6 +3,9 @@
 import { useMemo, useState, useCallback } from 'react';
 import { getFicoBand } from '@/lib/rates/engine';
 import { STATE_DEFAULTS, getThirdPartyCosts } from '@/lib/rates/closing-costs';
+import { getCountiesByState, classifyLoan, getLoanLimits, BASELINE_1UNIT } from '@/data/county-loan-limits';
+
+const DEFAULT_COUNTIES = { CO: 'Denver', CA: 'Los Angeles', TX: 'Dallas', OR: 'Multnomah' };
 
 export default function ScenarioForm({ scenario, onChange, onSubmit, loading }) {
   const update = (field, value) => onChange({ ...scenario, [field]: value });
@@ -50,6 +53,18 @@ export default function ScenarioForm({ scenario, onChange, onSubmit, loading }) 
   const isFha = scenario.loanType === 'fha';
   const loanAmount = isPurchase ? purchaseCalc.loanAmount : refiCalc.loanAmount;
   const ltv = isPurchase ? purchaseCalc.ltv : refiCalc.ltv;
+
+  // County list for selected state
+  const counties = useMemo(() => getCountiesByState(scenario.state || 'CO'), [scenario.state]);
+
+  // Loan classification based on county limits
+  const loanLimitInfo = useMemo(() => {
+    if (!scenario.county || !loanAmount) return null;
+    const limits = getLoanLimits(scenario.state, scenario.county);
+    if (!limits) return null;
+    const classification = classifyLoan(loanAmount, scenario.state, scenario.county);
+    return { ...limits, classification };
+  }, [scenario.state, scenario.county, loanAmount]);
 
   // Sync loanAmount and ltv to parent scenario
   useMemo(() => {
@@ -236,11 +251,21 @@ export default function ScenarioForm({ scenario, onChange, onSubmit, loading }) 
           <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">State</label>
           <select value={scenario.state || 'CO'} onChange={e => {
             const st = e.target.value;
-            onChange({ ...scenario, state: st, thirdPartyCosts: getThirdPartyCosts(st) });
+            onChange({ ...scenario, state: st, county: DEFAULT_COUNTIES[st] || '', thirdPartyCosts: getThirdPartyCosts(st) });
           }}
             className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm bg-white">
             {Object.entries(STATE_DEFAULTS).map(([code, { label }]) => (
               <option key={code} value={code}>{label}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">County</label>
+          <select value={scenario.county || ''} onChange={e => update("county", e.target.value)}
+            className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm bg-white">
+            <option value="">All counties</option>
+            {counties.map(c => (
+              <option key={c.fips} value={c.name}>{c.name}{c.oneUnitLimit > BASELINE_1UNIT ? ` ($${(c.oneUnitLimit / 1000).toFixed(0)}K)` : ''}</option>
             ))}
           </select>
         </div>
@@ -254,6 +279,19 @@ export default function ScenarioForm({ scenario, onChange, onSubmit, loading }) 
           <span>LTV: <strong className="text-gray-800">{ltv.toFixed(1)}%</strong></span>
           <span>FICO Band: <strong className="text-gray-800">{getFicoBand(scenario.fico)}</strong></span>
           <span>State: <strong className="text-gray-800">{scenario.state || 'CO'}</strong></span>
+          {loanLimitInfo && (
+            <>
+              <span>Limit: <strong className="text-gray-800">${loanLimitInfo.conforming1Unit.toLocaleString()}</strong></span>
+              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${
+                loanLimitInfo.classification === 'conforming' ? 'bg-green-100 text-green-700' :
+                loanLimitInfo.classification === 'highBalance' ? 'bg-amber-100 text-amber-700' :
+                'bg-red-100 text-red-700'
+              }`}>
+                {loanLimitInfo.classification === 'conforming' ? 'Conforming' :
+                 loanLimitInfo.classification === 'highBalance' ? 'High Balance' : 'Jumbo'}
+              </span>
+            </>
+          )}
         </div>
       )}
       {loanAmount > 0 && (

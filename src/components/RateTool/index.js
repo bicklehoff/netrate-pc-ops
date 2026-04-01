@@ -52,6 +52,7 @@ export default function RateTool({ initialRateData, defaultState }) {
     loanAmount: 0,
     ltv: 0,
     state: initialState,
+    county: initialState === 'CO' ? 'Denver' : initialState === 'CA' ? 'Los Angeles' : initialState === 'TX' ? 'Dallas' : initialState === 'OR' ? 'Multnomah' : '',
     thirdPartyCosts: getThirdPartyCosts(initialState),
   });
 

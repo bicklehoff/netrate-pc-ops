@@ -30,6 +30,7 @@ import { priceRate } from '@/lib/rates/pricing-v2';
 import { getDbLenderAdj } from '@/lib/rates/db-adj-loader';
 import { loadRateDataFromDB } from '@/lib/rates/db-loader';
 import { DEFAULT_SCENARIO } from '@/lib/rates/defaults';
+import { classifyLoan, getLoanLimits } from '@/data/county-loan-limits';
 
 const CACHE_TTL_MS = 2 * 60 * 1000;
 
@@ -98,6 +99,33 @@ export async function POST(request) {
       term: body.term || 30,
     };
 
+    // County-based loan classification
+    const county = body.county || null;
+    let loanClassification = null;
+    let countyLimits = null;
+    if (county && scenario.state) {
+      countyLimits = getLoanLimits(scenario.state, county);
+      if (countyLimits) {
+        if (scenario.loanType === 'fha') {
+          // FHA limits: floor = 65% of baseline, ceiling follows county conforming (capped at 150% baseline)
+          const fhaFloor = countyLimits.fhaLimit; // getLoanLimits returns the correct FHA limit per county
+          // In baseline counties, fhaFloor = 65% of baseline ($541K). In high-cost, it's the county limit.
+          // FHA high-balance = between FHA floor and county FHA limit
+          const fhaBaseline = Math.round(832750 * 0.65); // $541,288 — standard FHA floor
+          if (loanAmount <= fhaBaseline) {
+            loanClassification = 'conforming';
+          } else if (loanAmount <= fhaFloor) {
+            loanClassification = 'highBalance';
+          } else {
+            loanClassification = 'jumbo';
+          }
+        } else {
+          // Conventional + VA: use standard classification
+          loanClassification = classifyLoan(loanAmount, scenario.state, county);
+        }
+      }
+    }
+
     const lockDays = body.lockDays || 30;
     const termFilter = body.term || 30;
     const allLenders = await loadRateData();
@@ -138,6 +166,13 @@ export async function POST(request) {
         // Product type filter (fixed vs arm)
         if (body.productType && program.productType !== body.productType) continue;
 
+        // County loan limit filter — only when county is provided
+        if (loanClassification) {
+          if (loanClassification === 'conforming' && program.isHighBalance) continue;
+          // highBalance: show BOTH conforming AND high-balance products
+          if (loanClassification === 'jumbo') continue; // no agency products for jumbo
+        }
+
         // Get rates for requested lock period
         const lockRates = program.rates.filter(r => r.lockDays === lockDays);
         if (lockRates.length === 0) continue;
@@ -171,6 +206,14 @@ export async function POST(request) {
     return NextResponse.json({
       scenario,
       effectiveDate,
+      loanClassification,
+      countyLimits: countyLimits ? {
+        county: countyLimits.county,
+        state: countyLimits.state,
+        conformingLimit: countyLimits.conforming1Unit,
+        fhaLimit: countyLimits.fhaLimit,
+        isHighCost: !countyLimits.isBaseline,
+      } : null,
       resultCount: results.length,
       results,
     }, {
