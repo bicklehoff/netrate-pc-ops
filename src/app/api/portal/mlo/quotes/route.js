@@ -124,8 +124,18 @@ export async function POST(request) {
     // Run pricing engine
     const pricing = await priceScenario(pricingInput);
 
+    // Merge pricing config warnings into eligibility warnings
+    if (pricing.configWarnings?.length) {
+      for (const w of pricing.configWarnings) {
+        eligibility.warnings.push({ severity: 'warning', code: 'CONFIG_MISSING', message: w });
+      }
+    }
+
     // Build fee breakdown
-    const lenderFeeUw = pricing.results[0]?.lenderFee || 999;
+    const lenderFeeUw = pricing.results[0]?.lenderFee;
+    if (lenderFeeUw == null && pricing.results.length > 0) {
+      eligibility.warnings.push({ severity: 'warning', code: 'CONFIG_MISSING', message: 'Lender fee missing from rate results — check rate_lenders.uwFee' });
+    }
     const fees = await buildFeeBreakdown({
       state: pricingInput.state,
       county: pricingInput.county,
@@ -134,6 +144,11 @@ export async function POST(request) {
       loanAmount,
       propertyValue,
     });
+
+    // Surface fee template warning
+    if (fees?.configWarning) {
+      eligibility.warnings.push({ severity: 'warning', code: 'CONFIG_MISSING', message: fees.configWarning });
+    }
 
     // Pick top 3 rate scenarios for the quote (lowest rate with best price per lender)
     const topScenarios = pickTopScenarios(pricing.results, 3);

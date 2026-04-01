@@ -80,7 +80,20 @@ export async function buildFeeBreakdown({ state, county, purpose, lenderFeeUw = 
   const template = await loadTemplate(state, county, mappedPurpose);
 
   if (!template) {
-    return buildDefaultFees({ state, purpose, lenderFeeUw, loanAmount, propertyValue });
+    // No fallback defaults — return empty fees with a config warning
+    return {
+      sectionA: { label: 'Lender Fees', items: [{ label: 'Underwriting Fee', amount: lenderFeeUw }], total: lenderFeeUw },
+      sectionB: { label: 'Third-Party Services', items: [], total: 0 },
+      sectionC: { label: 'Title & Settlement', items: [], total: 0 },
+      sectionE: { label: 'Recording Fees', items: [], total: 0 },
+      sectionF: { label: 'Prepaid Items', items: [], total: 0 },
+      sectionG: { label: 'Initial Escrow', items: [], total: 0 },
+      totalClosingCosts: lenderFeeUw,
+      monthlyTax: 0,
+      monthlyInsurance: 0,
+      templateId: null,
+      configWarning: `No fee template for ${state}/${county || 'any county'}/${mappedPurpose} — add a row to fee_templates for accurate closing costs.`,
+    };
   }
 
   const sectionA = {
@@ -167,131 +180,5 @@ export async function buildFeeBreakdown({ state, county, purpose, lenderFeeUw = 
   };
 }
 
-/**
- * Fallback defaults when no fee template exists for the state.
- */
-function buildDefaultFees({ state, lenderFeeUw }) {
-  const defaults = STATE_DEFAULTS[state] || STATE_DEFAULTS.DEFAULT;
-
-  const sectionA = {
-    label: 'Lender Fees',
-    items: [{ label: 'Underwriting Fee', amount: lenderFeeUw }],
-    total: lenderFeeUw,
-  };
-
-  const sectionB = {
-    label: 'Third-Party Services',
-    items: [
-      { label: 'Appraisal', amount: defaults.appraisal },
-      { label: 'Credit Report', amount: defaults.creditReport },
-      { label: 'Flood Certification', amount: defaults.floodCert },
-      { label: 'Tax Service', amount: defaults.taxService },
-    ],
-    total: defaults.appraisal + defaults.creditReport + defaults.floodCert + defaults.taxService,
-  };
-
-  const sectionC = {
-    label: 'Title & Settlement',
-    items: [
-      { label: "Lender's Title Policy", amount: defaults.titlePolicy },
-      { label: 'Settlement Agent Fee', amount: defaults.settlementFee },
-    ],
-    total: defaults.titlePolicy + defaults.settlementFee,
-  };
-
-  const sectionE = {
-    label: 'Recording Fees',
-    items: [{ label: 'Recording Fees', amount: defaults.recordingFees }],
-    total: defaults.recordingFees,
-  };
-
-  const sectionF = {
-    label: 'Prepaid Items',
-    items: [{ label: 'Homeowner\'s Insurance (12 months)', amount: defaults.annualInsurance }],
-    total: defaults.annualInsurance,
-  };
-
-  const monthlyTax = defaults.monthlyTax;
-  const monthlyInsurance = Math.round(defaults.annualInsurance / 12);
-  const sectionG = {
-    label: 'Initial Escrow',
-    items: [
-      { label: 'Insurance (3 months)', amount: monthlyInsurance * 3 },
-      { label: 'Property Tax (3 months)', amount: monthlyTax * 3 },
-    ],
-    total: (monthlyInsurance * 3) + (monthlyTax * 3),
-  };
-
-  const totalClosingCosts = sectionA.total + sectionB.total + sectionC.total + sectionE.total + sectionF.total + sectionG.total;
-
-  return {
-    sectionA,
-    sectionB,
-    sectionC,
-    sectionE,
-    sectionF,
-    sectionG,
-    totalClosingCosts,
-    monthlyTax,
-    monthlyInsurance,
-    templateId: null,
-  };
-}
-
-const STATE_DEFAULTS = {
-  CO: {
-    appraisal: 650,
-    creditReport: 75,
-    floodCert: 14,
-    taxService: 78,
-    titlePolicy: 875,
-    settlementFee: 450,
-    recordingFees: 75,
-    annualInsurance: 2400,
-    monthlyTax: 250,
-  },
-  CA: {
-    appraisal: 750,
-    creditReport: 75,
-    floodCert: 14,
-    taxService: 78,
-    titlePolicy: 1200,
-    settlementFee: 600,
-    recordingFees: 125,
-    annualInsurance: 3000,
-    monthlyTax: 400,
-  },
-  TX: {
-    appraisal: 600,
-    creditReport: 75,
-    floodCert: 14,
-    taxService: 78,
-    titlePolicy: 950,
-    settlementFee: 500,
-    recordingFees: 85,
-    annualInsurance: 3600,
-    monthlyTax: 500,
-  },
-  OR: {
-    appraisal: 650,
-    creditReport: 75,
-    floodCert: 14,
-    taxService: 78,
-    titlePolicy: 800,
-    settlementFee: 475,
-    recordingFees: 100,
-    annualInsurance: 1800,
-    monthlyTax: 300,
-  },
-  DEFAULT: {
-    appraisal: 650,
-    creditReport: 75,
-    floodCert: 14,
-    taxService: 78,
-    titlePolicy: 900,
-    settlementFee: 475,
-    recordingFees: 85,
-    annualInsurance: 2400,
-    monthlyTax: 300,
-  },
-};
+// No fallback defaults — fee templates must exist in the DB.
+// Run: INSERT INTO fee_templates (state, purpose, appraisal, credit_report, ...) VALUES ('CO', 'purchase', 650, 75, ...)

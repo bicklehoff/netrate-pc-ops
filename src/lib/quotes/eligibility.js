@@ -10,6 +10,7 @@
 
 import prisma from '@/lib/prisma';
 import { classifyLoan, getLoanLimits } from '@/data/county-loan-limits';
+import { FHA_BASELINE_LIMIT } from '@/lib/rates/defaults';
 
 // 5-minute cache for lender/product metadata
 let metaCache = { data: null, fetchedAt: 0 };
@@ -105,7 +106,7 @@ export async function checkEligibility(scenario) {
     const limits = getLoanLimits(state, county);
     if (limits) {
       if (loanType === 'fha') {
-        const fhaBaseline = Math.round(832750 * 0.65);
+        const fhaBaseline = FHA_BASELINE_LIMIT;
         if (loanAmount <= fhaBaseline) loanClassification = 'conforming';
         else if (loanAmount <= limits.fhaLimit) loanClassification = 'highBalance';
         else loanClassification = 'jumbo';

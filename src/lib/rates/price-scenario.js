@@ -12,7 +12,7 @@
 import { priceRate } from '@/lib/rates/pricing-v2';
 import { getDbLenderAdj } from '@/lib/rates/db-adj-loader';
 import { loadRateDataFromDB } from '@/lib/rates/db-loader';
-import { DEFAULT_SCENARIO } from '@/lib/rates/defaults';
+import { DEFAULT_SCENARIO, FHA_BASELINE_LIMIT } from '@/lib/rates/defaults';
 import { classifyLoan, getLoanLimits } from '@/data/county-loan-limits';
 
 const CACHE_TTL_MS = 2 * 60 * 1000;
@@ -51,13 +51,14 @@ async function getEffectiveDate() {
   return null;
 }
 
-const FALLBACK_COMP_RATE = 0.02;
-
 /**
  * Price a borrower scenario against all active lender rate sheets.
  *
+ * No fallback defaults — if lender config is missing in the DB, the lender is
+ * skipped and a warning is returned so the admin knows what to fix.
+ *
  * @param {Object} body — scenario inputs (same shape as POST /api/pricing request body)
- * @returns {Object} { scenario, effectiveDate, loanClassification, countyLimits, resultCount, results }
+ * @returns {Object} { scenario, effectiveDate, loanClassification, countyLimits, resultCount, results, configWarnings }
  */
 export async function priceScenario(body) {
   const loanAmount = Number(body.loanAmount);
@@ -83,7 +84,7 @@ export async function priceScenario(body) {
     countyLimits = getLoanLimits(scenario.state, county);
     if (countyLimits) {
       if (scenario.loanType === 'fha') {
-        const fhaBaseline = Math.round(832750 * 0.65);
+        const fhaBaseline = FHA_BASELINE_LIMIT;
         if (loanAmount <= fhaBaseline) {
           loanClassification = 'conforming';
         } else if (loanAmount <= countyLimits.fhaLimit) {
@@ -101,15 +102,39 @@ export async function priceScenario(body) {
   const termFilter = body.term || 30;
   const allLenders = await loadRateData();
   const results = [];
+  const configWarnings = [];
 
   for (const lenderData of allLenders) {
     const lenderId = lenderData.lenderId;
+    const lenderName = lenderData.lenderName || lenderId;
+
+    // Validate required lender config — skip with warning if missing
+    if (!body.borrowerPaid) {
+      if (lenderData.compRate == null) {
+        configWarnings.push(`${lenderName}: missing compRate in rate_lenders — set comp % to price this lender`);
+        continue;
+      }
+      if (!lenderData.compCap?.purchase || !lenderData.compCap?.refinance) {
+        configWarnings.push(`${lenderName}: missing comp caps in rate_lenders — set maxCompCapPurchase and maxCompCapRefi`);
+        continue;
+      }
+    }
+
+    if (lenderData.lenderFee == null) {
+      configWarnings.push(`${lenderName}: missing uwFee in rate_lenders — set underwriting fee to price this lender`);
+      continue;
+    }
+
+    if (scenario.loanType === 'fha' && lenderData.fhaUfmip == null) {
+      configWarnings.push(`${lenderName}: missing fhaUfmip in rate_lenders — set FHA UFMIP rate for FHA pricing`);
+      continue;
+    }
 
     const brokerConfig = {
-      compRate: body.borrowerPaid ? 0 : (lenderData.compRate || FALLBACK_COMP_RATE),
-      compCapPurchase: body.borrowerPaid ? 0 : (lenderData.compCap?.purchase || 3595),
-      compCapRefi: body.borrowerPaid ? 0 : (lenderData.compCap?.refinance || 3595),
-      fhaUfmip: lenderData.fhaUfmip || 0.0175,
+      compRate: body.borrowerPaid ? 0 : lenderData.compRate,
+      compCapPurchase: body.borrowerPaid ? 0 : lenderData.compCap.purchase,
+      compCapRefi: body.borrowerPaid ? 0 : lenderData.compCap.refinance,
+      fhaUfmip: lenderData.fhaUfmip,
     };
 
     const lenderAdj = await getDbLenderAdj(lenderId, scenario.loanType);
@@ -140,10 +165,10 @@ export async function priceScenario(body) {
         name: program.name || program.rawName,
         lenderCode: lenderId,
         term: program.term,
-        productType: program.productType || 'fixed',
-        investor: program.investor || 'fnma',
-        tier: program.tier || 'core',
-        uwFee: lenderData.lenderFee || 999,
+        productType: program.productType,
+        investor: program.investor,
+        tier: program.tier,
+        uwFee: lenderData.lenderFee,
       };
 
       const llpaGrids = lenderData.llpas || null;
@@ -172,5 +197,6 @@ export async function priceScenario(body) {
     } : null,
     resultCount: results.length,
     results,
+    configWarnings,
   };
 }

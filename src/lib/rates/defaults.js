@@ -7,6 +7,10 @@
  * Change here → changes everywhere.
  */
 
+// FHA standard baseline limit (65% of conforming limit)
+// Single source of truth — update here when FHFA raises limits
+export const FHA_BASELINE_LIMIT = Math.round(832750 * 0.65); // $541,288
+
 export const DEFAULT_SCENARIO = {
   fico: 780,
   loanAmount: 400000,
