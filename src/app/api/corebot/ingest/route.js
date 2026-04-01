@@ -10,6 +10,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { encrypt } from '@/lib/encryption';
+import { enrichPropertyAddress } from '@/lib/geocode';
 
 // ─── Status Mapping: LDox → Core ────────────────────────────
 // Core statuses were modeled after LDox lifecycle.
@@ -341,6 +342,23 @@ async function processLoan(loanData) {
         data: { numBorrowers: 2 },
       });
     }
+  }
+
+  // ── 8. Geocode property address (non-blocking) ───────────
+  // Enriches with zip, county, lat/lng if missing
+  if (loanFields.propertyAddress?.street) {
+    enrichPropertyAddress(loanFields.propertyAddress).then(async (result) => {
+      if (result.enriched) {
+        await prisma.loan.update({
+          where: { id: loan.id },
+          data: {
+            propertyAddress: result.address,
+            propertyState: result.address.state || undefined,
+            propertyCounty: result.address.county || undefined,
+          },
+        }).catch(() => {}); // Non-blocking — don't fail import on geocode error
+      }
+    }).catch(() => {});
   }
 
   return { loanId: loan.id, loanNumber, isNew, status: coreStatus };

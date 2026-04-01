@@ -105,6 +105,8 @@ function EF({ label, value, type = 'text', options, onSave, placeholder = '—' 
 export default function OverviewSection({ loan, updateLoanField, updateDates }) {
   const { data: session } = useSession();
   const [showPrequalModal, setShowPrequalModal] = useState(false);
+  const [geocodeResult, setGeocodeResult] = useState(null);
+  const [geocoding, setGeocoding] = useState(false);
   const dates = loan.dates || {};
   const mi = getMilestoneIndex(loan.status);
   const borrower = loan.borrower || {};
@@ -208,7 +210,62 @@ export default function OverviewSection({ loan, updateLoanField, updateDates }) 
           <span className="font-bold text-slate-900">{addr.street}</span>
           {addr.csz && <><span className="text-slate-300">|</span><span className="text-slate-600">{addr.csz}</span></>}
           {(loan.propertyCounty || addr.county) && <><span className="text-slate-300">|</span><span className="text-slate-500">{loan.propertyCounty || addr.county} County</span></>}
+          {loan.propertyAddress?.googleValidated && <span className="text-[9px] font-bold text-emerald-600 ml-1">✓ Verified</span>}
+          {!loan.propertyAddress?.googleValidated && addr.street !== '—' && (
+            <button
+              onClick={async () => {
+                setGeocoding(true);
+                try {
+                  const res = await fetch(`/api/portal/mlo/loans/${loan.id}/geocode`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+                  });
+                  const data = await res.json();
+                  setGeocodeResult(data);
+                } catch {} finally { setGeocoding(false); }
+              }}
+              disabled={geocoding}
+              className="text-[9px] font-bold text-primary hover:text-cyan-700 ml-1"
+            >
+              {geocoding ? '...' : '⟳ Validate'}
+            </button>
+          )}
         </div>
+        {/* Geocode comparison */}
+        {geocodeResult?.validated && (
+          <div className="mt-1 p-1.5 bg-slate-50 rounded border border-slate-200 text-[10px]">
+            <div className="flex items-center justify-between mb-1">
+              <span className="font-bold text-slate-700">Google suggests:</span>
+              <div className="flex gap-1.5">
+                <button
+                  onClick={async () => {
+                    await fetch(`/api/portal/mlo/loans/${loan.id}/geocode`, {
+                      method: 'POST', headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ accept: true, address: geocodeResult.google }),
+                    });
+                    setGeocodeResult(null);
+                    window.location.reload();
+                  }}
+                  className="px-2 py-0.5 bg-emerald-600 text-white font-bold rounded text-[9px]"
+                >Accept Google</button>
+                <button
+                  onClick={() => setGeocodeResult(null)}
+                  className="px-2 py-0.5 bg-slate-300 text-slate-700 font-bold rounded text-[9px]"
+                >Keep Current</button>
+              </div>
+            </div>
+            <div className="font-semibold text-slate-800">{geocodeResult.google.formatted}</div>
+            <div className="text-slate-500 mt-0.5">
+              County: <span className="font-bold text-slate-700">{geocodeResult.google.county || '—'}</span>
+              {' | '}Zip: <span className="font-bold text-slate-700">{geocodeResult.google.zip || '—'}</span>
+            </div>
+          </div>
+        )}
+        {geocodeResult && !geocodeResult.validated && (
+          <div className="mt-1 p-1.5 bg-red-50 rounded border border-red-200 text-[10px] text-red-700 font-medium">
+            Could not validate: {geocodeResult.error || 'Address not found'}
+            <button onClick={() => setGeocodeResult(null)} className="ml-2 text-red-500 font-bold">✕</button>
+          </div>
+        )}
         <div className="flex gap-x-6 mt-1 pt-1 border-t border-slate-100">
           <div className="flex-1"><EF label="Type" value={loan.propertyType} type="select" options={PROPERTY_TYPE_OPTIONS} onSave={v => save({ propertyType: v })} /></div>
           <div className="flex-1"><EF label="Occup" value={loan.occupancy} type="select" options={OCCUPANCY_OPTIONS} onSave={v => save({ occupancy: v })} /></div>

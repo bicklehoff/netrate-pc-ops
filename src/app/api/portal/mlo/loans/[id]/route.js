@@ -8,6 +8,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { enrichPropertyAddress } from '@/lib/geocode';
 import prisma from '@/lib/prisma';
 import { getBallInCourt, EMAIL_TRIGGERS } from '@/lib/loan-states';
 import { sendEmail } from '@/lib/resend';
@@ -350,6 +351,22 @@ export async function PATCH(request, { params }) {
           details: { fields: fieldDetails, source: 'core_inline_edit' },
         },
       });
+
+      // Auto-geocode if propertyAddress changed (non-blocking)
+      if (fieldUpdates.propertyAddress && fieldUpdates.propertyAddress.street) {
+        enrichPropertyAddress(fieldUpdates.propertyAddress).then(async (result) => {
+          if (result.enriched) {
+            await prisma.loan.update({
+              where: { id },
+              data: {
+                propertyAddress: result.address,
+                propertyState: result.address.state || undefined,
+                propertyCounty: result.address.county || undefined,
+              },
+            }).catch(() => {});
+          }
+        }).catch(() => {});
+      }
 
       return NextResponse.json({ loan: updated });
     }
