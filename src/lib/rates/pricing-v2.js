@@ -40,10 +40,12 @@ function resolveGrids(tier, investor, term, lenderAdj, fallbackGrids) {
     // Merge both so cashout lookups work on >15yr products
     const allTermsGrids = grids.elite?.[agency]?.allTerms;
     if (agencyGrids || allTermsGrids) {
+      // Use helper to pick non-empty grid — empty {} is truthy but has no data
+      const pick = (a, b) => (a && Object.keys(a).length > 0) ? a : (b || {});
       return {
-        purchase: agencyGrids?.purchase || allTermsGrids?.purchase || {},
-        refinance: agencyGrids?.refinance || allTermsGrids?.refinance || {},
-        cashout: agencyGrids?.cashout || allTermsGrids?.cashout || {},
+        purchase: pick(agencyGrids?.purchase, allTermsGrids?.purchase),
+        refinance: pick(agencyGrids?.refinance, allTermsGrids?.refinance),
+        cashout: pick(agencyGrids?.cashout, allTermsGrids?.cashout),
       };
     }
   }

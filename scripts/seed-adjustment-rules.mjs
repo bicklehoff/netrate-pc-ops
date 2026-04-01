@@ -675,6 +675,22 @@ async function main() {
   for (const [lt, count] of Object.entries(byLoanType)) console.log(`  ${lt}: ${count}`);
   console.log(`  TOTAL: ${rows.length}\n`);
 
+  // Deduplicate rows — some seed functions can produce identical rows
+  const seen = new Set();
+  const uniqueRows = [];
+  for (const r of rows) {
+    const key = [r.adjustment_type, r.loan_type, r.purpose, r.agency, r.tier, r.state,
+      r.escrow_type, r.product_group, r.term_group, r.feature_name,
+      r.fico_min, r.fico_max, r.ltv_min, r.ltv_max,
+      r.loan_amount_min, r.loan_amount_max, r.term_min, r.term_max, r.value].join('|');
+    if (!seen.has(key)) { seen.add(key); uniqueRows.push(r); }
+  }
+  if (uniqueRows.length < rows.length) {
+    console.log(`Deduped: ${rows.length} → ${uniqueRows.length} (removed ${rows.length - uniqueRows.length} duplicates)\n`);
+    rows.length = 0;
+    rows.push(...uniqueRows);
+  }
+
   if (dryRun) { console.log('Dry run — no rows inserted.'); return; }
 
   // Get lender ID

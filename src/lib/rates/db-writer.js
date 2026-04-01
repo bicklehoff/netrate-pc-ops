@@ -188,12 +188,23 @@ async function writeRatesToDB(lenderCode, programs, sheetDate, sourceFile = null
       }
     }
 
+    // Deduplicate price rows — parser can emit same product+rate+lock multiple times
+    // (e.g., DSCR products with overlapping loan amount ranges that map to same product key)
+    // Keep the last occurrence (later programs in the sheet tend to be more specific)
+    const priceKey = (r) => `${r.productId}|${r.rate}|${r.lockDays}`;
+    const priceMap = new Map();
+    for (const row of allRows) priceMap.set(priceKey(row), row);
+    const dedupedRows = [...priceMap.values()];
+    if (dedupedRows.length < allRows.length) {
+      console.log(`  Deduped prices: ${allRows.length} → ${dedupedRows.length} (${allRows.length - dedupedRows.length} duplicates removed)`);
+    }
+
     // Batch insert — 500 rows per INSERT
     const BATCH_SIZE = 500;
     let pricesInserted = 0;
 
-    for (let i = 0; i < allRows.length; i += BATCH_SIZE) {
-      const batch = allRows.slice(i, i + BATCH_SIZE);
+    for (let i = 0; i < dedupedRows.length; i += BATCH_SIZE) {
+      const batch = dedupedRows.slice(i, i + BATCH_SIZE);
       const values = [];
       const params = [];
       let paramIdx = 1;
