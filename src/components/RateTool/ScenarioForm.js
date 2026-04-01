@@ -142,7 +142,7 @@ export default function ScenarioForm({ scenario, onChange, onSubmit, loading }) 
             <div>
               <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Down Payment %</label>
               <input type="number" step="0.5" min="0" max="99"
-                value={lastEdited === 'pct' ? (scenario.downPaymentPct || "") : (purchaseCalc.downPct || "")}
+                value={lastEdited === 'pct' ? (scenario.downPaymentPct ?? "") : (purchaseCalc.downPct ?? "")}
                 placeholder="%"
                 onChange={e => handleDownPct(Number(e.target.value))}
                 className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm" />
@@ -150,7 +150,7 @@ export default function ScenarioForm({ scenario, onChange, onSubmit, loading }) 
             <div>
               <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Down Payment $</label>
               <input type="number" step="1000"
-                value={lastEdited === 'dollars' ? (scenario.downPaymentDollars || "") : (purchaseCalc.downDollars || "")}
+                value={lastEdited === 'dollars' ? (scenario.downPaymentDollars ?? "") : (purchaseCalc.downDollars ?? "")}
                 placeholder="$"
                 onChange={e => handleDownDollars(Number(e.target.value))}
                 className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm" />
@@ -211,12 +211,12 @@ export default function ScenarioForm({ scenario, onChange, onSubmit, loading }) 
                   <input type="checkbox" checked={scenario.vaSubsequentUse || false}
                     onChange={e => update("vaSubsequentUse", e.target.checked)}
                     className="rounded border-gray-300 text-brand focus:ring-brand/30" />
-                  <span className="text-xs font-medium text-gray-600">Subsequent Use</span>
+                  <span className="text-xs font-medium text-gray-600">Have you used a VA loan before?</span>
                 </label>
                 <div className="group relative">
                   <span className="text-gray-400 cursor-help text-xs">ⓘ</span>
-                  <div className="hidden group-hover:block absolute bottom-full left-0 mb-1 w-56 bg-gray-800 text-white text-xs rounded-lg p-2 z-50">
-                    Check this if you&apos;ve used your VA loan benefit before. The funding fee is higher for subsequent use.
+                  <div className="hidden group-hover:block absolute bottom-full left-0 mb-1 w-64 bg-gray-800 text-white text-xs rounded-lg p-2 z-50">
+                    If you&apos;ve previously purchased a home with a VA loan and haven&apos;t fully restored your entitlement, the funding fee is higher. Entitlement is restored when you sell the home and pay off the VA loan.
                   </div>
                 </div>
               </div>
