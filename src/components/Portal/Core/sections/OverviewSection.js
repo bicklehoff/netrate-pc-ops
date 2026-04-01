@@ -49,6 +49,13 @@ function fmtDate(d) {
   if (!d) return null;
   return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
+// Avatar URL — colored initials circle via ui-avatars.com (free, no API key)
+// Shows borrower initials in brand teal. Could add Gravatar/Clearbit later.
+function avatarUrl(name, size = 80) {
+  const initials = (name || '?').split(' ').map(n => (n || '')[0]).filter(Boolean).join('').slice(0, 2);
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(initials)}&size=${size}&background=0891b2&color=fff&bold=true&format=svg`;
+}
+
 function fmtAddr(addr) {
   if (!addr) return { street: '—', csz: '', county: '' };
   return {
@@ -186,8 +193,9 @@ export default function OverviewSection({ loan, updateLoanField, updateDates }) 
 
       {/* Borrower — inline strip */}
       <div className="bg-white rounded-md border border-slate-200 px-2 py-1">
-        <div className="flex flex-wrap items-baseline gap-x-1 text-xs">
-          <span className="text-[9px] font-bold uppercase text-slate-400 mr-1">Borrower</span>
+        <div className="flex flex-wrap items-center gap-x-1.5 text-xs">
+          <img src={avatarUrl(`${borrower.firstName} ${borrower.lastName}`)} alt="" className="w-6 h-6 rounded-full shrink-0" />
+          <span className="text-[9px] font-bold uppercase text-slate-400">Borrower</span>
           <span className="font-bold text-slate-900">{borrower.firstName} {borrower.lastName}</span>
           {borrower.ssnLastFour && <><span className="text-slate-300">|</span><span className="text-slate-500">···{borrower.ssnLastFour}</span></>}
           {borrower.email && <><span className="text-slate-300">|</span><a href={`mailto:${borrower.email}`} className="text-primary font-semibold">{borrower.email}</a></>}
