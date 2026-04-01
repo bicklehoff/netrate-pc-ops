@@ -1,8 +1,8 @@
 # Twilio Integration — Status Tracker
 
-**Last Updated:** 2026-03-28
-**Status:** A2P CAMPAIGN UNDER REVIEW — Attempt 7 submitted 2026-03-26, IN_PROGRESS. SID: QE2c6890da8086d771620e9b13fadeba0b
-**Last Checked:** 2026-03-30 — still IN_PROGRESS, no errors, date_updated unchanged since submission (2026-03-26T21:25:25Z)
+**Last Updated:** 2026-04-01
+**Status:** A2P CAMPAIGN UNDER REVIEW — Attempt 8 submitted 2026-04-01. SID: QE2c6890da8086d771620e9b13fadeba0b
+**Last Checked:** 2026-04-01 — UNDER REVIEW. All previously known rejection causes addressed (direct lending attribute, placeholder URLs, embedded phone numbers).
 
 ---
 
@@ -136,7 +136,19 @@ Note: There was originally a SECOND phone number purchased during early campaign
 - **Entity:** Locus Companies LLC (legal name — DBA NetRate Mortgage)
 - **Status:** APPROVED, identity VERIFIED
 
-### Campaign Submissions (5 attempts = $53.50 in registration fees @ $10.70 each)
+### Campaign Submissions (8 attempts = $85.60 in registration fees @ $10.70 each)
+
+#### Attempt 8 — April 1, 2026 (UNDER REVIEW)
+- **Status:** UNDER REVIEW — all known blockers addressed
+- **Campaign SID:** QE2c6890da8086d771620e9b13fadeba0b
+- **Submitted:** 2026-04-01
+- **Fixes applied:**
+  - Checked "Direct Lending or Loan Arrangement" content attribute (cause of attempt 7 instant rejection)
+  - Set Privacy Policy URL to `https://www.netratemortgage.com/privacy` (was placeholder `example.com`)
+  - Set Terms URL to `https://www.netratemortgage.com/terms` (was placeholder `example.com`)
+  - Phone numbers removed from samples (attempts 6-7 fix carried forward)
+  - Sample 5 slot left empty (4 samples submitted)
+- **Cost:** $10.70
 
 #### Attempt 1 — ~March 2, 2026
 - **Status:** FAILED
@@ -160,13 +172,15 @@ Note: There was originally a SECOND phone number purchased during early campaign
 - **Status:** FAILED
 - **Details:** Two additional submission attempts were charged ($10.70 each) but details not recorded. These may have been duplicate submissions or earlier attempts before Attempt 1.
 
-#### Attempt 7 — March 26, 2026 (CURRENT — IN_PROGRESS)
-- **Status:** IN_PROGRESS
-- **Campaign SID:** QE2c6890da8086d771620e9b13fadeba0b (same SID reused after delete+create)
-- **Submitted:** 2026-03-26
-- **Key change:** Rewrote USE_CASE_DESCRIPTION to lead with explicit opt-in mechanism (checkbox on Contact form, URL, consent language). Removed embedded phone number from message sample 2.
-- **Submission method:** Official Twilio Node.js SDK (raw curl was returning misleading "Unable to process JSON" error for validation failures — SDK surfaces real error messages)
-- **Expected review:** Days to a few weeks
+#### Attempt 7 — March 26, 2026 (FAILED — confirmed 2026-03-31)
+- **Status:** FAILED (same-day rejection)
+- **Campaign SID:** QE2c6890da8086d771620e9b13fadeba0b
+- **Submitted:** 2026-03-26T21:25:25Z | **Rejected:** 2026-03-26T21:25:25Z (instant)
+- **Error:** 30895 — "The campaign submission cannot be verified because direct lending or loan arrangement campaign and content attribute was not selected."
+- **Field flagged:** USE_CASE_DESCRIPTION
+- **Root cause:** Campaign does not have the TCR "direct lending" content attribute set. NetRate is a direct lender/mortgage arranger — TCR requires this be explicitly declared in the campaign.
+- **Fix needed:** UPDATE the existing campaign via Twilio Console — do NOT delete and resubmit (wastes $10.70). Go to Messaging → A2P 10DLC → Campaigns → QE2c6890... → Edit. Check the "Direct Lending or Loan Arrangement" content attribute checkbox. Also remove phone numbers from message samples (303-444-5251 in samples 2 & 3 sets `has_embedded_phone: true`).
+- **Cost:** $10.70 wasted (instant rejection counted as submission)
 
 #### Attempt 6 — March 23, 2026 (FAILED)
 - **Status:** FAILED
