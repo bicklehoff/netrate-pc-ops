@@ -56,7 +56,7 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
   const effectiveLoan = isPurchase ? purchaseCalc.loanAmount : refiCalc.loanAmount;
   const effectiveLtv = isPurchase ? purchaseCalc.ltv : refiCalc.ltv;
 
-  const counties = useMemo(() => getCountiesByState(scenario.state || 'CO'), [scenario.state]);
+  const counties = useMemo(() => getCountiesByState(scenario.state || 'CO').map(c => c.name), [scenario.state]);
 
   const loanLimitInfo = useMemo(() => {
     if (!scenario.county || !effectiveLoan) return null;
