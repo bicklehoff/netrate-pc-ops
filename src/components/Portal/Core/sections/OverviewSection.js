@@ -139,7 +139,7 @@ export default function OverviewSection({ loan, onRefresh, updateLoanField, upda
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1.5">
       {/* Actions */}
       <div className="flex items-center gap-2">
         <button onClick={() => setShowPrequalModal(true)}
@@ -191,17 +191,17 @@ export default function OverviewSection({ loan, onRefresh, updateLoanField, upda
         </div>
       </div>
 
-      {/* Borrower + Property + Loan Terms — 2 wide columns, stacked */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+      {/* Info cards — single column, stacked */}
+      <div className="space-y-1.5">
         {/* Borrower */}
-        <div className="bg-white rounded-lg border border-slate-200 shadow-sm px-3 py-2">
+        <div className="bg-white rounded-md border border-slate-200 px-2 py-1">
           <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">Borrower</div>
           <div className="text-sm font-bold text-slate-900 leading-tight">{borrower.firstName} {borrower.lastName}
             {borrower.ssnLastFour && <span className="text-[10px] font-medium text-slate-400 ml-1">···{borrower.ssnLastFour}</span>}
           </div>
           {borrower.email && <a href={`mailto:${borrower.email}`} className="block text-xs text-primary font-semibold truncate">{borrower.email}</a>}
           {borrower.phone && <a href={`tel:${borrower.phone}`} className="block text-xs text-primary font-semibold">{borrower.phone}</a>}
-          <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 mt-1.5 pt-1.5 border-t border-slate-100">
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-x-3 gap-y-0.5 mt-1 pt-1 border-t border-slate-100">
             <EF label="FICO" value={loan.creditScore} type="text" onSave={v => save({ creditScore: v })} />
             <EF label="Income" value={loan.monthlyBaseIncome} type="currency" onSave={v => save({ monthlyBaseIncome: v })} />
             <EF label="Employment" value={loan.employmentStatus} type="text" onSave={v => save({ employmentStatus: v })} />
@@ -217,16 +217,14 @@ export default function OverviewSection({ loan, onRefresh, updateLoanField, upda
         </div>
 
         {/* Property */}
-        <div className="bg-white rounded-lg border border-slate-200 shadow-sm px-3 py-2">
+        <div className="bg-white rounded-md border border-slate-200 px-2 py-1">
           <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">Property</div>
           <div className="text-sm font-bold text-slate-900 leading-tight">{addr.street}</div>
           {addr.csz && <div className="text-xs text-slate-500">{addr.csz}</div>}
-          <div className="grid grid-cols-3 gap-x-2 gap-y-0.5 mt-1.5 pt-1.5 border-t border-slate-100">
+          <div className="grid grid-cols-3 sm:grid-cols-7 gap-x-3 gap-y-0.5 mt-1 pt-1 border-t border-slate-100">
             <EF label="Type" value={loan.propertyType} type="select" options={PROPERTY_TYPE_OPTIONS} onSave={v => save({ propertyType: v })} />
             <EF label="Occup" value={loan.occupancy} type="select" options={OCCUPANCY_OPTIONS} onSave={v => save({ occupancy: v })} />
             <EF label="Units" value={loan.numUnits} type="text" onSave={v => save({ numUnits: v })} />
-          </div>
-          <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 mt-1">
             <EF label="Purchase" value={loan.purchasePrice} type="currency" onSave={v => save({ purchasePrice: v })} />
             <EF label="Appraised" value={loan.estimatedValue} type="currency" onSave={v => save({ estimatedValue: v })} />
             <EF label="Down Pmt" value={loan.downPayment} type="currency" onSave={v => save({ downPayment: v })} />
@@ -235,7 +233,7 @@ export default function OverviewSection({ loan, onRefresh, updateLoanField, upda
         </div>
 
         {/* Loan Terms + Rate Lock (combined) */}
-        <div className="bg-white rounded-lg border border-slate-200 shadow-sm px-3 py-2">
+        <div className="bg-white rounded-md border border-slate-200 px-2 py-1">
           <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">Loan Terms</div>
           <div className="grid grid-cols-3 gap-x-2 gap-y-0.5">
             <EF label="Amount" value={loan.loanAmount} type="currency" onSave={v => save({ loanAmount: v })} />
@@ -266,7 +264,7 @@ export default function OverviewSection({ loan, onRefresh, updateLoanField, upda
       </div>
 
       {/* Processing — inline horizontal */}
-      <div className="bg-white rounded-lg border border-slate-200 shadow-sm px-3 py-2">
+      <div className="bg-white rounded-md border border-slate-200 px-2 py-1">
         <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Processing</div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {[
@@ -295,10 +293,10 @@ export default function OverviewSection({ loan, onRefresh, updateLoanField, upda
         </div>
       </div>
 
-      {/* Conditions + Key Dates + Source — 3 columns */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+      {/* Conditions + Key Dates + Source — stacked */}
+      <div className="space-y-1.5">
         {/* Conditions */}
-        <div className="bg-white rounded-lg border border-slate-200 shadow-sm px-3 py-2">
+        <div className="bg-white rounded-md border border-slate-200 px-2 py-1">
           <div className="flex items-center justify-between mb-1">
             <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Conditions</div>
             {condTotal > 0 && <span className="text-[10px] font-bold text-slate-500">{condCleared}/{condTotal}</span>}
@@ -324,9 +322,9 @@ export default function OverviewSection({ loan, onRefresh, updateLoanField, upda
         </div>
 
         {/* Key Dates */}
-        <div className="bg-white rounded-lg border border-slate-200 shadow-sm px-3 py-2">
+        <div className="bg-white rounded-md border border-slate-200 px-2 py-1">
           <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">Key Dates</div>
-          <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
+          <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 gap-x-3 gap-y-0.5">
             {[
               ['applicationDate','Application'], ['submittedToUwDate','Submitted UW'],
               ['condApprovedDate','Approved'], ['ctcDate','CTC'],
@@ -340,9 +338,9 @@ export default function OverviewSection({ loan, onRefresh, updateLoanField, upda
         </div>
 
         {/* Source */}
-        <div className="bg-white rounded-lg border border-slate-200 shadow-sm px-3 py-2">
+        <div className="bg-white rounded-md border border-slate-200 px-2 py-1">
           <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">Source / CRM</div>
-          <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-x-3 gap-y-0.5">
             <EF label="Lead Src" value={loan.leadSource} type="text" onSave={v => save({ leadSource: v })} />
             <EF label="Channel" value={loan.applicationChannel} type="text" onSave={v => save({ applicationChannel: v })} />
             <EF label="Referral" value={loan.referralSource} type="text" onSave={v => save({ referralSource: v })} />
