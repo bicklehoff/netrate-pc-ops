@@ -2,62 +2,53 @@
 
 import { useState, useEffect } from 'react';
 
-const FALLBACK_EVENTS = [
-  {
-    date: 'Fri Apr 3',
-    name: 'March Jobs Report',
-    impact:
-      'Strong jobs = higher rates. Weak jobs = lower rates. February was 151K — if March comes in under 150K, expect improvement.',
-    big: true,
-  },
-  {
-    date: 'Thu Apr 10',
-    name: 'CPI (March)',
-    impact:
-      "The last CPI was 2.8% year-over-year. If March drops below 2.7%, rates could test February lows again. If it stays above 3%, rates go higher.",
-  },
-  {
-    date: 'Wed May 6',
-    name: 'FOMC Rate Decision',
-    impact:
-      "The next Fed meeting. Markets are watching the dot plot — if the Fed signals fewer rate cuts in 2026, expect rates to stay elevated.",
-  },
-];
+function formatEventDate(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${days[d.getDay()]} ${months[d.getMonth()]} ${d.getDate()}`;
+}
 
 export default function BelowFold() {
-  const [summary, setSummary] = useState(null);
+  const [events, setEvents] = useState([]);
 
   useEffect(() => {
-    fetch('/api/market/summary')
+    fetch('/api/market/calendar?upcoming=true&limit=6')
       .then(res => res.ok ? res.json() : null)
-      .then(data => { if (data?.summary) setSummary(data.summary); })
+      .then(data => {
+        if (data?.events) {
+          // Show events that have impact text (the "what it means" context)
+          const withImpact = data.events.filter(ev => ev.impact);
+          setEvents(withImpact.slice(0, 3));
+        }
+      })
       .catch(() => {});
   }, []);
-
-  const events = summary?.upcomingEvents?.length ? summary.upcomingEvents : FALLBACK_EVENTS;
 
   return (
     <div className="space-y-8">
       {/* What Could Move Rates Next */}
-      <div>
-        <h3 className="text-slate-900 text-lg font-bold mb-4">What Could Move Rates Next</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {events.map((ev, i) => (
-            <div
-              key={i}
-              className={`bg-white rounded-2xl px-6 py-5 border border-slate-200 shadow-sm ${
-                ev.big ? 'border-l-4 border-l-amber-500' : ''
-              }`}
-            >
-              <div className="text-primary text-[10px] font-bold uppercase tracking-widest mb-1.5">
-                {ev.date}
+      {events.length > 0 && (
+        <div>
+          <h3 className="text-slate-900 text-lg font-bold mb-4">What Could Move Rates Next</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {events.map((ev) => (
+              <div
+                key={ev.id}
+                className={`bg-white rounded-2xl px-6 py-5 border border-slate-200 shadow-sm ${
+                  ev.big ? 'border-l-4 border-l-amber-500' : ''
+                }`}
+              >
+                <div className="text-primary text-[10px] font-bold uppercase tracking-widest mb-1.5">
+                  {formatEventDate(ev.date)}
+                </div>
+                <div className="text-slate-900 text-base font-bold mb-2">{ev.name}</div>
+                <div className="text-slate-500 text-sm leading-relaxed">{ev.impact}</div>
               </div>
-              <div className="text-slate-900 text-base font-bold mb-2">{ev.name}</div>
-              <div className="text-slate-500 text-sm leading-relaxed">{ev.impact}</div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* CTA Banner */}
       <div className="bg-gradient-to-br from-primary to-cyan-700 rounded-2xl px-8 py-7 flex flex-col sm:flex-row items-center justify-between gap-6">

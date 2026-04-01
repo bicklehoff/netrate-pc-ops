@@ -808,6 +808,26 @@ model RateWatchCommentary {
   @@map("rate_watch_commentaries")
 }
 
+model EconomicCalendarEvent {
+  id        Int      @id @default(autoincrement())
+  date      DateTime @db.Date
+  time      String?  @db.VarChar(20)
+  name      String   @db.VarChar(200)
+  forecast  String?  @db.VarChar(100)
+  actual    String?  @db.VarChar(100)
+  prior     String?  @db.VarChar(100)
+  impact    String?
+  result    String?  @db.VarChar(20)
+  big       Boolean  @default(false)
+  source    String   @default("claw") @db.VarChar(50)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([date, name])
+  @@index([date])
+  @@map("economic_calendar_events")
+}
+
 // =============================================================================
 // TOOLS & SCENARIOS
 // =============================================================================
