@@ -215,27 +215,32 @@ export default function OverviewSection({ loan, updateLoanField, updateDates }) 
             <button
               onClick={async () => {
                 setGeocoding(true);
+                setGeocodeResult(null);
                 try {
                   const res = await fetch(`/api/portal/mlo/loans/${loan.id}/geocode`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
                   });
                   const data = await res.json();
+                  console.log('Geocode result:', data);
                   setGeocodeResult(data);
-                } catch {} finally { setGeocoding(false); }
+                } catch (err) {
+                  console.error('Geocode error:', err);
+                  setGeocodeResult({ validated: false, error: err.message });
+                } finally { setGeocoding(false); }
               }}
               disabled={geocoding}
-              className="text-[9px] font-bold text-primary hover:text-cyan-700 ml-1"
+              className="text-[10px] font-bold text-white bg-primary px-2 py-0.5 rounded hover:bg-cyan-700 ml-2"
             >
-              {geocoding ? '...' : '⟳ Validate'}
+              {geocoding ? 'Validating...' : '⟳ Validate Address'}
             </button>
           )}
         </div>
         {/* Geocode comparison */}
         {geocodeResult?.validated && (
-          <div className="mt-1 p-1.5 bg-slate-50 rounded border border-slate-200 text-[10px]">
-            <div className="flex items-center justify-between mb-1">
-              <span className="font-bold text-slate-700">Google suggests:</span>
-              <div className="flex gap-1.5">
+          <div className="mt-1.5 p-3 bg-emerald-50 rounded-md border-2 border-emerald-300 text-xs">
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-bold text-emerald-800 text-sm">✓ Google Validated Address</span>
+              <div className="flex gap-2">
                 <button
                   onClick={async () => {
                     await fetch(`/api/portal/mlo/loans/${loan.id}/geocode`, {
@@ -245,25 +250,26 @@ export default function OverviewSection({ loan, updateLoanField, updateDates }) 
                     setGeocodeResult(null);
                     window.location.reload();
                   }}
-                  className="px-2 py-0.5 bg-emerald-600 text-white font-bold rounded text-[9px]"
-                >Accept Google</button>
+                  className="px-3 py-1 bg-emerald-600 text-white font-bold rounded-md text-xs hover:bg-emerald-700"
+                >Accept Google Address</button>
                 <button
                   onClick={() => setGeocodeResult(null)}
-                  className="px-2 py-0.5 bg-slate-300 text-slate-700 font-bold rounded text-[9px]"
+                  className="px-3 py-1 bg-slate-200 text-slate-700 font-bold rounded-md text-xs hover:bg-slate-300"
                 >Keep Current</button>
               </div>
             </div>
-            <div className="font-semibold text-slate-800">{geocodeResult.google.formatted}</div>
-            <div className="text-slate-500 mt-0.5">
-              County: <span className="font-bold text-slate-700">{geocodeResult.google.county || '—'}</span>
-              {' | '}Zip: <span className="font-bold text-slate-700">{geocodeResult.google.zip || '—'}</span>
+            <div className="font-bold text-slate-900 text-sm">{geocodeResult.google.formatted}</div>
+            <div className="text-slate-600 mt-1 flex gap-4">
+              <span>County: <span className="font-bold text-slate-900">{geocodeResult.google.county || '—'}</span></span>
+              <span>Zip: <span className="font-bold text-slate-900">{geocodeResult.google.zip || '—'}</span></span>
+              <span>State: <span className="font-bold text-slate-900">{geocodeResult.google.state || '—'}</span></span>
             </div>
           </div>
         )}
         {geocodeResult && !geocodeResult.validated && (
-          <div className="mt-1 p-1.5 bg-red-50 rounded border border-red-200 text-[10px] text-red-700 font-medium">
-            Could not validate: {geocodeResult.error || 'Address not found'}
-            <button onClick={() => setGeocodeResult(null)} className="ml-2 text-red-500 font-bold">✕</button>
+          <div className="mt-1.5 p-3 bg-red-50 rounded-md border-2 border-red-300 text-xs text-red-800 font-bold">
+            ✕ Could not validate address: {geocodeResult.error || 'Address not found'}
+            <button onClick={() => setGeocodeResult(null)} className="ml-3 text-red-500 underline font-medium">Dismiss</button>
           </div>
         )}
         <div className="flex gap-x-6 mt-1 pt-1 border-t border-slate-100">
