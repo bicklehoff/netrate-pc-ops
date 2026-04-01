@@ -32,6 +32,13 @@
       "value": -0.15
     },
     {
+      "featureName": "cashoutPurpose",
+      "agency": "fhlmc",
+      "tier": "core",
+      "purpose": "cashout",
+      "value": -0.15
+    },
+    {
       "featureName": "occupancyTerm",
       "agency": "fhlmc",
       "tier": "core",
