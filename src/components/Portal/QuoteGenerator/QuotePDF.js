@@ -146,19 +146,18 @@ export default function QuotePDF({ quote, scenarios, fees, closingDate, fundingD
         </View>
 
         <View style={s.table}>
-          {/* Credit/Charge — green = money back to borrower, red = borrower pays */}
+          {/* Credit/Charge — use rebateDollars as single source of truth for color */}
           <CompRow label="Lender (Credit) or Charge for Rate as %" values={rates.map(r => {
+            const isCredit = r.rebateDollars > 0;
             const price = r.price || 100;
-            if (price > 100) {
-              // Credit — borrower gets money back (green, show as negative)
-              return { text: '-' + (price - 100).toFixed(3) + '%', color: GREEN };
-            }
-            // Charge — borrower pays (red, show as positive)
-            return { text: (100 - price).toFixed(3) + '%', color: RED };
+            const pctVal = isCredit ? (price - 100).toFixed(3) : (100 - price).toFixed(3);
+            return { text: isCredit ? '-' + pctVal + '%' : pctVal + '%', color: isCredit ? GREEN : RED };
           })} />
           <CompRow label="Lender (Credit) or Charge for Rate as $" values={rates.map(r => {
-            if (r.rebateDollars > 0) return { text: '(' + $int(r.rebateDollars) + ')', color: GREEN };
-            return { text: $int(r.discountDollars || 0), color: RED };
+            const isCredit = r.rebateDollars > 0;
+            return isCredit
+              ? { text: '(' + $int(r.rebateDollars) + ')', color: GREEN }
+              : { text: $int(r.discountDollars || 0), color: RED };
           })} alt />
           <CompRow label="Appraised Value" values={rates.map(() => ({ text: $int(propertyValue) }))} />
           <CompRow label="Loan Amount" values={rates.map(() => ({ text: $int(loanAmount) }))} bold />
