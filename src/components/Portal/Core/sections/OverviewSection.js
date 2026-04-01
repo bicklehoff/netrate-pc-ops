@@ -102,16 +102,11 @@ export default function OverviewSection({ loan, updateLoanField, updateDates }) 
   const { data: session } = useSession();
   const [showPrequalModal, setShowPrequalModal] = useState(false);
   const dates = loan.dates || {};
-  const conditions = loan.conditions || [];
   const mi = getMilestoneIndex(loan.status);
   const borrower = loan.borrower || {};
   const coBorrowers = loan.loanBorrowers?.filter(lb => lb.borrowerType !== 'primary') || [];
   const alerts = computeAlerts(loan, dates);
   const addr = fmtAddr(loan.propertyAddress);
-
-  const condNeeded = conditions.filter(c => c.status === 'needed').length;
-  const condCleared = conditions.filter(c => c.status === 'cleared' || c.status === 'waived').length;
-  const condTotal = conditions.length;
 
   const loanAmt = Number(loan.loanAmount || 0);
   const propVal = Number(loan.purchasePrice || loan.estimatedValue || 0);
@@ -124,17 +119,6 @@ export default function OverviewSection({ loan, updateLoanField, updateDates }) 
 
   const save = updateLoanField || (() => Promise.resolve());
   const saveDates = updateDates || (() => Promise.resolve());
-
-  // Processing task status helper
-  const procStatus = (rcvKey, expKey, ordKey) => {
-    if (dates[rcvKey]) {
-      if (expKey && dates[expKey] && isExpired(dates[expKey])) return ['✕', 'text-red-600'];
-      if (expKey && dates[expKey] && isExpiringSoon(dates[expKey])) return ['!', 'text-amber-500'];
-      return ['✓', 'text-emerald-600'];
-    }
-    if (ordKey && dates[ordKey]) return ['⏳', 'text-blue-500'];
-    return ['○', 'text-slate-300'];
-  };
 
   return (
     <div className="space-y-1.5">
@@ -231,6 +215,22 @@ export default function OverviewSection({ loan, updateLoanField, updateDates }) 
         </div>
       </div>
 
+      {/* Key Dates — right after summary strip */}
+      <div className="bg-white rounded-md border border-slate-200 px-2 py-1">
+        <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">Key Dates</div>
+        <div className="flex gap-x-6">
+          {[
+            ['applicationDate','Applied'], ['submittedToUwDate','UW'],
+            ['condApprovedDate','Approved'], ['ctcDate','CTC'],
+            ['docsOutDate','Docs Out'], ['estimatedClosing','Est. Close'],
+            ['closingDate','Closing'], ['fundingDate','Funding'],
+            ['firstPaymentDate','1st Pmt'],
+          ].map(([key, lbl]) => (
+            <div key={key} className="flex-1"><EF label={lbl} value={dates[key]} type="date" onSave={v => saveDates({ [key]: v })} /></div>
+          ))}
+        </div>
+      </div>
+
       {/* Loan Terms + Rate Lock — inline strip */}
       <div className="bg-white rounded-md border border-slate-200 px-2 py-1">
         <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">Loan Terms</div>
@@ -260,81 +260,8 @@ export default function OverviewSection({ loan, updateLoanField, updateDates }) 
         </div>
       </div>
 
-      {/* Processing — inline horizontal */}
-      <div className="bg-white rounded-md border border-slate-200 px-2 py-1">
-        <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Processing</div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-          {[
-            { label: 'Credit', fields: [['creditPulledDate','Pulled'],['creditExpiration','Expires']], rcv: 'creditPulledDate', exp: 'creditExpiration' },
-            { label: 'Appraisal', fields: [['appraisalOrdered','Ordered'],['appraisalReceived','Rcvd'],['appraisalExpiry','Expires']], rcv: 'appraisalReceived', exp: 'appraisalExpiry', ord: 'appraisalOrdered' },
-            { label: 'Title', fields: [['titleOrdered','Ordered'],['titleReceived','Rcvd']], rcv: 'titleReceived', ord: 'titleOrdered' },
-            { label: 'Flood', fields: [['floodCertOrdered','Ordered'],['floodCertReceived','Rcvd']], rcv: 'floodCertReceived', ord: 'floodCertOrdered' },
-            { label: 'HOI', fields: [['hoiOrdered','Ordered'],['hoiReceived','Rcvd'],['hoiBound','Bound']], rcv: 'hoiBound', ord: 'hoiOrdered' },
-          ].map(task => {
-            const [icon, iconColor] = procStatus(task.rcv, task.exp, task.ord);
-            return (
-              <div key={task.label}>
-                <div className="flex items-center gap-1 mb-1">
-                  <span className={`text-xs font-bold ${iconColor}`}>{icon}</span>
-                  <span className="text-[10px] font-bold uppercase text-slate-700">{task.label}</span>
-                </div>
-                {task.fields.map(([key, lbl]) => (
-                  <div key={key} className="flex items-baseline justify-between gap-1">
-                    <span className="text-[9px] text-slate-400">{lbl}</span>
-                    <span className={`text-[10px] font-semibold ${dates[key] ? 'text-slate-800' : 'text-slate-300'}`}>{dates[key] ? fmtDate(dates[key]) : '—'}</span>
-                  </div>
-                ))}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Conditions + Key Dates + Source — stacked */}
+      {/* Source */}
       <div className="space-y-1.5">
-        {/* Conditions */}
-        <div className="bg-white rounded-md border border-slate-200 px-2 py-1">
-          <div className="flex items-center justify-between mb-1">
-            <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Conditions</div>
-            {condTotal > 0 && <span className="text-[10px] font-bold text-slate-500">{condCleared}/{condTotal}</span>}
-          </div>
-          {condTotal > 0 ? (
-            <>
-              <div className="flex gap-3 mb-1.5 text-[10px] font-bold">
-                <span className="text-amber-600">● {condNeeded} needed</span>
-                <span className="text-emerald-600">● {condCleared} cleared</span>
-              </div>
-              {conditions.slice(0, 5).map(c => (
-                <div key={c.id} className="flex items-center justify-between py-0.5 text-[11px]">
-                  <div className="flex items-center gap-1 min-w-0">
-                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${c.status === 'needed' ? 'bg-amber-500' : c.status === 'cleared' ? 'bg-emerald-500' : 'bg-slate-300'}`} />
-                    <span className="font-semibold text-slate-800 truncate">{c.title}</span>
-                  </div>
-                  <span className="text-[9px] font-bold text-slate-400 uppercase shrink-0 ml-1">{c.stage?.replace(/_/g, ' ')}</span>
-                </div>
-              ))}
-              {condTotal > 5 && <p className="text-[10px] font-bold text-primary mt-0.5">→ {condTotal - 5} more</p>}
-            </>
-          ) : <p className="text-[10px] text-slate-400">No conditions</p>}
-        </div>
-
-        {/* Key Dates */}
-        <div className="bg-white rounded-md border border-slate-200 px-2 py-1">
-          <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">Key Dates</div>
-          <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 gap-x-3 gap-y-0.5">
-            {[
-              ['applicationDate','Application'], ['submittedToUwDate','Submitted UW'],
-              ['condApprovedDate','Approved'], ['ctcDate','CTC'],
-              ['docsOutDate','Docs Out'], ['estimatedClosing','Est. Closing'],
-              ['closingDate','Closing'], ['fundingDate','Funding'],
-              ['firstPaymentDate','1st Payment'],
-            ].map(([key, lbl]) => (
-              <EF key={key} label={lbl} value={dates[key]} type="date" onSave={v => saveDates({ [key]: v })} />
-            ))}
-          </div>
-        </div>
-
-        {/* Source */}
         <div className="bg-white rounded-md border border-slate-200 px-2 py-1">
           <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">Source / CRM</div>
           <div className="grid grid-cols-3 sm:grid-cols-5 gap-x-3 gap-y-0.5">
