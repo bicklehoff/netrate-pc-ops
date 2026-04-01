@@ -5,6 +5,89 @@
 
 ---
 
+## 2026-04-01 — Dev — Pricing Engine Validation, County Limits, NonQM Spec
+**Actor:** pc-dev
+
+### What was done
+
+**DB Audit & Cleanup**
+- Full 43-table duplicate scan
+- Removed 213 duplicate adjustment_rules, 308 duplicate rate_prices (93 bogus 80.08 + 215 DSCR parser dupes), 7 stale rate_sheets
+- Added dedup logic to seed script (pre-insert) and db-writer (price rows) to prevent recurrence
+
+**Elite Conv Cashout Fix**
+- `resolveGrids()` returned empty `{}` for cashout grid (truthy in JS) instead of falling through to `allTerms` grid
+- Fixed with `Object.keys().length > 0` check — Elite conv cashout now gets FICO/LTV adjustment
+- Verified: adj = 0.802, exact match to LS
+
+**County Loan Limits**
+- Added county dropdown to rate tool (populated from 2026 FHFA data, all 4 licensed states)
+- Pricing API classifies loan as conforming/highBalance/jumbo per county
+- Conforming: filters out HB products. High-balance: shows both. Jumbo: no agency products
+- No county = no filter (backwards compatible)
+- FHA uses separate limit structure (65% baseline floor)
+- Summary strip shows county limit + classification badge
+
+**FICO Adj Scope Fix**
+- FICO band penalty (640-699 = -0.100) now applies to conv/fha/va per rate sheet ("Conf/FHA/VA")
+- State adj, property type, occupancy remain FHA-only
+- Split `coreFeatures` (all loan types) from `fhaOnlyFeatures` (FHA only) in lender-config
+
+**FHA SRP Band Fix**
+- SRP band lookup now uses UFMIP-adjusted loan amount (effective, not base)
+- $400K base + $7K UFMIP = $407K → matches $400K-$500K SRP band instead of $375K-$400K
+
+**LS Validation: 21 rows, all exact adj match**
+- Conv Core/Elite x FNMA/FHLMC x Purchase/Refi/Cashout — CO (rows 1-9)
+- Conv Core/Elite x FNMA/FHLMC x Purchase — CA (rows 10-13)
+- Conv Core/Elite x FNMA/FHLMC x Purchase — TX (rows 14-17)
+- Conv Core/Elite x FNMA/FHLMC x Refi — CO (rows 18-21)
+- FHA Core/Elite, VA Core/Elite — adj correct per rate sheet
+- Purchase prices consistently -0.250pt vs LS on $400K (our $4,595 comp vs LS $3,595)
+- Refi/cashout prices exact match (both use $3,595 comp)
+
+**FHA/VA Elite Discrepancy Resolved**
+- LS applies Rate-Term Refi purpose grid to Purchase scenarios for Elite govt products
+- Verified against XLSX source: our extraction matches the sheet exactly
+- Diff is ~0.19 points ($773 on $407K) — we're more generous than LS
+- Rate sheet is the contract — we follow it
+
+**New Rate Sheet Loaded**
+- 4/1/2026 reprice parsed and loaded (10,116 prices after dedup)
+
+**NonQM Pricer Spec**
+- Wrote spec at `Work/Dev/Products/NONQM-PRICER-SPEC.md`
+- Separate engine: DSCR ratios, PPP terms, doc types, property matrices
+- Sent relay to Claw for NonQM content pages
+
+### Commits (7)
+- `eb4dbf8` — Fix Elite conv cashout grid lookup + dedup DB writes
+- `2585f31` — Wire county loan limits into pricing engine
+- `36246d9` — Fix FICO adj scope: all Core loan types
+- `b6f33e5` — Purchase credit: restore all loan types per rate sheet
+- `02d7866` — FHA SRP: use UFMIP-adjusted loan amount for band lookup
+- `d33713b` — Spec: NonQM pricing engine
+- Plus David's price-scenario refactor commit
+
+### Key decisions
+- County limits: highBalance shows BOTH conforming + HB products
+- Purchase credit applies to ALL loan types per rate sheet
+- FHA SRP uses effective (UFMIP-adjusted) loan amount for band lookup
+- FICO adj (640-699) is all loan types; state/property/occupancy is FHA-only
+- NonQM gets separate pricing engine
+- Rate sheet is source of truth over LoanSifter
+
+### Open items
+- [ ] NonQM pricer build (spec written)
+- [ ] DSCR parser fixes (name disambiguation, bogus prices)
+- [ ] VA funding fee not yet in pricing
+- [ ] High Balance price validation against LS
+- [ ] Wire other 5 lenders
+- [ ] Accounts table 45 dupes from Zoho import
+- [ ] Contact notes 7 dupes from Zoho import
+
+---
+
 ## 2026-04-01 — Dev — Twilio + MCR Push + Contact→Deal Architecture
 **Actor:** pc-dev
 
