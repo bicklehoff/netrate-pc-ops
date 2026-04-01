@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import QuoteWizard from '@/components/Portal/QuoteGenerator/QuoteWizard';
 
-export default function QuoteDetailPage({ params }) {
-  const { id } = use(params);
+export default function QuoteDetailPage() {
+  const { id } = useParams();
   const [quote, setQuote] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

@@ -47,14 +47,17 @@ export default function QuoteWizard({ prefill }) {
   const [quoteId, setQuoteId] = useState(null);
   const [error, setError] = useState(null);
 
-  const handlePrice = useCallback(async () => {
+  const handlePrice = useCallback(async (computedScenario) => {
+    // Merge computed values (loanAmount, ltv from form calc) into scenario
+    const payload = { ...scenario, ...computedScenario };
+    setScenario(payload);
     setLoading(true);
     setError(null);
     try {
       const res = await fetch('/api/portal/mlo/quotes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(scenario),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Pricing failed');
