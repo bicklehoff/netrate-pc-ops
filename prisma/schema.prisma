@@ -164,6 +164,21 @@ model Loan {
   loanNotes             LoanNote[]
   tasks                 LoanTask[]
   loanContacts          LoanContact[]
+  // 1003 Application models
+  assets                LoanAsset[]
+  liabilities           LoanLiability[]
+  reos                  LoanREO[]
+  transaction           LoanTransaction?
+  // 1003 Loan detail fields
+  amortizationType      String?        @map("amortization_type")
+  titleHeldAs           String?        @map("title_held_as")
+  estateHeldIn          String?        @map("estate_held_in")
+  armIndex              String?        @map("arm_index")
+  armMargin             Decimal?       @map("arm_margin") @db.Decimal(5, 4)
+  armInitialCap         Decimal?       @map("arm_initial_cap") @db.Decimal(5, 4)
+  armPeriodicCap        Decimal?       @map("arm_periodic_cap") @db.Decimal(5, 4)
+  armLifetimeCap        Decimal?       @map("arm_lifetime_cap") @db.Decimal(5, 4)
+  armAdjustmentPeriod   Int?           @map("arm_adjustment_period")
   borrower              Borrower       @relation(fields: [borrowerId], references: [id])
   mlo                   Mlo?           @relation(fields: [mloId], references: [id])
 
@@ -190,10 +205,24 @@ model LoanBorrower {
   otherMonthlyIncome Decimal? @map("other_monthly_income") @db.Decimal(12, 2)
   otherIncomeSource  String?  @map("other_income_source")
   declarations       Json?
+  // 1003 additional fields
+  dobEncrypted       String?  @map("dob_encrypted")
+  citizenship        String?
+  housingType        String?  @map("housing_type")
+  monthlyRent        Decimal? @map("monthly_rent") @db.Decimal(12, 2)
+  previousAddress    Json?    @map("previous_address")
+  previousAddressYears Int?   @map("previous_address_years")
+  previousAddressMonths Int?  @map("previous_address_months")
+  cellPhone          String?  @map("cell_phone")
+  suffix             String?
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
   borrower           Borrower @relation(fields: [borrowerId], references: [id])
   loan               Loan     @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  // 1003 per-borrower models
+  employments        LoanEmployment[]
+  income             LoanIncome?
+  declaration        LoanDeclaration?
 
   @@unique([loanId, borrowerId])
   @@unique([loanId, ordinal])
@@ -439,6 +468,152 @@ model LoanContact {
 
   @@unique([loanId, contact_id])
   @@map("loan_contacts")
+}
+
+// =============================================================================
+// 1003 APPLICATION MODELS
+// =============================================================================
+
+model LoanEmployment {
+  id               String    @id @default(uuid()) @db.Uuid
+  loanBorrowerId   String    @map("loan_borrower_id") @db.Uuid
+  isPrimary        Boolean   @default(true) @map("is_primary")
+  employerName     String?   @map("employer_name")
+  employerAddress  Json?     @map("employer_address")
+  employerPhone    String?   @map("employer_phone")
+  position         String?
+  startDate        DateTime? @map("start_date") @db.Date
+  endDate          DateTime? @map("end_date") @db.Date
+  yearsOnJob       Int?      @map("years_on_job")
+  monthsOnJob      Int?      @map("months_on_job")
+  selfEmployed     Boolean   @default(false) @map("self_employed")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  loanBorrower     LoanBorrower @relation(fields: [loanBorrowerId], references: [id], onDelete: Cascade)
+
+  @@index([loanBorrowerId])
+  @@map("loan_employments")
+}
+
+model LoanIncome {
+  id                  String       @id @default(uuid()) @db.Uuid
+  loanBorrowerId      String       @unique @map("loan_borrower_id") @db.Uuid
+  baseMonthly         Decimal?     @map("base_monthly") @db.Decimal(12, 2)
+  overtimeMonthly     Decimal?     @map("overtime_monthly") @db.Decimal(12, 2)
+  bonusMonthly        Decimal?     @map("bonus_monthly") @db.Decimal(12, 2)
+  commissionMonthly   Decimal?     @map("commission_monthly") @db.Decimal(12, 2)
+  dividendsMonthly    Decimal?     @map("dividends_monthly") @db.Decimal(12, 2)
+  interestMonthly     Decimal?     @map("interest_monthly") @db.Decimal(12, 2)
+  rentalIncomeMonthly Decimal?     @map("rental_income_monthly") @db.Decimal(12, 2)
+  otherMonthly        Decimal?     @map("other_monthly") @db.Decimal(12, 2)
+  otherIncomeSource   String?      @map("other_income_source")
+  createdAt           DateTime     @default(now()) @map("created_at")
+  updatedAt           DateTime     @updatedAt @map("updated_at")
+  loanBorrower        LoanBorrower @relation(fields: [loanBorrowerId], references: [id], onDelete: Cascade)
+
+  @@map("loan_incomes")
+}
+
+model LoanAsset {
+  id             String   @id @default(uuid()) @db.Uuid
+  loanId         String   @map("loan_id") @db.Uuid
+  borrowerType   String?  @map("borrower_type")
+  institution    String?
+  accountType    String?  @map("account_type")
+  accountNumber  String?  @map("account_number")
+  balance        Decimal? @db.Decimal(12, 2)
+  isJoint        Boolean  @default(false) @map("is_joint")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  loan           Loan     @relation(fields: [loanId], references: [id], onDelete: Cascade)
+
+  @@index([loanId])
+  @@map("loan_assets")
+}
+
+model LoanLiability {
+  id              String   @id @default(uuid()) @db.Uuid
+  loanId          String   @map("loan_id") @db.Uuid
+  creditor        String?
+  accountNumber   String?  @map("account_number")
+  liabilityType   String?  @map("liability_type")
+  monthlyPayment  Decimal? @map("monthly_payment") @db.Decimal(12, 2)
+  unpaidBalance   Decimal? @map("unpaid_balance") @db.Decimal(12, 2)
+  monthsRemaining Int?     @map("months_remaining")
+  paidOffAtClosing Boolean @default(false) @map("paid_off_at_closing")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  loan            Loan     @relation(fields: [loanId], references: [id], onDelete: Cascade)
+
+  @@index([loanId])
+  @@map("loan_liabilities")
+}
+
+model LoanREO {
+  id                         String   @id @default(uuid()) @db.Uuid
+  loanId                     String   @map("loan_id") @db.Uuid
+  address                    Json?
+  propertyType               String?  @map("property_type")
+  presentMarketValue         Decimal? @map("present_market_value") @db.Decimal(12, 2)
+  mortgageBalance            Decimal? @map("mortgage_balance") @db.Decimal(12, 2)
+  mortgagePayment            Decimal? @map("mortgage_payment") @db.Decimal(12, 2)
+  grossRentalIncome          Decimal? @map("gross_rental_income") @db.Decimal(12, 2)
+  netRentalIncome            Decimal? @map("net_rental_income") @db.Decimal(12, 2)
+  insuranceTaxesMaintenance  Decimal? @map("insurance_taxes_maintenance") @db.Decimal(12, 2)
+  status                     String?  @default("retained")
+  createdAt                  DateTime @default(now()) @map("created_at")
+  updatedAt                  DateTime @updatedAt @map("updated_at")
+  loan                       Loan     @relation(fields: [loanId], references: [id], onDelete: Cascade)
+
+  @@index([loanId])
+  @@map("loan_reos")
+}
+
+model LoanDeclaration {
+  id                              String       @id @default(uuid()) @db.Uuid
+  loanBorrowerId                  String       @unique @map("loan_borrower_id") @db.Uuid
+  outstandingJudgments            Boolean?     @map("outstanding_judgments")
+  bankruptcy                      Boolean?
+  bankruptcyType                  String?      @map("bankruptcy_type")
+  bankruptcyDate                  DateTime?    @map("bankruptcy_date") @db.Date
+  foreclosure                     Boolean?
+  foreclosureDate                 DateTime?    @map("foreclosure_date") @db.Date
+  partyToLawsuit                  Boolean?     @map("party_to_lawsuit")
+  loanDefault                     Boolean?     @map("loan_default")
+  alimonyObligation               Boolean?     @map("alimony_obligation")
+  delinquentFederalDebt           Boolean?     @map("delinquent_federal_debt")
+  coSignerOnOtherLoan             Boolean?     @map("co_signer_on_other_loan")
+  intentToOccupy                  Boolean?     @map("intent_to_occupy")
+  ownershipInterestLastThreeYears Boolean?     @map("ownership_interest_last_three_years")
+  propertyTypeOfOwnership         String?      @map("property_type_of_ownership")
+  createdAt                       DateTime     @default(now()) @map("created_at")
+  updatedAt                       DateTime     @updatedAt @map("updated_at")
+  loanBorrower                    LoanBorrower @relation(fields: [loanBorrowerId], references: [id], onDelete: Cascade)
+
+  @@map("loan_declarations")
+}
+
+model LoanTransaction {
+  id                     String   @id @default(uuid()) @db.Uuid
+  loanId                 String   @unique @map("loan_id") @db.Uuid
+  purchasePrice          Decimal? @map("purchase_price") @db.Decimal(12, 2)
+  alterationsAmount      Decimal? @map("alterations_amount") @db.Decimal(12, 2)
+  landValue              Decimal? @map("land_value") @db.Decimal(12, 2)
+  refinanceOriginalCost  Decimal? @map("refinance_original_cost") @db.Decimal(12, 2)
+  yearAcquired           Int?     @map("year_acquired")
+  existingLiens          Decimal? @map("existing_liens") @db.Decimal(12, 2)
+  closingCostsEstimate   Decimal? @map("closing_costs_estimate") @db.Decimal(12, 2)
+  discountPoints         Decimal? @map("discount_points") @db.Decimal(12, 2)
+  pmiMip                 Decimal? @map("pmi_mip") @db.Decimal(12, 2)
+  sellerConcessions      Decimal? @map("seller_concessions") @db.Decimal(12, 2)
+  subordinateFinancing   Decimal? @map("subordinate_financing") @db.Decimal(12, 2)
+  cashFromBorrower       Decimal? @map("cash_from_borrower") @db.Decimal(12, 2)
+  sourceOfDownPayment    String?  @map("source_of_down_payment")
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt              DateTime @updatedAt @map("updated_at")
+  loan                   Loan     @relation(fields: [loanId], references: [id], onDelete: Cascade)
+
+  @@map("loan_transactions")
 }
 
 model Document {

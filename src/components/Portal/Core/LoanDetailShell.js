@@ -20,6 +20,7 @@ import DocumentsSection from './sections/DocumentsSection';
 import NotesActivitySection from './sections/NotesActivitySection';
 import PostCloseSection from './sections/PostCloseSection';
 import ConditionsSection from './sections/ConditionsSection';
+import ApplicationSection from './sections/ApplicationSection';
 import PayrollSection from '../PayrollSection';
 import CompensationSection from '../CompensationSection';
 import PrequalLetterModal from '../PrequalLetter/PrequalLetterModal';
@@ -98,6 +99,12 @@ export default function LoanDetailShell({ loan, onRefresh }) {
           <BorrowerSection
             loan={loan}
             updateLoanField={updateLoanField}
+          />
+        );
+      case 'application':
+        return (
+          <ApplicationSection
+            loan={loan}
           />
         );
       case 'processing':

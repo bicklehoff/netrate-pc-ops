@@ -137,11 +137,12 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
       <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
         <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider mb-4">Loan Scenario</h3>
 
-        {/* Purpose + Type + Term */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        {/* Purpose + Type + Term + Product Type */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
           <SelectField label="Purpose" value={scenario.purpose} options={PURPOSES} onChange={v => update('purpose', v)} />
           <SelectField label="Loan Type" value={scenario.loanType} options={LOAN_TYPES} onChange={v => update('loanType', v)} />
           <SelectField label="Term" value={scenario.term} options={TERMS.map(t => ({ value: t, label: `${t} Year` }))} onChange={v => update('term', Number(v))} />
+          <SelectField label="Amortization" value={scenario.productType || 'fixed'} options={[{ value: 'fixed', label: 'Fixed' }, { value: 'arm', label: 'ARM' }]} onChange={v => update('productType', v)} />
         </div>
 
         {/* Property + Down Payment / Loan Amount */}

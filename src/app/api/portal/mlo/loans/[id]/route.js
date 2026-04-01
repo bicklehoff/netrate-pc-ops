@@ -48,6 +48,9 @@ const EDITABLE_FIELDS = [
   'prequalLetterData',
   // Universal approval fields
   'appraisedValue', 'loanProgram', 'underwriterName', 'accountExec', 'brokerProcessor',
+  // 1003 loan details
+  'amortizationType', 'titleHeldAs', 'estateHeldIn',
+  'armIndex', 'armMargin', 'armInitialCap', 'armPeriodicCap', 'armLifetimeCap', 'armAdjustmentPeriod',
 ];
 
 // Fields that need Decimal conversion
@@ -56,10 +59,11 @@ const DECIMAL_FIELDS = [
   'estimatedValue', 'currentBalance', 'cashOutAmount',
   'monthlyBaseIncome', 'otherMonthlyIncome', 'presentHousingExpense',
   'appraisedValue',
+  'armMargin', 'armInitialCap', 'armPeriodicCap', 'armLifetimeCap',
 ];
 
 // Fields that need Integer conversion
-const INT_FIELDS = ['loanTerm', 'numUnits', 'yearsInPosition', 'numBorrowers', 'creditScore', 'numDependents'];
+const INT_FIELDS = ['loanTerm', 'numUnits', 'yearsInPosition', 'numBorrowers', 'creditScore', 'numDependents', 'armAdjustmentPeriod'];
 
 export async function GET(request, { params }) {
   try {
@@ -110,8 +114,15 @@ export async function GET(request, { params }) {
             borrower: {
               select: { id: true, firstName: true, lastName: true, email: true, phone: true },
             },
+            employments: { orderBy: { isPrimary: 'desc' } },
+            income: true,
+            declaration: true,
           },
         },
+        assets: { orderBy: { createdAt: 'asc' } },
+        liabilities: { orderBy: { createdAt: 'asc' } },
+        reos: { orderBy: { createdAt: 'asc' } },
+        transaction: true,
         tasks: {
           orderBy: [{ priority: 'asc' }, { createdAt: 'desc' }],
         },
@@ -150,12 +161,25 @@ export async function GET(request, { params }) {
       otherMonthlyIncome: loan.otherMonthlyIncome ? Number(loan.otherMonthlyIncome) : null,
       presentHousingExpense: loan.presentHousingExpense ? Number(loan.presentHousingExpense) : null,
       appraisedValue: loan.appraisedValue ? Number(loan.appraisedValue) : null,
+      // New 1003 loan-level fields
+      armMargin: loan.armMargin ? Number(loan.armMargin) : null,
+      armInitialCap: loan.armInitialCap ? Number(loan.armInitialCap) : null,
+      armPeriodicCap: loan.armPeriodicCap ? Number(loan.armPeriodicCap) : null,
+      armLifetimeCap: loan.armLifetimeCap ? Number(loan.armLifetimeCap) : null,
       // LoanBorrower decimal fields
       loanBorrowers: (loan.loanBorrowers || []).map((lb) => ({
         ...lb,
         monthlyBaseIncome: lb.monthlyBaseIncome ? Number(lb.monthlyBaseIncome) : null,
         otherMonthlyIncome: lb.otherMonthlyIncome ? Number(lb.otherMonthlyIncome) : null,
+        monthlyRent: lb.monthlyRent ? Number(lb.monthlyRent) : null,
+        income: serializeDecimals(lb.income),
+        employments: (lb.employments || []).map(serializeDecimals),
       })),
+      // 1003 repeating models
+      assets: (loan.assets || []).map(serializeDecimals),
+      liabilities: (loan.liabilities || []).map(serializeDecimals),
+      reos: (loan.reos || []).map(serializeDecimals),
+      transaction: serializeDecimals(loan.transaction),
       // Satellite table decimal fields
       fha: serializeDecimals(loan.fha),
       hecm: serializeDecimals(loan.hecm),

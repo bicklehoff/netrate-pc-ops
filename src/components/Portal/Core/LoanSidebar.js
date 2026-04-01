@@ -19,6 +19,7 @@ function getSections(loanStatus) {
       group: 'People',
       items: [
         { key: 'borrower', label: 'Borrower', icon: '👤' },
+        { key: 'application', label: '1003', icon: '📝' },
       ],
     },
     {
