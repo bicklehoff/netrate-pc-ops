@@ -37,30 +37,30 @@ const s = StyleSheet.create({
   rowHeader: { backgroundColor: GRAY_BG },
   rowBold: {},
   rowHighlight: { backgroundColor: '#f0fdf4', borderBottomWidth: 1, borderBottomColor: '#86efac' },
-  labelCell: { width: '40%', paddingVertical: 4, paddingHorizontal: 6, fontSize: 8.5 },
-  labelCellBold: { width: '40%', paddingVertical: 4, paddingHorizontal: 6, fontSize: 8.5, fontFamily: 'Helvetica-Bold' },
-  valCell: { width: '20%', paddingVertical: 4, paddingHorizontal: 6, textAlign: 'right', fontSize: 8.5, fontFamily: 'Courier' },
-  valCellBold: { width: '20%', paddingVertical: 4, paddingHorizontal: 6, textAlign: 'right', fontSize: 8.5, fontFamily: 'Courier-Bold' },
-  sectionHeader: { flexDirection: 'row', backgroundColor: GRAY_900, paddingVertical: 5, paddingHorizontal: 6, marginTop: 8 },
-  sectionHeaderText: { fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: '#ffffff' },
-  sectionHeaderVal: { width: '20%', fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: '#ffffff', textAlign: 'right', paddingHorizontal: 6 },
+  labelCell: { width: '40%', paddingVertical: 5, paddingHorizontal: 8, fontSize: 9.5 },
+  labelCellBold: { width: '40%', paddingVertical: 5, paddingHorizontal: 8, fontSize: 10, fontFamily: 'Helvetica-Bold' },
+  valCell: { width: '20%', paddingVertical: 5, paddingHorizontal: 8, textAlign: 'right', fontSize: 10, fontFamily: 'Courier' },
+  valCellBold: { width: '20%', paddingVertical: 5, paddingHorizontal: 8, textAlign: 'right', fontSize: 10.5, fontFamily: 'Courier-Bold' },
+  sectionHeader: { flexDirection: 'row', backgroundColor: GRAY_900, paddingVertical: 6, paddingHorizontal: 8, marginTop: 10 },
+  sectionHeaderText: { fontSize: 9.5, fontFamily: 'Helvetica-Bold', color: '#ffffff' },
+  sectionHeaderVal: { width: '20%', fontSize: 10, fontFamily: 'Helvetica-Bold', color: '#ffffff', textAlign: 'right', paddingHorizontal: 8 },
   greenText: { color: GREEN },
   redText: { color: RED },
   // Page 2 - fees
-  feeTitle: { fontSize: 11, fontFamily: 'Helvetica-Bold', marginBottom: 8, marginTop: 4 },
-  feeSectionHeader: { flexDirection: 'row', justifyContent: 'space-between', backgroundColor: GRAY_BG, paddingVertical: 4, paddingHorizontal: 6, marginTop: 8, borderBottomWidth: 1, borderBottomColor: GRAY_900 },
-  feeSectionLabel: { fontSize: 9, fontFamily: 'Helvetica-Bold' },
-  feeSectionTotal: { fontSize: 9, fontFamily: 'Helvetica-Bold' },
-  feeRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 2.5, paddingHorizontal: 6, borderBottomWidth: 0.5, borderBottomColor: GRAY_BORDER },
-  feeLabel: { fontSize: 8.5, color: GRAY_700 },
-  feeAmount: { fontSize: 8.5, fontFamily: 'Courier' },
-  feeTotalRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5, paddingHorizontal: 6, borderTopWidth: 1.5, borderTopColor: GRAY_900, marginTop: 4 },
-  feeTotalLabel: { fontSize: 9.5, fontFamily: 'Helvetica-Bold' },
-  feeTotalAmount: { fontSize: 9.5, fontFamily: 'Courier-Bold' },
+  feeTitle: { fontSize: 12, fontFamily: 'Helvetica-Bold', marginBottom: 10, marginTop: 4 },
+  feeSectionHeader: { flexDirection: 'row', justifyContent: 'space-between', backgroundColor: GRAY_BG, paddingVertical: 5, paddingHorizontal: 8, marginTop: 10, borderBottomWidth: 1, borderBottomColor: GRAY_900 },
+  feeSectionLabel: { fontSize: 10, fontFamily: 'Helvetica-Bold' },
+  feeSectionTotal: { fontSize: 10, fontFamily: 'Courier-Bold' },
+  feeRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3, paddingHorizontal: 8, borderBottomWidth: 0.5, borderBottomColor: GRAY_BORDER },
+  feeLabel: { fontSize: 9.5, color: GRAY_700 },
+  feeAmount: { fontSize: 9.5, fontFamily: 'Courier' },
+  feeTotalRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, paddingHorizontal: 8, borderTopWidth: 1.5, borderTopColor: GRAY_900, marginTop: 6 },
+  feeTotalLabel: { fontSize: 11, fontFamily: 'Helvetica-Bold' },
+  feeTotalAmount: { fontSize: 11, fontFamily: 'Courier-Bold' },
   // Page 3
-  dateRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4, paddingHorizontal: 6, borderBottomWidth: 0.5, borderBottomColor: GRAY_BORDER },
-  dateLabel: { fontSize: 9, fontFamily: 'Helvetica-Bold' },
-  dateValue: { fontSize: 9, fontFamily: 'Courier' },
+  dateRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5, paddingHorizontal: 8, borderBottomWidth: 0.5, borderBottomColor: GRAY_BORDER },
+  dateLabel: { fontSize: 10, fontFamily: 'Helvetica-Bold' },
+  dateValue: { fontSize: 10, fontFamily: 'Courier' },
   note: { fontSize: 8, color: GRAY_500, lineHeight: 1.5, marginTop: 16, maxWidth: 300 },
   // Footer
   footer: { position: 'absolute', bottom: 30, left: 40, right: 40, flexDirection: 'row', justifyContent: 'space-between', fontSize: 7, color: GRAY_500, borderTopWidth: 0.5, borderTopColor: GRAY_BORDER, paddingTop: 6 },
@@ -146,14 +146,19 @@ export default function QuotePDF({ quote, scenarios, fees, closingDate, fundingD
         </View>
 
         <View style={s.table}>
-          {/* Credit/Charge */}
+          {/* Credit/Charge — green = money back to borrower, red = borrower pays */}
           <CompRow label="Lender (Credit) or Charge for Rate as %" values={rates.map(r => {
-            const creditPct = (100 - (r.price || 100)) * -1;
-            return { text: (creditPct >= 0 ? '-' : '') + Math.abs(creditPct).toFixed(3) + '%', color: creditPct <= 0 ? GREEN : RED };
+            const price = r.price || 100;
+            if (price > 100) {
+              // Credit — borrower gets money back (green, show as negative)
+              return { text: '-' + (price - 100).toFixed(3) + '%', color: GREEN };
+            }
+            // Charge — borrower pays (red, show as positive)
+            return { text: (100 - price).toFixed(3) + '%', color: RED };
           })} />
           <CompRow label="Lender (Credit) or Charge for Rate as $" values={rates.map(r => {
-            if (r.rebateDollars > 0) return { text: $(-r.rebateDollars), color: GREEN };
-            return { text: $(r.discountDollars), color: RED };
+            if (r.rebateDollars > 0) return { text: '(' + $int(r.rebateDollars) + ')', color: GREEN };
+            return { text: $int(r.discountDollars || 0), color: RED };
           })} alt />
           <CompRow label="Appraised Value" values={rates.map(() => ({ text: $int(propertyValue) }))} />
           <CompRow label="Loan Amount" values={rates.map(() => ({ text: $int(loanAmount) }))} bold />
@@ -209,8 +214,8 @@ export default function QuotePDF({ quote, scenarios, fees, closingDate, fundingD
             return { text: $((fees?.totalClosingCosts || 0) + daily) };
           })} />
           <CompRow label="Lender (Credit) or Charge" values={rates.map(r => {
-            if (r.rebateDollars > 0) return { text: $(-r.rebateDollars), color: GREEN };
-            return { text: $(r.discountDollars), color: RED };
+            if (r.rebateDollars > 0) return { text: '(' + $int(r.rebateDollars) + ')', color: GREEN };
+            return { text: $int(r.discountDollars || 0), color: RED };
           })} alt />
           {quote.purpose !== 'purchase' && (
             <CompRow label="Loan Payoff (Estimate)" values={rates.map(() => ({ text: $(quote.currentBalance || 0) }))} />

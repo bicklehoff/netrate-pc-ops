@@ -2,6 +2,51 @@
 
 import { useState, useCallback, useMemo } from 'react';
 
+/**
+ * Find sweet spot rates for a set of rates within a program.
+ * CHARGE SIDE: cheapest cost per 1/8th of rate drop from par
+ * CREDIT SIDE: most credit per 1/8th of rate increase from par
+ */
+function findSweetSpots(rates) {
+  // Find par rate (closest to 100)
+  const parRate = rates.reduce((best, r) =>
+    !best || Math.abs(r.finalPrice - 100) < Math.abs(best.finalPrice - 100) ? r : best, null);
+
+  if (!parRate) return { chargeSweet: null, creditSweet: null, parRate: null };
+
+  let chargeSweet = null;
+  let bestCostPerEighth = Infinity;
+  let creditSweet = null;
+  let bestCreditPerEighth = 0;
+
+  for (const r of rates) {
+    // Charge side — lower rate than par, borrower pays discount
+    if (r.rate < parRate.rate && r.discountDollars > 0) {
+      const eighthsBelow = (parRate.rate - r.rate) / 0.125;
+      if (eighthsBelow > 0) {
+        const costPerEighth = r.discountDollars / eighthsBelow;
+        if (costPerEighth < bestCostPerEighth) {
+          bestCostPerEighth = costPerEighth;
+          chargeSweet = r;
+        }
+      }
+    }
+    // Credit side — higher rate than par, borrower gets rebate
+    if (r.rate > parRate.rate && r.rebateDollars > 0) {
+      const eighthsAbove = (r.rate - parRate.rate) / 0.125;
+      if (eighthsAbove > 0) {
+        const creditPerEighth = r.rebateDollars / eighthsAbove;
+        if (creditPerEighth > bestCreditPerEighth) {
+          bestCreditPerEighth = creditPerEighth;
+          creditSweet = r;
+        }
+      }
+    }
+  }
+
+  return { chargeSweet, creditSweet, parRate };
+}
+
 export default function QuoteRateResults({ pricing, selectedRates, onSelectRates, onReprice, loading, onNext, borrowerPaid }) {
   const [viewMode, setViewMode] = useState('programs'); // 'programs' | 'all'
   const [expandedPrograms, setExpandedPrograms] = useState(new Set());
@@ -29,9 +74,18 @@ export default function QuoteRateResults({ pricing, selectedRates, onSelectRates
       if (!g.bestRate || r.finalPrice > g.bestRate.finalPrice) g.bestRate = r;
       if (!g.parRate || Math.abs(r.finalPrice - 100) < Math.abs(g.parRate.finalPrice - 100)) g.parRate = r;
     }
+    // Compute sweet spots per program
+    for (const g of groups.values()) {
+      const spots = findSweetSpots(g.rates);
+      g.chargeSweet = spots.chargeSweet;
+      g.creditSweet = spots.creditSweet;
+    }
     // Sort by best price descending (most credit first)
     return Array.from(groups.values()).sort((a, b) => b.bestRate.finalPrice - a.bestRate.finalPrice);
   }, [results]);
+
+  // Global sweet spots for the flat "All Rates" view
+  const globalSweets = useMemo(() => findSweetSpots(results), [results]);
 
   const toggleProgram = (program) => {
     setExpandedPrograms(prev => {
@@ -131,9 +185,21 @@ export default function QuoteRateResults({ pricing, selectedRates, onSelectRates
                   </div>
                   <div className="flex items-center gap-4 ml-4">
                     <div className="text-right">
-                      <div className="text-xs text-gray-400">PAR rate</div>
+                      <div className="text-xs text-gray-400">PAR</div>
                       <div className="text-sm font-mono font-bold">{par?.rate?.toFixed(3)}%</div>
                     </div>
+                    {g.chargeSweet && (
+                      <div className="text-right">
+                        <div className="text-xs text-blue-500">Buy-Down Sweet</div>
+                        <div className="text-sm font-mono font-bold text-blue-700">{g.chargeSweet.rate.toFixed(3)}%</div>
+                      </div>
+                    )}
+                    {g.creditSweet && (
+                      <div className="text-right">
+                        <div className="text-xs text-purple-500">Credit Sweet</div>
+                        <div className="text-sm font-mono font-bold text-purple-700">{g.creditSweet.rate.toFixed(3)}%</div>
+                      </div>
+                    )}
                     <div className="text-right">
                       <div className="text-xs text-gray-400">Best (adj.)</div>
                       <div className={`text-sm font-mono font-bold ${best?.finalPrice > 100 ? 'text-green-600' : 'text-gray-900'}`}>
@@ -184,6 +250,8 @@ export default function QuoteRateResults({ pricing, selectedRates, onSelectRates
                               <td className="py-1.5 font-mono">
                                 {r.rate.toFixed(3)}%
                                 {rIsPar && <span className="ml-1 px-1 bg-green-100 text-green-700 rounded text-[9px]">PAR</span>}
+                                {g.chargeSweet && r.rate === g.chargeSweet.rate && <span className="ml-1 px-1 bg-blue-100 text-blue-700 rounded text-[9px]">SWEET SPOT</span>}
+                                {g.creditSweet && r.rate === g.creditSweet.rate && <span className="ml-1 px-1 bg-purple-100 text-purple-700 rounded text-[9px]">SWEET SPOT</span>}
                               </td>
                               <td className="py-1.5 text-right font-mono">{r.finalPrice?.toFixed(4)}</td>
                               <td className={`py-1.5 text-right font-mono ${isRebate ? 'text-green-600' : 'text-red-600'}`}>
@@ -239,6 +307,8 @@ export default function QuoteRateResults({ pricing, selectedRates, onSelectRates
                       <td className="px-3 py-2">
                         <span>{r.program}</span>
                         {isPar && <span className="ml-1 px-1 py-0.5 bg-green-100 text-green-700 rounded text-[10px] font-medium">PAR</span>}
+                        {globalSweets.chargeSweet && r.rate === globalSweets.chargeSweet.rate && r.program === globalSweets.chargeSweet.program && <span className="ml-1 px-1 py-0.5 bg-blue-100 text-blue-700 rounded text-[10px] font-medium">SWEET SPOT</span>}
+                        {globalSweets.creditSweet && r.rate === globalSweets.creditSweet.rate && r.program === globalSweets.creditSweet.program && <span className="ml-1 px-1 py-0.5 bg-purple-100 text-purple-700 rounded text-[10px] font-medium">SWEET SPOT</span>}
                       </td>
                       <td className="px-3 py-2 text-right font-mono">{r.finalPrice?.toFixed(4)}</td>
                       <td className={`px-3 py-2 text-right font-mono ${isRebate ? 'text-green-600' : 'text-red-600'}`}>
