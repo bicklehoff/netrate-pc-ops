@@ -105,6 +105,7 @@ export async function POST(request) {
       term: body.term || 30,
       lockDays: body.lockDays || 30,
       productType: body.productType || 'fixed',
+      borrowerPaid: body.borrowerPaid || false,
     };
 
     // Run eligibility check

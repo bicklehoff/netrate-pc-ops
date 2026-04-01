@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo } from 'react';
 
-export default function QuoteRateResults({ pricing, selectedRates, onSelectRates, onReprice, loading, onNext }) {
+export default function QuoteRateResults({ pricing, selectedRates, onSelectRates, onReprice, loading, onNext, borrowerPaid }) {
   const [viewMode, setViewMode] = useState('programs'); // 'programs' | 'all'
   const [expandedPrograms, setExpandedPrograms] = useState(new Set());
   const [showAll, setShowAll] = useState(false);
@@ -80,7 +80,8 @@ export default function QuoteRateResults({ pricing, selectedRates, onSelectRates
             }
           </h3>
           <p className="text-xs text-gray-500 mt-0.5">
-            Effective: {pricing?.effectiveDate || 'N/A'} | Select up to 3 rates
+            Effective: {pricing?.effectiveDate || 'N/A'} | All prices after LLPA adjustments
+            {borrowerPaid && <span className="ml-2 px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded font-medium">BORROWER-PAID (no comp)</span>}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -134,7 +135,7 @@ export default function QuoteRateResults({ pricing, selectedRates, onSelectRates
                       <div className="text-sm font-mono font-bold">{par?.rate?.toFixed(3)}%</div>
                     </div>
                     <div className="text-right">
-                      <div className="text-xs text-gray-400">Best price</div>
+                      <div className="text-xs text-gray-400">Best (adj.)</div>
                       <div className={`text-sm font-mono font-bold ${best?.finalPrice > 100 ? 'text-green-600' : 'text-gray-900'}`}>
                         {best?.finalPrice?.toFixed(3)}
                       </div>

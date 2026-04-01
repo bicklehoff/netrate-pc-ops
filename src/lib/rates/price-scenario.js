@@ -106,9 +106,9 @@ export async function priceScenario(body) {
     const lenderId = lenderData.lenderId;
 
     const brokerConfig = {
-      compRate: lenderData.compRate || FALLBACK_COMP_RATE,
-      compCapPurchase: lenderData.compCap?.purchase || 3595,
-      compCapRefi: lenderData.compCap?.refinance || 3595,
+      compRate: body.borrowerPaid ? 0 : (lenderData.compRate || FALLBACK_COMP_RATE),
+      compCapPurchase: body.borrowerPaid ? 0 : (lenderData.compCap?.purchase || 3595),
+      compCapRefi: body.borrowerPaid ? 0 : (lenderData.compCap?.refinance || 3595),
       fhaUfmip: lenderData.fhaUfmip || 0.0175,
     };
 

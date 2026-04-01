@@ -172,6 +172,7 @@ export default function QuoteWizard({ prefill }) {
             onReprice={handleReprice}
             loading={loading}
             onNext={() => setStep(2)}
+            borrowerPaid={scenario.borrowerPaid}
           />
         </div>
       )}

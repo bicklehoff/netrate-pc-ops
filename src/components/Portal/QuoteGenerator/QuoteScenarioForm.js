@@ -39,7 +39,7 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
 
   const isPurchase = scenario.purpose === 'purchase';
 
-  // Zip → county + state lookup
+  // Zip → state + county lookup (zippopotam for lat/lon + state, then FCC for county)
   const handleZipLookup = useCallback(async (zip) => {
     setZipCode(zip);
     if (zip.length !== 5) return;
@@ -49,24 +49,37 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
       if (!res.ok) return;
       const data = await res.json();
       const place = data.places?.[0];
-      if (place) {
-        const st = place['state abbreviation'];
-        // Try to match county from our data
-        if (st && STATES.includes(st)) {
-          const countyList = getCountiesByState(st).map(c => c.name);
-          // Find county that contains the place name or vice versa
-          const matched = countyList.find(c =>
-            c.toLowerCase().includes(place['place name'].toLowerCase()) ||
-            place['place name'].toLowerCase().includes(c.toLowerCase())
-          );
-          onChange({
-            ...scenario,
-            state: st,
-            county: matched || '',
-            zipCode: zip,
-          });
+      if (!place) return;
+
+      const st = place['state abbreviation'];
+      if (!st || !STATES.includes(st)) return;
+
+      // Use FCC Census Block API with lat/lon to get county name
+      const lat = place.latitude;
+      const lon = place.longitude;
+      let countyName = '';
+      try {
+        const fccRes = await fetch(`https://geo.fcc.gov/api/census/area?lat=${lat}&lon=${lon}&format=json`);
+        if (fccRes.ok) {
+          const fccData = await fccRes.json();
+          const fccCounty = fccData?.results?.[0]?.county_name;
+          if (fccCounty) {
+            // Match against our county data (FCC returns "Boulder" not "Boulder County")
+            const countyList = getCountiesByState(st).map(c => c.name);
+            countyName = countyList.find(c =>
+              c.toLowerCase() === fccCounty.toLowerCase() ||
+              c.toLowerCase().replace(' county', '') === fccCounty.toLowerCase()
+            ) || '';
+          }
         }
-      }
+      } catch { /* FCC lookup failed, just set state */ }
+
+      onChange({
+        ...scenario,
+        state: st,
+        county: countyName,
+        zipCode: zip,
+      });
     } catch { /* ignore lookup failures */ } finally {
       setZipLoading(false);
     }
@@ -265,6 +278,17 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
           <div>
             <span className="text-gray-400 text-xs">Type</span>
             <div className="font-bold uppercase text-xs">{scenario.loanType}</div>
+          </div>
+          <div className="border-l border-gray-700 pl-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={scenario.borrowerPaid || false}
+                onChange={e => update('borrowerPaid', e.target.checked)}
+                className="w-3.5 h-3.5 rounded border-gray-600 bg-gray-800 text-cyan-500 focus:ring-cyan-500"
+              />
+              <span className="text-xs text-gray-300">Borrower-Paid</span>
+            </label>
           </div>
         </div>
         <button
