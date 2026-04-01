@@ -19,6 +19,7 @@ const parser = new XMLParser({
       'CONTACT_POINT', 'RESIDENCE', 'EMPLOYER', 'CURRENT_INCOME_ITEM',
       'HOUSING_EXPENSE', 'TAXPAYER_IDENTIFIER', 'ROLE',
       'LOAN_BORROWER', 'CO_BORROWER',
+      'ASSET', 'LIABILITY', 'RELATIONSHIP',
     ];
     return alwaysArray.includes(name);
   },
@@ -155,6 +156,92 @@ export function parseMismoXml(xmlString) {
     }
   }
 
+  // ─── Amortization ──────────────────────────────────────
+  const amortRule = dig(loanData, 'AMORTIZATION', 'AMORTIZATION_RULE') || {};
+  const amortizationType = mapAmortizationType(str(amortRule.AmortizationType));
+  // Derive loanTerm from AmortizationPeriodCount if not in TermsOfLoan
+  const derivedLoanTerm = loanTerm || int(amortRule.LoanAmortizationPeriodCount);
+
+  // ─── Extract Assets & REOs from DEAL level ──────────────
+  const rawAssets = toArray(dig(deal, 'ASSETS', 'ASSET'));
+  const assets = [];
+  const reos = [];
+
+  // Build relationship map (ASSET label → BORROWER label)
+  const relationships = toArray(dig(deal, 'RELATIONSHIPS', 'RELATIONSHIP'));
+  const assetToBorrowerMap = {};
+  for (const rel of relationships) {
+    const arcRole = str(rel['@_xlink:arcrole']) || '';
+    if (arcRole.includes('ASSET_IsAssociatedWith_ROLE')) {
+      assetToBorrowerMap[str(rel['@_xlink:from'])] = str(rel['@_xlink:to']);
+    }
+  }
+
+  for (const asset of rawAssets) {
+    const assetDetail = dig(asset, 'ASSET_DETAIL') || {};
+    const assetType = str(assetDetail.AssetType);
+    const assetLabel = str(asset['@_xlink:label']);
+    const borrowerLabel = assetToBorrowerMap[assetLabel];
+
+    if (assetType === 'RealEstateOwned') {
+      // This is an REO, not a financial asset
+      const ownedProp = dig(asset, 'OWNED_PROPERTY') || {};
+      const ownedDetail = dig(ownedProp, 'OWNED_PROPERTY_DETAIL') || {};
+      const propAddr = extractAddress(dig(ownedProp, 'PROPERTY', 'ADDRESS'));
+      const propDetail = dig(ownedProp, 'PROPERTY', 'PROPERTY_DETAIL') || {};
+
+      reos.push({
+        address: propAddr,
+        propertyType: mapPropertyType(str(propDetail.ConstructionMethodType) || str(propDetail.AttachmentType)),
+        presentMarketValue: num(ownedDetail.OwnedPropertyMarketValueAmount),
+        mortgageBalance: num(ownedDetail.OwnedPropertyMortgageAmount),
+        mortgagePayment: num(ownedDetail.OwnedPropertyMortgagePaymentAmount),
+        grossRentalIncome: num(ownedDetail.OwnedPropertyRentalIncomeGrossAmount),
+        netRentalIncome: num(ownedDetail.OwnedPropertyRentalIncomeNetAmount),
+        insuranceTaxesMaintenance: num(ownedDetail.OwnedPropertyMaintenanceExpenseAmount),
+        status: mapReoStatus(str(ownedDetail.OwnedPropertyDispositionStatusType)),
+        borrowerLabel,
+      });
+    } else {
+      // Financial asset
+      assets.push({
+        institution: str(assetDetail.AssetAccountIdentifier) ? null : null, // MISMO doesn't always have institution
+        accountType: mapAccountType(assetType),
+        accountNumber: str(assetDetail.AssetAccountIdentifier),
+        balance: num(assetDetail.AssetCashOrMarketValueAmount),
+        borrowerLabel,
+      });
+    }
+  }
+
+  // ─── Extract Liabilities from DEAL level ────────────────
+  const rawLiabilities = toArray(dig(deal, 'LIABILITIES', 'LIABILITY'));
+  const liabilities = rawLiabilities.map((liab) => {
+    const liabDetail = dig(liab, 'LIABILITY_DETAIL') || {};
+    return {
+      creditor: str(liabDetail.LiabilityHolderName),
+      accountNumber: str(liabDetail.LiabilityAccountIdentifier),
+      liabilityType: mapLiabilityType(str(liabDetail.LiabilityType)),
+      monthlyPayment: num(liabDetail.LiabilityMonthlyPaymentAmount),
+      unpaidBalance: num(liabDetail.LiabilityUnpaidBalanceAmount),
+      monthsRemaining: int(liabDetail.LiabilityPaymentRemainingCount),
+      paidOffAtClosing: toBool(liabDetail.LiabilityPayoffStatusIndicator),
+    };
+  });
+
+  // ─── Extract Transaction Details from URLA ──────────────
+  const urla = dig(loanData, 'DOCUMENT_SPECIFIC_DATA_SETS', 'DOCUMENT_SPECIFIC_DATA_SET', 'URLA') || {};
+  const urlaDetail = dig(urla, 'URLA_DETAIL') || {};
+  const closingInfo = dig(loanData, 'CLOSING_INFORMATION', 'CLOSING_INFORMATION_DETAIL') || {};
+
+  const transaction = {
+    purchasePrice: property.purchasePrice,
+    closingCostsEstimate: num(urlaDetail.EstimatedClosingCostsAmount),
+    discountPoints: num(dig(loanProduct, 'DiscountPointsTotalAmount')),
+    sellerConcessions: num(dig(urla, 'URLA_TOTAL', 'EXTENSION', 'OTHER', 'URLA_TOTAL_EXTENSION', 'URLATotalSellerCreditsAmount')),
+    cashFromBorrower: num(closingInfo.CashFromBorrowerAtClosingAmount),
+  };
+
   // ─── Build Result ───────────────────────────────────────
   return {
     loan: {
@@ -163,7 +250,7 @@ export function parseMismoXml(xmlString) {
       loanType,
       loanAmount,
       interestRate,
-      loanTerm,
+      loanTerm: derivedLoanTerm,
       lenderName,
       presentHousingExpense,
       occupancy: mapOccupancy(str(property.occupancy)),
@@ -171,11 +258,17 @@ export function parseMismoXml(xmlString) {
       numUnits: property.numUnits,
       purchasePrice: property.purchasePrice,
       estimatedValue: property.estimatedValue,
+      amortizationType,
     },
     borrowers,
     property: {
       address: property.address,
     },
+    // 1003 models
+    assets,
+    liabilities,
+    reos,
+    transaction,
     // Convenience: primary borrower (first one)
     primaryBorrower: borrowers[0] || null,
     coBorrowers: borrowers.slice(1),
@@ -184,6 +277,9 @@ export function parseMismoXml(xmlString) {
       dealCount: deals.length,
       partyCount: parties.length,
       borrowerCount: borrowers.length,
+      assetCount: assets.length,
+      liabilityCount: liabilities.length,
+      reoCount: reos.length,
       hasLoanNumber: !!loanNumber,
       hasSSN: borrowers.some((b) => !!b.ssn),
       hasDOB: borrowers.some((b) => !!b.dob),
@@ -202,12 +298,18 @@ function extractBorrower(party, role, index) {
   // Extract contact info
   let email = null;
   let phone = null;
+  let cellPhone = null;
   for (const cp of contactPoints) {
     if (cp.CONTACT_POINT_EMAIL) {
       email = str(dig(cp, 'CONTACT_POINT_EMAIL', 'ContactPointEmailValue')) || email;
     }
     if (cp.CONTACT_POINT_TELEPHONE) {
-      phone = str(dig(cp, 'CONTACT_POINT_TELEPHONE', 'ContactPointTelephoneValue')) || phone;
+      const phoneVal = str(dig(cp, 'CONTACT_POINT_TELEPHONE', 'ContactPointTelephoneValue'));
+      const roleType = str(dig(cp, 'CONTACT_POINT_DETAIL', 'ContactPointRoleType'));
+      if (roleType === 'Mobile' || roleType === 'Cell') {
+        cellPhone = phoneVal || cellPhone;
+      }
+      phone = phoneVal || phone;
     }
   }
 
@@ -219,64 +321,105 @@ function extractBorrower(party, role, index) {
       break;
     }
   }
-  // Fallback: take any taxpayer identifier
   if (!ssn && taxpayerIds.length > 0) {
     ssn = str(taxpayerIds[0].TaxpayerIdentifierValue);
   }
 
   // Extract DOB
-  const dob = str(party.BIRTH_DATE) || str(dig(party, 'INDIVIDUAL', 'BIRTH_DATE'));
+  const dob = str(borrowerDetail.BorrowerBirthDate)
+    || str(party.BIRTH_DATE)
+    || str(dig(party, 'INDIVIDUAL', 'BIRTH_DATE'));
 
   // Extract residences
-  const residences = toArray(dig(party, 'RESIDENCES', 'RESIDENCE'))
-    || toArray(dig(role, 'BORROWER', 'RESIDENCES', 'RESIDENCE'));
+  const residences = toArray(dig(role, 'BORROWER', 'RESIDENCES', 'RESIDENCE'));
   const currentResidence = residences.find(
-    (r) => str(r.BorrowerResidencyType) === 'Current' || str(r['@_BorrowerResidencyType']) === 'Current'
+    (r) => str(dig(r, 'RESIDENCE_DETAIL', 'BorrowerResidencyType')) === 'Current'
   ) || residences[0];
+  const priorResidence = residences.find(
+    (r) => str(dig(r, 'RESIDENCE_DETAIL', 'BorrowerResidencyType')) === 'Prior'
+  );
+
   const address = extractAddress(dig(currentResidence, 'ADDRESS'));
-  const addressYears = int(dig(currentResidence, 'RESIDENCE_DETAIL', 'BorrowerResidencyDurationYearsCount'));
-  const addressMonths = int(dig(currentResidence, 'RESIDENCE_DETAIL', 'BorrowerResidencyDurationMonthsCount'));
+  const currentDetail = dig(currentResidence, 'RESIDENCE_DETAIL') || {};
+  const addressMonths = int(currentDetail.BorrowerResidencyDurationMonthsCount);
+  const addressYears = int(currentDetail.BorrowerResidencyDurationYearsCount)
+    || (addressMonths ? Math.floor(addressMonths / 12) : null);
 
-  // Extract employment
-  const employers = toArray(dig(role, 'BORROWER', 'EMPLOYERS', 'EMPLOYER'))
-    || toArray(dig(party, 'EMPLOYERS', 'EMPLOYER'));
+  // Housing type from residence
+  const housingType = mapHousingType(str(currentDetail.BorrowerResidencyBasisType));
+  const monthlyRent = num(dig(currentResidence, 'LANDLORD', 'LANDLORD_DETAIL', 'MonthlyRentAmount'));
+
+  // Previous address
+  const previousAddress = priorResidence ? extractAddress(dig(priorResidence, 'ADDRESS')) : null;
+  const priorDetail = dig(priorResidence, 'RESIDENCE_DETAIL') || {};
+  const prevMonths = int(priorDetail.BorrowerResidencyDurationMonthsCount);
+  const previousAddressYears = int(priorDetail.BorrowerResidencyDurationYearsCount)
+    || (prevMonths ? Math.floor(prevMonths / 12) : null);
+  const previousAddressMonths = prevMonths ? (prevMonths % 12) : null;
+
+  // Extract ALL employments (not just current)
+  const employers = toArray(dig(role, 'BORROWER', 'EMPLOYERS', 'EMPLOYER'));
+  const employments = employers.map((emp) => extractFullEmployment(emp));
+
+  // Current employer for backward-compat flat fields
   const currentEmployer = employers.find(
-    (e) => str(dig(e, 'EMPLOYER_DETAIL', 'EmploymentStatusType')) !== 'Previous'
-      && str(e.EmploymentCurrentIndicator) !== 'false'
+    (e) => str(dig(e, 'EMPLOYMENT', 'EmploymentStatusType')) === 'Current'
+      || str(dig(e, 'EMPLOYMENT', 'EmploymentClassificationType')) === 'Primary'
   ) || employers[0];
-
   const employment = extractEmployment(currentEmployer);
 
-  // Extract income
+  // Extract detailed income (by type)
   const incomeItems = toArray(
     dig(role, 'BORROWER', 'CURRENT_INCOME', 'CURRENT_INCOME_ITEMS', 'CURRENT_INCOME_ITEM')
   );
   const income = extractIncome(incomeItems);
+  const detailedIncome = extractDetailedIncome(incomeItems);
 
-  // Extract declarations
-  const declarations = extractDeclarations(dig(role, 'BORROWER', 'DECLARATION', 'DECLARATION_DETAIL'));
+  // Extract declarations (structured for LoanDeclaration model)
+  const declDetail = dig(role, 'BORROWER', 'DECLARATION', 'DECLARATION_DETAIL') || {};
+  const declarations = extractDeclarations(declDetail);
+  const structuredDeclaration = extractStructuredDeclaration(declDetail);
+
+  // Citizenship
+  const citizenship = mapCitizenship(str(declDetail.CitizenshipResidencyType));
 
   // Marital status
   const maritalStatus = mapMaritalStatus(str(borrowerDetail.MaritalStatusType));
 
+  // xlink label for relationship mapping
+  const roleLabel = str(role['@_xlink:label']);
+
   return {
     ordinal: index,
     borrowerType: index === 0 ? 'primary' : 'co_borrower',
+    roleLabel,
     firstName: str(name.FirstName),
     lastName: str(name.LastName),
     middleName: str(name.MiddleName),
     suffix: str(name.SuffixName),
     email,
     phone,
-    ssn: ssn ? ssn.replace(/\D/g, '') : null, // Strip formatting
+    cellPhone,
+    ssn: ssn ? ssn.replace(/\D/g, '') : null,
     dob,
     maritalStatus,
+    citizenship,
+    housingType,
+    monthlyRent,
     currentAddress: address,
     addressYears,
     addressMonths,
+    previousAddress,
+    previousAddressYears,
+    previousAddressMonths,
+    // Flat employment (backward compat)
     ...employment,
     ...income,
     declarations,
+    // Full 1003 data
+    employments,
+    detailedIncome,
+    structuredDeclaration,
   };
 }
 
@@ -451,8 +594,161 @@ function mapMaritalStatus(raw) {
 
 function mapCitizenship(raw) {
   const upper = (raw || '').toUpperCase();
-  if (upper.includes('US') || upper.includes('CITIZEN')) return 'us_citizen';
+  if (upper.includes('USCITIZEN') || upper === 'US_CITIZEN') return 'us_citizen';
+  if (upper.includes('US') && upper.includes('CITIZEN')) return 'us_citizen';
   if (upper.includes('PERMANENT') || upper.includes('RESIDENT')) return 'permanent_resident';
   if (upper.includes('NON')) return 'non_permanent_resident';
   return raw?.toLowerCase() || null;
+}
+
+// ─── Full Employment Extraction (for LoanEmployment model) ─
+
+function extractFullEmployment(employer) {
+  if (!employer) return null;
+  const emp = dig(employer, 'EMPLOYMENT') || {};
+  const legalEntity = dig(employer, 'LEGAL_ENTITY') || {};
+  const empName = str(dig(legalEntity, 'LEGAL_ENTITY_DETAIL', 'FullName'))
+    || str(dig(employer, 'EMPLOYER_DETAIL', 'EmployerName'));
+  const addr = extractAddress(dig(employer, 'ADDRESS'));
+  const empPhone = str(dig(legalEntity, 'CONTACTS', 'CONTACT', 'CONTACT_POINTS', 'CONTACT_POINT', 'CONTACT_POINT_TELEPHONE', 'ContactPointTelephoneValue'));
+
+  const classification = str(emp.EmploymentClassificationType);
+  const isPrimary = classification === 'Primary' || classification === 'Current'
+    || str(emp.EmploymentStatusType) === 'Current';
+
+  return {
+    isPrimary,
+    employerName: empName,
+    employerAddress: addr,
+    employerPhone: empPhone,
+    position: str(emp.EmploymentPositionDescription),
+    startDate: str(emp.EmploymentStartDate),
+    endDate: str(emp.EmploymentEndDate),
+    yearsOnJob: null, // Calculated from dates
+    monthsOnJob: int(emp.EmploymentTimeInLineOfWorkMonthsCount),
+    selfEmployed: toBool(emp.EmploymentBorrowerSelfEmployedIndicator),
+  };
+}
+
+// ─── Detailed Income (for LoanIncome model) ──────────────
+
+function extractDetailedIncome(items) {
+  const income = {
+    baseMonthly: null,
+    overtimeMonthly: null,
+    bonusMonthly: null,
+    commissionMonthly: null,
+    dividendsMonthly: null,
+    interestMonthly: null,
+    rentalIncomeMonthly: null,
+    otherMonthly: null,
+    otherIncomeSource: null,
+  };
+
+  for (const item of items) {
+    const detail = dig(item, 'CURRENT_INCOME_ITEM_DETAIL') || item;
+    const type = str(detail.IncomeType);
+    const amount = num(detail.CurrentIncomeMonthlyTotalAmount);
+    if (!amount) continue;
+
+    switch (type) {
+      case 'Base':
+      case 'MilitaryBasePay':
+        income.baseMonthly = (income.baseMonthly || 0) + amount;
+        break;
+      case 'Overtime':
+        income.overtimeMonthly = (income.overtimeMonthly || 0) + amount;
+        break;
+      case 'Bonus':
+        income.bonusMonthly = (income.bonusMonthly || 0) + amount;
+        break;
+      case 'Commissions':
+      case 'Commission':
+        income.commissionMonthly = (income.commissionMonthly || 0) + amount;
+        break;
+      case 'DividendsInterest':
+      case 'Dividends':
+        income.dividendsMonthly = (income.dividendsMonthly || 0) + amount;
+        break;
+      case 'Interest':
+        income.interestMonthly = (income.interestMonthly || 0) + amount;
+        break;
+      case 'NetRentalIncome':
+      case 'RentalIncome':
+        income.rentalIncomeMonthly = (income.rentalIncomeMonthly || 0) + amount;
+        break;
+      default:
+        income.otherMonthly = (income.otherMonthly || 0) + amount;
+        if (!income.otherIncomeSource) income.otherIncomeSource = type;
+        break;
+    }
+  }
+
+  return income;
+}
+
+// ─── Structured Declaration (for LoanDeclaration model) ───
+
+function extractStructuredDeclaration(decl) {
+  if (!decl) return null;
+
+  return {
+    outstandingJudgments: toBool(decl.OutstandingJudgmentsIndicator),
+    bankruptcy: toBool(decl.BankruptcyIndicator),
+    bankruptcyType: str(decl.BankruptcyChapterType),
+    foreclosure: toBool(decl.PriorPropertyForeclosureCompletedIndicator),
+    partyToLawsuit: toBool(decl.PartyToLawsuitIndicator),
+    loanDefault: toBool(decl.PresentlyDelinquentIndicator),
+    alimonyObligation: false, // Not directly in MISMO standard declarations
+    delinquentFederalDebt: toBool(decl.PresentlyDelinquentIndicator),
+    coSignerOnOtherLoan: toBool(decl.UndisclosedComakerOfNoteIndicator),
+    intentToOccupy: str(decl.IntentToOccupyType) === 'Yes',
+    ownershipInterestLastThreeYears: str(decl.HomeownerPastThreeYearsType) === 'Yes',
+    propertyTypeOfOwnership: str(decl.PriorPropertyTitleType),
+  };
+}
+
+// ─── Additional Mappers ──────────────────────────────────
+
+function mapHousingType(raw) {
+  const upper = (raw || '').toUpperCase();
+  if (upper.includes('OWN')) return 'own';
+  if (upper.includes('RENT')) return 'rent';
+  if (upper.includes('FREE') || upper.includes('LIVING')) return 'free';
+  return null;
+}
+
+function mapAmortizationType(raw) {
+  const upper = (raw || '').toUpperCase();
+  if (upper.includes('FIXED')) return 'fixed';
+  if (upper.includes('ARM') || upper.includes('ADJUSTABLE')) return 'arm';
+  if (upper.includes('BALLOON')) return 'balloon';
+  return null;
+}
+
+function mapAccountType(raw) {
+  const upper = (raw || '').toUpperCase();
+  if (upper.includes('CHECK')) return 'checking';
+  if (upper.includes('SAVING')) return 'savings';
+  if (upper.includes('CD') || upper.includes('CERTIFICATE')) return 'cd';
+  if (upper.includes('STOCK') || upper.includes('BOND') || upper.includes('MUTUAL')) return 'stocks';
+  if (upper.includes('RETIRE') || upper.includes('401K') || upper.includes('IRA')) return 'retirement';
+  return 'other';
+}
+
+function mapLiabilityType(raw) {
+  const upper = (raw || '').toUpperCase();
+  if (upper.includes('REVOLV')) return 'revolving';
+  if (upper.includes('INSTALL')) return 'installment';
+  if (upper.includes('MORTGAGE') || upper.includes('HELOC')) return 'mortgage';
+  if (upper.includes('COLLECT')) return 'collection';
+  return 'other';
+}
+
+function mapReoStatus(raw) {
+  const upper = (raw || '').toUpperCase();
+  if (upper.includes('RETAIN')) return 'retained';
+  if (upper.includes('SOLD')) return 'sold';
+  if (upper.includes('PENDING')) return 'pending_sale';
+  return 'retained';
 }

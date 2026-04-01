@@ -37,6 +37,10 @@ export async function POST(request) {
       loan: result.loan,
       borrowers: previewBorrowers,
       property: result.property,
+      assets: result.assets,
+      liabilities: result.liabilities,
+      reos: result.reos,
+      transaction: result.transaction,
       stats: result.stats,
     });
   } catch (error) {
@@ -143,16 +147,24 @@ export async function PUT(request) {
     });
 
     // ─── Create LoanBorrower for Primary ──────────────────
-    await prisma.loanBorrower.create({
+    const primaryLB = await prisma.loanBorrower.create({
       data: {
         loanId: loan.id,
         borrowerId: borrower.id,
         borrowerType: 'primary',
         ordinal: 0,
         maritalStatus: primary.maritalStatus,
+        citizenship: primary.citizenship,
+        housingType: primary.housingType,
+        monthlyRent: primary.monthlyRent,
         currentAddress: primary.currentAddress,
         addressYears: primary.addressYears,
         addressMonths: primary.addressMonths,
+        previousAddress: primary.previousAddress,
+        previousAddressYears: primary.previousAddressYears,
+        previousAddressMonths: primary.previousAddressMonths,
+        cellPhone: primary.cellPhone,
+        suffix: primary.suffix,
         employmentStatus: primary.employmentStatus,
         employerName: primary.employerName,
         positionTitle: primary.positionTitle,
@@ -164,22 +176,33 @@ export async function PUT(request) {
       },
     });
 
+    // Create 1003 sub-models for primary borrower
+    await create1003BorrowerModels(primaryLB.id, primary);
+
     // ─── Create Co-Borrower Records ───────────────────────
     for (const cb of result.coBorrowers) {
       if (!cb.firstName || !cb.lastName) continue;
 
       const cbBorrower = await upsertBorrowerFromImport(cb);
 
-      await prisma.loanBorrower.create({
+      const cbLB = await prisma.loanBorrower.create({
         data: {
           loanId: loan.id,
           borrowerId: cbBorrower.id,
           borrowerType: 'co_borrower',
           ordinal: cb.ordinal,
           maritalStatus: cb.maritalStatus,
+          citizenship: cb.citizenship,
+          housingType: cb.housingType,
+          monthlyRent: cb.monthlyRent,
           currentAddress: cb.currentAddress,
           addressYears: cb.addressYears,
           addressMonths: cb.addressMonths,
+          previousAddress: cb.previousAddress,
+          previousAddressYears: cb.previousAddressYears,
+          previousAddressMonths: cb.previousAddressMonths,
+          cellPhone: cb.cellPhone,
+          suffix: cb.suffix,
           employmentStatus: cb.employmentStatus,
           employerName: cb.employerName,
           positionTitle: cb.positionTitle,
@@ -190,7 +213,13 @@ export async function PUT(request) {
           declarations: cb.declarations,
         },
       });
+
+      // Create 1003 sub-models for co-borrower
+      await create1003BorrowerModels(cbLB.id, cb);
     }
+
+    // ─── Create Loan-Level 1003 Models ────────────────────
+    await create1003LoanModels(loan.id, result);
 
     // ─── Create Contacts for All Borrowers ─────────────────
     // Every borrower becomes a Contact (marketable, searchable, linkable to future leads)
@@ -409,5 +438,167 @@ async function upsertContactFromBorrower(borrower, rawData, source) {
     // Non-fatal — log and continue (loan import should not fail if contact creation fails)
     console.error('Contact creation failed (non-fatal):', error?.message);
     return null;
+  }
+}
+
+/**
+ * Create 1003 per-borrower models: LoanEmployment[], LoanIncome, LoanDeclaration
+ */
+async function create1003BorrowerModels(loanBorrowerId, borrowerData) {
+  try {
+    // Employments
+    if (borrowerData.employments?.length > 0) {
+      for (const emp of borrowerData.employments) {
+        if (!emp) continue;
+        await prisma.loanEmployment.create({
+          data: {
+            loanBorrowerId,
+            isPrimary: emp.isPrimary ?? true,
+            employerName: emp.employerName || null,
+            employerAddress: emp.employerAddress || null,
+            employerPhone: emp.employerPhone || null,
+            position: emp.position || null,
+            startDate: emp.startDate ? new Date(emp.startDate) : null,
+            endDate: emp.endDate ? new Date(emp.endDate) : null,
+            yearsOnJob: emp.yearsOnJob || null,
+            monthsOnJob: emp.monthsOnJob || null,
+            selfEmployed: emp.selfEmployed ?? false,
+          },
+        });
+      }
+    }
+
+    // Income
+    const inc = borrowerData.detailedIncome;
+    if (inc) {
+      const hasAnyIncome = inc.baseMonthly || inc.overtimeMonthly || inc.bonusMonthly
+        || inc.commissionMonthly || inc.dividendsMonthly || inc.interestMonthly
+        || inc.rentalIncomeMonthly || inc.otherMonthly;
+      if (hasAnyIncome) {
+        await prisma.loanIncome.create({
+          data: {
+            loanBorrowerId,
+            baseMonthly: inc.baseMonthly || null,
+            overtimeMonthly: inc.overtimeMonthly || null,
+            bonusMonthly: inc.bonusMonthly || null,
+            commissionMonthly: inc.commissionMonthly || null,
+            dividendsMonthly: inc.dividendsMonthly || null,
+            interestMonthly: inc.interestMonthly || null,
+            rentalIncomeMonthly: inc.rentalIncomeMonthly || null,
+            otherMonthly: inc.otherMonthly || null,
+            otherIncomeSource: inc.otherIncomeSource || null,
+          },
+        });
+      }
+    }
+
+    // Declarations
+    const decl = borrowerData.structuredDeclaration;
+    if (decl) {
+      await prisma.loanDeclaration.create({
+        data: {
+          loanBorrowerId,
+          outstandingJudgments: decl.outstandingJudgments ?? null,
+          bankruptcy: decl.bankruptcy ?? null,
+          bankruptcyType: decl.bankruptcyType || null,
+          foreclosure: decl.foreclosure ?? null,
+          partyToLawsuit: decl.partyToLawsuit ?? null,
+          loanDefault: decl.loanDefault ?? null,
+          alimonyObligation: decl.alimonyObligation ?? null,
+          delinquentFederalDebt: decl.delinquentFederalDebt ?? null,
+          coSignerOnOtherLoan: decl.coSignerOnOtherLoan ?? null,
+          intentToOccupy: decl.intentToOccupy ?? null,
+          ownershipInterestLastThreeYears: decl.ownershipInterestLastThreeYears ?? null,
+          propertyTypeOfOwnership: decl.propertyTypeOfOwnership || null,
+        },
+      });
+    }
+  } catch (error) {
+    console.error('1003 borrower models creation failed (non-fatal):', error?.message);
+  }
+}
+
+/**
+ * Create 1003 loan-level models: LoanAsset[], LoanLiability[], LoanREO[], LoanTransaction
+ */
+async function create1003LoanModels(loanId, result) {
+  try {
+    // Assets
+    for (const asset of (result.assets || [])) {
+      await prisma.loanAsset.create({
+        data: {
+          loanId,
+          borrowerType: null, // Could map from relationship labels
+          institution: asset.institution || null,
+          accountType: asset.accountType || null,
+          accountNumber: asset.accountNumber || null,
+          balance: asset.balance || null,
+          isJoint: false,
+        },
+      });
+    }
+
+    // Liabilities
+    for (const liab of (result.liabilities || [])) {
+      await prisma.loanLiability.create({
+        data: {
+          loanId,
+          creditor: liab.creditor || null,
+          accountNumber: liab.accountNumber || null,
+          liabilityType: liab.liabilityType || null,
+          monthlyPayment: liab.monthlyPayment || null,
+          unpaidBalance: liab.unpaidBalance || null,
+          monthsRemaining: liab.monthsRemaining || null,
+          paidOffAtClosing: liab.paidOffAtClosing ?? false,
+        },
+      });
+    }
+
+    // REOs
+    for (const reo of (result.reos || [])) {
+      await prisma.loanREO.create({
+        data: {
+          loanId,
+          address: reo.address || null,
+          propertyType: reo.propertyType || null,
+          presentMarketValue: reo.presentMarketValue || null,
+          mortgageBalance: reo.mortgageBalance || null,
+          mortgagePayment: reo.mortgagePayment || null,
+          grossRentalIncome: reo.grossRentalIncome || null,
+          netRentalIncome: reo.netRentalIncome || null,
+          insuranceTaxesMaintenance: reo.insuranceTaxesMaintenance || null,
+          status: reo.status || 'retained',
+        },
+      });
+    }
+
+    // Transaction
+    const tx = result.transaction;
+    if (tx) {
+      const hasTxData = tx.purchasePrice || tx.closingCostsEstimate || tx.discountPoints
+        || tx.sellerConcessions || tx.cashFromBorrower;
+      if (hasTxData) {
+        await prisma.loanTransaction.create({
+          data: {
+            loanId,
+            purchasePrice: tx.purchasePrice || null,
+            closingCostsEstimate: tx.closingCostsEstimate || null,
+            discountPoints: tx.discountPoints || null,
+            sellerConcessions: tx.sellerConcessions || null,
+            cashFromBorrower: tx.cashFromBorrower || null,
+          },
+        });
+      }
+    }
+
+    // Update loan with amortization type
+    if (result.loan.amortizationType) {
+      await prisma.loan.update({
+        where: { id: loanId },
+        data: { amortizationType: result.loan.amortizationType },
+      });
+    }
+  } catch (error) {
+    console.error('1003 loan models creation failed (non-fatal):', error?.message);
   }
 }
