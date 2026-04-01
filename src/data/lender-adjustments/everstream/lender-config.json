@@ -61,6 +61,7 @@
   ],
   "purposeCredits": [
     {
+      "_note": "Rate sheet shows purchase=0.1 on ALL products (conv/fha/va/dscr/jumbo). LS may not display it for govt but sheet is source of truth.",
       "loanType": "conventional",
       "purpose": "purchase",
       "featureName": "purposeAdj",
