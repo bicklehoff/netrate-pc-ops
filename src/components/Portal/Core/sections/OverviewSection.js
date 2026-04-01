@@ -50,8 +50,12 @@ function fmtDate(d) {
   return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 function fmtAddr(addr) {
-  if (!addr) return { street: '—', csz: '' };
-  return { street: addr.street || '—', csz: [addr.city, addr.state, addr.zip].filter(Boolean).join(', ') };
+  if (!addr) return { street: '—', csz: '', county: '' };
+  return {
+    street: addr.street || '—',
+    csz: [addr.city, addr.state, addr.zip].filter(Boolean).join(', '),
+    county: addr.county || '',
+  };
 }
 function getMilestoneIndex(status) {
   const idx = MILESTONES.findIndex(m => m.key === status);
@@ -203,6 +207,7 @@ export default function OverviewSection({ loan, updateLoanField, updateDates }) 
           <span className="text-[9px] font-bold uppercase text-slate-400 mr-1">Property</span>
           <span className="font-bold text-slate-900">{addr.street}</span>
           {addr.csz && <><span className="text-slate-300">|</span><span className="text-slate-600">{addr.csz}</span></>}
+          {(loan.propertyCounty || addr.county) && <><span className="text-slate-300">|</span><span className="text-slate-500">{loan.propertyCounty || addr.county} County</span></>}
         </div>
         <div className="flex gap-x-6 mt-1 pt-1 border-t border-slate-100">
           <div className="flex-1"><EF label="Type" value={loan.propertyType} type="select" options={PROPERTY_TYPE_OPTIONS} onSave={v => save({ propertyType: v })} /></div>
