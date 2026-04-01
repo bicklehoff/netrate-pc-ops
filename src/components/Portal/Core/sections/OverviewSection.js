@@ -4,8 +4,6 @@
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import EditableField from '../EditableField';
-import PayrollSection from '../../PayrollSection';
-import CompensationSection from '../../CompensationSection';
 import PrequalLetterModal from '../../PrequalLetter/PrequalLetterModal';
 
 // ─── Constants ──────────────────────────────────────────────
@@ -144,9 +142,14 @@ export default function OverviewSection({ loan, onRefresh, updateLoanField, upda
       <div className="flex items-center gap-2">
         <button onClick={() => setShowPrequalModal(true)}
           className="px-3 py-1.5 text-xs font-bold text-white bg-primary rounded-md hover:bg-cyan-700 transition-colors">Pre-Qual Letter</button>
+        {(loan.status === 'funded' || loan.status === 'settled') && (
+          <a href={`?section=post-close`}
+            className="px-3 py-1.5 text-xs font-bold text-white bg-emerald-600 rounded-md hover:bg-emerald-700 transition-colors">
+            Payroll / CD →
+          </a>
+        )}
       </div>
       {showPrequalModal && <PrequalLetterModal loan={loan} session={session} onClose={() => setShowPrequalModal(false)} />}
-      {loan.status === 'funded' && <><PayrollSection loan={loan} onRefresh={onRefresh} /><CompensationSection loan={loan} /></>}
 
       {/* Alerts */}
       {alerts.length > 0 && (
