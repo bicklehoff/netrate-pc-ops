@@ -1,0 +1,75 @@
+'use client';
+
+import { useState, useEffect, use } from 'react';
+import Link from 'next/link';
+import QuoteWizard from '@/components/Portal/QuoteGenerator/QuoteWizard';
+
+export default function QuoteDetailPage({ params }) {
+  const { id } = use(params);
+  const [quote, setQuote] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await fetch(`/api/portal/mlo/quotes/${id}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        setQuote(data.quote);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, [id]);
+
+  if (loading) return <div className="p-6 text-gray-400">Loading quote...</div>;
+  if (error) return <div className="p-6 text-red-600">Error: {error}</div>;
+  if (!quote) return <div className="p-6 text-gray-400">Quote not found</div>;
+
+  // Re-open the wizard with quote data as prefill
+  const prefill = {
+    contactId: quote.contactId,
+    leadId: quote.leadId,
+    loanId: quote.loanId,
+    borrowerName: quote.borrowerName,
+    borrowerEmail: quote.borrowerEmail,
+    borrowerPhone: quote.borrowerPhone,
+    purpose: quote.purpose,
+    loanType: quote.loanType,
+    propertyValue: Number(quote.propertyValue),
+    loanAmount: Number(quote.loanAmount),
+    ltv: Number(quote.ltv),
+    fico: quote.fico,
+    state: quote.state,
+    county: quote.county,
+    term: quote.term,
+    currentRate: quote.currentRate ? Number(quote.currentRate) : '',
+    currentBalance: quote.currentBalance ? Number(quote.currentBalance) : '',
+    currentPayment: quote.currentPayment ? Number(quote.currentPayment) : '',
+    currentLender: quote.currentLender || '',
+  };
+
+  return (
+    <div className="p-6">
+      <div className="flex items-center gap-3 mb-6">
+        <Link href="/portal/mlo/quotes" className="text-sm text-gray-500 hover:text-gray-700">&larr; Quotes</Link>
+        <span className="text-gray-300">|</span>
+        <h1 className="text-lg font-bold text-gray-900">
+          {quote.borrowerName || 'Unnamed Quote'}
+        </h1>
+        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+          quote.status === 'sent' ? 'bg-blue-100 text-blue-700' :
+          quote.status === 'viewed' ? 'bg-green-100 text-green-700' :
+          'bg-gray-100 text-gray-600'
+        }`}>
+          {quote.status}
+        </span>
+      </div>
+      <QuoteWizard prefill={prefill} />
+    </div>
+  );
+}

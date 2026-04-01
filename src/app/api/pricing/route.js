@@ -20,58 +20,11 @@
  *   includeIO: false,            // optional
  * }
  *
- * Response: see priceScenario() return shape in pricing.js
- *
- * Caching: 2-minute in-memory cache keyed by scenario hash.
+ * Core logic lives in priceScenario() — shared with MLO quote generator.
  */
 
 import { NextResponse } from 'next/server';
-import { priceRate } from '@/lib/rates/pricing-v2';
-import { getDbLenderAdj } from '@/lib/rates/db-adj-loader';
-import { loadRateDataFromDB } from '@/lib/rates/db-loader';
-import { DEFAULT_SCENARIO } from '@/lib/rates/defaults';
-import { classifyLoan, getLoanLimits } from '@/data/county-loan-limits';
-
-const CACHE_TTL_MS = 2 * 60 * 1000;
-
-let rateCache = { data: null, fetchedAt: 0 };
-
-async function loadRateData() {
-  const now = Date.now();
-  if (rateCache.data && (now - rateCache.fetchedAt) < CACHE_TTL_MS) {
-    return rateCache.data;
-  }
-
-  try {
-    const lenders = await loadRateDataFromDB();
-    if (lenders?.length) {
-      rateCache = { data: lenders, fetchedAt: now };
-      return lenders;
-    }
-  } catch (err) {
-    console.error('DB rate data load failed:', err.message);
-  }
-
-  return [];
-}
-
-async function getEffectiveDate() {
-  try {
-    const sheet = await (await import('@/lib/prisma')).default.rateSheet.findFirst({
-      where: { status: 'active' },
-      orderBy: { effectiveDate: 'desc' },
-      select: { effectiveDate: true },
-    });
-    if (sheet?.effectiveDate) {
-      const d = new Date(sheet.effectiveDate);
-      return `${d.getUTCMonth() + 1}/${d.getUTCDate()}/${d.getUTCFullYear()}`;
-    }
-  } catch { /* fall through */ }
-  return null;
-}
-
-// Fallback comp rate — actual rate comes from rate_lenders table per lender
-const FALLBACK_COMP_RATE = 0.02;
+import { priceScenario } from '@/lib/rates/price-scenario';
 
 export async function POST(request) {
   try {
@@ -84,139 +37,9 @@ export async function POST(request) {
       );
     }
 
-    const loanAmount = Number(body.loanAmount);
-    const propertyValue = body.propertyValue ? Number(body.propertyValue) : null;
-    const ltv = propertyValue ? Math.floor((loanAmount / propertyValue) * 10000) / 100 : 75;
+    const result = await priceScenario(body);
 
-    const scenario = {
-      loanAmount,
-      loanPurpose: body.loanPurpose || 'purchase',
-      loanType: body.loanType || 'conventional',
-      state: body.state || 'CO',
-      creditScore: body.creditScore || DEFAULT_SCENARIO.fico,
-      ltv: Math.round(ltv * 100) / 100,
-      propertyValue,
-      term: body.term || 30,
-    };
-
-    // County-based loan classification
-    const county = body.county || null;
-    let loanClassification = null;
-    let countyLimits = null;
-    if (county && scenario.state) {
-      countyLimits = getLoanLimits(scenario.state, county);
-      if (countyLimits) {
-        if (scenario.loanType === 'fha') {
-          // FHA limits: floor = 65% of baseline, ceiling follows county conforming (capped at 150% baseline)
-          const fhaFloor = countyLimits.fhaLimit; // getLoanLimits returns the correct FHA limit per county
-          // In baseline counties, fhaFloor = 65% of baseline ($541K). In high-cost, it's the county limit.
-          // FHA high-balance = between FHA floor and county FHA limit
-          const fhaBaseline = Math.round(832750 * 0.65); // $541,288 — standard FHA floor
-          if (loanAmount <= fhaBaseline) {
-            loanClassification = 'conforming';
-          } else if (loanAmount <= fhaFloor) {
-            loanClassification = 'highBalance';
-          } else {
-            loanClassification = 'jumbo';
-          }
-        } else {
-          // Conventional + VA: use standard classification
-          loanClassification = classifyLoan(loanAmount, scenario.state, county);
-        }
-      }
-    }
-
-    const lockDays = body.lockDays || 30;
-    const termFilter = body.term || 30;
-    const allLenders = await loadRateData();
-    const results = [];
-
-    for (const lenderData of allLenders) {
-      const lenderId = lenderData.lenderId;
-
-      // Build broker config from DB lender data (comp rate, caps, fees)
-      const brokerConfig = {
-        compRate: lenderData.compRate || FALLBACK_COMP_RATE,
-        compCapPurchase: lenderData.compCap?.purchase || 3595,
-        compCapRefi: lenderData.compCap?.refinance || 3595,
-        fhaUfmip: lenderData.fhaUfmip || 0.0175,
-      };
-
-      // Load adjustments from DB for this loan type — skip lenders with no rules
-      const lenderAdj = await getDbLenderAdj(lenderId, scenario.loanType);
-      if (!lenderAdj) continue;
-
-      for (const program of lenderData.programs) {
-        // Term filter
-        if (program.term !== termFilter) continue;
-
-        // Loan type filter
-        if (scenario.loanType && program.loanType !== scenario.loanType) continue;
-
-        // Occupancy filter — only primary for now
-        if (program.occupancy && program.occupancy !== 'primary') continue;
-
-        // Loan amount range filter
-        if (program.loanAmountRange) {
-          const { min, max } = program.loanAmountRange;
-          if (min && loanAmount <= min) continue;
-          if (max && loanAmount > max) continue;
-        }
-
-        // Product type filter (fixed vs arm)
-        if (body.productType && program.productType !== body.productType) continue;
-
-        // County loan limit filter — only when county is provided
-        if (loanClassification) {
-          if (loanClassification === 'conforming' && program.isHighBalance) continue;
-          // highBalance: show BOTH conforming AND high-balance products
-          if (loanClassification === 'jumbo') continue; // no agency products for jumbo
-        }
-
-        // Get rates for requested lock period
-        const lockRates = program.rates.filter(r => r.lockDays === lockDays);
-        if (lockRates.length === 0) continue;
-
-        // Build product object for pricing-v2
-        const product = {
-          name: program.name || program.rawName,
-          lenderCode: lenderId,
-          term: program.term,
-          productType: program.productType || 'fixed',
-          investor: program.investor || 'fnma',
-          tier: program.tier || 'core',
-          uwFee: lenderData.lenderFee || 999,
-        };
-
-        // LLPA grids from parsed rate sheet data
-        const llpaGrids = lenderData.llpas || null;
-
-        for (const rateEntry of lockRates) {
-          const result = priceRate(rateEntry, product, scenario, lenderAdj, brokerConfig, llpaGrids);
-          results.push(result);
-        }
-      }
-    }
-
-    // Sort by rate ascending
-    results.sort((a, b) => a.rate - b.rate);
-
-    const effectiveDate = await getEffectiveDate();
-
-    return NextResponse.json({
-      scenario,
-      effectiveDate,
-      loanClassification,
-      countyLimits: countyLimits ? {
-        county: countyLimits.county,
-        state: countyLimits.state,
-        conformingLimit: countyLimits.conforming1Unit,
-        fhaLimit: countyLimits.fhaLimit,
-        isHighCost: !countyLimits.isBaseline,
-      } : null,
-      resultCount: results.length,
-      results,
-    }, {
+    return NextResponse.json(result, {
       headers: {
         'Cache-Control': 'public, s-maxage=60, max-age=30, stale-while-revalidate=60',
       },
