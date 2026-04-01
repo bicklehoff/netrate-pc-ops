@@ -559,11 +559,17 @@ export default function PipelineTable({ loans, allLoans, mloList, selectedIds, o
     switch (col.key) {
       case 'borrowerName':
         return (
-          <Link href={`/portal/mlo/loans/${loan.id}`} className="block">
-            <span className="font-bold text-slate-900">{loan.borrowerName}</span>
-            <span className="block text-xs text-gray-400 mt-0.5 truncate">
-              ···{loan.ssnLastFour}{loan.propertyStreet ? ` · ${loan.propertyStreet}` : ''}
-            </span>
+          <Link href={`/portal/mlo/loans/${loan.id}`} className="flex items-center gap-2">
+            <img
+              src={`https://ui-avatars.com/api/?name=${encodeURIComponent((loan.borrowerName || '?').split(' ').map(n => n[0]).join(''))}&size=32&background=0891b2&color=fff&bold=true&format=svg`}
+              alt="" className="w-7 h-7 rounded-full shrink-0"
+            />
+            <div className="min-w-0">
+              <span className="block font-bold text-slate-900 truncate">{loan.borrowerName}</span>
+              {loan.borrowerEmail && (
+                <span className="block text-[10px] text-slate-400 truncate">{loan.borrowerEmail}</span>
+              )}
+            </div>
           </Link>
         );
       case 'loanNumber':
@@ -591,9 +597,17 @@ export default function PipelineTable({ loans, allLoans, mloList, selectedIds, o
           <EditableSelect value={loan.mloId || ''} options={mloOptions}
             onSave={val => onLoanUpdate(loan.id, { mloId: val || null })}
             renderValue={val => {
-              if (!val) return <span className="text-gray-300 text-sm">Unassigned</span>;
+              if (!val) return <span className="text-slate-300 text-sm">Unassigned</span>;
               const mlo = mloList.find(m => m.id === val);
-              return <span className="text-sm text-gray-700">{mlo ? mlo.name : 'Unknown'}</span>;
+              const name = mlo ? mlo.name : 'Unknown';
+              const initials = name.split(' ').map(n => n[0]).join('');
+              const short = name.split(' ').length > 1 ? `${name.split(' ')[0][0]}. ${name.split(' ').slice(1).join(' ')}` : name;
+              return (
+                <span className="flex items-center gap-1.5 text-sm font-medium text-slate-800">
+                  <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(initials)}&size=24&background=64748b&color=fff&bold=true&format=svg`} alt="" className="w-5 h-5 rounded-full" />
+                  {short}
+                </span>
+              );
             }}
           />
         );
@@ -748,12 +762,12 @@ export default function PipelineTable({ loans, allLoans, mloList, selectedIds, o
               return (
                 <React.Fragment key={loan.id}>
                   <tr className={`transition-colors ${selectedIds.has(loan.id) ? 'bg-brand/5' : isExpanded ? 'bg-gray-50' : 'hover:bg-gray-50'}`}>
-                    <td className="pl-2 py-3 w-6">
+                    <td className="pl-2 py-3.5 w-6">
                       <button onClick={() => setExpandedId(isExpanded ? null : loan.id)} className="text-gray-400 hover:text-gray-600 text-xs">
                         {isExpanded ? '▼' : '▶'}
                       </button>
                     </td>
-                    <td className="px-3 py-3">
+                    <td className="px-3 py-3.5">
                       <input type="checkbox" checked={selectedIds.has(loan.id)} onChange={() => {
                         const next = new Set(selectedIds);
                         if (next.has(loan.id)) next.delete(loan.id); else next.add(loan.id);
@@ -761,7 +775,7 @@ export default function PipelineTable({ loans, allLoans, mloList, selectedIds, o
                       }} className="rounded border-gray-300 text-brand focus:ring-brand/30" />
                     </td>
                     {visibleCols.map(col => (
-                      <td key={col.key} className={`px-3 py-3 ${col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : ''} ${col.key === 'borrowerName' ? 'max-w-[200px]' : ''}`}>
+                      <td key={col.key} className={`px-3 py-3.5 ${col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : ''} ${col.key === 'borrowerName' ? 'max-w-[200px]' : ''}`}>
                         {renderCell(loan, col)}
                       </td>
                     ))}

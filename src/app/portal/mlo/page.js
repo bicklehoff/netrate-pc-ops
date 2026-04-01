@@ -408,33 +408,26 @@ export default function MloDashboardPage() {
 
 
 
-      {/* Tier 1: Big group filters */}
-      <div className="flex items-center gap-2 mb-2">
+      {/* Tier 1: Summary cards */}
+      <div className="flex items-center gap-3 mb-3">
         {TIER1_FILTERS.map((t) => {
           const isActive = tier1 === t.value;
-          const isMuted = t.value === 'cancelled';
           const count = tier1Counts[t.value] || 0;
           return (
             <button
               key={t.value}
               onClick={() => { setTier1(t.value); setTier2(null); }}
-              className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${
+              className={`flex flex-col items-center px-5 py-2 rounded-xl transition-all ${
                 isActive
-                  ? isMuted
-                    ? 'bg-gray-600 text-white'
-                    : t.value === 'settled'
-                      ? 'bg-green-700 text-white'
-                      : 'bg-brand text-white'
-                  : isMuted
-                    ? 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-500'
-                    : t.value === 'settled'
-                      ? 'bg-green-50 text-green-700 hover:bg-green-100'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  ? 'bg-white border-2 border-primary shadow-sm'
+                  : 'bg-white border border-slate-200 hover:border-slate-300'
               }`}
             >
-              {t.label}
-              <span className={`ml-1.5 text-xs ${isActive ? 'opacity-80' : 'opacity-60'}`}>
+              <span className={`text-2xl font-black tabular-nums ${isActive ? 'text-primary' : 'text-slate-900'}`}>
                 {count}
+              </span>
+              <span className={`text-[10px] font-bold uppercase tracking-wider ${isActive ? 'text-primary' : 'text-slate-400'}`}>
+                {t.label}
               </span>
             </button>
           );
@@ -444,7 +437,7 @@ export default function MloDashboardPage() {
           <select
             value={mloFilter}
             onChange={(e) => setMloFilter(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand"
+            className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
           >
             <option value="all">All LOs</option>
             <option value="unassigned">Unassigned</option>
@@ -457,7 +450,7 @@ export default function MloDashboardPage() {
             placeholder="Search borrower, lender, address..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand"
+            className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
           />
         </div>
       </div>
