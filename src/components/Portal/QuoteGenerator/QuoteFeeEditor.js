@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scenario, quoteId, onSaveDraft, loading, onSendToBorrower }) {
+export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scenario, quoteId, onSaveDraft, loading, onSendToBorrower, onPreviewPDF }) {
   const [expanded, setExpanded] = useState({});
 
   const toggle = (section) => setExpanded(prev => ({ ...prev, [section]: !prev[section] }));
@@ -157,13 +157,20 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
           <button
             onClick={onSaveDraft}
             disabled={loading}
-            className="px-5 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50 transition-colors"
+            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50 transition-colors"
           >
-            {loading ? 'Saving...' : 'Save Draft'}
+            Save Draft
+          </button>
+          <button
+            onClick={onPreviewPDF}
+            disabled={loading || selectedRates.length === 0}
+            className="px-4 py-2 border border-cyan-300 text-cyan-700 bg-cyan-50 rounded-lg text-sm font-medium hover:bg-cyan-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            Preview PDF
           </button>
           <button
             onClick={onSendToBorrower}
-            disabled={loading || !scenario.borrowerEmail}
+            disabled={loading || !scenario.borrowerEmail || selectedRates.length === 0}
             className="px-5 py-2 bg-cyan-600 text-white rounded-lg text-sm font-bold hover:bg-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             title={!scenario.borrowerEmail ? 'Add borrower email to send' : 'Send quote with PDF to borrower'}
           >

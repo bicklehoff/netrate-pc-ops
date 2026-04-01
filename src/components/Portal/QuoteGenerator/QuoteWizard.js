@@ -67,10 +67,8 @@ export default function QuoteWizard({ prefill }) {
       setFees(data.fees);
       setQuoteId(data.quote?.id);
 
-      // Pre-select the auto-picked scenarios
-      if (data.quote?.scenarios) {
-        setSelectedRates(data.quote.scenarios);
-      }
+      // Don't auto-select — let MLO choose rates
+      setSelectedRates([]);
 
       setStep(1);
     } catch (err) {
@@ -128,6 +126,14 @@ export default function QuoteWizard({ prefill }) {
       setError('Add borrower email before sending');
       return;
     }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(scenario.borrowerEmail)) {
+      setError('Enter a valid email address');
+      return;
+    }
+    if (selectedRates.length === 0) {
+      setError('Select at least one rate before sending');
+      return;
+    }
 
     // Save latest selections first
     await handleSaveDraft();
@@ -154,6 +160,44 @@ export default function QuoteWizard({ prefill }) {
       setLoading(false);
     }
   }, [quoteId, scenario.borrowerEmail, handleSaveDraft]);
+
+  const handlePreviewPDF = useCallback(async () => {
+    if (selectedRates.length === 0) return;
+    try {
+      const [{ pdf }, { default: QuotePDF }] = await Promise.all([
+        import('@react-pdf/renderer'),
+        import('./QuotePDF'),
+      ]);
+
+      const blob = await pdf(
+        QuotePDF({
+          quote: {
+            borrowerName: scenario.borrowerName || 'Borrower',
+            purpose: scenario.purpose,
+            loanAmount: scenario.loanAmount,
+            propertyValue: scenario.propertyValue,
+            ltv: scenario.ltv,
+            fico: scenario.fico,
+            loanType: scenario.loanType,
+            state: scenario.state,
+            county: scenario.county,
+            term: scenario.term,
+            currentBalance: scenario.currentBalance,
+          },
+          scenarios: selectedRates,
+          fees,
+          closingDate: scenario.closingDate || null,
+          fundingDate: scenario.fundingDate || null,
+          firstPaymentDate: scenario.firstPaymentDate || null,
+        })
+      ).toBlob();
+
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    } catch (err) {
+      setError('PDF preview failed: ' + err.message);
+    }
+  }, [selectedRates, scenario, fees]);
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -239,6 +283,7 @@ export default function QuoteWizard({ prefill }) {
           quoteId={quoteId}
           onSaveDraft={handleSaveDraft}
           onSendToBorrower={handleSendToBorrower}
+          onPreviewPDF={handlePreviewPDF}
           loading={loading}
         />
       )}

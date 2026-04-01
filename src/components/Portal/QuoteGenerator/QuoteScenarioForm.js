@@ -217,6 +217,7 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
               placeholder="80027"
               className="w-full rounded-lg border-gray-300 text-sm focus:ring-cyan-500 focus:border-cyan-500"
             />
+            {scenario.county && <div className="text-[10px] text-cyan-600 mt-0.5">{scenario.county} County, {scenario.state}</div>}
           </div>
           <SelectField label="State" value={scenario.state} options={STATES.map(s => ({ value: s, label: s }))} onChange={v => { update('state', v); update('county', ''); }} />
           <div>
@@ -231,6 +232,14 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
             </select>
           </div>
           <SelectField label="Lock Days" value={scenario.lockDays} options={LOCK_DAYS.map(d => ({ value: d, label: `${d} Days` }))} onChange={v => update('lockDays', Number(v))} />
+        </div>
+
+        {/* Closing dates */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Field label="Closing Date" value={scenario.closingDate || ''} onChange={v => update('closingDate', v)} type="date" />
+          <Field label="Funding Date" value={scenario.fundingDate || ''} onChange={v => update('fundingDate', v)} type="date" />
+          <Field label="First Payment" value={scenario.firstPaymentDate || ''} onChange={v => update('firstPaymentDate', v)} type="date" />
+          <Field label="Loan Payoff (Refi)" value={scenario.currentBalance || ''} onChange={v => update('currentBalance', v)} type="number" placeholder="Existing balance" disabled={isPurchase} />
         </div>
 
         {/* Loan limit badge */}
