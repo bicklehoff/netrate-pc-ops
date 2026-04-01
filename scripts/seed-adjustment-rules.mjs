@@ -536,57 +536,75 @@ function seedLenderConfig() {
     }
   }
 
-  // FHA additional adjustments
-  if (cfg.fhaAdditional) {
-    const fha = cfg.fhaAdditional;
+  // Core feature adjustments — seed each feature block with its own loanTypes
+  // coreFeatures = all loan types (conv/fha/va), fhaOnlyFeatures = FHA only
+  // Legacy key: fhaAdditional (treated as FHA-only for backwards compat)
+  const featureBlocks = [
+    cfg.coreFeatures,
+    cfg.fhaOnlyFeatures,
+    !cfg.coreFeatures && !cfg.fhaOnlyFeatures ? cfg.fhaAdditional : null, // legacy fallback
+  ].filter(Boolean);
+
+  for (const coreFeatures of featureBlocks) {
+    const loanTypes = coreFeatures.loanTypes || ['fha'];
 
     // FICO band adjustments
-    if (fha.ficoAdj) {
-      for (const [band, value] of Object.entries(fha.ficoAdj)) {
+    if (coreFeatures.ficoAdj) {
+      for (const [band, value] of Object.entries(coreFeatures.ficoAdj)) {
         if (value === 0) continue;
         const match = band.match(/(\d+)-(\d+|max)/);
         if (!match) continue;
-        addRow({ adjustmentType: 'productFeature', loanType: 'fha', featureName: 'ficoAdj',
-          ficoMin: parseInt(match[1]), ficoMax: match[2] === 'max' ? 999 : parseInt(match[2]), value, sourceFile: 'lender-config.json' });
+        for (const lt of loanTypes) {
+          addRow({ adjustmentType: 'productFeature', loanType: lt, featureName: 'ficoAdj',
+            ficoMin: parseInt(match[1]), ficoMax: match[2] === 'max' ? 999 : parseInt(match[2]), value, sourceFile: 'lender-config.json' });
+        }
       }
     }
 
     // Purpose adjustments
-    if (fha.purposeAdj) {
+    if (coreFeatures.purposeAdj) {
       const purposeMap = { purchase: 'purchase', rateTermRefi: 'refinance', cashOut: 'cashout' };
-      for (const [purpose, value] of Object.entries(fha.purposeAdj)) {
+      for (const [purpose, value] of Object.entries(coreFeatures.purposeAdj)) {
         if (value === 0) continue;
-        addRow({ adjustmentType: 'productFeature', loanType: 'fha', featureName: 'purposeAdj',
-          purpose: purposeMap[purpose] || purpose, value, sourceFile: 'lender-config.json' });
+        for (const lt of loanTypes) {
+          addRow({ adjustmentType: 'productFeature', loanType: lt, featureName: 'purposeAdj',
+            purpose: purposeMap[purpose] || purpose, value, sourceFile: 'lender-config.json' });
+        }
       }
     }
 
     // State adjustments
-    if (fha.stateAdj?.states && fha.stateAdj.value !== 0) {
-      for (const state of fha.stateAdj.states) {
-        addRow({ adjustmentType: 'productFeature', loanType: 'fha', featureName: 'stateAdj',
-          state, value: fha.stateAdj.value, sourceFile: 'lender-config.json' });
+    if (coreFeatures.stateAdj?.states && coreFeatures.stateAdj.value !== 0) {
+      for (const state of coreFeatures.stateAdj.states) {
+        for (const lt of loanTypes) {
+          addRow({ adjustmentType: 'productFeature', loanType: lt, featureName: 'stateAdj',
+            state, value: coreFeatures.stateAdj.value, sourceFile: 'lender-config.json' });
+        }
       }
     }
 
     // Property type
-    if (fha.propertyType) {
-      for (const [propType, value] of Object.entries(fha.propertyType)) {
+    if (coreFeatures.propertyType) {
+      for (const [propType, value] of Object.entries(coreFeatures.propertyType)) {
         if (value === 0) continue;
-        addRow({ adjustmentType: 'productFeature', loanType: 'fha', featureName: 'propertyType',
-          productGroup: propType, value, sourceFile: 'lender-config.json' });
+        for (const lt of loanTypes) {
+          addRow({ adjustmentType: 'productFeature', loanType: lt, featureName: 'propertyType',
+            productGroup: propType, value, sourceFile: 'lender-config.json' });
+        }
       }
     }
 
     // Occupancy (investment/second home)
-    if (fha.occupancy) {
-      for (const [occType, value] of Object.entries(fha.occupancy)) {
+    if (coreFeatures.occupancy) {
+      for (const [occType, value] of Object.entries(coreFeatures.occupancy)) {
         if (value === 0) continue;
-        addRow({ adjustmentType: 'productFeature', loanType: 'fha', featureName: 'occupancy',
-          productGroup: occType, value, sourceFile: 'lender-config.json' });
+        for (const lt of loanTypes) {
+          addRow({ adjustmentType: 'productFeature', loanType: lt, featureName: 'occupancy',
+            productGroup: occType, value, sourceFile: 'lender-config.json' });
+        }
       }
     }
-  }
+  } // end for featureBlocks
 }
 
 // ─── Product Loan Amount LLPAs (master per-product adjusters) ───────

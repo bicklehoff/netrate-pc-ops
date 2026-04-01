@@ -79,12 +79,18 @@
       "value": 0.1
     }
   ],
-  "fhaAdditional": {
+  "coreFeatures": {
+    "_note": "FICO adj applies to all Core loan types (LS: 'FICO 640-699, Loan Type Conf/FHA/VA'). State/property/occupancy apply to FHA only.",
+    "loanTypes": ["conventional", "fha", "va"],
     "ficoAdj": {
       "0-619": -1.1,
       "620-639": -0.4,
       "640-699": -0.1
-    },
+    }
+  },
+  "fhaOnlyFeatures": {
+    "_note": "These apply to FHA Core only — not conventional or VA",
+    "loanTypes": ["fha"],
     "purposeAdj": {
       "purchase": 0
     },
