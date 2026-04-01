@@ -43,10 +43,12 @@ export function useApiPricing(scenario) {
           creditScore: scenario.fico,
           propertyValue: scenario.propertyValue,
           propertyType: scenario.propertyType,
-          term: 30,
+          term: scenario.term || 30,
           productType: scenario.productType || 'fixed',
           lockDays: 30,
           state: scenario.state,
+          vaFundingFeeExempt: scenario.vaFundingFeeExempt || false,
+          vaSubsequentUse: scenario.vaSubsequentUse || false,
         }),
       });
       const data = await resp.json();
@@ -113,7 +115,7 @@ export function useApiPricing(scenario) {
       if (err.name !== 'AbortError') setResults(null);
     }
     setLoading(false);
-  }, [scenario.loanAmount, scenario.fico, scenario.propertyValue, scenario.purpose, scenario.loanType, scenario.propertyType, scenario.productType, scenario.state, scenario.currentRate]);
+  }, [scenario.loanAmount, scenario.fico, scenario.propertyValue, scenario.purpose, scenario.loanType, scenario.propertyType, scenario.productType, scenario.term, scenario.state, scenario.currentRate, scenario.vaFundingFeeExempt, scenario.vaSubsequentUse]);
 
   return { results, loading, fetchRates, effectiveDate };
 }

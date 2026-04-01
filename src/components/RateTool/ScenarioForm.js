@@ -93,13 +93,21 @@ export default function ScenarioForm({ scenario, onChange, onSubmit, loading }) 
               const newDown = lt === 'fha' ? 3.5 : lt === 'va' ? 0 : 25;
               const newFico = lt === 'fha' ? 680 : lt === 'va' ? 720 : 780;
               const newPV = lt === 'fha' ? 400000 : lt === 'va' ? 400000 : 533334;
-              onChange({ ...scenario, loanType: lt, downPaymentPct: newDown, fico: newFico, propertyValue: newPV });
+              onChange({ ...scenario, loanType: lt, downPaymentPct: newDown, fico: newFico, propertyValue: newPV, vaFundingFeeExempt: false, vaSubsequentUse: false });
               setLastEdited('pct');
             }}
             className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm bg-white">
             <option value="conventional">Conventional</option>
             <option value="fha">FHA</option>
             <option value="va">VA</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Term</label>
+          <select value={scenario.term || 30} onChange={e => update("term", parseInt(e.target.value, 10))}
+            className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm bg-white">
+            <option value={30}>30 Year</option>
+            <option value={15}>15 Year</option>
           </select>
         </div>
         <div>
@@ -180,6 +188,41 @@ export default function ScenarioForm({ scenario, onChange, onSubmit, loading }) 
             <span>580</span><span>660</span><span>740</span><span>850</span>
           </div>
         </div>
+        {/* VA-specific fields */}
+        {scenario.loanType === 'va' && (
+          <>
+            <div className="flex items-center gap-3 py-1">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={scenario.vaFundingFeeExempt || false}
+                  onChange={e => update("vaFundingFeeExempt", e.target.checked)}
+                  className="rounded border-gray-300 text-brand focus:ring-brand/30" />
+                <span className="text-xs font-medium text-gray-600">Exempt from VA Funding Fee</span>
+              </label>
+              <div className="group relative">
+                <span className="text-gray-400 cursor-help text-xs">ⓘ</span>
+                <div className="hidden group-hover:block absolute bottom-full left-0 mb-1 w-56 bg-gray-800 text-white text-xs rounded-lg p-2 z-50">
+                  Veterans with a service-connected disability (10%+) are exempt from the VA funding fee.
+                </div>
+              </div>
+            </div>
+            {!scenario.vaFundingFeeExempt && (
+              <div className="flex items-center gap-3 py-1">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={scenario.vaSubsequentUse || false}
+                    onChange={e => update("vaSubsequentUse", e.target.checked)}
+                    className="rounded border-gray-300 text-brand focus:ring-brand/30" />
+                  <span className="text-xs font-medium text-gray-600">Subsequent Use</span>
+                </label>
+                <div className="group relative">
+                  <span className="text-gray-400 cursor-help text-xs">ⓘ</span>
+                  <div className="hidden group-hover:block absolute bottom-full left-0 mb-1 w-56 bg-gray-800 text-white text-xs rounded-lg p-2 z-50">
+                    Check this if you&apos;ve used your VA loan benefit before. The funding fee is higher for subsequent use.
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
         {!isPurchase && (
           <div>
             <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Current Rate</label>
