@@ -79,6 +79,8 @@ export default function LoanDetailShell({ loan, onRefresh }) {
           <OverviewSection
             loan={loan}
             onRefresh={onRefresh}
+            updateLoanField={updateLoanField}
+            updateDates={updateDates}
           />
         );
       case 'loan-info':
