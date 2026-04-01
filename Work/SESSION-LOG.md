@@ -5,6 +5,65 @@
 
 ---
 
+## 2026-04-01 — Dev — Twilio + MCR Push + Contact→Deal Architecture
+**Actor:** pc-dev
+
+### What was built
+
+**Twilio A2P Campaign**
+- Fixed scheduled task `twilio-a2p-daily` — was hitting service-level endpoint instead of campaign-level, giving false "pending" status for 5 days
+- Task now checks campaign-specific endpoint, detects instant rejections, verifies website pages the reviewer will check
+- Resubmitted campaign (attempt 8): checked "Direct Lending" content attribute, set real privacy/terms URLs (were placeholders), clean message samples. Under review.
+
+**MCR Push Route**
+- `POST /api/portal/mlo/mcr/push` — admin-only, sends full loan pipeline snapshot to TrackerPortal
+- Auto-classifies QM status from loan type (conv/FHA/VA=QM, DSCR/bank stmt=Non-QM, HECM=Not Subject)
+- Maps `settled`→FUNDED, normalizes state names to USPS 2-letter codes
+- `GET /api/portal/mlo/mcr/push` — preview mode with by-state breakdown
+- Sent full MCR API spec to Mac via relay (endpoint, payload, QM rules, Q1 2026 seeds)
+
+**Contact→Deal Architecture**
+- Schema: `contactId` FK on Loan, `applicationDate` + `isApplication` gate fields, fixed LoanContact→Contact FK relation
+- `src/lib/application-gate.js` — 5-field Reg B check (name, credit, property, amount, income)
+- `POST /api/portal/mlo/contacts/:id/new-deal` — create loan pre-filled from MLO-selected prior loan
+- `GET /api/portal/mlo/contacts/:id/loans` — contact loan history with template flags
+- Wired gate into loan PATCH handler + borrower apply route
+- Migration: linked 839 existing loans to Contacts (582 new Contacts created)
+
+**Data Cleanup**
+- Deleted 44 test records (manny doe, bob rob, Unknown Unknown, etc.)
+- Normalized 616 state names (Colorado→CO, co→CO, "CO 80016"→CO)
+- Fixed loan types: Pritchett→VA, Devoe→HECM, 7 'other'→conventional
+- Merged 577 duplicate contacts (preserved MLO assignments from orphans)
+- Identified Q4 2025 seed loans: Flores, Hall, Havens, Osborne, Ritchie
+- Hall: file closed (AC060) — contract fell through, still shopping = new app when ready
+- Wagner (TX): confirmed withdrawn in Q1
+
+### Key decisions
+- QM auto-classification: product type drives it. 43% DTI cap replaced by price-based test in 2021 — AUS-approved conventional loans are QM regardless of DTI
+- Application gate: loan enters MCR pipeline only when all 5 Reg B fields present
+- Contact is lightweight (identity + CRM only) — no SSN, no financial data on Contact
+- Clone = new Deal from Contact, not duplicate loan. MLO picks source loan.
+- Co-borrowers are separate Contacts linked via LoanBorrower with role field
+- MCR push is on-demand snapshot, not event-driven
+- Lead→Loan conversion: Leads can generate quotes, convert to Loan when ready (spec for tomorrow)
+
+### Relays
+- Sent: MCR API spec to Mac (relay cmngaxi5f) — full payload, QM rules, Q1 2026 seeds
+- Resolved: Mac's MCR data feed request (cmng5g5aa)
+- Open: Claw morning commentary (cmng4gvdz0000y4uryvrq9llh) — not processed this session
+
+### Open items
+- [ ] Build Lead→Loan conversion flow + quotes from Leads
+- [ ] Contact detail page UI (loan history + "New App" + "New Lead" buttons)
+- [ ] Twilio A2P campaign — awaiting review result
+- [ ] LenDox webhook pushes 'other' as loan type — fix or enforce on our side
+- [ ] 5 'manny doe' settled loans need real borrower names
+- [ ] Havens duplicate loan record (settled + archived) — review
+- [ ] Q4 2025 CO AC080 was overstated by 1 (Hall) — may need revision
+
+---
+
 ## 2026-04-01 — Dev — Full 1003 Application Build (All 3 Spec Sessions)
 **Actor:** pc-dev
 
