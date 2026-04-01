@@ -68,15 +68,72 @@ async function getNationalRates() {
   }
 }
 
+const FRED_BASE = 'https://api.stlouisfed.org/fred/series/observations';
+const FRED_SERIES = {
+  MORTGAGE30US: '30yr Fixed (Freddie Mac)',
+  MORTGAGE15US: '15yr Fixed (Freddie Mac)',
+  DGS2: '2yr Treasury', DGS5: '5yr Treasury',
+  DGS10: '10yr Treasury', DGS30: '30yr Treasury',
+};
+const FRED_FALLBACK = {
+  MORTGAGE30US: [{ date: '2026-03-26', value: 6.38 }, { date: '2026-03-20', value: 6.22 }],
+  MORTGAGE15US: [{ date: '2026-03-26', value: 5.75 }, { date: '2026-03-20', value: 5.59 }],
+  DGS2: [{ date: '2026-03-27', value: 3.919 }, { date: '2026-03-26', value: 3.978 }],
+  DGS5: [{ date: '2026-03-27', value: 4.076 }, { date: '2026-03-26', value: 4.099 }],
+  DGS10: [{ date: '2026-03-27', value: 4.434 }, { date: '2026-03-26', value: 4.42 }],
+  DGS30: [{ date: '2026-03-27', value: 4.97 }, { date: '2026-03-26', value: 4.936 }],
+};
+
 async function getFredData() {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL
-      || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
-    const res = await fetch(`${baseUrl}/api/rates/fred?series=all&days=365`, {
-      next: { revalidate: 3600 },
-    });
-    if (!res.ok) throw new Error('FRED API error');
-    return res.json();
+    const apiKey = process.env.FRED_API_KEY;
+    const start = new Date();
+    start.setDate(start.getDate() - 365);
+    const startStr = start.toISOString().split('T')[0];
+
+    const seriesIds = Object.keys(FRED_SERIES);
+    let usedFallback = false;
+
+    const fetchResults = await Promise.all(
+      seriesIds.map(async (id) => {
+        if (!apiKey) return [id, null];
+        try {
+          const url = `${FRED_BASE}?series_id=${id}&api_key=${apiKey}&file_type=json&observation_start=${startStr}&sort_order=desc`;
+          const res = await fetch(url, { next: { revalidate: 3600 } });
+          if (!res.ok) return [id, null];
+          const data = await res.json();
+          const obs = (data.observations || [])
+            .filter(o => o.value !== '.')
+            .map(o => ({ date: o.date, value: parseFloat(o.value) }));
+          return [id, obs.length > 0 ? obs : null];
+        } catch { return [id, null]; }
+      })
+    );
+
+    const results = {};
+    for (const [id, data] of fetchResults) {
+      if (data) { results[id] = data; }
+      else { results[id] = FRED_FALLBACK[id] || []; usedFallback = true; }
+    }
+
+    const latest = {};
+    for (const [key, obs] of Object.entries(results)) {
+      if (obs.length > 0) {
+        const cur = obs[0];
+        const prev = obs.length > 1 ? obs[1] : null;
+        latest[key] = {
+          value: cur.value, date: cur.date,
+          change: prev ? Math.round((cur.value - prev.value) * 1000) / 1000 : 0,
+          label: FRED_SERIES[key] || key,
+        };
+      }
+    }
+
+    return {
+      series: results, latest,
+      source: !apiKey ? 'fallback' : usedFallback ? 'partial-fallback' : 'fred',
+      ...(usedFallback && { fallbackDate: '2026-03-28', stale: true }),
+    };
   } catch (error) {
     console.error('Failed to fetch FRED data:', error);
     return { series: {}, latest: {}, source: 'error' };
