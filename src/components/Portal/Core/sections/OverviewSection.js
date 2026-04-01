@@ -1,7 +1,4 @@
 // OverviewSection — Dense, editable, full-width loan overview
-// Layout: Summary strip → Borrower+Property → Loan Terms+Rate Lock →
-//         Processing Timeline → Conditions+Key Dates → Source+Alerts
-
 'use client';
 
 import { useState } from 'react';
@@ -19,41 +16,28 @@ const MILESTONES = [
   { key: 'submitted_uw', label: 'UW', dateField: 'submittedToUwDate' },
   { key: 'cond_approved', label: 'Approved', dateField: 'condApprovedDate' },
   { key: 'ctc', label: 'CTC', dateField: 'ctcDate' },
-  { key: 'docs_out', label: 'Docs Out', dateField: 'docsOutDate' },
+  { key: 'docs_out', label: 'Docs', dateField: 'docsOutDate' },
   { key: 'funded', label: 'Funded', dateField: 'fundingDate' },
 ];
 
 const LOAN_TYPE_OPTIONS = [
-  { value: 'conventional', label: 'Conventional' },
-  { value: 'fha', label: 'FHA' },
-  { value: 'va', label: 'VA' },
-  { value: 'usda', label: 'USDA' },
-  { value: 'jumbo', label: 'Jumbo' },
-  { value: 'other', label: 'Other' },
+  { value: 'conventional', label: 'Conv' }, { value: 'fha', label: 'FHA' },
+  { value: 'va', label: 'VA' }, { value: 'usda', label: 'USDA' },
+  { value: 'jumbo', label: 'Jumbo' }, { value: 'other', label: 'Other' },
 ];
-
 const PURPOSE_OPTIONS = [
-  { value: 'purchase', label: 'Purchase' },
-  { value: 'refinance', label: 'Refinance' },
-  { value: 'cash_out', label: 'Cash-Out Refi' },
-  { value: 'heloc', label: 'HELOC' },
-  { value: 'hecm', label: 'HECM' },
-  { value: 'construction', label: 'Construction' },
+  { value: 'purchase', label: 'Purchase' }, { value: 'refinance', label: 'Refi' },
+  { value: 'cash_out', label: 'C/O Refi' }, { value: 'heloc', label: 'HELOC' },
+  { value: 'hecm', label: 'HECM' }, { value: 'construction', label: 'Construction' },
 ];
-
 const OCCUPANCY_OPTIONS = [
-  { value: 'primary', label: 'Primary' },
-  { value: 'secondary', label: 'Second Home' },
+  { value: 'primary', label: 'Primary' }, { value: 'secondary', label: '2nd Home' },
   { value: 'investment', label: 'Investment' },
 ];
-
 const PROPERTY_TYPE_OPTIONS = [
-  { value: 'SFH-Detached', label: 'SFH-Detached' },
-  { value: 'SFH-Attached', label: 'SFH-Attached' },
-  { value: 'Condo', label: 'Condo' },
-  { value: 'Townhome', label: 'Townhome' },
-  { value: 'Multi-Family', label: 'Multi-Family' },
-  { value: 'Manufactured', label: 'Manufactured' },
+  { value: 'SFH-Detached', label: 'SFH-Det' }, { value: 'SFH-Attached', label: 'SFH-Att' },
+  { value: 'Condo', label: 'Condo' }, { value: 'Townhome', label: 'Town' },
+  { value: 'Multi-Family', label: 'Multi' }, { value: 'Manufactured', label: 'Mfg' },
   { value: 'PUD', label: 'PUD' },
 ];
 
@@ -63,121 +47,53 @@ function fmt$(val) {
   if (!val) return '—';
   return `$${Number(val).toLocaleString('en-US', { minimumFractionDigits: 0 })}`;
 }
-
-function fmtDate(dateStr) {
-  if (!dateStr) return null;
-  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+function fmtDate(d) {
+  if (!d) return null;
+  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
-
 function fmtAddr(addr) {
-  if (!addr) return '—';
-  const street = addr.street || '';
-  const cityStateZip = [addr.city, addr.state, addr.zip].filter(Boolean).join(', ');
-  return { street: street || '—', cityStateZip: cityStateZip || '' };
+  if (!addr) return { street: '—', csz: '' };
+  return { street: addr.street || '—', csz: [addr.city, addr.state, addr.zip].filter(Boolean).join(', ') };
 }
-
 function getMilestoneIndex(status) {
-  const idx = MILESTONES.findIndex((m) => m.key === status);
+  const idx = MILESTONES.findIndex(m => m.key === status);
   return idx >= 0 ? idx : -1;
 }
-
-function isExpiringSoon(dateStr, days = 7) {
-  if (!dateStr) return false;
-  const diff = (new Date(dateStr) - new Date()) / 86400000;
+function isExpiringSoon(d, days = 7) {
+  if (!d) return false;
+  const diff = (new Date(d) - new Date()) / 86400000;
   return diff >= 0 && diff <= days;
 }
-
-function isExpired(dateStr) {
-  if (!dateStr) return false;
-  return new Date(dateStr) < new Date();
-}
+function isExpired(d) { return d ? new Date(d) < new Date() : false; }
 
 function computeAlerts(loan, dates) {
-  const alerts = [];
-  if (!loan.creditScore) alerts.push('FICO missing');
-  if (!loan.estimatedValue || Number(loan.estimatedValue) === 0) alerts.push('Appraised Value missing');
-  if (!dates.lockedDate && !dates.lockExpiration) alerts.push('Rate not locked');
-  if (dates.lockExpiration && isExpired(dates.lockExpiration)) alerts.push('Lock EXPIRED');
-  if (dates.lockExpiration && isExpiringSoon(dates.lockExpiration)) alerts.push('Lock expires within 7 days');
-  if (dates.creditExpiration && isExpired(dates.creditExpiration)) alerts.push('Credit report EXPIRED');
-  if (!loan.lenderName) alerts.push('No lender assigned');
-  if (!loan.interestRate) alerts.push('Rate not set');
-  if (!loan.monthlyBaseIncome) alerts.push('Income missing');
-  return alerts;
+  const a = [];
+  if (!loan.creditScore) a.push('FICO missing');
+  if (!loan.estimatedValue || Number(loan.estimatedValue) === 0) a.push('Appraised Value missing');
+  if (!dates.lockedDate && !dates.lockExpiration) a.push('Rate not locked');
+  if (dates.lockExpiration && isExpired(dates.lockExpiration)) a.push('Lock EXPIRED');
+  else if (dates.lockExpiration && isExpiringSoon(dates.lockExpiration)) a.push('Lock expires soon');
+  if (dates.creditExpiration && isExpired(dates.creditExpiration)) a.push('Credit EXPIRED');
+  if (!loan.lenderName) a.push('No lender');
+  if (!loan.interestRate) a.push('Rate not set');
+  return a;
 }
 
-// ─── Section Header ─────────────────────────────────────────
+// ─── Tiny display components ────────────────────────────────
 
-function SectionHeader({ children }) {
+function RF({ label, value, warn, error }) {
   return (
-    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">{children}</h3>
-  );
-}
-
-// ─── Read-only Field (for non-editable data like borrower identity) ─
-
-function ReadField({ label, value, warn = false, error = false }) {
-  return (
-    <div>
-      <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">{label}</span>
-      <span className={`text-sm font-semibold ${error ? 'text-red-600' : warn ? 'text-amber-600' : value && value !== '—' ? 'text-slate-900' : 'text-slate-300'}`}>
-        {value || '—'}
-      </span>
+    <div className="min-w-0">
+      <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none mb-0.5">{label}</div>
+      <div className={`text-xs font-semibold leading-tight truncate ${error ? 'text-red-600' : warn ? 'text-amber-600' : value && value !== '—' ? 'text-slate-900' : 'text-slate-300'}`}>{value || '—'}</div>
     </div>
   );
 }
 
-// ─── Processing Task (compact) ──────────────────────────────
-
-function ProcessingTask({ label, dates: d, fields, updateDates }) {
-  // Determine status from dates
-  let statusIcon = '○';
-  let statusColor = 'text-slate-400';
-
-  const receivedField = fields.find(f => f.key.includes('Received') || f.key.includes('Bound') || f.key.includes('Pulled'));
-  const expiryField = fields.find(f => f.key.includes('Expir') || f.key.includes('Expiry'));
-
-  if (receivedField && d[receivedField.key]) {
-    if (expiryField && d[expiryField.key] && isExpired(d[expiryField.key])) {
-      statusIcon = '✕'; statusColor = 'text-red-600';
-    } else if (expiryField && d[expiryField.key] && isExpiringSoon(d[expiryField.key])) {
-      statusIcon = '!'; statusColor = 'text-amber-500';
-    } else {
-      statusIcon = '✓'; statusColor = 'text-emerald-600';
-    }
-  } else {
-    const orderedField = fields.find(f => f.key.includes('Ordered') || f.key.includes('Pulled'));
-    if (orderedField && d[orderedField.key]) {
-      statusIcon = '⏳'; statusColor = 'text-blue-500';
-    }
-  }
-
+function EF({ label, value, type = 'text', options, onSave, placeholder = '—' }) {
   return (
-    <div className="flex-1 min-w-[140px]">
-      <div className="flex items-center gap-1.5 mb-2">
-        <span className={`text-sm font-bold ${statusColor}`}>{statusIcon}</span>
-        <span className="text-xs font-bold uppercase tracking-wider text-slate-700">{label}</span>
-      </div>
-      <div className="space-y-1">
-        {fields.map(f => (
-          <div key={f.key} className="flex items-baseline justify-between gap-2">
-            <span className="text-[10px] text-slate-400 shrink-0">{f.label}</span>
-            {updateDates ? (
-              <EditableField
-                value={d[f.key] || null}
-                type="date"
-                onSave={val => updateDates({ [f.key]: val })}
-                placeholder="—"
-                className="text-right"
-              />
-            ) : (
-              <span className={`text-xs font-semibold ${d[f.key] ? 'text-slate-800' : 'text-slate-300'}`}>
-                {d[f.key] ? fmtDate(d[f.key]) : '—'}
-              </span>
-            )}
-          </div>
-        ))}
-      </div>
+    <div className="min-w-0">
+      <EditableField label={label} value={value} type={type} options={options} onSave={onSave} placeholder={placeholder} />
     </div>
   );
 }
@@ -189,332 +105,253 @@ export default function OverviewSection({ loan, onRefresh, updateLoanField, upda
   const [showPrequalModal, setShowPrequalModal] = useState(false);
   const dates = loan.dates || {};
   const conditions = loan.conditions || [];
-  const milestoneIndex = getMilestoneIndex(loan.status);
-  const addr = loan.propertyAddress;
+  const mi = getMilestoneIndex(loan.status);
   const borrower = loan.borrower || {};
   const coBorrowers = loan.loanBorrowers?.filter(lb => lb.borrowerType !== 'primary') || [];
   const alerts = computeAlerts(loan, dates);
+  const addr = fmtAddr(loan.propertyAddress);
 
-  const condNeeded = conditions.filter((c) => c.status === 'needed').length;
-  const condCleared = conditions.filter((c) => c.status === 'cleared' || c.status === 'waived').length;
-  const condWaived = conditions.filter((c) => c.status === 'waived').length;
+  const condNeeded = conditions.filter(c => c.status === 'needed').length;
+  const condCleared = conditions.filter(c => c.status === 'cleared' || c.status === 'waived').length;
   const condTotal = conditions.length;
 
-  const address = fmtAddr(addr);
-
-  // Compute LTV
   const loanAmt = Number(loan.loanAmount || 0);
   const propVal = Number(loan.purchasePrice || loan.estimatedValue || 0);
   const ltv = propVal > 0 ? ((loanAmt / propVal) * 100).toFixed(1) + '%' : '—';
 
-  // Lock expiry coloring
   const lockClass = dates.lockExpiration
     ? isExpired(dates.lockExpiration) ? 'text-red-600 font-bold'
       : isExpiringSoon(dates.lockExpiration) ? 'text-amber-600 font-bold'
-      : 'text-slate-900'
-    : '';
+      : '' : '';
 
   const save = updateLoanField || (() => Promise.resolve());
   const saveDates = updateDates || (() => Promise.resolve());
 
+  // Processing task status helper
+  const procStatus = (rcvKey, expKey, ordKey) => {
+    if (dates[rcvKey]) {
+      if (expKey && dates[expKey] && isExpired(dates[expKey])) return ['✕', 'text-red-600'];
+      if (expKey && dates[expKey] && isExpiringSoon(dates[expKey])) return ['!', 'text-amber-500'];
+      return ['✓', 'text-emerald-600'];
+    }
+    if (ordKey && dates[ordKey]) return ['⏳', 'text-blue-500'];
+    return ['○', 'text-slate-300'];
+  };
+
   return (
-    <div className="space-y-4">
-      {/* ─── Actions Bar ─── */}
-      <div className="flex items-center gap-3">
+    <div className="space-y-2">
+      {/* Actions */}
+      <div className="flex items-center gap-2">
         <button onClick={() => setShowPrequalModal(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold text-white bg-primary rounded-lg hover:bg-cyan-700 transition-colors shadow-sm">
-          Pre-Qual Letter
-        </button>
+          className="px-3 py-1.5 text-xs font-bold text-white bg-primary rounded-md hover:bg-cyan-700 transition-colors">Pre-Qual Letter</button>
       </div>
+      {showPrequalModal && <PrequalLetterModal loan={loan} session={session} onClose={() => setShowPrequalModal(false)} />}
+      {loan.status === 'funded' && <><PayrollSection loan={loan} onRefresh={onRefresh} /><CompensationSection loan={loan} /></>}
 
-      {showPrequalModal && (
-        <PrequalLetterModal loan={loan} session={session} onClose={() => setShowPrequalModal(false)} />
-      )}
-
-      {loan.status === 'funded' && (
-        <>
-          <PayrollSection loan={loan} onRefresh={onRefresh} />
-          <CompensationSection loan={loan} />
-        </>
-      )}
-
-      {/* ─── Alerts ─── */}
+      {/* Alerts */}
       {alerts.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex flex-wrap gap-3">
-          {alerts.map((a, i) => (
-            <span key={i} className="inline-flex items-center gap-1 text-xs font-bold text-amber-800">
-              <span className="text-amber-500">⚠</span> {a}
-            </span>
-          ))}
+        <div className="bg-amber-50 border border-amber-200 rounded-md px-3 py-1.5 flex flex-wrap gap-2">
+          {alerts.map((a, i) => <span key={i} className="text-[10px] font-bold text-amber-800">⚠ {a}</span>)}
         </div>
       )}
 
-      {/* ─── Pipeline Progress Bar ─── */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm px-5 py-3">
-        <div className="flex items-center justify-between">
-          {MILESTONES.map((milestone, i) => {
-            const isComplete = milestoneIndex >= i;
-            const isCurrent = milestoneIndex === i;
-            const dateVal = milestone.dateField ? dates[milestone.dateField] : null;
+      {/* Pipeline + Summary strip — combined */}
+      <div className="bg-white rounded-lg border border-slate-200 shadow-sm">
+        {/* Pipeline bar */}
+        <div className="flex items-center px-3 py-1.5 border-b border-slate-100">
+          {MILESTONES.map((m, i) => {
+            const done = mi >= i;
+            const cur = mi === i;
+            const dv = m.dateField ? dates[m.dateField] : null;
             return (
-              <div key={milestone.key} className="flex-1 flex flex-col items-center relative">
-                {i > 0 && (
-                  <div className={`absolute top-3 right-1/2 w-full h-1 -translate-y-1/2 ${isComplete ? 'bg-primary' : 'bg-slate-200'}`}
-                    style={{ left: '-50%' }} />
-                )}
-                <div className={`relative z-10 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
-                  isCurrent ? 'bg-primary text-white ring-4 ring-primary/20'
-                    : isComplete ? 'bg-primary text-white' : 'bg-slate-200 text-slate-400'
-                }`}>
-                  {isComplete ? '✓' : i + 1}
+              <div key={m.key} className="flex-1 flex items-center gap-1">
+                {i > 0 && <div className={`flex-1 h-0.5 ${done ? 'bg-primary' : 'bg-slate-200'}`} />}
+                <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 ${
+                  cur ? 'bg-primary text-white ring-2 ring-primary/30' : done ? 'bg-primary text-white' : 'bg-slate-200 text-slate-400'
+                }`}>{done ? '✓' : i + 1}</div>
+                <div className="hidden sm:block">
+                  <div className={`text-[9px] font-bold leading-none ${cur ? 'text-primary' : done ? 'text-slate-700' : 'text-slate-400'}`}>{m.label}</div>
+                  {dv && <div className="text-[8px] text-slate-400 leading-none">{fmtDate(dv)}</div>}
                 </div>
-                <span className={`text-[10px] mt-1 font-bold ${isCurrent ? 'text-primary' : isComplete ? 'text-slate-700' : 'text-slate-400'}`}>
-                  {milestone.label}
-                </span>
-                <span className="text-[10px] text-slate-400">{dateVal ? fmtDate(dateVal) : ''}</span>
+              </div>
+            );
+          })}
+        </div>
+        {/* Summary strip */}
+        <div className="grid grid-cols-4 lg:grid-cols-8 gap-x-4 gap-y-1 px-3 py-2">
+          <EF label="Loan Amt" value={loan.loanAmount} type="currency" onSave={v => save({ loanAmount: v })} />
+          <EF label="Rate" value={loan.interestRate} type="text" onSave={v => save({ interestRate: v })} />
+          <RF label="LTV" value={ltv} />
+          <EF label="FICO" value={loan.creditScore} type="text" onSave={v => save({ creditScore: v })} />
+          <RF label="Mo. Pmt" value={fmt$(loan.monthlyPayment)} />
+          <EF label="Closing" value={dates.estimatedClosing || dates.closingDate} type="date" onSave={v => saveDates({ estimatedClosing: v })} />
+          <div><div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none mb-0.5">Lock Exp</div>
+            <div className={`text-xs font-semibold leading-tight ${lockClass || 'text-slate-300'}`}>{dates.lockExpiration ? fmtDate(dates.lockExpiration) : '—'}</div></div>
+          <RF label="BIC" value={loan.ballInCourt || '—'} />
+        </div>
+      </div>
+
+      {/* Borrower + Property + Loan Terms + Rate Lock — 4 columns */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2">
+        {/* Borrower */}
+        <div className="bg-white rounded-lg border border-slate-200 shadow-sm px-3 py-2">
+          <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">Borrower</div>
+          <div className="text-sm font-bold text-slate-900 leading-tight">{borrower.firstName} {borrower.lastName}
+            {borrower.ssnLastFour && <span className="text-[10px] font-medium text-slate-400 ml-1">···{borrower.ssnLastFour}</span>}
+          </div>
+          {borrower.email && <a href={`mailto:${borrower.email}`} className="block text-xs text-primary font-semibold truncate">{borrower.email}</a>}
+          {borrower.phone && <a href={`tel:${borrower.phone}`} className="block text-xs text-primary font-semibold">{borrower.phone}</a>}
+          <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 mt-1.5 pt-1.5 border-t border-slate-100">
+            <EF label="FICO" value={loan.creditScore} type="text" onSave={v => save({ creditScore: v })} />
+            <EF label="Income" value={loan.monthlyBaseIncome} type="currency" onSave={v => save({ monthlyBaseIncome: v })} />
+            <EF label="Employment" value={loan.employmentStatus} type="text" onSave={v => save({ employmentStatus: v })} />
+            <EF label="Employer" value={loan.employerName} type="text" onSave={v => save({ employerName: v })} />
+            <EF label="Housing" value={loan.presentHousingExpense} type="currency" onSave={v => save({ presentHousingExpense: v })} />
+          </div>
+          {coBorrowers.length > 0 && (
+            <div className="mt-1 pt-1 border-t border-slate-100 text-[10px]">
+              <span className="font-bold text-slate-400 uppercase">Co-Borr: </span>
+              {coBorrowers.map((lb, i) => <span key={i} className="font-semibold text-slate-700">{lb.borrower?.firstName} {lb.borrower?.lastName}{i < coBorrowers.length - 1 ? ', ' : ''}</span>)}
+            </div>
+          )}
+        </div>
+
+        {/* Property */}
+        <div className="bg-white rounded-lg border border-slate-200 shadow-sm px-3 py-2">
+          <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">Property</div>
+          <div className="text-sm font-bold text-slate-900 leading-tight">{addr.street}</div>
+          {addr.csz && <div className="text-xs text-slate-500">{addr.csz}</div>}
+          <div className="grid grid-cols-3 gap-x-2 gap-y-0.5 mt-1.5 pt-1.5 border-t border-slate-100">
+            <EF label="Type" value={loan.propertyType} type="select" options={PROPERTY_TYPE_OPTIONS} onSave={v => save({ propertyType: v })} />
+            <EF label="Occup" value={loan.occupancy} type="select" options={OCCUPANCY_OPTIONS} onSave={v => save({ occupancy: v })} />
+            <EF label="Units" value={loan.numUnits} type="text" onSave={v => save({ numUnits: v })} />
+          </div>
+          <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 mt-1">
+            <EF label="Purchase" value={loan.purchasePrice} type="currency" onSave={v => save({ purchasePrice: v })} />
+            <EF label="Appraised" value={loan.estimatedValue} type="currency" onSave={v => save({ estimatedValue: v })} />
+            <EF label="Down Pmt" value={loan.downPayment} type="currency" onSave={v => save({ downPayment: v })} />
+            <EF label="Cur Bal" value={loan.currentBalance} type="currency" onSave={v => save({ currentBalance: v })} />
+          </div>
+        </div>
+
+        {/* Loan Terms */}
+        <div className="bg-white rounded-lg border border-slate-200 shadow-sm px-3 py-2">
+          <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">Loan Terms</div>
+          <div className="grid grid-cols-3 gap-x-2 gap-y-0.5">
+            <EF label="Amount" value={loan.loanAmount} type="currency" onSave={v => save({ loanAmount: v })} />
+            <EF label="Rate" value={loan.interestRate} type="text" onSave={v => save({ interestRate: v })} />
+            <EF label="Term" value={loan.loanTerm} type="text" onSave={v => save({ loanTerm: v })} />
+            <EF label="Type" value={loan.loanType} type="select" options={LOAN_TYPE_OPTIONS} onSave={v => save({ loanType: v })} />
+            <EF label="Purpose" value={loan.purpose} type="select" options={PURPOSE_OPTIONS} onSave={v => save({ purpose: v })} />
+            <EF label="Lender" value={loan.lenderName} type="text" onSave={v => save({ lenderName: v })} />
+            <EF label="Loan #" value={loan.loanNumber} type="text" onSave={v => save({ loanNumber: v })} />
+            <EF label="Lien" value={loan.lienStatus} type="text" onSave={v => save({ lienStatus: v })} />
+            <RF label="BIC" value={loan.ballInCourt} />
+          </div>
+          {(loan.purpose === 'refinance' || loan.purpose === 'cash_out') && (
+            <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 mt-1 pt-1 border-t border-slate-100">
+              <EF label="Refi Purpose" value={loan.refiPurpose} type="text" onSave={v => save({ refiPurpose: v })} />
+              <EF label="Cash Out" value={loan.cashOutAmount} type="currency" onSave={v => save({ cashOutAmount: v })} />
+            </div>
+          )}
+        </div>
+
+        {/* Rate Lock */}
+        <div className="bg-white rounded-lg border border-slate-200 shadow-sm px-3 py-2">
+          <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">Rate Lock</div>
+          <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
+            <EF label="Lock Date" value={dates.lockedDate} type="date" onSave={v => saveDates({ lockedDate: v })} />
+            <EF label="Lock Exp" value={dates.lockExpiration} type="date" onSave={v => saveDates({ lockExpiration: v })} />
+            <EF label="Lock Term" value={dates.lockTerm} type="text" onSave={v => saveDates({ lockTerm: v })} />
+            <RF label="# Borrowers" value={loan.numBorrowers} />
+          </div>
+        </div>
+      </div>
+
+      {/* Processing — inline horizontal */}
+      <div className="bg-white rounded-lg border border-slate-200 shadow-sm px-3 py-2">
+        <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Processing</div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          {[
+            { label: 'Credit', fields: [['creditPulledDate','Pulled'],['creditExpiration','Expires']], rcv: 'creditPulledDate', exp: 'creditExpiration' },
+            { label: 'Appraisal', fields: [['appraisalOrdered','Ordered'],['appraisalReceived','Rcvd'],['appraisalExpiry','Expires']], rcv: 'appraisalReceived', exp: 'appraisalExpiry', ord: 'appraisalOrdered' },
+            { label: 'Title', fields: [['titleOrdered','Ordered'],['titleReceived','Rcvd']], rcv: 'titleReceived', ord: 'titleOrdered' },
+            { label: 'Flood', fields: [['floodCertOrdered','Ordered'],['floodCertReceived','Rcvd']], rcv: 'floodCertReceived', ord: 'floodCertOrdered' },
+            { label: 'HOI', fields: [['hoiOrdered','Ordered'],['hoiReceived','Rcvd'],['hoiBound','Bound']], rcv: 'hoiBound', ord: 'hoiOrdered' },
+          ].map(task => {
+            const [icon, iconColor] = procStatus(task.rcv, task.exp, task.ord);
+            return (
+              <div key={task.label}>
+                <div className="flex items-center gap-1 mb-1">
+                  <span className={`text-xs font-bold ${iconColor}`}>{icon}</span>
+                  <span className="text-[10px] font-bold uppercase text-slate-700">{task.label}</span>
+                </div>
+                {task.fields.map(([key, lbl]) => (
+                  <div key={key} className="flex items-baseline justify-between gap-1">
+                    <span className="text-[9px] text-slate-400">{lbl}</span>
+                    <span className={`text-[10px] font-semibold ${dates[key] ? 'text-slate-800' : 'text-slate-300'}`}>{dates[key] ? fmtDate(dates[key]) : '—'}</span>
+                  </div>
+                ))}
               </div>
             );
           })}
         </div>
       </div>
 
-      {/* ─── Row 1: Loan Summary Strip ─── */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm px-5 py-3">
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4">
-          <div>
-            <EditableField label="Loan Amount" value={loan.loanAmount} type="currency"
-              onSave={val => save({ loanAmount: val })} placeholder="—" />
-          </div>
-          <div>
-            <EditableField label="Rate" value={loan.interestRate} type="text"
-              onSave={val => save({ interestRate: val })} placeholder="—" />
-          </div>
-          <div>
-            <ReadField label="LTV" value={ltv} />
-          </div>
-          <div>
-            <EditableField label="FICO" value={loan.creditScore} type="text"
-              onSave={val => save({ creditScore: val })} placeholder="—" />
-          </div>
-          <div>
-            <ReadField label="Monthly Pmt" value={fmt$(loan.monthlyPayment)} />
-          </div>
-          <div>
-            <EditableField label="Closing Date" value={dates.estimatedClosing || dates.closingDate} type="date"
-              onSave={val => saveDates({ estimatedClosing: val })} placeholder="—" />
-          </div>
-          <div>
-            <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Lock Expires</span>
-            <span className={`text-sm font-semibold ${lockClass || 'text-slate-300'}`}>
-              {dates.lockExpiration ? fmtDate(dates.lockExpiration) : '—'}
-            </span>
-          </div>
-          <div>
-            <ReadField label="Ball In Court" value={loan.ballInCourt || '—'} />
-          </div>
-        </div>
-      </div>
-
-      {/* ─── Row 2: Borrower + Property ─── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Borrower */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-          <SectionHeader>Borrower</SectionHeader>
-          <div className="space-y-2">
-            <div className="flex items-baseline gap-2">
-              <span className="text-base font-bold text-slate-900">{borrower.firstName} {borrower.lastName}</span>
-              {borrower.ssnLastFour && <span className="text-xs font-medium text-slate-400">SSN ···{borrower.ssnLastFour}</span>}
-            </div>
-            {borrower.email && (
-              <a href={`mailto:${borrower.email}`} className="block text-sm text-primary font-semibold hover:underline">{borrower.email}</a>
-            )}
-            {borrower.phone && (
-              <a href={`tel:${borrower.phone}`} className="block text-sm text-primary font-semibold hover:underline">{borrower.phone}</a>
-            )}
-            <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-100">
-              <EditableField label="FICO" value={loan.creditScore} type="text" onSave={val => save({ creditScore: val })} placeholder="—" />
-              <EditableField label="Monthly Income" value={loan.monthlyBaseIncome} type="currency" onSave={val => save({ monthlyBaseIncome: val })} placeholder="—" />
-              <EditableField label="Employment" value={loan.employmentStatus} type="text" onSave={val => save({ employmentStatus: val })} placeholder="—" />
-              <EditableField label="Employer" value={loan.employerName} type="text" onSave={val => save({ employerName: val })} placeholder="—" />
-              <EditableField label="Housing Exp" value={loan.presentHousingExpense} type="currency" onSave={val => save({ presentHousingExpense: val })} placeholder="—" />
-            </div>
-            {coBorrowers.length > 0 && (
-              <div className="border-t border-slate-100 pt-2 mt-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Co-Borrower</span>
-                {coBorrowers.map((lb, i) => (
-                  <div key={i} className="text-sm font-semibold text-slate-800 mt-0.5">
-                    {lb.borrower?.firstName} {lb.borrower?.lastName}
-                    {lb.borrower?.email && <span className="text-slate-400 font-normal ml-2">{lb.borrower.email}</span>}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Property */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-          <SectionHeader>Property</SectionHeader>
-          <div className="space-y-2">
-            <div className="text-base font-bold text-slate-900">{address.street}</div>
-            {address.cityStateZip && <div className="text-sm text-slate-600">{address.cityStateZip}</div>}
-            <div className="grid grid-cols-3 gap-3 pt-2 border-t border-slate-100">
-              <EditableField label="Type" value={loan.propertyType} type="select" options={PROPERTY_TYPE_OPTIONS} onSave={val => save({ propertyType: val })} placeholder="—" />
-              <EditableField label="Occupancy" value={loan.occupancy} type="select" options={OCCUPANCY_OPTIONS} onSave={val => save({ occupancy: val })} placeholder="—" />
-              <EditableField label="Units" value={loan.numUnits} type="text" onSave={val => save({ numUnits: val })} placeholder="—" />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <EditableField label="Purchase Price" value={loan.purchasePrice} type="currency" onSave={val => save({ purchasePrice: val })} placeholder="—" />
-              <EditableField label="Appraised Value" value={loan.estimatedValue} type="currency" onSave={val => save({ estimatedValue: val })} placeholder="—" />
-              <EditableField label="Down Payment" value={loan.downPayment} type="currency" onSave={val => save({ downPayment: val })} placeholder="—" />
-              <EditableField label="Current Balance" value={loan.currentBalance} type="currency" onSave={val => save({ currentBalance: val })} placeholder="—" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ─── Row 3: Loan Terms + Rate Lock ─── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Loan Terms */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-          <SectionHeader>Loan Terms</SectionHeader>
-          <div className="grid grid-cols-3 gap-3">
-            <EditableField label="Amount" value={loan.loanAmount} type="currency" onSave={val => save({ loanAmount: val })} placeholder="—" />
-            <EditableField label="Rate" value={loan.interestRate} type="text" onSave={val => save({ interestRate: val })} placeholder="—" />
-            <EditableField label="Term" value={loan.loanTerm} type="text" onSave={val => save({ loanTerm: val })} placeholder="—" />
-            <EditableField label="Type" value={loan.loanType} type="select" options={LOAN_TYPE_OPTIONS} onSave={val => save({ loanType: val })} placeholder="—" />
-            <EditableField label="Purpose" value={loan.purpose} type="select" options={PURPOSE_OPTIONS} onSave={val => save({ purpose: val })} placeholder="—" />
-            <EditableField label="Lender" value={loan.lenderName} type="text" onSave={val => save({ lenderName: val })} placeholder="—" />
-            <EditableField label="Loan #" value={loan.loanNumber} type="text" onSave={val => save({ loanNumber: val })} placeholder="—" />
-            <EditableField label="Lien Status" value={loan.lienStatus} type="text" onSave={val => save({ lienStatus: val })} placeholder="—" />
-            <ReadField label="Ball in Court" value={loan.ballInCourt} />
-          </div>
-          {(loan.purpose === 'refinance' || loan.purpose === 'cash_out') && (
-            <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-slate-100">
-              <EditableField label="Refi Purpose" value={loan.refiPurpose} type="text" onSave={val => save({ refiPurpose: val })} placeholder="—" />
-              <EditableField label="Cash Out" value={loan.cashOutAmount} type="currency" onSave={val => save({ cashOutAmount: val })} placeholder="—" />
-            </div>
-          )}
-        </div>
-
-        {/* Rate Lock */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-          <SectionHeader>Rate Lock</SectionHeader>
-          <div className="grid grid-cols-2 gap-3">
-            <EditableField label="Lock Date" value={dates.lockedDate} type="date" onSave={val => saveDates({ lockedDate: val })} placeholder="—" />
-            <EditableField label="Lock Expires" value={dates.lockExpiration} type="date" onSave={val => saveDates({ lockExpiration: val })} placeholder="—" />
-            <EditableField label="Lock Term (days)" value={dates.lockTerm} type="text" onSave={val => saveDates({ lockTerm: val })} placeholder="—" />
-            <ReadField label="# Borrowers" value={loan.numBorrowers} />
-          </div>
-        </div>
-      </div>
-
-      {/* ─── Row 4: Processing Timeline (compact horizontal) ─── */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-        <SectionHeader>Processing</SectionHeader>
-        <div className="flex flex-wrap gap-6">
-          <ProcessingTask label="Credit" dates={dates} updateDates={updateDates} fields={[
-            { key: 'creditPulledDate', label: 'Pulled' },
-            { key: 'creditExpiration', label: 'Expires' },
-          ]} />
-          <ProcessingTask label="Appraisal" dates={dates} updateDates={updateDates} fields={[
-            { key: 'appraisalOrdered', label: 'Ordered' },
-            { key: 'appraisalReceived', label: 'Received' },
-            { key: 'appraisalExpiry', label: 'Expires' },
-          ]} />
-          <ProcessingTask label="Title" dates={dates} updateDates={updateDates} fields={[
-            { key: 'titleOrdered', label: 'Ordered' },
-            { key: 'titleReceived', label: 'Received' },
-          ]} />
-          <ProcessingTask label="Flood" dates={dates} updateDates={updateDates} fields={[
-            { key: 'floodCertOrdered', label: 'Ordered' },
-            { key: 'floodCertReceived', label: 'Received' },
-          ]} />
-          <ProcessingTask label="HOI" dates={dates} updateDates={updateDates} fields={[
-            { key: 'hoiOrdered', label: 'Ordered' },
-            { key: 'hoiReceived', label: 'Received' },
-            { key: 'hoiBound', label: 'Bound' },
-          ]} />
-        </div>
-      </div>
-
-      {/* ─── Row 5: Conditions + Key Dates ─── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Conditions + Key Dates + Source — 3 columns */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
         {/* Conditions */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-          <div className="flex items-center justify-between mb-3">
-            <SectionHeader>Conditions</SectionHeader>
-            {condTotal > 0 && <span className="text-xs font-bold text-slate-400">{condCleared}/{condTotal} cleared</span>}
+        <div className="bg-white rounded-lg border border-slate-200 shadow-sm px-3 py-2">
+          <div className="flex items-center justify-between mb-1">
+            <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Conditions</div>
+            {condTotal > 0 && <span className="text-[10px] font-bold text-slate-500">{condCleared}/{condTotal}</span>}
           </div>
           {condTotal > 0 ? (
             <>
-              <div className="flex items-center gap-4 mb-3">
-                <div className="flex items-center gap-1.5">
-                  <span className="inline-block w-2.5 h-2.5 rounded-full bg-amber-500" />
-                  <span className="text-xs font-bold text-slate-700">{condNeeded} needed</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                  <span className="text-xs font-bold text-slate-700">{condCleared - condWaived} cleared</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="inline-block w-2.5 h-2.5 rounded-full bg-slate-400" />
-                  <span className="text-xs font-bold text-slate-700">{condWaived} waived</span>
-                </div>
+              <div className="flex gap-3 mb-1.5 text-[10px] font-bold">
+                <span className="text-amber-600">● {condNeeded} needed</span>
+                <span className="text-emerald-600">● {condCleared} cleared</span>
               </div>
-              <div className="space-y-1.5">
-                {conditions.slice(0, 5).map((cond) => (
-                  <div key={cond.id} className="flex items-center justify-between py-1 border-b border-slate-50 last:border-0">
-                    <div className="flex items-center gap-2">
-                      <span className={`w-2 h-2 rounded-full ${
-                        cond.status === 'needed' ? 'bg-amber-500' :
-                        cond.status === 'cleared' ? 'bg-emerald-500' :
-                        cond.status === 'waived' ? 'bg-slate-400' : 'bg-slate-200'
-                      }`} />
-                      <span className="text-sm font-semibold text-slate-800">{cond.title}</span>
-                    </div>
-                    <span className="text-[10px] font-bold uppercase text-slate-400">{cond.stage?.replace(/_/g, ' ')}</span>
+              {conditions.slice(0, 5).map(c => (
+                <div key={c.id} className="flex items-center justify-between py-0.5 text-[11px]">
+                  <div className="flex items-center gap-1 min-w-0">
+                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${c.status === 'needed' ? 'bg-amber-500' : c.status === 'cleared' ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+                    <span className="font-semibold text-slate-800 truncate">{c.title}</span>
                   </div>
-                ))}
-                {condTotal > 5 && <p className="text-xs font-medium text-primary pt-1">→ View all {condTotal} conditions</p>}
-              </div>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase shrink-0 ml-1">{c.stage?.replace(/_/g, ' ')}</span>
+                </div>
+              ))}
+              {condTotal > 5 && <p className="text-[10px] font-bold text-primary mt-0.5">→ {condTotal - 5} more</p>}
             </>
-          ) : (
-            <p className="text-sm text-slate-400">No conditions yet</p>
-          )}
+          ) : <p className="text-[10px] text-slate-400">No conditions</p>}
         </div>
 
         {/* Key Dates */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-          <SectionHeader>Key Dates</SectionHeader>
-          <div className="grid grid-cols-2 gap-2">
+        <div className="bg-white rounded-lg border border-slate-200 shadow-sm px-3 py-2">
+          <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">Key Dates</div>
+          <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
             {[
-              { label: 'Application', key: 'applicationDate' },
-              { label: 'Submitted UW', key: 'submittedToUwDate' },
-              { label: 'Cond. Approved', key: 'condApprovedDate' },
-              { label: 'CTC', key: 'ctcDate' },
-              { label: 'Docs Out', key: 'docsOutDate' },
-              { label: 'Est. Closing', key: 'estimatedClosing' },
-              { label: 'Closing', key: 'closingDate' },
-              { label: 'Funding', key: 'fundingDate' },
-              { label: 'First Payment', key: 'firstPaymentDate' },
-            ].map(d => (
-              <EditableField key={d.key} label={d.label} value={dates[d.key]} type="date"
-                onSave={val => saveDates({ [d.key]: val })} placeholder="—" />
+              ['applicationDate','Application'], ['submittedToUwDate','Submitted UW'],
+              ['condApprovedDate','Approved'], ['ctcDate','CTC'],
+              ['docsOutDate','Docs Out'], ['estimatedClosing','Est. Closing'],
+              ['closingDate','Closing'], ['fundingDate','Funding'],
+              ['firstPaymentDate','1st Payment'],
+            ].map(([key, lbl]) => (
+              <EF key={key} label={lbl} value={dates[key]} type="date" onSave={v => saveDates({ [key]: v })} />
             ))}
           </div>
         </div>
-      </div>
 
-      {/* ─── Row 6: Source/CRM ─── */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-        <SectionHeader>Source / CRM</SectionHeader>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <EditableField label="Lead Source" value={loan.leadSource} type="text" onSave={val => save({ leadSource: val })} placeholder="—" />
-          <EditableField label="Channel" value={loan.applicationChannel} type="text" onSave={val => save({ applicationChannel: val })} placeholder="—" />
-          <EditableField label="Referral" value={loan.referralSource} type="text" onSave={val => save({ referralSource: val })} placeholder="—" />
-          <ReadField label="LDox ID" value={loan.ldoxLoanId} />
-          <ReadField label="Created" value={loan.createdAt ? new Date(loan.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'} />
+        {/* Source */}
+        <div className="bg-white rounded-lg border border-slate-200 shadow-sm px-3 py-2">
+          <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">Source / CRM</div>
+          <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
+            <EF label="Lead Src" value={loan.leadSource} type="text" onSave={v => save({ leadSource: v })} />
+            <EF label="Channel" value={loan.applicationChannel} type="text" onSave={v => save({ applicationChannel: v })} />
+            <EF label="Referral" value={loan.referralSource} type="text" onSave={v => save({ referralSource: v })} />
+            <RF label="LDox ID" value={loan.ldoxLoanId} />
+            <RF label="Created" value={loan.createdAt ? fmtDate(loan.createdAt) : '—'} />
+          </div>
         </div>
       </div>
     </div>
