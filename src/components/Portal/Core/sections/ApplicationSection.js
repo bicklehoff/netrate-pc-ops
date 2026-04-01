@@ -12,7 +12,6 @@ function fmt$(v) { if (v == null || v === '') return '—'; return `$${Number(v)
 function fmt$0(v) { if (v == null || v === '') return '—'; return `$${Number(v).toLocaleString('en-US', { minimumFractionDigits: 0 })}`; }
 function fmtPct(v) { if (v == null) return '—'; return `${Number(v).toFixed(3)}%`; }
 function fmtAddr(a) { if (!a) return '—'; return [a.street, a.city, a.state, a.zip].filter(Boolean).join(', ') || '—'; }
-function fmtDate(d) { if (!d) return '—'; return new Date(d).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }); }
 function fmtShortDate(d) { if (!d) return '—'; return new Date(d).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }); }
 
 // ─── Main Component ───
