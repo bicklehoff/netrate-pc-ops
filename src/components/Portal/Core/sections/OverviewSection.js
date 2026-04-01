@@ -131,26 +131,24 @@ function ReadField({ label, value, warn = false, error = false }) {
 
 function ProcessingTask({ label, dates: d, fields, updateDates }) {
   // Determine status from dates
-  let status = 'pending'; // default
   let statusIcon = '○';
   let statusColor = 'text-slate-400';
 
-  const hasReceived = fields.some(f => f.key.includes('Received') || f.key.includes('Bound') || f.key.includes('Pulled'));
   const receivedField = fields.find(f => f.key.includes('Received') || f.key.includes('Bound') || f.key.includes('Pulled'));
   const expiryField = fields.find(f => f.key.includes('Expir') || f.key.includes('Expiry'));
 
   if (receivedField && d[receivedField.key]) {
     if (expiryField && d[expiryField.key] && isExpired(d[expiryField.key])) {
-      status = 'expired'; statusIcon = '✕'; statusColor = 'text-red-600';
+      statusIcon = '✕'; statusColor = 'text-red-600';
     } else if (expiryField && d[expiryField.key] && isExpiringSoon(d[expiryField.key])) {
-      status = 'expiring'; statusIcon = '!'; statusColor = 'text-amber-500';
+      statusIcon = '!'; statusColor = 'text-amber-500';
     } else {
-      status = 'complete'; statusIcon = '✓'; statusColor = 'text-emerald-600';
+      statusIcon = '✓'; statusColor = 'text-emerald-600';
     }
   } else {
     const orderedField = fields.find(f => f.key.includes('Ordered') || f.key.includes('Pulled'));
     if (orderedField && d[orderedField.key]) {
-      status = 'ordered'; statusIcon = '⏳'; statusColor = 'text-blue-500';
+      statusIcon = '⏳'; statusColor = 'text-blue-500';
     }
   }
 
