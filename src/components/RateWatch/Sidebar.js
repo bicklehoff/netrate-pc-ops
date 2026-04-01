@@ -67,9 +67,9 @@ export function EconomicCalendar() {
   }, []);
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm h-full flex flex-col overflow-hidden">
-      <h3 className="text-base font-bold text-slate-900 mb-4 shrink-0">Economic Calendar</h3>
-      <div className="flex-1 overflow-y-auto space-y-2 pr-1 -mr-1">
+    <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm h-full flex flex-col">
+      <h3 className="text-base font-bold text-slate-900 mb-4">Economic Calendar</h3>
+      <div className="space-y-2">
         {loading && (
           <div className="text-xs text-slate-400 py-4 text-center">Loading...</div>
         )}

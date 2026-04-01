@@ -225,8 +225,8 @@ export default async function RateWatchPage() {
             </div>
           </div>
 
-          {/* Row 3: Rate Table (2col) + Economic Calendar (1col) — fixed height */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:h-[280px]">
+          {/* Row 3: Rate Table (2col) + Economic Calendar (1col) */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div className="lg:col-span-2 min-h-0">
               <RateGrid
                 netRates={liveRates}
