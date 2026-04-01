@@ -7,6 +7,7 @@
 //   result = { validated: true, address: { street, city, state, zip, county, formatted, lat, lng, placeId }, raw: {...} }
 
 const API_KEY = process.env.GOOGLE_GEOCODING_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+const KEY_SOURCE = process.env.GOOGLE_GEOCODING_API_KEY ? 'GOOGLE_GEOCODING_API_KEY' : 'NEXT_PUBLIC_GOOGLE_MAPS_API_KEY';
 
 /**
  * Validate and enrich a property address via Google Geocoding API
@@ -37,7 +38,8 @@ export async function geocodeAddress(addr) {
     const data = await res.json();
 
     if (data.status !== 'OK' || !data.results?.length) {
-      return { validated: false, error: data.status, raw: data };
+      console.error('Geocode failed:', { status: data.status, error_message: data.error_message, keySource: KEY_SOURCE, keyPrefix: API_KEY?.slice(0, 10) + '...' });
+      return { validated: false, error: `${data.status}${data.error_message ? ': ' + data.error_message : ''}`, keySource: KEY_SOURCE };
     }
 
     const result = data.results[0];

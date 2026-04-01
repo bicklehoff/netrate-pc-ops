@@ -68,6 +68,7 @@ export async function POST(request, { params }) {
       return NextResponse.json({
         validated: false,
         error: result.error || 'Could not validate address',
+        keySource: result.keySource || 'unknown',
         current: currentAddr,
       });
     }
