@@ -428,8 +428,8 @@ export function priceRate(rateEntry, product, scenario, lenderAdj, brokerConfig,
     }
   }
 
-  // Step 3: SRP — CREDIT → add (pass loanAmount for Elite banded lookup)
-  const srp = getSRP(state, term, productType, tier, lenderAdj, loanAmount, loanType);
+  // Step 3: SRP — CREDIT → add (use effectiveLoanAmount for FHA so UFMIP-adjusted amount picks correct SRP band)
+  const srp = getSRP(state, term, productType, tier, lenderAdj, effectiveLoanAmount, loanType);
   if (srp !== 0) {
     price += srp;
     breakdown.push({ label: `SRP (${state})`, value: +srp });
