@@ -5,6 +5,47 @@
 
 ---
 
+## 2026-04-01 — Dev — Economic Calendar, DB Connection Fix, ISR Revalidation, Treasury Yields
+**Actor:** pc-dev
+
+### What was built
+- **Economic Calendar API** — New `economic_calendar_events` DB table + `POST/GET /api/market/calendar` endpoint. Claw can POST events with date, time, name, forecast, actual, prior, impact, result, big flag. Upsert key on (date, name). Auth via `CLAW_API_KEY`.
+- **EconomicCalendar component** — Replaced hardcoded 5-event list with DB-driven component. Shows past events dimmed with result badges (✓ Better / ✗ Worse / — Inline), future events with forecast/prior values. Removed scrollbar, expanded row height for natural fit.
+- **BelowFold "What Could Move Rates Next"** — Now reads from `/api/market/calendar?upcoming=true`. Shows future events with impact text in 3-column cards. Removed hardcoded fallback.
+- **DB connection fix** — Found root cause of stale data: 10 raw `neon()` calls used `DATABASE_URL` which on Vercel points to old shared `neondb`, not `netrate_pc`. Fixed all to use `PC_DATABASE_URL || DATABASE_URL`. Affected: rate-watch page, strike-rate, rate history, national-rates, archive pages.
+- **ISR on-demand revalidation** — Added `revalidatePath('/rate-watch')` and `revalidatePath('/')` to POST handlers for `/api/market/summary` and `/api/market/calendar`. Pages update instantly when Claw posts instead of waiting 5-min ISR expiry.
+- **Treasury Yields fix** — Page was self-fetching `/api/rates/fred` during SSR (known Next.js issue — server calling itself fails on Vercel cold starts). Replaced with direct FRED API calls from server component. Same data, same fallback, no self-referencing.
+
+### Schema changes
+- New table: `economic_calendar_events` (id, date, time, name, forecast, actual, prior, impact, result, big, source, created_at, updated_at)
+
+### New files
+- `src/app/api/market/calendar/route.js` — GET + POST for economic calendar
+- `Work/Dev/SPEC-benchmark-indexes.md` — Spec for tomorrow: add SOFR, Prime, CMT benchmark indexes to Rate Watch
+
+### Key decisions
+- Vercel Neon integration locked to old `neondb` — can't easily remove or reconfigure. `PC_DATABASE_URL` takes priority in code, integration-managed `DATABASE_URL` is harmless dead variable.
+- Economic Calendar owned by Claw — they POST events daily with forecasts, update with results after release
+- Self-fetch pattern eliminated for FRED — direct API calls from server component
+
+### Relays handled
+- Claw: Economic Calendar improvements → built API + components, replied with full endpoint spec
+- Claw: Commentary not displaying → fixed DB connection (was querying wrong database)
+- Claw: Treasury Yields blank → fixed self-fetch SSR issue
+- Claw: ISR cache not updating → added revalidatePath to POST handlers
+- CoreCRM relay → resolved (already built)
+- Mac: acknowledged Dev batch relay
+
+### Open items
+- [ ] Benchmark Index Rates — spec ready, build tomorrow (SOFR, Prime, CMT on Rate Watch)
+- [ ] Vercel `DATABASE_URL` cleanup — integration locked to neondb, cosmetic issue only
+- [ ] Mac relay: CD commission POST missing cdBlobUrl/cdWorkDriveFileId
+- [ ] Claw relay: DSCR Scenario Builder + Income Qualification Calculator
+- [ ] Mac relay: Dev batch (Tickets API, dashboard contacts, email attachments, signing queue)
+- [ ] Publisher relay: 3 rate portal pages need rate tool components wired up
+
+---
+
 ## 2026-04-01 — Dev — Pricing Engine Validation, County Limits, NonQM Spec
 **Actor:** pc-dev
 
