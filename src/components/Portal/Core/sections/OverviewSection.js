@@ -98,7 +98,7 @@ function EF({ label, value, type = 'text', options, onSave, placeholder = '—' 
 
 // ─── Main Component ─────────────────────────────────────────
 
-export default function OverviewSection({ loan, onRefresh, updateLoanField, updateDates }) {
+export default function OverviewSection({ loan, updateLoanField, updateDates }) {
   const { data: session } = useSession();
   const [showPrequalModal, setShowPrequalModal] = useState(false);
   const dates = loan.dates || {};
