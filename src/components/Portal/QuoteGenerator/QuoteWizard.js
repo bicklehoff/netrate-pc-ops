@@ -60,7 +60,7 @@ export default function QuoteWizard({ prefill }) {
         body: JSON.stringify(payload),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Pricing failed');
+      if (!res.ok) throw new Error(data.detail || data.error || 'Pricing failed');
 
       setPricingResult(data.pricing);
       setEligibility(data.eligibility);

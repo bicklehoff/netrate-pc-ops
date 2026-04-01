@@ -146,6 +146,16 @@ export async function POST(request) {
     const monthlyInsurance = fees?.monthlyInsurance || 0;
     const monthlyPayment = monthlyPI ? monthlyPI + monthlyTax + monthlyInsurance : null;
 
+    // Compute safe property value (avoid Infinity from ltv=0)
+    const safePropertyValue = propertyValue || (ltv > 0 ? Math.round(loanAmount / (ltv / 100)) : loanAmount);
+
+    // Coerce empty strings to null for Decimal fields
+    const toDecimalOrNull = (v) => {
+      if (v === '' || v === null || v === undefined) return null;
+      const n = Number(v);
+      return isNaN(n) ? null : n;
+    };
+
     // Create quote record
     const quote = await prisma.borrowerQuote.create({
       data: {
@@ -157,7 +167,7 @@ export async function POST(request) {
         borrowerEmail: body.borrowerEmail || null,
         borrowerPhone: body.borrowerPhone || null,
         purpose: body.purpose,
-        propertyValue: propertyValue || loanAmount / (ltv / 100),
+        propertyValue: safePropertyValue,
         loanAmount,
         ltv,
         fico: body.fico,
@@ -168,9 +178,9 @@ export async function POST(request) {
         loanType: pricingInput.loanType,
         term: pricingInput.term,
         closingDate: body.closingDate ? new Date(body.closingDate) : null,
-        currentRate: body.currentRate ?? null,
-        currentBalance: body.currentBalance ?? null,
-        currentPayment: body.currentPayment ?? null,
+        currentRate: toDecimalOrNull(body.currentRate),
+        currentBalance: toDecimalOrNull(body.currentBalance),
+        currentPayment: toDecimalOrNull(body.currentPayment),
         currentLender: body.currentLender || null,
         scenarios: topScenarios,
         feeBreakdown: fees,
