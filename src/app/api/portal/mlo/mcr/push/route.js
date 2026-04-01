@@ -27,12 +27,26 @@ function deriveQmStatus(loanType) {
   }
 }
 
+// ─── State Name → USPS Abbreviation ──────────────────────────
+const STATE_NORMALIZE = {
+  'colorado': 'CO', 'oregon': 'OR', 'texas': 'TX', 'california': 'CA',
+  'co': 'CO', 'or': 'OR', 'tx': 'TX', 'ca': 'CA',
+  'CO': 'CO', 'OR': 'OR', 'TX': 'TX', 'CA': 'CA',
+};
+
+function normalizeState(raw) {
+  if (!raw) return null;
+  const cleaned = raw.trim().split(' ')[0]; // handle "CO 80016" type entries
+  return STATE_NORMALIZE[cleaned.toLowerCase()] || cleaned.toUpperCase();
+}
+
 // ─── Status → MCR Event Type ──────────────────────────────────
 function mapStatusToMcrEvent(status, actionTaken) {
-  if (status === 'funded') return 'FUNDED';
+  if (status === 'funded' || status === 'settled') return 'FUNDED';
   if (status === 'denied') return 'DENIED';
-  if (actionTaken === 'withdrawn') return 'WITHDRAWN';
+  if (status === 'withdrawn' || actionTaken === 'withdrawn') return 'WITHDRAWN';
   if (actionTaken === 'incomplete') return 'FILE_CLOSED';
+  if (status === 'archived') return 'FILE_CLOSED'; // archived without specific action = file closed
   // Everything else still in the pipeline
   return 'IN_PIPELINE';
 }
@@ -68,7 +82,7 @@ export async function POST() {
 
     for (const loan of loans) {
       // Must have property state for MCR (per-state reporting)
-      const propertyState = loan.propertyAddress?.state;
+      const propertyState = normalizeState(loan.propertyAddress?.state);
       if (!propertyState) {
         skipped.push({
           loanId: loan.loanId || loan.id,
@@ -88,19 +102,20 @@ export async function POST() {
       }
 
       const eventType = mapStatusToMcrEvent(loan.status, loan.actionTaken);
+      const loanType = (loan.loanType || 'conventional').toLowerCase();
 
       pushed.push({
         ldoxLoanId: loan.loanId || loan.id,
         borrowerName: `${loan.borrower.firstName} ${loan.borrower.lastName}`,
         loanAmount: loan.loanAmount ? Number(loan.loanAmount) : null,
         propertyState,
-        loanType: loan.loanType || 'conventional',
+        loanType,
         loanPurpose: loan.purpose || null,
         propertyType: loan.propertyType || 'one_to_four_family',
         lienPosition: loan.lienStatus || 'first',
         occupancy: loan.occupancy || 'owner_occupied',
         mloNmlsId: loan.mlo?.nmls || null,
-        qmStatus: deriveQmStatus(loan.loanType),
+        qmStatus: deriveQmStatus(loanType),
         eventType,
         eventDate: (loan.actionTakenDate || loan.fundingDate || loan.updatedAt)?.toISOString()?.split('T')[0] || null,
         applicationDate: loan.createdAt?.toISOString()?.split('T')[0] || null,
@@ -199,9 +214,9 @@ export async function GET() {
     const summary = { total: loans.length, byState: {}, byStatus: {}, byType: {}, missingState: 0 };
 
     for (const loan of loans) {
-      const state = loan.propertyAddress?.state || 'MISSING';
+      const state = normalizeState(loan.propertyAddress?.state) || 'MISSING';
       const eventType = mapStatusToMcrEvent(loan.status, loan.actionTaken);
-      const loanType = loan.loanType || 'unknown';
+      const loanType = (loan.loanType || 'unknown').toLowerCase();
 
       if (state === 'MISSING') {
         summary.missingState++;
