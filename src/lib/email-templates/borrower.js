@@ -228,3 +228,65 @@ export function welcomeTemplate({ firstName, portalUrl }) {
     text,
   };
 }
+
+/**
+ * Quote email — sent when MLO shares a rate quote with a borrower.
+ * @param {object} params
+ * @param {string} params.firstName — borrower's first name
+ * @param {string} params.quoteLink — portal link to view the quote
+ * @param {Array} params.scenarios — rate scenarios [{rate, program, monthlyPI}]
+ * @param {string} params.loanAmount — formatted loan amount
+ * @param {string} params.purpose — purchase/refinance/cashout
+ */
+export function quoteTemplate({ firstName, quoteLink, scenarios, loanAmount, purpose }) {
+  const name = firstName || 'there';
+  const primaryRate = scenarios?.[0];
+  const rateDisplay = primaryRate ? `${primaryRate.rate.toFixed(3)}%` : '';
+  const piDisplay = primaryRate?.monthlyPI ? `$${Number(primaryRate.monthlyPI).toLocaleString()}` : '';
+
+  const rateRows = (scenarios || []).map(s =>
+    `<tr>
+      <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-family:monospace;font-weight:bold;">${s.rate.toFixed(3)}%</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:13px;">${s.program || ''}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-family:monospace;text-align:right;">$${Number(s.monthlyPI || 0).toLocaleString()}/mo</td>
+    </tr>`
+  ).join('');
+
+  const html = emailLayout(`
+  <h2 style="margin:0 0 8px;font-size:20px;color:#111827;">Your Rate Quote Is Ready</h2>
+  <p style="margin:0 0 20px;font-size:14px;color:#6b7280;line-height:1.5;">
+    Hi ${name}, I've put together a personalized rate quote for your ${purpose} loan${loanAmount ? ` (${loanAmount})` : ''}.
+  </p>
+
+  ${rateRows ? `
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+    <tr style="background-color:#111827;">
+      <th style="padding:8px 12px;text-align:left;color:#ffffff;font-size:12px;">Rate</th>
+      <th style="padding:8px 12px;text-align:left;color:#ffffff;font-size:12px;">Program</th>
+      <th style="padding:8px 12px;text-align:right;color:#ffffff;font-size:12px;">Monthly P&I</th>
+    </tr>
+    ${rateRows}
+  </table>
+  ` : ''}
+
+  ${ctaButton('View Full Quote Details', quoteLink)}
+
+  <p style="margin:16px 0 0;font-size:13px;color:#6b7280;line-height:1.5;">
+    The full quote includes closing cost breakdown, fee details, and a downloadable PDF.
+    This quote is based on current wholesale pricing and is subject to change.
+  </p>
+  <p style="margin:12px 0 0;font-size:13px;color:#6b7280;">
+    Questions? Reply to this email or call me at 303-444-5251.
+  </p>
+`, `Your rate quote: ${rateDisplay} — ${piDisplay}/mo`);
+
+  const text = `Hi ${name},\n\nYour rate quote is ready for your ${purpose} loan${loanAmount ? ` (${loanAmount})` : ''}.\n\n${
+    (scenarios || []).map(s => `${s.rate.toFixed(3)}% — ${s.program} — $${Number(s.monthlyPI || 0).toLocaleString()}/mo`).join('\n')
+  }\n\nView your full quote: ${quoteLink}\n\nQuestions? Reply to this email or call 303-444-5251.\n\nDavid Burson\nNetRate Mortgage LLC | NMLS #641790`;
+
+  return {
+    subject: `Your Rate Quote${rateDisplay ? `: ${rateDisplay}` : ''} — NetRate Mortgage`,
+    html,
+    text,
+  };
+}

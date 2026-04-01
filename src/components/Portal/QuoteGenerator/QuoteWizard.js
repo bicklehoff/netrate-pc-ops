@@ -120,6 +120,41 @@ export default function QuoteWizard({ prefill }) {
     }
   }, [quoteId, selectedRates, fees]);
 
+  const [sendResult, setSendResult] = useState(null);
+
+  const handleSendToBorrower = useCallback(async () => {
+    if (!quoteId) return;
+    if (!scenario.borrowerEmail) {
+      setError('Add borrower email before sending');
+      return;
+    }
+
+    // Save latest selections first
+    await handleSaveDraft();
+
+    setLoading(true);
+    setError(null);
+    setSendResult(null);
+    try {
+      const res = await fetch(`/api/portal/mlo/quotes/${quoteId}/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || data.error || 'Send failed');
+
+      setSendResult({
+        success: true,
+        quoteLink: data.quoteLink,
+        pdfUrl: data.pdfUrl,
+      });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [quoteId, scenario.borrowerEmail, handleSaveDraft]);
+
   return (
     <div className="max-w-6xl mx-auto">
       {/* Step indicator */}
@@ -148,6 +183,23 @@ export default function QuoteWizard({ prefill }) {
       {error && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
           {error}
+        </div>
+      )}
+
+      {sendResult?.success && (
+        <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+          <div className="text-green-800 font-medium text-sm">Quote sent to {scenario.borrowerEmail}</div>
+          <div className="text-green-600 text-xs mt-1">
+            PDF attached + portal link included. Borrower can view at the link in their email.
+          </div>
+          {sendResult.quoteLink && (
+            <div className="mt-2 text-xs">
+              <span className="text-gray-500">Quote link: </span>
+              <a href={sendResult.quoteLink} target="_blank" rel="noopener noreferrer" className="text-cyan-600 hover:underline break-all">
+                {sendResult.quoteLink}
+              </a>
+            </div>
+          )}
         </div>
       )}
 
@@ -186,6 +238,7 @@ export default function QuoteWizard({ prefill }) {
           scenario={scenario}
           quoteId={quoteId}
           onSaveDraft={handleSaveDraft}
+          onSendToBorrower={handleSendToBorrower}
           loading={loading}
         />
       )}

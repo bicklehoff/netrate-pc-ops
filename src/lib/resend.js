@@ -30,9 +30,10 @@ const REPLY_TO = 'david@netratemortgage.com';
  * @param {string} [params.replyTo] — override reply-to (default: david@netratemortgage.com)
  * @param {string} [params.from] — override from address (default: notifications@netratemortgage.com)
  * @param {string[]} [params.cc] — CC recipients
+ * @param {Array<{filename: string, content: Buffer}>} [params.attachments] — file attachments
  * @returns {Promise<{id: string, skipped?: boolean}>}
  */
-export async function sendEmail({ to, subject, html, text, replyTo = REPLY_TO, from = FROM_ADDRESS, cc }) {
+export async function sendEmail({ to, subject, html, text, replyTo = REPLY_TO, from = FROM_ADDRESS, cc, attachments }) {
   if (!process.env.RESEND_API_KEY) {
     console.log(`[EMAIL SKIP] No RESEND_API_KEY. Would send to ${to}: ${subject}`);
     return { id: 'dev-skip', skipped: true };
@@ -48,6 +49,7 @@ export async function sendEmail({ to, subject, html, text, replyTo = REPLY_TO, f
 
   if (text) payload.text = text;
   if (cc) payload.cc = Array.isArray(cc) ? cc : [cc];
+  if (attachments?.length) payload.attachments = attachments;
 
   const { data, error } = await getResend().emails.send(payload);
 

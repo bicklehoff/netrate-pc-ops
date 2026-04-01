@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scenario, quoteId, onSaveDraft, loading }) {
+export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scenario, quoteId, onSaveDraft, loading, onSendToBorrower }) {
   const [expanded, setExpanded] = useState({});
 
   const toggle = (section) => setExpanded(prev => ({ ...prev, [section]: !prev[section] }));
@@ -162,11 +162,12 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
             {loading ? 'Saving...' : 'Save Draft'}
           </button>
           <button
-            disabled
-            className="px-5 py-2 bg-cyan-600 text-white rounded-lg text-sm font-medium opacity-50 cursor-not-allowed"
-            title="Send to Borrower — coming in Phase 4"
+            onClick={onSendToBorrower}
+            disabled={loading || !scenario.borrowerEmail}
+            className="px-5 py-2 bg-cyan-600 text-white rounded-lg text-sm font-bold hover:bg-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            title={!scenario.borrowerEmail ? 'Add borrower email to send' : 'Send quote with PDF to borrower'}
           >
-            Send to Borrower
+            {loading ? 'Sending...' : 'Send to Borrower'}
           </button>
         </div>
       </div>
