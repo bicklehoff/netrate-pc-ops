@@ -34,11 +34,14 @@ function loadJson(filename) {
 
 // ─── Parse helpers (normalized keys — no Unicode, no %) ─────────────
 
-/** ">=780" → { ficoMin: 780, ficoMax: 999 }, "760-779" → { ficoMin: 760, ficoMax: 779 } */
+/** ">=780" → { ficoMin: 780, ficoMax: 999 }, "760-779" → { ficoMin: 760, ficoMax: 779 }, "<=639 or NTC" → { ficoMin: 0, ficoMax: 639 } */
 function parseFico(band) {
   const ge = band.match(/>=\s*(\d+)/);
   if (ge) return { ficoMin: parseInt(ge[1]), ficoMax: 999 };
-  const lt = band.match(/<\s*(\d+)/);
+  // "<=639 or NTC" — SWMC's lowest conforming tier
+  const leOrNtc = band.match(/<=\s*(\d+)/);
+  if (leOrNtc) return { ficoMin: 0, ficoMax: parseInt(leOrNtc[1]) };
+  const lt = band.match(/^<\s*(\d+)/);
   if (lt) return { ficoMin: 0, ficoMax: parseInt(lt[1]) - 1 };
   const range = band.match(/(\d+)-(\d+)/);
   if (range) return { ficoMin: parseInt(range[1]), ficoMax: parseInt(range[2]) };
@@ -46,12 +49,14 @@ function parseFico(band) {
   return null;
 }
 
-/** "<= 30" → { ltvMin: 0, ltvMax: 30 }, "30.01-60" → { ltvMin: 30.01, ltvMax: 60 } */
+/** "<= 30" → { ltvMin: 0, ltvMax: 30 }, "30.01-60" → { ltvMin: 30.01, ltvMax: 60 }, ">95" → { ltvMin: 95.01, ltvMax: 100 } */
 function parseLtv(band) {
   const le = band.match(/<=\s*([\d.]+)/);
   if (le && !band.includes('-')) return { ltvMin: 0, ltvMax: parseFloat(le[1]) };
   const range = band.match(/([\d.]+)-([\d.]+)/);
   if (range) return { ltvMin: parseFloat(range[1]), ltvMax: parseFloat(range[2]) };
+  const gt = band.match(/^>\s*([\d.]+)$/);
+  if (gt) return { ltvMin: parseFloat(gt[1]) + 0.01, ltvMax: 100 };
   console.warn(`  ⚠ LTV: "${band}"`);
   return null;
 }
@@ -658,6 +663,134 @@ function seedProductLoanAmountLlpas() {
   }
 }
 
+// ─── SWMC: Conforming FICO/LTV grids ────────────────────────────────
+// SWMC has one set of FICO/LTV grids per purpose (no investor/tier split).
+// Values are COSTS (positive = cost). Engine does `price -= ficoLtvCost` for conventional.
+
+function seedSwmcConvLlpa() {
+  const data = loadJson('conv-llpa.json');
+  if (!data) return;
+
+  const ltvBands = data.ltvBands; // ["<=30","30.01-60","60.01-70","70.01-75","75.01-80","80.01-85","85.01-90","90.01-95",">95"]
+
+  for (const purpose of ['purchase', 'refinance', 'cashout']) {
+    const grid = data.ficoLtv?.[purpose];
+    if (!grid) continue;
+    // Convert { ficoBand: { ltvBand: value } } → seedGrid
+    seedGrid(grid, {
+      adjustmentType: 'ficoLtv',
+      loanType: 'conventional',
+      purpose,
+      termGroup: '>15yr',
+      sourceFile: 'conv-llpa.json',
+    });
+  }
+}
+
+// ─── SWMC: Government FICO / State / Property adjustments ────────────
+// Values in lender-config.json are PRE-NEGATED from SWMC sheet convention.
+// (Sheet negative=credit → stored as positive for engine productFeature: price += value)
+
+function seedSwmcGovAdj() {
+  const cfg = loadJson('lender-config.json');
+  if (!cfg) return;
+
+  const SRC = 'lender-config.json';
+  const govLoanTypes = ['fha', 'va'];
+
+  // FICO adjustments (flat, no LTV dimension)
+  if (cfg.govFicoAdj) {
+    for (const [band, value] of Object.entries(cfg.govFicoAdj)) {
+      if (value === 0) continue;
+      const fico = parseFico(band);
+      if (!fico) continue;
+      for (const lt of govLoanTypes) {
+        addRow({
+          adjustmentType: 'productFeature',
+          loanType: lt,
+          featureName: 'ficoAdj',
+          ...fico, value,
+          sourceFile: SRC,
+        });
+      }
+    }
+  }
+
+  // State adjustments
+  if (cfg.govStateAdj) {
+    for (const [state, value] of Object.entries(cfg.govStateAdj)) {
+      if (value === 0) continue;
+      for (const lt of govLoanTypes) {
+        addRow({
+          adjustmentType: 'productFeature',
+          loanType: lt,
+          featureName: 'stateAdj',
+          state, value,
+          sourceFile: SRC,
+        });
+      }
+    }
+  }
+
+  // Property type adjustments
+  if (cfg.govPropertyAdj) {
+    const propMap = {
+      'Manufactured Home': 'manufactured',
+      '3 - 4 Units': '3-4unit',
+      'Second Home': 'secondHome',
+      'Investment Property': 'investment',
+    };
+    for (const [rawKey, value] of Object.entries(cfg.govPropertyAdj)) {
+      if (value === 0) continue;
+      const productGroup = propMap[rawKey] || rawKey.toLowerCase().replace(/\s+/g, '_');
+      for (const lt of govLoanTypes) {
+        addRow({
+          adjustmentType: 'productFeature',
+          loanType: lt,
+          featureName: 'propertyType',
+          productGroup, value,
+          sourceFile: SRC,
+        });
+      }
+    }
+  }
+
+  // Loan amount adjustments (FHA/VA)
+  if (cfg.govLoanAmtAdj) {
+    for (const entry of cfg.govLoanAmtAdj) {
+      if (entry.value === 0) continue;
+      for (const lt of govLoanTypes) {
+        addRow({
+          adjustmentType: 'productFeature',
+          loanType: lt,
+          featureName: 'loanAmtAdj',
+          loanAmountMin: 0,
+          loanAmountMax: entry.max,
+          value: entry.value,
+          sourceFile: SRC,
+        });
+      }
+    }
+  }
+}
+
+// ─── SWMC: Promo credits ─────────────────────────────────────────────
+
+function seedSwmcPromos() {
+  const cfg = loadJson('lender-config.json');
+  if (!cfg?.promos) return;
+
+  for (const promo of cfg.promos) {
+    addRow({
+      adjustmentType: 'productFeature',
+      loanType: promo.loanType,
+      featureName: promo.featureName,
+      value: promo.value,
+      sourceFile: 'lender-config.json',
+    });
+  }
+}
+
 // ─── Execute ────────────────────────────────────────────────────────
 
 async function main() {
@@ -665,20 +798,27 @@ async function main() {
   console.log(`Source: ${BASE_DIR}`);
   console.log(`Dry run: ${dryRun}\n`);
 
-  // Build all rows
-  seedCoreConvLlpa();
-  seedCoreConvSrp();
-  seedEliteConvLlpa();
-  seedEliteConvSrp();
-  seedFhaLlpa();
-  seedFhaSrp();
-  seedEliteFhaLlpa();
-  seedEliteFhaSrp();
-  seedEliteVaLlpa();
-  seedEliteVaSrp();
-  seedCoreVaLlpa();
-  seedLenderConfig();
-  seedProductLoanAmountLlpas();
+  // Build all rows — dispatch by lender
+  if (lenderArg === 'swmc') {
+    seedSwmcConvLlpa();
+    seedSwmcGovAdj();
+    seedSwmcPromos();
+  } else {
+    // EverStream and other lenders using the original file structure
+    seedCoreConvLlpa();
+    seedCoreConvSrp();
+    seedEliteConvLlpa();
+    seedEliteConvSrp();
+    seedFhaLlpa();
+    seedFhaSrp();
+    seedEliteFhaLlpa();
+    seedEliteFhaSrp();
+    seedEliteVaLlpa();
+    seedEliteVaSrp();
+    seedCoreVaLlpa();
+    seedLenderConfig();
+    seedProductLoanAmountLlpas();
+  }
 
   // Count by type
   const counts = {};

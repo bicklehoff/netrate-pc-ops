@@ -1,0 +1,55 @@
+{
+  "_meta": {
+    "lender": "swmc",
+    "type": "gov-adj",
+    "updated": "2026-04-02",
+    "notes": "SWMC uses positive=cost convention. ficoAdj keys: main FICO adj; _additional suffix = secondary table."
+  },
+  "ficoAdj": {
+    ">=700": -0.25,
+    "680-699": -0.125,
+    "640-659": 0,
+    "620-639": 0,
+    "600-619": 0,
+    "580-599": 0.125,
+    "500-579": 1.75,
+    "NTC": 1,
+    ">=700_additional": -0.4,
+    "680-699_additional": -0.4,
+    "660-679_additional": -0.4,
+    "640-659_additional": -0.4,
+    "500-579_additional": -0.5
+  },
+  "stateAdj": {
+    "TX": -0.125,
+    "NY": 0,
+    "VI": 0.5,
+    "WA": 0.125
+  },
+  "propertyAdj": {
+    "Manufactured Home": 0.25,
+    "3 - 4 Units": 0.5,
+    "Second Home": 0.75,
+    "VA loan amount >$1,000,000": 0,
+    "VA Cash-out Refinance": 0,
+    "Investment Property": 1,
+    "Loan Term 20 - 29 Year Fixed (Based on 30 Year Fixed Pricing)": 0.5,
+    "FICO 500 - 599  / Non-Traditional Credit (additional for ARMs)": 0.25
+  },
+  "otherAdj": {
+    "BuyDown Std Bal": 0,
+    "FICO < 620": 0,
+    "Condo": 0.125,
+    "FHA / USDA Construction Single Closing": 1,
+    "VA FICO < 620": 0,
+    "Properties located in PR, FICO < 620": 0,
+    "Properties located in PR, FICO >= 620": 0
+  },
+  "loanAmtAdj": [
+    {
+      "description": "Loan Amount <=$150,000 (Fixed Amortization Only)",
+      "max": 150000,
+      "adj": -0.25
+    }
+  ]
+}
