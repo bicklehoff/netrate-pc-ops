@@ -87,6 +87,7 @@ export async function GET(request) {
       mbs6Coupon: record.mbs6Coupon,
       mbs6Change: record.mbs6Change,
       author: record.author,
+      source: record.source,
       publishedAt: record.publishedAt,
     };
 

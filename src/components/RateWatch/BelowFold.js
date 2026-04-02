@@ -9,17 +9,57 @@ function formatEventDate(dateStr) {
   return `${days[d.getDay()]} ${months[d.getMonth()]} ${d.getDate()}`;
 }
 
+function getEventTiming(dateStr) {
+  const today = new Date().toISOString().split('T')[0];
+  if (dateStr === today) return 'today';
+  return dateStr < today ? 'past' : 'future';
+}
+
+function getBorderClass(ev) {
+  const timing = getEventTiming(ev.date);
+  if (timing === 'today') return 'border-l-4 border-l-primary';
+  if (timing === 'past' && ev.result === 'better') return 'border-l-4 border-l-emerald-500';
+  if (timing === 'past' && ev.result === 'worse') return 'border-l-4 border-l-red-400';
+  if (timing === 'past') return 'border-l-4 border-l-slate-300';
+  if (ev.big) return 'border-l-4 border-l-amber-500';
+  return '';
+}
+
+function ResultTag({ ev }) {
+  const timing = getEventTiming(ev.date);
+  if (timing !== 'past' || !ev.actual) return null;
+  const colors = {
+    better: 'text-emerald-600 bg-emerald-50',
+    worse: 'text-red-600 bg-red-50',
+    inline: 'text-slate-500 bg-slate-100',
+  };
+  const labels = { better: 'Good for rates', worse: 'Bad for rates', inline: 'Neutral' };
+  const icons = { better: '\u2713', worse: '\u2717', inline: '\u2014' };
+  const style = colors[ev.result] || colors.inline;
+  return (
+    <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${style}`}>
+      {icons[ev.result]} {labels[ev.result] || 'Released'}
+    </span>
+  );
+}
+
 export default function BelowFold() {
   const [events, setEvents] = useState([]);
 
   useEffect(() => {
-    fetch('/api/market/calendar?upcoming=true&limit=6')
+    // Fetch both past (with results) and upcoming events
+    fetch('/api/market/calendar?limit=20')
       .then(res => res.ok ? res.json() : null)
       .then(data => {
         if (data?.events) {
-          // Show events that have impact text (the "what it means" context)
           const withImpact = data.events.filter(ev => ev.impact);
-          setEvents(withImpact.slice(0, 3));
+          // Sort: upcoming first (by date asc), then past (by date desc, most recent first)
+          const today = new Date().toISOString().split('T')[0];
+          const upcoming = withImpact.filter(ev => ev.date >= today).sort((a, b) => a.date.localeCompare(b.date));
+          const past = withImpact.filter(ev => ev.date < today).sort((a, b) => b.date.localeCompare(a.date));
+          // Show up to 3 upcoming + up to 3 past with results
+          const pastWithResults = past.filter(ev => ev.actual).slice(0, 3);
+          setEvents([...upcoming.slice(0, 3), ...pastWithResults]);
         }
       })
       .catch(() => {});
@@ -30,22 +70,43 @@ export default function BelowFold() {
       {/* What Could Move Rates Next */}
       {events.length > 0 && (
         <div>
-          <h3 className="text-slate-900 text-lg font-bold mb-4">What Could Move Rates Next</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {events.map((ev) => (
-              <div
-                key={ev.id}
-                className={`bg-white rounded-2xl px-6 py-5 border border-slate-200 shadow-sm ${
-                  ev.big ? 'border-l-4 border-l-amber-500' : ''
-                }`}
-              >
-                <div className="text-primary text-[10px] font-bold uppercase tracking-widest mb-1.5">
-                  {formatEventDate(ev.date)}
+          <h3 className="text-slate-900 text-lg font-bold mb-4">Economic Calendar</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {events.map((ev) => {
+              const timing = getEventTiming(ev.date);
+              return (
+                <div
+                  key={ev.id}
+                  className={`bg-white rounded-2xl px-6 py-5 border border-slate-200 shadow-sm ${getBorderClass(ev)} ${
+                    timing === 'past' ? 'opacity-75' : ''
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="text-primary text-[10px] font-bold uppercase tracking-widest">
+                      {formatEventDate(ev.date)}
+                      {timing === 'today' && (
+                        <span className="ml-2 text-primary bg-primary/10 px-1.5 py-0.5 rounded text-[9px]">TODAY</span>
+                      )}
+                    </div>
+                    <ResultTag ev={ev} />
+                  </div>
+                  <div className="text-slate-900 text-base font-bold mb-2">{ev.name}</div>
+                  {timing === 'past' && ev.actual ? (
+                    <div className="text-slate-500 text-sm leading-relaxed">
+                      {ev.actual}{ev.forecast ? ` vs ${ev.forecast} forecast` : ''}
+                      {ev.prior ? ` (prior: ${ev.prior})` : ''}
+                    </div>
+                  ) : (
+                    <div className="text-slate-500 text-sm leading-relaxed">{ev.impact}</div>
+                  )}
+                  {timing !== 'past' && ev.forecast && (
+                    <div className="text-[10px] text-slate-400 mt-2">
+                      Forecast: {ev.forecast}{ev.prior ? ` | Prior: ${ev.prior}` : ''}
+                    </div>
+                  )}
                 </div>
-                <div className="text-slate-900 text-base font-bold mb-2">{ev.name}</div>
-                <div className="text-slate-500 text-sm leading-relaxed">{ev.impact}</div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

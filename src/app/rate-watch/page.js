@@ -341,17 +341,10 @@ export default async function RateWatchPage() {
           {/* Row 5: Benchmark Index Rates — full width */}
           <BenchmarkIndexes fredLatest={fredData.latest} cmtData={cmtData} />
 
-          {/* Row 6: What Happened Today (2col) + Market News (1col) */}
+          {/* Row 6: Commentary detail (2col) + Market News (1col) */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:h-[320px]">
             <div className="lg:col-span-2 min-h-0" id="full-commentary">
-              <div className="bg-white rounded-2xl border border-slate-200 border-l-4 border-l-primary p-6 shadow-sm h-full flex flex-col overflow-hidden">
-                <h2 className="text-slate-900 text-xl font-extrabold leading-tight mb-3 shrink-0">
-                  What Happened Today
-                </h2>
-                <div className="text-slate-600 text-sm leading-relaxed flex-1 overflow-hidden">
-                  <WhatHappenedToday />
-                </div>
-              </div>
+              <WhatHappenedToday />
             </div>
             <div className="min-h-0">
               <MarketNews />
