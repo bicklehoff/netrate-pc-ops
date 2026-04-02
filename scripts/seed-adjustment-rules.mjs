@@ -17,6 +17,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: join(__dirname, '..', '.env') });
 
 const dryRun = process.argv.includes('--dry-run');
+const force = process.argv.includes('--force');
 const lenderArg = process.argv.find((_, i, a) => a[i - 1] === '--lender') || 'everstream';
 const sql = neon(process.env.PC_DATABASE_URL || process.env.DATABASE_URL);
 
@@ -717,13 +718,23 @@ async function main() {
   const lenderId = lender.id;
   console.log(`Lender ID: ${lenderId}`);
 
+  // Skip guard — don't re-seed unless --force is passed
+  const [existing] = await sql`SELECT COUNT(*) as cnt FROM adjustment_rules WHERE lender_id = ${lenderId}`;
+  if (Number(existing.cnt) > 0 && !force) {
+    console.log(`\nSkipping — ${existing.cnt} rules already exist for ${lenderArg}.`);
+    console.log('Re-run with --force to clear and re-seed (only do this on new rate sheet days).');
+    return;
+  }
+
   // Clear existing
   await sql`DELETE FROM adjustment_rules WHERE lender_id = ${lenderId}`;
   console.log('Cleared existing rules');
 
-  // Insert
+  // Batch insert — 50 rows per query to minimize HTTP round trips to Neon
+  const BATCH_SIZE = 50;
   let inserted = 0;
-  for (const r of rows) {
+  for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+    const batch = rows.slice(i, i + BATCH_SIZE);
     await sql`
       INSERT INTO adjustment_rules (
         id, lender_id, adjustment_type, loan_type,
@@ -732,17 +743,25 @@ async function main() {
         loan_amount_min, loan_amount_max, term_min, term_max,
         value, effective_date, status, source,
         created_at, updated_at
-      ) VALUES (
-        gen_random_uuid(), ${lenderId}, ${r.adjustment_type}, ${r.loan_type},
-        ${r.purpose}, ${r.agency}, ${r.tier}, ${r.state}, ${r.escrow_type}, ${r.product_group}, ${r.term_group}, ${r.feature_name},
-        ${r.fico_min}, ${r.fico_max}, ${r.ltv_min}, ${r.ltv_max},
-        ${r.loan_amount_min}, ${r.loan_amount_max}, ${r.term_min}, ${r.term_max},
-        ${r.value}, ${TODAY}, 'active', ${r.source},
+      )
+      SELECT
+        gen_random_uuid(), ${lenderId}, r.adjustment_type, r.loan_type,
+        r.purpose, r.agency, r.tier, r.state, r.escrow_type, r.product_group, r.term_group, r.feature_name,
+        r.fico_min, r.fico_max, r.ltv_min, r.ltv_max,
+        r.loan_amount_min, r.loan_amount_max, r.term_min, r.term_max,
+        r.value, ${TODAY}, 'active', r.source,
         NOW(), NOW()
+      FROM json_to_recordset(${JSON.stringify(batch)}::json) AS r(
+        adjustment_type text, loan_type text,
+        purpose text, agency text, tier text, state text, escrow_type text,
+        product_group text, term_group text, feature_name text,
+        fico_min numeric, fico_max numeric, ltv_min numeric, ltv_max numeric,
+        loan_amount_min numeric, loan_amount_max numeric, term_min numeric, term_max numeric,
+        value numeric, source text
       )
     `;
-    inserted++;
-    if (inserted % 100 === 0) process.stdout.write(`  Inserted ${inserted}/${rows.length}\r`);
+    inserted += batch.length;
+    process.stdout.write(`  Inserted ${inserted}/${rows.length}\r`);
   }
 
   console.log(`\nDone! Inserted ${inserted} adjustment rules for ${lenderArg}.`);

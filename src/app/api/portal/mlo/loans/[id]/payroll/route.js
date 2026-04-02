@@ -540,6 +540,7 @@ export async function POST(request, { params }) {
       loNmls: freshLoan.mlo?.nmls || null,
       confirmedBy: freshLoan.mlo ? freshLoan.mlo.firstName.toLowerCase() : session.user.id,
       confirmedAt: freshLoan.cdApprovedAt?.toISOString() || now.toISOString(),
+      cdWorkDriveFileId: freshLoan.cdWorkDriveFileId || null,
     };
 
     // POST to TrackerPortal

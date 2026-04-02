@@ -40,6 +40,35 @@ Before pushing, verify: every field in `schema.prisma` has a corresponding colum
 
 ---
 
+## Neon DB Usage (Keep Transfer Low)
+
+Neon serverless billing includes **network transfer**. The free tier is 5 GB/month — easy to blow through on a heavy seeding day. Patterns that burn transfer:
+
+### Always use the pooled connection string
+`PC_DATABASE_URL` must point to the `-pooler.` URL (PgBouncer), not the direct endpoint. PgBouncer reuses connections; the direct URL opens a new TCP connection per query.
+- Pooled: `ep-plain-math-aixa3lmr-pooler.c-4.us-east-1.aws.neon.tech`
+- Direct (migrations only): `ep-plain-math-aixa3lmr.c-4.us-east-1.aws.neon.tech`
+
+Use `directUrl` in `schema.prisma` for Prisma migrations. Use pooled for everything else.
+
+### Seed scripts: run locally only, once per rate sheet day
+Never run seed scripts from a Vercel serverless function — every invocation opens a fresh HTTP connection to Neon. Run them from your local machine where the connection can be reused.
+
+**seed-adjustment-rules.mjs** has a skip guard:
+- If rows already exist for the lender, it exits without touching the DB
+- Pass `--force` to clear and re-seed: `node scripts/seed-adjustment-rules.mjs --lender everstream --force`
+- Only use `--force` on new rate sheet days — not to "refresh" data that hasn't changed
+
+**seed-fee-templates.mjs** uses upsert (ON CONFLICT DO UPDATE) — safe to run anytime, only 8 rows.
+
+### Batch inserts, not row-by-row
+Each `await sql\`INSERT...\`` is a separate HTTP round trip to Neon. At 700 rows, that's 700 connections. The adjustment rules seeder now batches 50 rows per query (~14 round trips total). Apply the same pattern to any future seed scripts.
+
+### Use JSON files for public-facing rate display
+The public rate tool reads from `src/data/parsed-rates.json` (a static file). Don't replace this with DB queries — the DB is for the MLO portal and pricing engine where you need live data. Serving rate data from a JSON file = zero DB transfer.
+
+---
+
 ## Deployment
 
 ### Wave deploys for big features
