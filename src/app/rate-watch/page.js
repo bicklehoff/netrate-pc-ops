@@ -10,6 +10,7 @@ import FedStatementDiff from '@/components/RateWatch/FedStatementDiff';
 import Commentary from '@/components/RateWatch/Commentary';
 import WhatHappenedToday from '@/components/RateWatch/WhatHappenedToday';
 import BenchmarkIndexes from '@/components/RateWatch/BenchmarkIndexes';
+import MarketNews from '@/components/RateWatch/MarketNews';
 import { getHomepageRatesFromDB } from '@/lib/rates/homepage-db';
 
 export const revalidate = 300; // ISR: 5 minutes
@@ -340,7 +341,7 @@ export default async function RateWatchPage() {
           {/* Row 5: Benchmark Index Rates — full width */}
           <BenchmarkIndexes fredLatest={fredData.latest} cmtData={cmtData} />
 
-          {/* Row 6: What Happened Today (2col) + Fed Statement Diff (1col) */}
+          {/* Row 6: What Happened Today (2col) + Market News (1col) */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:h-[320px]">
             <div className="lg:col-span-2 min-h-0" id="full-commentary">
               <div className="bg-white rounded-2xl border border-slate-200 border-l-4 border-l-primary p-6 shadow-sm h-full flex flex-col overflow-hidden">
@@ -353,9 +354,12 @@ export default async function RateWatchPage() {
               </div>
             </div>
             <div className="min-h-0">
-              <FedStatementDiff />
+              <MarketNews />
             </div>
           </div>
+
+          {/* Row 7: Fed Statement Diff — full width */}
+          <FedStatementDiff />
 
           {/* Below fold: events, CTA, SEO */}
           <BelowFold />

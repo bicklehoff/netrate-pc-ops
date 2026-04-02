@@ -1013,6 +1013,20 @@ model EconomicCalendarEvent {
   @@map("economic_calendar_events")
 }
 
+model MarketNewsHeadline {
+  id          Int      @id @default(autoincrement())
+  title       String   @db.VarChar(500)
+  source      String   @db.VarChar(100)
+  url         String
+  publishedAt DateTime @map("published_at")
+  postedBy    String   @default("claw") @map("posted_by") @db.VarChar(50)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([title, publishedAt])
+  @@index([publishedAt])
+  @@map("market_news_headlines")
+}
+
 // =============================================================================
 // TOOLS & SCENARIOS
 // =============================================================================
