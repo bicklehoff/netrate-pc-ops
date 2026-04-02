@@ -12,6 +12,7 @@
  */
 
 import prisma from '@/lib/prisma';
+import { calculateEscrow } from './escrow-calc';
 
 // 10-minute cache for fee templates (they rarely change)
 let templateCache = { data: new Map(), fetchedAt: 0 };
@@ -72,10 +73,12 @@ function toNum(val) {
  * @param {number} params.lenderFeeUw — underwriting fee from lender (typically from RateLender or product)
  * @param {number} [params.loanAmount] — used for escrow estimates
  * @param {number} [params.propertyValue] — used for insurance/tax estimates
+ * @param {Date|string} [params.closingDate] — if provided, escrow months are calculated from dates
+ * @param {number} [params.annualRate] — interest rate for per diem calc (e.g. 6.75)
  *
  * @returns {Object|null} { sectionA, sectionB, sectionC, sectionE, sectionF, sectionG, totalClosingCosts }
  */
-export async function buildFeeBreakdown({ state, county, purpose, lenderFeeUw = 0 }) {
+export async function buildFeeBreakdown({ state, county, purpose, lenderFeeUw = 0, closingDate, annualRate, loanAmount }) {
   const mappedPurpose = purpose === 'cashout' ? 'refinance' : purpose;
   const template = await loadTemplate(state, county, mappedPurpose);
 
@@ -138,7 +141,15 @@ export async function buildFeeBreakdown({ state, county, purpose, lenderFeeUw = 
   };
   sectionE.total = sectionE.items.reduce((sum, i) => sum + i.amount, 0);
 
-  // Prepaid items
+  // Escrow calculation — use closing date if provided, else fall back to template defaults
+  const escrow = closingDate
+    ? calculateEscrow({ closingDate, state, annualRate, loanAmount })
+    : null;
+
+  const escrowInsMonths = escrow?.insuranceMonths ?? template.escrowInsuranceMonths ?? 2;
+  const escrowTaxMonths = escrow?.taxMonths ?? template.escrowTaxMonths ?? 3;
+
+  // Prepaid items (Section F)
   const homeInsurance = toNum(template.homeInsuranceAtClose);
   const floodIns = toNum(template.floodInsurance);
   const sectionF = {
@@ -146,14 +157,16 @@ export async function buildFeeBreakdown({ state, county, purpose, lenderFeeUw = 
     items: [
       ...(homeInsurance > 0 ? [{ label: 'Homeowner\'s Insurance (12 months)', amount: homeInsurance }] : []),
       ...(floodIns > 0 ? [{ label: 'Flood Insurance (12 months)', amount: floodIns }] : []),
+      ...(escrow?.prepaidInterestTotal > 0 ? [{
+        label: `Prepaid Interest (${escrow.daysToEndOfMonth} days @ $${escrow.perDiemInterest}/day)`,
+        amount: escrow.prepaidInterestTotal,
+      }] : []),
     ],
   };
   sectionF.total = sectionF.items.reduce((sum, i) => sum + i.amount, 0);
 
-  // Escrow
+  // Initial escrow reserves (Section G)
   const taxMonthly = toNum(template.propertyTaxMonthly);
-  const escrowInsMonths = template.escrowInsuranceMonths ?? 3;
-  const escrowTaxMonths = template.escrowTaxMonths ?? 3;
   const monthlyInsurance = homeInsurance > 0 ? Math.round(homeInsurance / 12) : 0;
   const sectionG = {
     label: 'Initial Escrow',
@@ -177,6 +190,7 @@ export async function buildFeeBreakdown({ state, county, purpose, lenderFeeUw = 
     monthlyTax: taxMonthly,
     monthlyInsurance,
     templateId: template.id,
+    escrowCalc: escrow || null,
   };
 }
 

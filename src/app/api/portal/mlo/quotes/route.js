@@ -136,6 +136,7 @@ export async function POST(request) {
     if (lenderFeeUw == null && pricing.results.length > 0) {
       eligibility.warnings.push({ severity: 'warning', code: 'CONFIG_MISSING', message: 'Lender fee missing from rate results — check rate_lenders.uwFee' });
     }
+    const primaryAnnualRate = pricing.results[0]?.rate ?? 0;
     const fees = await buildFeeBreakdown({
       state: pricingInput.state,
       county: pricingInput.county,
@@ -143,6 +144,8 @@ export async function POST(request) {
       lenderFeeUw,
       loanAmount,
       propertyValue,
+      closingDate: body.closingDate || null,
+      annualRate: primaryAnnualRate,
     });
 
     // Surface fee template warning
@@ -172,12 +175,79 @@ export async function POST(request) {
       return isNaN(n) ? null : n;
     };
 
+    // Lead auto-create / link ──────────────────────────────────────────────
+    // If leadId provided → verify it belongs to this MLO and use it.
+    // Else if borrower email provided → upsert a Lead (email + mloId unique).
+    let resolvedLeadId = body.leadId || null;
+
+    if (resolvedLeadId) {
+      // Verify ownership
+      const existingLead = await prisma.lead.findFirst({
+        where: { id: resolvedLeadId, mloId: session.user.id },
+        select: { id: true },
+      });
+      if (!existingLead) resolvedLeadId = null; // Don't link to someone else's lead
+    }
+
+    if (!resolvedLeadId && body.borrowerEmail) {
+      // Upsert lead — email + mloId as natural key
+      // Prisma doesn't have a compound unique on email+mloId, so use findFirst + create
+      const existingByEmail = await prisma.lead.findFirst({
+        where: { email: body.borrowerEmail, mloId: session.user.id },
+        select: { id: true },
+      });
+      if (existingByEmail) {
+        resolvedLeadId = existingByEmail.id;
+      } else {
+        const newLead = await prisma.lead.create({
+          data: {
+            email: body.borrowerEmail,
+            phone: body.borrowerPhone || null,
+            name: body.borrowerName || body.borrowerEmail,
+            first_name: body.borrowerName ? body.borrowerName.split(' ')[0] : null,
+            last_name: body.borrowerName ? body.borrowerName.split(' ').slice(1).join(' ') || null : null,
+            source: 'quote_generator',
+            status: 'quoted',
+            loanPurpose: body.purpose,
+            loanAmount: loanAmount,
+            propertyValue: safePropertyValue,
+            propertyState: pricingInput.state,
+            propertyCounty: pricingInput.county || null,
+            creditScore: body.fico,
+            mloId: session.user.id,
+          },
+        });
+        resolvedLeadId = newLead.id;
+      }
+    }
+
+    // Update lead status → quoted (if we have one)
+    if (resolvedLeadId) {
+      await prisma.lead.update({
+        where: { id: resolvedLeadId },
+        data: {
+          status: 'quoted',
+          scenarioData: {
+            purpose: body.purpose,
+            loanAmount,
+            propertyValue: safePropertyValue,
+            state: pricingInput.state,
+            county: pricingInput.county,
+            fico: body.fico,
+            loanType: pricingInput.loanType,
+            lastQuotedAt: new Date().toISOString(),
+          },
+        },
+      });
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     // Create quote record
     const quote = await prisma.borrowerQuote.create({
       data: {
         mloId: session.user.id,
         contactId: body.contactId || null,
-        leadId: body.leadId || null,
+        leadId: resolvedLeadId,
         loanId: body.loanId || null,
         borrowerName: body.borrowerName || null,
         borrowerEmail: body.borrowerEmail || null,

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -44,6 +44,23 @@ export default function LeadDetailPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+
+  // Build quote generator URL with lead data pre-filled
+  const quoteGeneratorUrl = useMemo(() => {
+    if (!lead) return '/portal/mlo/tools/quote-generator';
+    const params = new URLSearchParams();
+    params.set('leadId', id);
+    if (lead.name) params.set('name', lead.name);
+    if (lead.email) params.set('email', lead.email);
+    if (lead.phone) params.set('phone', lead.phone);
+    if (lead.propertyState) params.set('state', lead.propertyState);
+    if (lead.propertyCounty) params.set('county', lead.propertyCounty);
+    if (lead.loanAmount) params.set('loanAmount', String(lead.loanAmount));
+    if (lead.creditScore) params.set('fico', String(lead.creditScore));
+    if (lead.loanPurpose) params.set('purpose', lead.loanPurpose);
+    if (lead.propertyValue) params.set('propertyValue', String(lead.propertyValue));
+    return `/portal/mlo/tools/quote-generator?${params.toString()}`;
+  }, [lead, id]);
 
   const handleConvert = async () => {
     if (!confirm('Convert this lead to a draft loan? This will create a contact (if needed), borrower, and loan record.')) return;
@@ -183,6 +200,12 @@ export default function LeadDetailPage() {
           >
             {quoting ? 'Running...' : 'Run Quote'}
           </button>
+          <Link
+            href={quoteGeneratorUrl}
+            className="px-4 py-2 text-sm font-medium bg-cyan-700 text-white rounded-lg hover:bg-cyan-800 transition-colors"
+          >
+            Generate Quote
+          </Link>
           {lead.status !== 'converted' && lead.status !== 'closed' && (
             <button
               onClick={handleConvert}
@@ -338,65 +361,81 @@ export default function LeadDetailPage() {
         </div>
 
         {/* Right: Quotes */}
-        <div>
+        <div className="space-y-4">
+          {/* Full quote wizard quotes (BorrowerQuote) */}
           <div className="bg-white border border-gray-200 rounded-xl p-5">
-            <h3 className="font-semibold text-gray-900 mb-4">Rate Quotes</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-gray-900">Quotes</h3>
+              <Link
+                href={quoteGeneratorUrl}
+                className="text-xs font-medium bg-cyan-600 text-white px-3 py-1.5 rounded-lg hover:bg-cyan-700 transition-colors"
+              >
+                + New Quote
+              </Link>
+            </div>
 
-            {(!lead.quotes || lead.quotes.length === 0) ? (
-              <div className="text-center py-8 text-gray-400">
+            {(!lead.borrowerQuotes || lead.borrowerQuotes.length === 0) ? (
+              <div className="text-center py-6 text-gray-400">
                 <p className="text-sm">No quotes yet</p>
-                <p className="text-xs mt-1">Fill in the scenario and click &ldquo;Run Quote&rdquo;</p>
+                <p className="text-xs mt-1">Click &ldquo;Generate Quote&rdquo; or &ldquo;+ New Quote&rdquo; to build a full quote with PDF</p>
               </div>
             ) : (
-              <div className="space-y-3">
-                {lead.quotes.map((quote) => (
-                  <div key={quote.id} className="border border-gray-100 rounded-lg p-4 hover:border-brand/30 transition-colors">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs text-gray-400">
-                        {new Date(quote.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
-                      </span>
-                      {quote.sentAt && (
-                        <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded">Sent</span>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-2 text-center">
-                      <div>
-                        <p className="text-xl font-bold text-gray-900">{quote.bestRate ? `${Number(quote.bestRate).toFixed(3)}%` : '—'}</p>
-                        <p className="text-[10px] text-gray-500 uppercase">Best Rate</p>
+              <div className="space-y-2">
+                {lead.borrowerQuotes.map((q) => (
+                  <Link
+                    key={q.id}
+                    href={`/portal/mlo/quotes/${q.id}`}
+                    className="flex items-center justify-between p-3 border border-gray-100 rounded-lg hover:border-cyan-200 hover:bg-cyan-50/30 transition-colors"
+                  >
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">
+                        {q.purpose} · {q.loanType} · ${Number(q.loanAmount).toLocaleString()}
                       </div>
-                      <div>
-                        <p className="text-xl font-bold text-gray-900">{quote.monthlyPayment ? `$${Number(quote.monthlyPayment).toLocaleString()}` : '—'}</p>
-                        <p className="text-[10px] text-gray-500 uppercase">Payment</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-700 mt-1">{quote.bestLender || '—'}</p>
-                        <p className="text-[10px] text-gray-500 uppercase">Lender</p>
+                      <div className="text-xs text-gray-500 mt-0.5">
+                        {new Date(q.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        {q.sentAt && <span className="ml-2 text-green-600">Sent</span>}
+                        {q.viewedAt && <span className="ml-1 text-blue-500">Viewed</span>}
                       </div>
                     </div>
-
-                    {/* Show all results if available */}
-                    {quote.results?.results?.length > 1 && (
-                      <div className="mt-3 pt-3 border-t border-gray-100">
-                        <p className="text-[10px] text-gray-400 mb-1">{quote.results.results.length} programs available</p>
-                        {quote.results.results.slice(0, 5).map((r, i) => (
-                          <div key={i} className="flex justify-between text-xs text-gray-600 py-0.5">
-                            <span>{r.lender}</span>
-                            <span>{r.rate}% — {r.adjustedPrice > 100 ? `+$${Math.round((r.adjustedPrice - 100) / 100 * (quote.scenario?.loanAmount || 0))}` : `-$${Math.round((100 - r.adjustedPrice) / 100 * (quote.scenario?.loanAmount || 0))}`}</span>
-                          </div>
-                        ))}
+                    <div className="text-right">
+                      <div className="text-sm font-mono text-gray-900">
+                        {q.monthlyPayment ? `$${Number(q.monthlyPayment).toLocaleString()}/mo` : '—'}
                       </div>
-                    )}
-
-                    <div className="flex gap-2 mt-3">
-                      <button className="text-xs text-brand hover:text-brand-dark font-medium">Send to Borrower</button>
-                      <button className="text-xs text-gray-400 hover:text-gray-600 font-medium">Generate PDF</button>
+                      <div className={`text-[10px] px-1.5 py-0.5 rounded mt-1 inline-block ${
+                        q.status === 'sent' ? 'bg-green-100 text-green-700' :
+                        q.status === 'viewed' ? 'bg-blue-100 text-blue-700' :
+                        'bg-gray-100 text-gray-500'
+                      }`}>{q.status}</div>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}
           </div>
+
+          {/* Quick quotes (LeadQuote — legacy) */}
+          {lead.quotes && lead.quotes.length > 0 && (
+            <div className="bg-white border border-gray-200 rounded-xl p-5">
+              <h3 className="font-semibold text-gray-900 mb-3 text-sm">Quick Quotes</h3>
+              <div className="space-y-2">
+                {lead.quotes.map((quote) => (
+                  <div key={quote.id} className="border border-gray-100 rounded-lg p-3">
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs text-gray-500">
+                        {new Date(quote.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </div>
+                      {quote.sentAt && <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded">Sent</span>}
+                    </div>
+                    <div className="flex gap-4 mt-1 text-sm">
+                      <span className="font-mono font-bold">{quote.bestRate ? `${Number(quote.bestRate).toFixed(3)}%` : '—'}</span>
+                      <span className="text-gray-500">{quote.bestLender || '—'}</span>
+                      <span className="text-gray-500">{quote.monthlyPayment ? `$${Number(quote.monthlyPayment).toLocaleString()}/mo` : ''}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

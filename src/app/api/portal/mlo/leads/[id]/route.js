@@ -17,21 +17,43 @@ export async function GET(request, { params }) {
     }
 
     const { id } = await params;
-    const lead = await prisma.lead.findUnique({
-      where: { id },
-      include: {
-        quotes: {
-          orderBy: { createdAt: 'desc' },
-          take: 10,
+    const [lead, borrowerQuotes] = await Promise.all([
+      prisma.lead.findUnique({
+        where: { id },
+        include: {
+          quotes: {
+            orderBy: { createdAt: 'desc' },
+            take: 10,
+          },
         },
-      },
-    });
+      }),
+      prisma.borrowerQuote.findMany({
+        where: { leadId: id },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+        select: {
+          id: true,
+          purpose: true,
+          loanAmount: true,
+          loanType: true,
+          state: true,
+          fico: true,
+          ltv: true,
+          status: true,
+          monthlyPayment: true,
+          version: true,
+          sentAt: true,
+          viewedAt: true,
+          createdAt: true,
+        },
+      }),
+    ]);
 
     if (!lead) {
       return NextResponse.json({ error: 'Lead not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ lead });
+    return NextResponse.json({ lead: { ...lead, borrowerQuotes } });
   } catch (error) {
     console.error('Lead detail error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
