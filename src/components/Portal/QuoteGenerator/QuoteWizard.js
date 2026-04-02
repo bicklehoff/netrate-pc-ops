@@ -12,12 +12,38 @@ const STEPS = [
   { key: 'fees', label: 'Fees & Preview' },
 ];
 
-// Default closing date ~30 days from today; first payment = 1st of 2nd month after closing
+// Default closing date ~30 days from today
 function defaultClosingDate() {
   const d = new Date();
   d.setDate(d.getDate() + 30);
   return d.toISOString().split('T')[0];
 }
+
+// Add N business days (skips Sat/Sun) to a date string
+function addBusinessDays(dateStr, days) {
+  const d = new Date(dateStr + 'T12:00:00');
+  let added = 0;
+  while (added < days) {
+    d.setDate(d.getDate() + 1);
+    const dow = d.getDay();
+    if (dow !== 0 && dow !== 6) added++;
+  }
+  return d.toISOString().split('T')[0];
+}
+
+/**
+ * Derive default funding date from closing date, state, and purpose.
+ *   CO, TX purchase → same day as closing
+ *   CA, OR purchase → closing + 3 business days
+ *   All refinances  → closing + 3 business days (rescission period)
+ */
+function defaultFundingDate(closingStr, state, purpose) {
+  if (!closingStr) return '';
+  const isRefi = purpose === 'refinance' || purpose === 'cashout';
+  const needsDelay = isRefi || state === 'CA' || state === 'OR';
+  return needsDelay ? addBusinessDays(closingStr, 3) : closingStr;
+}
+
 function firstPaymentFromClosing(closingStr) {
   if (!closingStr) return '';
   const [y, m] = closingStr.split('-').map(Number); // m is 1-indexed
@@ -29,6 +55,8 @@ export default function QuoteWizard({ prefill }) {
   const [step, setStep] = useState(0);
 
   const initClosing = prefill?.closingDate || defaultClosingDate();
+  const initState   = prefill?.state    || 'CO';
+  const initPurpose = prefill?.purpose  || 'purchase';
   const [scenario, setScenario] = useState({
     borrowerName: prefill?.borrowerName || '',
     borrowerEmail: prefill?.borrowerEmail || '',
@@ -36,13 +64,13 @@ export default function QuoteWizard({ prefill }) {
     contactId: prefill?.contactId || null,
     leadId: prefill?.leadId || null,
     loanId: prefill?.loanId || null,
-    purpose: prefill?.purpose || 'purchase',
+    purpose: initPurpose,
     loanType: prefill?.loanType || 'conventional',
     propertyValue: prefill?.propertyValue || '',
     loanAmount: prefill?.loanAmount || '',
     downPaymentPct: prefill?.downPaymentPct || 25,
     fico: prefill?.fico || 780,
-    state: prefill?.state || 'CO',
+    state: initState,
     county: prefill?.county || '',
     zipCode: prefill?.zipCode || '',
     term: prefill?.term || 30,
@@ -52,7 +80,10 @@ export default function QuoteWizard({ prefill }) {
     // Date defaults
     closingDate: initClosing,
     firstPaymentDate: prefill?.firstPaymentDate || firstPaymentFromClosing(initClosing),
-    fundingDate: prefill?.fundingDate || '',
+    fundingDate: prefill?.fundingDate || defaultFundingDate(initClosing, initState, initPurpose),
+    // Escrow
+    escrowsWaived: prefill?.escrowsWaived || false,
+    borrowerPaid: prefill?.borrowerPaid || false,
     // Refi fields
     currentRate: prefill?.currentRate || '',
     currentBalance: prefill?.currentBalance || '',
@@ -289,6 +320,8 @@ export default function QuoteWizard({ prefill }) {
             loading={loading}
             onNext={() => setStep(2)}
             borrowerPaid={scenario.borrowerPaid}
+            escrowsWaived={scenario.escrowsWaived}
+            onEscrowsWaivedChange={(v) => setScenario(prev => ({ ...prev, escrowsWaived: v }))}
           />
         </div>
       )}
@@ -305,6 +338,7 @@ export default function QuoteWizard({ prefill }) {
           onSendToBorrower={handleSendToBorrower}
           onPreviewPDF={handlePreviewPDF}
           loading={loading}
+          escrowsWaived={scenario.escrowsWaived}
         />
       )}
     </div>

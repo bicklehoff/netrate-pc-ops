@@ -214,6 +214,8 @@ function respaAggregate(items, firstPaymentDate, fundingDate, cushionMonths = CU
  * @param {number}      params.annualMud
  * @param {boolean}     params.hasHailWind       — TX hail/wind separate policy
  * @param {number}      params.annualHailWind
+ * @param {Object}      [params.overrideDueDates] — editable due date overrides
+ *   Keys: tax_0, tax_1 (per installment), hoi, flood, mud, hw → YYYY-MM-DD strings
  *
  * @returns {{
  *   firstPaymentDate: Date|null,
@@ -223,6 +225,8 @@ function respaAggregate(items, firstPaymentDate, fundingDate, cushionMonths = CU
  *   sectionFItems: Array<{ label: string, amount: number }>,
  *   sectionGItems: Array<{ label: string, amount: number }>,
  *   escrowMonthly: { taxes, insurance, flood, mud, hailWind, total },
+ *   escrowItems: Array<{ key, label, monthly, dueDate, dateStr, installment, monthsFromFirstPmt }>,
+ *   respa: { totalMonthly, cushion, initialDeposit },
  * }}
  */
 export function calculateEscrowSections({
@@ -241,6 +245,7 @@ export function calculateEscrowSections({
   annualMud = 0,
   hasHailWind = false,
   annualHailWind = 0,
+  overrideDueDates = {},
 } = {}) {
   const funding = parseDate(fundingDate);
   const { firstPaymentDate, isCredit: isInterestCredit } = funding
@@ -288,107 +293,165 @@ export function calculateEscrowSections({
     sectionFItems.push({ label, amount: prepaidInterest.total }); // negative for credit
   }
 
-  // ── Section G (RESPA aggregate) ─────────────────────────────────────────────
-  const sectionGItems = [];
+  // ── Build escrow items (for RESPA aggregate + show-your-work display) ───────
+  // Each entry represents one disbursement event (installment or renewal).
+  // overrideDueDates keys: tax_0, tax_1, hoi, flood, mud, hw
+  const escrowItemsList = []; // flat: one entry per disbursement
 
-  if (isEscrowing && firstPaymentDate && funding) {
+  const resolvedDate = (key, computed) =>
+    overrideDueDates[key] ? parseDate(overrideDueDates[key]) : computed;
+
+  const monthsFromFirstPmt = (dueDate) => {
+    if (!firstPaymentDate || !dueDate) return null;
+    const diff = (dueDate.getFullYear() - firstPaymentDate.getFullYear()) * 12
+               + (dueDate.getMonth() - firstPaymentDate.getMonth());
+    return Math.max(0, diff);
+  };
+
+  if (firstPaymentDate && funding) {
     const schedule = TAX_SCHEDULE[state] || TAX_SCHEDULE_DEFAULT;
-    const escrowItems = [];
 
-    // Property taxes
+    // Property taxes — one entry per installment
     if (annualTaxes > 0) {
       const installmentAmt = schedule.type === 'semiannual' ? annualTaxes / 2 : annualTaxes;
-      const disbursements = schedule.dues.map(([m, d]) => ({
-        date: nextDueDate(firstPaymentDate, m, d),
-        amount: installmentAmt,
-      })).filter(disb => disb.date);
+      const monthly = Math.round(annualTaxes / 12 * 100) / 100;
+      const labels = schedule.type === 'semiannual'
+        ? ['Property Tax — 1st Installment', 'Property Tax — 2nd Installment']
+        : ['Property Tax'];
 
-      escrowItems.push({
-        label: 'Property Tax',
-        monthly: Math.round(annualTaxes / 12 * 100) / 100,
-        disbursements,
+      schedule.dues.forEach(([m, d], idx) => {
+        const key = `tax_${idx}`;
+        const computed = nextDueDate(firstPaymentDate, m, d);
+        const dueDate = resolvedDate(key, computed);
+        if (dueDate) {
+          escrowItemsList.push({
+            key,
+            label: labels[idx] || `Property Tax — Installment ${idx + 1}`,
+            monthly,
+            dueDate,
+            dateStr: fmtDate(dueDate),
+            installment: installmentAmt,
+            monthsFromFirstPmt: monthsFromFirstPmt(dueDate),
+          });
+        }
       });
     }
 
-    // HOI reserves (only if HOI is being escrowed — it was collected at close)
+    // HOI reserves
     if (annualInsurance > 0 && hoiAtClose) {
-      // Renewal = 12 months from effective date
       const effDate = parseDate(hoiEffectiveDate) || (isPurchase ? funding : null);
       if (effDate) {
-        const renewal = new Date(effDate);
-        renewal.setFullYear(renewal.getFullYear() + 1);
-        escrowItems.push({
-          label: "Homeowner's Insurance",
-          monthly: Math.round(annualInsurance / 12 * 100) / 100,
-          disbursements: [{ date: renewal, amount: annualInsurance }],
+        const computed = new Date(effDate);
+        computed.setFullYear(computed.getFullYear() + 1);
+        const dueDate = resolvedDate('hoi', computed);
+        if (dueDate) {
+          escrowItemsList.push({
+            key: 'hoi',
+            label: "Homeowner's Insurance",
+            monthly: Math.round(annualInsurance / 12 * 100) / 100,
+            dueDate,
+            dateStr: fmtDate(dueDate),
+            installment: annualInsurance,
+            monthsFromFirstPmt: monthsFromFirstPmt(dueDate),
+          });
+        }
+      }
+    }
+
+    // Flood insurance
+    if (hasFlood && annualFlood > 0) {
+      const computed = new Date(funding);
+      computed.setFullYear(computed.getFullYear() + 1);
+      const dueDate = resolvedDate('flood', computed);
+      if (dueDate) {
+        escrowItemsList.push({
+          key: 'flood',
+          label: 'Flood Insurance',
+          monthly: Math.round(annualFlood / 12 * 100) / 100,
+          dueDate,
+          dateStr: fmtDate(dueDate),
+          installment: annualFlood,
+          monthsFromFirstPmt: monthsFromFirstPmt(dueDate),
         });
       }
     }
 
-    // Flood insurance reserves
-    if (hasFlood && annualFlood > 0) {
-      const floodRenewal = new Date(funding);
-      floodRenewal.setFullYear(floodRenewal.getFullYear() + 1);
-      escrowItems.push({
-        label: 'Flood Insurance',
-        monthly: Math.round(annualFlood / 12 * 100) / 100,
-        disbursements: [{ date: floodRenewal, amount: annualFlood }],
-      });
-    }
-
-    // TX: MUD tax (annual, Jan 31)
+    // TX: MUD tax
     if (hasMud && annualMud > 0) {
-      const mudDue = nextDueDate(firstPaymentDate, 1, 31);
-      if (mudDue) {
-        escrowItems.push({
+      const computed = nextDueDate(firstPaymentDate, 1, 31);
+      const dueDate = resolvedDate('mud', computed);
+      if (dueDate) {
+        escrowItemsList.push({
+          key: 'mud',
           label: 'MUD Tax',
           monthly: Math.round(annualMud / 12 * 100) / 100,
-          disbursements: [{ date: mudDue, amount: annualMud }],
+          dueDate,
+          dateStr: fmtDate(dueDate),
+          installment: annualMud,
+          monthsFromFirstPmt: monthsFromFirstPmt(dueDate),
         });
       }
     }
 
-    // TX: Hail/Wind reserves
+    // TX: Hail/Wind
     if (hasHailWind && annualHailWind > 0) {
-      const hwRenewal = new Date(funding);
-      hwRenewal.setFullYear(hwRenewal.getFullYear() + 1);
-      escrowItems.push({
-        label: 'Hail/Wind Insurance',
-        monthly: Math.round(annualHailWind / 12 * 100) / 100,
-        disbursements: [{ date: hwRenewal, amount: annualHailWind }],
+      const computed = new Date(funding);
+      computed.setFullYear(computed.getFullYear() + 1);
+      const dueDate = resolvedDate('hw', computed);
+      if (dueDate) {
+        escrowItemsList.push({
+          key: 'hw',
+          label: 'Hail/Wind Insurance',
+          monthly: Math.round(annualHailWind / 12 * 100) / 100,
+          dueDate,
+          dateStr: fmtDate(dueDate),
+          installment: annualHailWind,
+          monthsFromFirstPmt: monthsFromFirstPmt(dueDate),
+        });
+      }
+    }
+  }
+
+  // ── Section G (RESPA aggregate) ─────────────────────────────────────────────
+  const sectionGItems = [];
+  let respaResult = { totalMonthly: 0, cushion: 0, initialDeposit: 0 };
+
+  if (isEscrowing && escrowItemsList.length > 0 && firstPaymentDate && funding) {
+    // Convert flat escrowItemsList to RESPA format (group by key, combine disbursements)
+    const respaItems = escrowItemsList.map(item => ({
+      monthly: item.monthly,
+      disbursements: [{ date: item.dueDate, amount: item.installment }],
+    }));
+
+    respaResult = respaAggregate(respaItems, firstPaymentDate, funding);
+    const { initialDeposit, totalMonthly } = respaResult;
+
+    // Apportion initial deposit across items by monthly proportion
+    for (const item of escrowItemsList) {
+      const proportion = totalMonthly > 0 ? item.monthly / totalMonthly : 1 / escrowItemsList.length;
+      const itemDeposit = Math.round(initialDeposit * proportion * 100) / 100;
+      const months = item.monthly > 0 ? Math.round(itemDeposit / item.monthly * 10) / 10 : 0;
+      sectionGItems.push({
+        label: `${item.label} (${months} months)`,
+        amount: itemDeposit,
       });
     }
 
-    if (escrowItems.length > 0) {
-      const { initialDeposit, totalMonthly } = respaAggregate(escrowItems, firstPaymentDate, funding);
-
-      // Apportion initial deposit across items by monthly proportion for display
-      for (const item of escrowItems) {
-        const proportion = totalMonthly > 0 ? item.monthly / totalMonthly : 1 / escrowItems.length;
-        const itemDeposit = Math.round(initialDeposit * proportion * 100) / 100;
-        const months = item.monthly > 0 ? Math.round(itemDeposit / item.monthly * 10) / 10 : 0;
-        sectionGItems.push({
-          label: `${item.label} (${months} months)`,
-          amount: itemDeposit,
-        });
-      }
-
-      // Correct for rounding: adjust last item so total matches initialDeposit exactly
-      const sumG = sectionGItems.reduce((s, i) => s + i.amount, 0);
-      if (sectionGItems.length > 0 && Math.abs(sumG - initialDeposit) > 0.01) {
-        const last = sectionGItems[sectionGItems.length - 1];
-        last.amount = Math.round((last.amount + (initialDeposit - sumG)) * 100) / 100;
-      }
+    // Fix rounding on last item
+    const sumG = sectionGItems.reduce((s, i) => s + i.amount, 0);
+    if (sectionGItems.length > 0 && Math.abs(sumG - initialDeposit) > 0.01) {
+      const last = sectionGItems[sectionGItems.length - 1];
+      last.amount = Math.round((last.amount + (initialDeposit - sumG)) * 100) / 100;
     }
   }
 
   // ── Monthly escrow breakdown (for PITI display) ──────────────────────────────
   const escrowMonthly = {
-    taxes:     isEscrowing && annualTaxes > 0     ? Math.round(annualTaxes / 12)     : 0,
-    insurance: isEscrowing && annualInsurance > 0 ? Math.round(annualInsurance / 12) : 0,
-    flood:     isEscrowing && hasFlood && annualFlood > 0      ? Math.round(annualFlood / 12)     : 0,
-    mud:       isEscrowing && hasMud && annualMud > 0          ? Math.round(annualMud / 12)        : 0,
-    hailWind:  isEscrowing && hasHailWind && annualHailWind > 0 ? Math.round(annualHailWind / 12) : 0,
+    taxes:     isEscrowing && annualTaxes > 0      ? Math.round(annualTaxes / 12)      : 0,
+    insurance: isEscrowing && annualInsurance > 0  ? Math.round(annualInsurance / 12)  : 0,
+    flood:     isEscrowing && hasFlood && annualFlood > 0       ? Math.round(annualFlood / 12)      : 0,
+    mud:       isEscrowing && hasMud && annualMud > 0           ? Math.round(annualMud / 12)         : 0,
+    hailWind:  isEscrowing && hasHailWind && annualHailWind > 0 ? Math.round(annualHailWind / 12)   : 0,
   };
   escrowMonthly.total = Object.values(escrowMonthly).reduce((s, v) => s + v, 0);
 
@@ -400,5 +463,7 @@ export function calculateEscrowSections({
     sectionFItems,
     sectionGItems,
     escrowMonthly,
+    escrowItems: escrowItemsList,  // for show-your-work display
+    respa: respaResult,
   };
 }

@@ -47,7 +47,7 @@ function findSweetSpots(rates) {
   return { chargeSweet, creditSweet, parRate };
 }
 
-export default function QuoteRateResults({ pricing, selectedRates, onSelectRates, onReprice, loading, onNext, borrowerPaid }) {
+export default function QuoteRateResults({ pricing, selectedRates, onSelectRates, onReprice, loading, onNext, borrowerPaid, escrowsWaived, onEscrowsWaivedChange }) {
   const [viewMode, setViewMode] = useState('programs'); // 'programs' | 'all'
   const [expandedPrograms, setExpandedPrograms] = useState(new Set());
   const [showAll, setShowAll] = useState(false);
@@ -138,12 +138,25 @@ export default function QuoteRateResults({ pricing, selectedRates, onSelectRates
               : `${results.length} Rates`
             }
           </h3>
-          <p className="text-xs text-gray-500 mt-0.5">
+          <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-2 flex-wrap">
             Effective: {pricing?.effectiveDate || 'N/A'} | All prices after LLPA adjustments
-            {borrowerPaid && <span className="ml-2 px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded font-medium">BORROWER-PAID (no comp)</span>}
+            {borrowerPaid && <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded font-medium">BORROWER-PAID (no comp)</span>}
+            {escrowsWaived && <span className="px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded font-medium">ESCROWS WAIVED</span>}
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Escrows Waived toggle */}
+          <button
+            onClick={() => onEscrowsWaivedChange?.(!escrowsWaived)}
+            className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
+              escrowsWaived
+                ? 'bg-orange-100 text-orange-700 border-orange-300 hover:bg-orange-50'
+                : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+            }`}
+            title="Toggle escrow waiver — affects LLPA"
+          >
+            {escrowsWaived ? 'Escrows Waived ✓' : 'Waive Escrows'}
+          </button>
           <div className="flex bg-gray-100 rounded-lg p-0.5">
             <button
               onClick={() => setViewMode('programs')}
