@@ -5,6 +5,57 @@ import { useState } from 'react';
 export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scenario, quoteId, onSaveDraft, loading, onSendToBorrower, onPreviewPDF }) {
   const [expanded, setExpanded] = useState({});
 
+  // Escrow override state — seeded from fee template values
+  const [annualTaxes, setAnnualTaxes] = useState(() => Math.round((fees?.monthlyTax || 0) * 12));
+  const [annualInsurance, setAnnualInsurance] = useState(() => {
+    // homeInsuranceAtClose in sectionF is the annual 12-month prepaid
+    const insItem = fees?.sectionF?.items?.find(i => i.label.startsWith('Homeowner'));
+    return insItem?.amount || 0;
+  });
+
+  // When escrow overrides change, rebuild sectionF and sectionG items
+  const applyEscrowOverride = (newAnnualTax, newAnnualIns) => {
+    if (!fees) return;
+    const monthlyTax = Math.round(newAnnualTax / 12);
+    const monthlyIns = Math.round(newAnnualIns / 12);
+
+    const updated = { ...fees };
+
+    // Update sectionF — find/replace homeowners insurance line
+    const sectionF = { ...updated.sectionF, items: [...(updated.sectionF?.items || [])] };
+    const insIdx = sectionF.items.findIndex(i => i.label.startsWith('Homeowner'));
+    if (newAnnualIns > 0) {
+      const insItem = { label: "Homeowner's Insurance (12 months)", amount: newAnnualIns };
+      if (insIdx >= 0) sectionF.items[insIdx] = insItem;
+      else sectionF.items.unshift(insItem);
+    } else if (insIdx >= 0) {
+      sectionF.items.splice(insIdx, 1);
+    }
+    // Keep per diem line if present
+    sectionF.total = sectionF.items.reduce((s, i) => s + i.amount, 0);
+    updated.sectionF = sectionF;
+
+    // Update sectionG — rebuild insurance + tax lines, keep same month counts
+    const escrowInsMonths = fees.escrowCalc?.insuranceMonths ?? 2;
+    const escrowTaxMonths = fees.escrowCalc?.taxMonths ?? (fees.sectionG?.items?.find(i => i.label.startsWith('Property'))
+      ? parseInt(fees.sectionG.items.find(i => i.label.startsWith('Property')).label.match(/\d+/)?.[0] || 3) : 3);
+
+    const sectionG = { ...updated.sectionG };
+    sectionG.items = [
+      ...(monthlyIns > 0 ? [{ label: `Insurance (${escrowInsMonths} months)`, amount: monthlyIns * escrowInsMonths }] : []),
+      ...(monthlyTax > 0 ? [{ label: `Property Tax (${escrowTaxMonths} months)`, amount: monthlyTax * escrowTaxMonths }] : []),
+    ];
+    sectionG.total = sectionG.items.reduce((s, i) => s + i.amount, 0);
+    updated.sectionG = sectionG;
+
+    updated.monthlyTax = monthlyTax;
+    updated.monthlyInsurance = monthlyIns;
+    updated.totalClosingCosts = ['sectionA', 'sectionB', 'sectionC', 'sectionE', 'sectionF', 'sectionG']
+      .reduce((sum, k) => sum + (updated[k]?.total || 0), 0);
+
+    onFeesChange(updated);
+  };
+
   const toggle = (section) => setExpanded(prev => ({ ...prev, [section]: !prev[section] }));
 
   const updateItem = (sectionKey, itemIndex, newAmount) => {
@@ -58,6 +109,62 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
               </div>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Escrow Inputs */}
+      <div className="bg-white rounded-xl border border-amber-200 p-5 shadow-sm">
+        <h3 className="text-sm font-semibold text-gray-700 mb-1">Escrow Inputs</h3>
+        <p className="text-xs text-gray-400 mb-4">
+          Override defaults from fee template. Changes update Sections F &amp; G automatically.
+          {fees?.escrowCalc && (
+            <span className="ml-2 text-cyan-600">
+              Closing {scenario.closingDate} → {fees.escrowCalc.taxMonths} tax months, {fees.escrowCalc.insuranceMonths} ins months
+              {fees.escrowCalc.perDiemInterest > 0 && `, ${fees.escrowCalc.daysToEndOfMonth} days per diem @ $${fees.escrowCalc.perDiemInterest}/day`}
+            </span>
+          )}
+        </p>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Annual Property Taxes</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">$</span>
+              <input
+                type="number"
+                value={annualTaxes}
+                onChange={e => {
+                  const v = Number(e.target.value) || 0;
+                  setAnnualTaxes(v);
+                  applyEscrowOverride(v, annualInsurance);
+                }}
+                className="w-full pl-7 rounded-lg border-gray-300 text-sm font-mono focus:ring-amber-400 focus:border-amber-400"
+                placeholder="3600"
+              />
+            </div>
+            <div className="text-[10px] text-gray-400 mt-0.5">
+              ${Math.round(annualTaxes / 12).toLocaleString()}/mo
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Annual Homeowner&apos;s Insurance</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">$</span>
+              <input
+                type="number"
+                value={annualInsurance}
+                onChange={e => {
+                  const v = Number(e.target.value) || 0;
+                  setAnnualInsurance(v);
+                  applyEscrowOverride(annualTaxes, v);
+                }}
+                className="w-full pl-7 rounded-lg border-gray-300 text-sm font-mono focus:ring-amber-400 focus:border-amber-400"
+                placeholder="1800"
+              />
+            </div>
+            <div className="text-[10px] text-gray-400 mt-0.5">
+              ${Math.round(annualInsurance / 12).toLocaleString()}/mo
+            </div>
+          </div>
         </div>
       </div>
 

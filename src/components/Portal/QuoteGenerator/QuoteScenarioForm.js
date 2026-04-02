@@ -31,10 +31,19 @@ function unfmt(s) {
   return s.replace(/,/g, '');
 }
 
+// Compute 1st of 2nd month after a closing date string (YYYY-MM-DD)
+function firstPaymentFromClosing(closingStr) {
+  if (!closingStr) return '';
+  const [y, m] = closingStr.split('-').map(Number); // m is 1-indexed
+  const fp = new Date(y, m + 1, 1);
+  return `${fp.getFullYear()}-${String(fp.getMonth() + 1).padStart(2, '0')}-01`;
+}
+
 export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loading }) {
   const update = (field, value) => onChange({ ...scenario, [field]: value });
   const [lastEdited, setLastEdited] = useState('pct');
-  const [zipCode, setZipCode] = useState('');
+  // Persist zip from scenario so it survives back-navigation
+  const [zipCode, setZipCode] = useState(scenario.zipCode || '');
   const [zipLoading, setZipLoading] = useState(false);
 
   const isPurchase = scenario.purpose === 'purchase';
@@ -237,7 +246,22 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
 
         {/* Closing dates */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Field label="Closing Date" value={scenario.closingDate || ''} onChange={v => update('closingDate', v)} type="date" />
+          <Field
+            label="Closing Date"
+            value={scenario.closingDate || ''}
+            onChange={v => {
+              const fp = firstPaymentFromClosing(v);
+              onChange({
+                ...scenario,
+                closingDate: v,
+                // Auto-fill first payment only if not already manually set to a different value
+                firstPaymentDate: scenario.firstPaymentDate === firstPaymentFromClosing(scenario.closingDate)
+                  ? fp
+                  : scenario.firstPaymentDate,
+              });
+            }}
+            type="date"
+          />
           <Field label="Funding Date" value={scenario.fundingDate || ''} onChange={v => update('fundingDate', v)} type="date" />
           <Field label="First Payment" value={scenario.firstPaymentDate || ''} onChange={v => update('firstPaymentDate', v)} type="date" />
           <Field label="Loan Payoff (Refi)" value={scenario.currentBalance || ''} onChange={v => update('currentBalance', v)} type="number" placeholder="Existing balance" disabled={isPurchase} />

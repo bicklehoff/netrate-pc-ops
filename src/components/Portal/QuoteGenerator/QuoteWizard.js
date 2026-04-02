@@ -12,8 +12,23 @@ const STEPS = [
   { key: 'fees', label: 'Fees & Preview' },
 ];
 
+// Default closing date ~30 days from today; first payment = 1st of 2nd month after closing
+function defaultClosingDate() {
+  const d = new Date();
+  d.setDate(d.getDate() + 30);
+  return d.toISOString().split('T')[0];
+}
+function firstPaymentFromClosing(closingStr) {
+  if (!closingStr) return '';
+  const [y, m] = closingStr.split('-').map(Number); // m is 1-indexed
+  const fp = new Date(y, m + 1, 1); // 1st of 2nd month after closing
+  return `${fp.getFullYear()}-${String(fp.getMonth() + 1).padStart(2, '0')}-01`;
+}
+
 export default function QuoteWizard({ prefill }) {
   const [step, setStep] = useState(0);
+
+  const initClosing = prefill?.closingDate || defaultClosingDate();
   const [scenario, setScenario] = useState({
     borrowerName: prefill?.borrowerName || '',
     borrowerEmail: prefill?.borrowerEmail || '',
@@ -29,10 +44,15 @@ export default function QuoteWizard({ prefill }) {
     fico: prefill?.fico || 780,
     state: prefill?.state || 'CO',
     county: prefill?.county || '',
+    zipCode: prefill?.zipCode || '',
     term: prefill?.term || 30,
     lockDays: prefill?.lockDays || 30,
     productType: prefill?.productType || 'fixed',
     ltv: prefill?.ltv || 75,
+    // Date defaults
+    closingDate: initClosing,
+    firstPaymentDate: prefill?.firstPaymentDate || firstPaymentFromClosing(initClosing),
+    fundingDate: prefill?.fundingDate || '',
     // Refi fields
     currentRate: prefill?.currentRate || '',
     currentBalance: prefill?.currentBalance || '',

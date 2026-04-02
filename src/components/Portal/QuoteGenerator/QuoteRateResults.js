@@ -80,8 +80,13 @@ export default function QuoteRateResults({ pricing, selectedRates, onSelectRates
       g.chargeSweet = spots.chargeSweet;
       g.creditSweet = spots.creditSweet;
     }
-    // Sort by best price descending (most credit first)
-    return Array.from(groups.values()).sort((a, b) => b.bestRate.finalPrice - a.bestRate.finalPrice);
+    // Sort by PAR rate quality descending (best par pricing at the top)
+    // This gives the most meaningful comparison — same rate, which lender prices it best
+    return Array.from(groups.values()).sort((a, b) => {
+      const aScore = a.parRate?.finalPrice ?? 0;
+      const bScore = b.parRate?.finalPrice ?? 0;
+      return bScore - aScore;
+    });
   }, [results]);
 
   // Global sweet spots for the flat "All Rates" view
