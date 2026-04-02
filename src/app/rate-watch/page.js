@@ -9,6 +9,7 @@ import RateGrid from '@/components/RateWatch/RateGrid';
 import FedStatementDiff from '@/components/RateWatch/FedStatementDiff';
 import Commentary from '@/components/RateWatch/Commentary';
 import WhatHappenedToday from '@/components/RateWatch/WhatHappenedToday';
+import BenchmarkIndexes from '@/components/RateWatch/BenchmarkIndexes';
 import { getHomepageRatesFromDB } from '@/lib/rates/homepage-db';
 
 export const revalidate = 300; // ISR: 5 minutes
@@ -74,6 +75,8 @@ const FRED_SERIES = {
   MORTGAGE15US: '15yr Fixed (Freddie Mac)',
   DGS2: '2yr Treasury', DGS5: '5yr Treasury',
   DGS10: '10yr Treasury', DGS30: '30yr Treasury',
+  SOFR30DAYAVG: '30-Day Avg SOFR', SOFR: 'SOFR (Overnight)',
+  DPRIME: 'Prime Rate', FEDFUNDS: 'Fed Funds Rate',
 };
 const FRED_FALLBACK = {
   MORTGAGE30US: [{ date: '2026-03-26', value: 6.38 }, { date: '2026-03-20', value: 6.22 }],
@@ -82,6 +85,10 @@ const FRED_FALLBACK = {
   DGS5: [{ date: '2026-03-27', value: 4.076 }, { date: '2026-03-26', value: 4.099 }],
   DGS10: [{ date: '2026-03-27', value: 4.434 }, { date: '2026-03-26', value: 4.42 }],
   DGS30: [{ date: '2026-03-27', value: 4.97 }, { date: '2026-03-26', value: 4.936 }],
+  SOFR30DAYAVG: [{ date: '2026-03-28', value: 4.31 }, { date: '2026-03-27', value: 4.31 }],
+  SOFR: [{ date: '2026-03-28', value: 4.30 }, { date: '2026-03-27', value: 4.31 }],
+  DPRIME: [{ date: '2026-03-28', value: 7.50 }, { date: '2026-01-30', value: 7.50 }],
+  FEDFUNDS: [{ date: '2026-03-01', value: 4.33 }, { date: '2026-02-01', value: 4.33 }],
 };
 
 async function getFredData() {
@@ -140,6 +147,35 @@ async function getFredData() {
   }
 }
 
+async function getTreasuryCMT() {
+  try {
+    const year = new Date().getFullYear();
+    const url = `https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/all/${year}?type=daily_treasury_yield_curve&field_tdr_date_value=${year}&page&_format=csv`;
+    const res = await fetch(url, { next: { revalidate: 3600 } });
+    if (!res.ok) return null;
+    const csv = await res.text();
+    const lines = csv.trim().split('\n');
+    if (lines.length < 3) return null;
+    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+    const idx1y = headers.findIndex(h => h === '1 Yr');
+    const idx10y = headers.findIndex(h => h === '10 Yr');
+    const idxDate = headers.findIndex(h => h === 'Date');
+    if (idx1y === -1 || idx10y === -1) return null;
+    const lastRow = lines[lines.length - 1].split(',').map(v => v.trim().replace(/"/g, ''));
+    const prevRow = lines[lines.length - 2].split(',').map(v => v.trim().replace(/"/g, ''));
+    return {
+      date: idxDate >= 0 ? lastRow[idxDate] : null,
+      oneYear: parseFloat(lastRow[idx1y]) || null,
+      tenYear: parseFloat(lastRow[idx10y]) || null,
+      oneYearPrev: parseFloat(prevRow[idx1y]) || null,
+      tenYearPrev: parseFloat(prevRow[idx10y]) || null,
+    };
+  } catch (error) {
+    console.error('Treasury CMT error:', error);
+    return null;
+  }
+}
+
 export async function generateMetadata() {
   let rateStr = '';
   try {
@@ -188,8 +224,8 @@ const jsonLd = {
 };
 
 export default async function RateWatchPage() {
-  const [rateHistory, fredData, nationalData] = await Promise.all([
-    getRateHistory(), getFredData(), getNationalRates(),
+  const [rateHistory, fredData, nationalData, cmtData] = await Promise.all([
+    getRateHistory(), getFredData(), getNationalRates(), getTreasuryCMT(),
   ]);
 
   let liveRates = null;
@@ -301,7 +337,10 @@ export default async function RateWatchPage() {
             <RateChart rateHistory={rateHistory} fredData={fredData.series} />
           </div>
 
-          {/* Row 5: What Happened Today (2col) + Fed Statement Diff (1col) */}
+          {/* Row 5: Benchmark Index Rates — full width */}
+          <BenchmarkIndexes fredLatest={fredData.latest} cmtData={cmtData} />
+
+          {/* Row 6: What Happened Today (2col) + Fed Statement Diff (1col) */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:h-[320px]">
             <div className="lg:col-span-2 min-h-0" id="full-commentary">
               <div className="bg-white rounded-2xl border border-slate-200 border-l-4 border-l-primary p-6 shadow-sm h-full flex flex-col overflow-hidden">
