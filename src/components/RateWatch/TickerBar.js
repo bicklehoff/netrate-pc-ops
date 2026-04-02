@@ -124,7 +124,7 @@ export default function TickerBar({ fredLatest, todayRate, rateHistory }) {
         <TickerStat
           label="Nat'l Avg (Freddie Mac)"
           value={fm30.value.toFixed(2) + '%'}
-          change={`+${spread} vs NetRate`}
+          change={`+${spread} vs NetRate Mortgage`}
           changeColor="text-red-500"
         />
       )}

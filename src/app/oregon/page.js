@@ -2,8 +2,8 @@ import Link from 'next/link';
 import CountyLoanLimits from '@/components/CountyLoanLimits';
 
 export const metadata = {
-  title: 'Oregon Mortgage Rates — Wholesale Rates from a Licensed Broker | NetRate Mortgage',
-  description: 'NetRate Mortgage is licensed in Oregon. See today\'s wholesale mortgage rates — refinance, purchase, and reverse mortgage — before you apply.',
+  title: 'Oregon Mortgage Rates — Licensed Mortgage Broker | NetRate Mortgage',
+  description: 'NetRate Mortgage is licensed in Oregon. See today\'s mortgage rates — refinance, purchase, and reverse mortgage — before you apply.',
 };
 
 export default function Oregon() {

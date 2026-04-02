@@ -81,7 +81,7 @@ const spreadPlugin = {
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    const nrText = 'NetRate: ' + val0 + '%';
+    const nrText = 'NetRate Mortgage: ' + val0 + '%';
     ctx.font = 'bold 13px -apple-system, BlinkMacSystemFont, sans-serif';
     let tw = ctx.measureText(nrText).width;
     let px = p0.x + 14;
@@ -119,7 +119,7 @@ const spreadPlugin = {
     // 5. Arrow + savings pill
     const midY = (p0.y + p1.y) / 2;
     const midX = p0.x + 14;
-    const saveText = 'Save ' + spread + '% with NetRate';
+    const saveText = 'Save ' + spread + '% with NetRate Mortgage';
     ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, sans-serif';
     tw = ctx.measureText(saveText).width;
 
@@ -423,7 +423,7 @@ export default function RateChart({ rateHistory, fredData: serverFredData }) {
         labels: extLabels,
         datasets: [
           {
-            label: 'NetRate Wholesale',
+            label: 'NetRate Mortgage',
             data: extValues,
             borderColor: '#0891b2',
             backgroundColor: 'rgba(8,145,178,0.08)',
@@ -487,7 +487,7 @@ export default function RateChart({ rateHistory, fredData: serverFredData }) {
               },
               label: (item) => {
                 if (item.raw === null) return '';
-                if (item.datasetIndex === 0) return ' NetRate: ' + item.raw + '%';
+                if (item.datasetIndex === 0) return ' NetRate Mortgage: ' + item.raw + '%';
                 if (item.datasetIndex === 1) return " Nat'l Avg: " + item.raw.toFixed(2) + '%';
               },
               afterBody: (items) => {
@@ -588,7 +588,7 @@ export default function RateChart({ rateHistory, fredData: serverFredData }) {
         </div>
         {/* Inline legend */}
         <div className="flex items-center gap-3 ml-auto text-[10px] text-slate-500">
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-brand" />NetRate</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-brand" />NetRate Mortgage</span>
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-red-500" />Nat&apos;l Avg</span>
           <span className="flex items-center gap-1"><span className="w-2 h-0.5 bg-red-500/30" />Spread</span>
         </div>

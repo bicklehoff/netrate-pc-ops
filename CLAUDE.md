@@ -39,12 +39,14 @@ Use these identifiers in MCP tool calls (`source` fields), RELAY entries, and co
 
 ---
 
-## MANDATORY — Run These Steps BEFORE Responding to ANY Request
+## Session Startup — Lightweight by Default
 
-Do NOT skip these. Do NOT respond to David's first message until these are complete.
+**Default behavior:** Skip the full startup sequence. Announce your department and ask David what he needs.
+
+**Run the full startup only when David says "full setup" or "run startup":**
 
 1. `get_briefing(device="pc", department=<yours>)` — full context from MCP
-2. `check_relay(device="pc")` — check for cross-device messages
+2. `GET https://tracker.netratemortgage.com/api/relay?device=pc&status=open` — check for cross-device messages
 3. Read `Work/SESSION-LOG.md` (last 3-5 entries) — recent work, handoffs, open items
 4. Read `REGISTRY.md` (if it exists) — know what's been built
 5. `git log --oneline -5` — see recent commits
@@ -89,7 +91,6 @@ All departments launch from the same place: **this repo root** (`netrate-pc-ops/
 | Department | Docs Folder | Responsibilities |
 |------------|-------------|------------------|
 | Dev | `Work/Dev/` (+ `Products/`, `Integrations/` subfolders) | All code — website, tools, calculators, integrations, APIs, CRM hooks |
-| Publisher | `Work/Publisher/` | Takes finished markdown from Claw, builds Next.js page components with SEO markup/schema/meta tags, deploys to Vercel. Does NOT write content, make strategy decisions, or touch pricing engine/calculators/API code. |
 | Admin | `Work/Admin/` | PC-side admin (minimal — process docs only, NO trackers) |
 | Setup | Root files | CLAUDE.md, Work/SESSION-LOG.md, folder structure |
 
@@ -99,29 +100,18 @@ All departments have full access to code and docs. Ownership rules apply to **do
 
 **Ownership rules:**
 - All departments may freely edit code (`src/`, `prisma/`, `scripts/`, etc.)
-- Only modify files in YOUR department's **docs folder** (e.g. `Work/Dev/`, `Work/Publisher/`)
+- Only modify files in YOUR department's **docs folder** (e.g. `Work/Dev/`, `Work/Admin/`)
 - You may READ other departments' docs but not edit them
 - All departments may write their own entries to `Work/SESSION-LOG.md`
 - If you need something from another department, note it as an "open item"
 
 **If David doesn't assign a department:**
-Ask: "Which department should I work as? (Dev, Publisher, Admin, or Setup)"
+Ask: "Which department should I work as? (Dev, Admin, or Setup)"
 
 **Critical Dev Rules:**
 - **Commit often** with descriptive messages. Push to main = Vercel auto-deploys.
 - **No tracker writes.** All trackers live on Mac. Log your work in SESSION-LOG; David relays to Mac.
 - **Read DEV-PLAYBOOK.md** for hard-won patterns (Prisma, deployment, etc.)
-
-**Publisher Workflow:**
-1. Claw commits finished markdown to `netrate-claw-ops/Work/Marketing/publish-queue/`
-2. Claw sends relay to PC: `type: "action"`, content includes the file path to publish
-3. David opens PC as Publisher
-4. Publisher pulls `netrate-claw-ops`, reads the markdown from `publish-queue/`
-5. Builds Next.js page component with SEO markup, schema, meta tags
-6. Commits, pushes → Vercel auto-deploys
-7. Sends relay back to Claw confirming publication with live URL
-- **Publisher does NOT** write content, edit copy, make strategy decisions, or touch Dev code
-- **Publisher DOES** add schema markup, Open Graph tags, canonical URLs, internal links, and page-level SEO
 
 ---
 
@@ -232,7 +222,7 @@ This structured format lets Mac's enforcement system validate the completion.
 
 ```
 Mac writes marketing copy → pushes to netrate-ops → PC reads from GitHub
-Claw writes content pages → pushes to netrate-claw-ops/Work/Marketing/publish-queue/ → PC Publisher reads from GitHub → builds page → deploys
+Claw writes content pages → pushes to netrate-claw-ops → Claw deploys
 Mac writes rate tool source → pushes to netrate-ops → PC reads for porting
 Mac updates trackers → Neon Postgres reflects changes → TrackerPortal dashboard
 PC builds website → pushes to netrate-pc-ops → Vercel auto-deploys from repo root
@@ -241,23 +231,24 @@ All devices share context → MCP knowledge layer (Neon Postgres) → get_briefi
 Cross-device proposals/questions → post to RELAY.md in netrate-governance → other device pulls and reads
 ```
 
-**Relay:** Cross-device communication uses MCP tools (`send_relay`, `check_relay`, `ack_relay`). Legacy file-based relay (`netrate-governance/RELAY.md`) is a fallback if MCP is unavailable.
+**Relay:** Cross-device communication uses the **TrackerPortal Relay API** (REST). MCP relay tools (`send_relay`, `check_relay`, `ack_relay`) are deprecated — do not use them.
 
-### Ironclad Relay Protocol
+Auth: `x-tracker-api-key: {TRACKER_API_KEY}` on all requests.
 
-1. **ALWAYS pass `device` on `check_relay`:**
-   `check_relay(device="pc")` — without this, Prisma silently returns 0 results.
+### Relay Protocol
 
-2. **ALWAYS pass `from` on `send_relay`:**
-   `send_relay(from="pc", to=..., ...)` — never omit the sender.
+1. **Check inbox at session start — MANDATORY, every session:**
+   `GET https://tracker.netratemortgage.com/api/relay?device=pc&status=open`
 
-3. **To REPLY to a relay, use `send_relay` — NOT `ack_relay` with a response:**
-   `send_relay(from="pc", to="<originalSender>", type="response", content="your reply")`
-   Then ack the original: `ack_relay(id="...", status="resolved")`
+2. **Send a relay:**
+   `POST https://tracker.netratemortgage.com/api/relay`
+   Body: `{ fromDevice, toDevice, type, content, context? }`
 
-4. **`ack_relay` is for STATUS changes only** (acknowledged/resolved). The `response` field auto-creates a reply relay as a safety net, but don't rely on it — always use `send_relay` for replies.
+3. **Ack or resolve:**
+   `PATCH https://tracker.netratemortgage.com/api/relay/{id}`
+   Body: `{ status: "resolved", response: "..." }`
 
-5. **At session start:** `check_relay(device="pc")` — MANDATORY, every session, no exceptions.
+4. **UI:** David views and resolves relays at `tracker.netratemortgage.com/relay`.
 
 ## Key Resources on Mac (Read via GitHub)
 
@@ -299,6 +290,12 @@ PC connects to the shared knowledge layer via `.mcp.json` in repo root. The MCP 
 - **Font:** Inter
 - **Logo:** Wordmark — "Net" (black) + "Rate" (teal) + "Mortgage"
 - **Philosophy:** "Show, don't tell" — demonstrate transparency with real rates, real math
+
+### Branding Rules (mandatory for all published content)
+
+1. **We are a broker, not a wholesaler.** NetRate Mortgage is a licensed mortgage broker — we access wholesale pricing from lenders on the borrower's behalf. Never refer to NetRate as a wholesale lender or imply we are the source of wholesale rates.
+
+2. **Always use "NetRate Mortgage" — never just "NetRate".** Every public-facing reference must use the full brand name "NetRate Mortgage". Bare "NetRate" is not acceptable in any website copy, UI labels, meta titles, descriptions, or marketing content (copyright requirement). Abbreviations (e.g. "NRM") are not acceptable substitutes.
 
 ---
 

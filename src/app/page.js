@@ -69,7 +69,7 @@ export default async function HomePage() {
             <div key={dup} className="flex items-center gap-8 px-8 shrink-0">
               <span className="text-gray-500 font-medium uppercase tracking-wider text-[10px]">Today&apos;s Rate</span>
               <div className="flex items-center gap-1.5">
-                <span className="text-gray-400">NetRate 30-Yr Fixed</span>
+                <span className="text-gray-400">NetRate Mortgage 30-Yr Fixed</span>
                 <span className="text-brand-light font-bold">{conv30Rate}</span>
                 <span className="text-gray-400 text-[11px]">APR {conv30Apr}</span>
               </div>
@@ -288,7 +288,7 @@ export default async function HomePage() {
           {[
             {
               icon: '☰', iconClass: 'bg-gradient-to-br from-cyan-50 to-cyan-100 text-brand',
-              title: 'Rate Tool', desc: 'Live wholesale rates across 11 lenders. See rate, points, payment, and lender credits side by side.',
+              title: 'Rate Tool', desc: 'Live mortgage rates across 11 lenders. See rate, points, payment, and lender credits side by side.',
               href: '/rates', cta: 'Try it',
             },
             {

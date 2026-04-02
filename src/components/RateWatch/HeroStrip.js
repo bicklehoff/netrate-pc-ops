@@ -94,7 +94,7 @@ export default function HeroStrip({ todayRate, rateChange, apr }) {
 
       <div className="relative z-10">
         {/* Label */}
-        <span className="text-[10px] text-primary font-bold tracking-widest uppercase">NetRate Wholesale Rate</span>
+        <span className="text-[10px] text-primary font-bold tracking-widest uppercase">NetRate Mortgage Rate</span>
 
         {/* Rate header */}
         <div className="mt-1 mb-1">

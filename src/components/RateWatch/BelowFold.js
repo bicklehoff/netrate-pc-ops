@@ -133,12 +133,12 @@ export default function BelowFold() {
       {/* SEO Text */}
       <div className="pt-8 border-t border-slate-100">
         <h2 className="text-slate-400 text-base font-semibold mb-4">
-          About NetRate&apos;s Rate Watch
+          About NetRate Mortgage&apos;s Rate Watch
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-3 text-slate-500 text-xs leading-relaxed">
             <p>
-              NetRate tracks daily wholesale mortgage rates sourced directly from our lending
+              NetRate Mortgage tracks daily mortgage rates sourced directly from our wholesale lending
               partners. Unlike survey-based averages from Freddie Mac or Bankrate, our data reflects
               actual wholesale pricing available to mortgage brokers — updated every business day.
             </p>
@@ -153,7 +153,7 @@ export default function BelowFold() {
             <p>
               The spread between wholesale and retail rates exists because retail lenders build their
               margin, overhead, and profit into the rate they quote you. When you work with a
-              mortgage broker like NetRate, you access wholesale pricing and pay a transparent broker
+              mortgage broker like NetRate Mortgage, you access wholesale pricing and pay a transparent broker
               fee instead — typically resulting in a lower overall cost.
             </p>
             <p>
