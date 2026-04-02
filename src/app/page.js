@@ -3,8 +3,8 @@ import TrustBar from '@/components/TrustBar';
 import StickyRateBar from '@/components/StickyRateBar';
 import { getHomepageRatesFromDB } from '@/lib/rates/homepage-db';
 
-// Revalidate every 5 minutes (ISR) — matches /api/rates and /rates page
-export const revalidate = 300;
+// Revalidate every 30 min — rates change once/day when new sheet is parsed
+export const revalidate = 1800;
 
 // Sentiment → consumer-friendly label + color
 const SENTIMENT_MAP = {
@@ -17,7 +17,7 @@ async function getMarketSentiment() {
   try {
     const base = process.env.NEXT_PUBLIC_BASE_URL || process.env.VERCEL_URL
       ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000';
-    const res = await fetch(`${base}/api/market/summary`, { next: { revalidate: 300 } });
+    const res = await fetch(`${base}/api/market/summary`, { next: { revalidate: 1800 } });
     if (!res.ok) return null;
     const data = await res.json();
     return data.summary?.sentiment || null;

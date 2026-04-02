@@ -13,7 +13,7 @@ import BenchmarkIndexes from '@/components/RateWatch/BenchmarkIndexes';
 import MarketNews from '@/components/RateWatch/MarketNews';
 import { getHomepageRatesFromDB } from '@/lib/rates/homepage-db';
 
-export const revalidate = 300; // ISR: 5 minutes
+export const revalidate = 1800; // 30 min — rates change once/day when new sheet is parsed
 
 async function getRateHistory() {
   try {

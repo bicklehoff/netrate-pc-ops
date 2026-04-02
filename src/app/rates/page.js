@@ -9,8 +9,8 @@ export const metadata = {
   description: "See today's real wholesale mortgage rates with transparent pricing. Enter your scenario and get instant rate quotes with full cost breakdown.",
 };
 
-// Revalidate every 5 minutes (ISR) — fetches fresh rates from GCS on this interval
-export const revalidate = 300;
+// Revalidate every 30 min — rates change once/day when new sheet is parsed
+export const revalidate = 1800;
 
 const GCS_BUCKET = process.env.GCS_BUCKET_NAME || 'netrate-rates';
 

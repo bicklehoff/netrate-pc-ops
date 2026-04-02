@@ -14,7 +14,7 @@ import staticAmwest from '@/data/rates/amwest.json';
 import staticManifest from '@/data/rates/manifest.json';
 
 const GCS_BUCKET = process.env.GCS_BUCKET_NAME || 'netrate-rates';
-const CACHE_TTL_MS = 2 * 60 * 1000; // 2 minutes
+const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes — rates change once/day
 
 // Module-level cache (persists across warm invocations on Vercel)
 let cache = { data: null, fetchedAt: 0 };

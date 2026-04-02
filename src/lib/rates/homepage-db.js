@@ -15,6 +15,13 @@ const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'S
 
 const FALLBACK_COMP_RATE = 0.02;
 
+// ─── Homepage rate cache ─────────────────────────────────────────────
+// Rates only change when a new sheet is parsed (~once/day).
+// Cache keyed on effectiveDate so it auto-busts on new rate sheets.
+// 30-minute TTL as safety net; ISR already caches the rendered pages.
+let homepageCache = { data: null, sheetDate: null, fetchedAt: 0 };
+const HOMEPAGE_CACHE_TTL = 30 * 60 * 1000; // 30 minutes
+
 function calculatePI(rate, amount, termYears = 30) {
   const monthlyRate = rate / 100 / 12;
   const n = termYears * 12;
@@ -164,15 +171,33 @@ async function priceProduct(loanType, termYears) {
 /**
  * Compute homepage display rates from DB using pricing-v2 engine.
  * @returns {Object|null} { dateShort, conv30, conv15, fha30, va30 }
+ *
+ * Cached for 30 minutes, keyed on active sheet effective date.
+ * When new rates are parsed (new sheet activated), cache auto-busts
+ * because the effective date changes.
  */
 export async function getHomepageRatesFromDB() {
   try {
-    // Get the latest active sheet date
+    // Check active sheet date — this is ONE tiny query (just a date field)
     const latestSheet = await prisma.rateSheet.findFirst({
       where: { status: 'active' },
       orderBy: { effectiveDate: 'desc' },
       select: { effectiveDate: true },
     });
+
+    const sheetDate = latestSheet?.effectiveDate?.toISOString() || null;
+    const now = Date.now();
+
+    // Return cached result if:
+    //   1. Same sheet date (no new rates parsed)
+    //   2. Within TTL
+    if (
+      homepageCache.data &&
+      homepageCache.sheetDate === sheetDate &&
+      (now - homepageCache.fetchedAt) < HOMEPAGE_CACHE_TTL
+    ) {
+      return homepageCache.data;
+    }
 
     let dateShort = null;
     if (latestSheet?.effectiveDate) {
@@ -186,7 +211,12 @@ export async function getHomepageRatesFromDB() {
     const fha30 = await priceProduct('fha', 30);
     const va30 = await priceProduct('va', 30);
 
-    return { dateShort, conv30, conv15, fha30, va30 };
+    const result = { dateShort, conv30, conv15, fha30, va30 };
+
+    // Cache it
+    homepageCache = { data: result, sheetDate, fetchedAt: now };
+
+    return result;
   } catch (err) {
     console.error('DB homepage rate computation failed:', err.message);
     return null;
