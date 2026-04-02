@@ -1,57 +1,107 @@
 'use client';
 
 import { useState } from 'react';
+import { calculateEscrowSections } from '@/lib/quotes/escrow-calc';
 
 export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scenario, quoteId, onSaveDraft, loading, onSendToBorrower, onPreviewPDF }) {
   const [expanded, setExpanded] = useState({});
 
-  // Escrow override state — seeded from fee template values
-  const [annualTaxes, setAnnualTaxes] = useState(() => Math.round((fees?.monthlyTax || 0) * 12));
-  const [annualInsurance, setAnnualInsurance] = useState(() => {
-    // homeInsuranceAtClose in sectionF is the annual 12-month prepaid
+  // ── Escrow state — seeded from fee object, all editable ──────────────────
+  const [isEscrowing,    setIsEscrowing]    = useState(() => fees?.isEscrowing !== false);
+  const [fundingDate,    setFundingDate]    = useState(() => fees?.fundingDate || scenario?.fundingDate || scenario?.closingDate || '');
+  const [annualTaxes,    setAnnualTaxes]    = useState(() => fees?.annualTaxes ?? Math.round((fees?.monthlyTax || 0) * 12));
+  const [annualIns,      setAnnualIns]      = useState(() => {
+    if (fees?.annualInsurance != null) return fees.annualInsurance;
     const insItem = fees?.sectionF?.items?.find(i => i.label.startsWith('Homeowner'));
     return insItem?.amount || 0;
   });
+  const [hoiDate,        setHoiDate]        = useState(() => {
+    if (fees?.hoiEffectiveDate) return fees.hoiEffectiveDate;
+    // Purchase: default to funding/closing date
+    if (scenario?.purpose === 'purchase') return fees?.fundingDate || scenario?.fundingDate || scenario?.closingDate || '';
+    return '';
+  });
+  const [hasFlood,       setHasFlood]       = useState(() => fees?.hasFlood ?? false);
+  const [annualFlood,    setAnnualFlood]     = useState(() => fees?.annualFlood || 0);
+  const [hasMud,         setHasMud]         = useState(() => fees?.hasMud ?? false);
+  const [annualMud,      setAnnualMud]       = useState(() => fees?.annualMud || 0);
+  const [hasHailWind,    setHasHailWind]    = useState(() => fees?.hasHailWind ?? false);
+  const [annualHailWind, setAnnualHailWind] = useState(() => fees?.annualHailWind || 0);
 
-  // When escrow overrides change, rebuild sectionF and sectionG items
-  const applyEscrowOverride = (newAnnualTax, newAnnualIns) => {
+  const isTX = (scenario?.state || fees?.escrowCalc?.state || 'CO') === 'TX';
+  const isPurchase = scenario?.purpose === 'purchase';
+
+  // Derive first payment date for display
+  const escrowCalcResult = fees?.escrowCalc;
+  const firstPaymentDateStr = fees?.firstPaymentDateStr || escrowCalcResult?.firstPaymentDateStr || '';
+  const isInterestCredit = fees?.isInterestCredit ?? escrowCalcResult?.isInterestCredit ?? false;
+
+  // ── Rebuild sections F and G client-side when any escrow input changes ────
+  const rebuildEscrow = ({
+    escrowing = isEscrowing,
+    funding = fundingDate,
+    taxes = annualTaxes,
+    ins = annualIns,
+    hoi = hoiDate,
+    flood = hasFlood,
+    floodAmt = annualFlood,
+    mud = hasMud,
+    mudAmt = annualMud,
+    hw = hasHailWind,
+    hwAmt = annualHailWind,
+  } = {}) => {
     if (!fees) return;
-    const monthlyTax = Math.round(newAnnualTax / 12);
-    const monthlyIns = Math.round(newAnnualIns / 12);
 
-    const updated = { ...fees };
+    const escrow = calculateEscrowSections({
+      fundingDate: funding,
+      loanAmount: Number(scenario?.loanAmount) || 0,
+      annualRate: Number(selectedRates[0]?.rate) || 0,
+      state: scenario?.state || 'CO',
+      purpose: scenario?.purpose || 'purchase',
+      isEscrowing: escrowing,
+      annualTaxes: taxes,
+      annualInsurance: ins,
+      hoiEffectiveDate: hoi || null,
+      hasFlood: flood,
+      annualFlood: floodAmt,
+      hasMud: mud,
+      annualMud: mudAmt,
+      hasHailWind: hw,
+      annualHailWind: hwAmt,
+    });
 
-    // Update sectionF — find/replace homeowners insurance line
-    const sectionF = { ...updated.sectionF, items: [...(updated.sectionF?.items || [])] };
-    const insIdx = sectionF.items.findIndex(i => i.label.startsWith('Homeowner'));
-    if (newAnnualIns > 0) {
-      const insItem = { label: "Homeowner's Insurance (12 months)", amount: newAnnualIns };
-      if (insIdx >= 0) sectionF.items[insIdx] = insItem;
-      else sectionF.items.unshift(insItem);
-    } else if (insIdx >= 0) {
-      sectionF.items.splice(insIdx, 1);
-    }
-    // Keep per diem line if present
-    sectionF.total = sectionF.items.reduce((s, i) => s + i.amount, 0);
-    updated.sectionF = sectionF;
+    const sectionF = {
+      label: 'Prepaid Items',
+      items: escrow.sectionFItems,
+      total: escrow.sectionFItems.reduce((s, i) => s + i.amount, 0),
+    };
+    const sectionG = {
+      label: 'Initial Escrow',
+      items: escrow.sectionGItems,
+      total: escrow.sectionGItems.reduce((s, i) => s + i.amount, 0),
+    };
 
-    // Update sectionG — rebuild insurance + tax lines, keep same month counts
-    const escrowInsMonths = fees.escrowCalc?.insuranceMonths ?? 2;
-    const escrowTaxMonths = fees.escrowCalc?.taxMonths ?? (fees.sectionG?.items?.find(i => i.label.startsWith('Property'))
-      ? parseInt(fees.sectionG.items.find(i => i.label.startsWith('Property')).label.match(/\d+/)?.[0] || 3) : 3);
-
-    const sectionG = { ...updated.sectionG };
-    sectionG.items = [
-      ...(monthlyIns > 0 ? [{ label: `Insurance (${escrowInsMonths} months)`, amount: monthlyIns * escrowInsMonths }] : []),
-      ...(monthlyTax > 0 ? [{ label: `Property Tax (${escrowTaxMonths} months)`, amount: monthlyTax * escrowTaxMonths }] : []),
-    ];
-    sectionG.total = sectionG.items.reduce((s, i) => s + i.amount, 0);
-    updated.sectionG = sectionG;
-
-    updated.monthlyTax = monthlyTax;
-    updated.monthlyInsurance = monthlyIns;
+    const updated = {
+      ...fees,
+      sectionF,
+      sectionG,
+      monthlyTax:       escrow.escrowMonthly.taxes,
+      monthlyInsurance: escrow.escrowMonthly.insurance,
+      // Persist escrow metadata so save draft captures it
+      isEscrowing: escrowing,
+      fundingDate: funding,
+      firstPaymentDateStr: escrow.firstPaymentDateStr,
+      isInterestCredit: escrow.isInterestCredit,
+      annualTaxes: taxes,
+      annualInsurance: ins,
+      hoiEffectiveDate: hoi || null,
+      hasFlood: flood,   annualFlood: floodAmt,
+      hasMud: mud,       annualMud: mudAmt,
+      hasHailWind: hw,   annualHailWind: hwAmt,
+      escrowCalc: escrow,
+    };
     updated.totalClosingCosts = ['sectionA', 'sectionB', 'sectionC', 'sectionE', 'sectionF', 'sectionG']
-      .reduce((sum, k) => sum + (updated[k]?.total || 0), 0);
+      .reduce((s, k) => s + (updated[k]?.total || 0), 0);
 
     onFeesChange(updated);
   };
@@ -82,7 +132,7 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
   const downPayment = scenario.purpose === 'purchase'
     ? (Number(scenario.propertyValue) || 0) - (Number(scenario.loanAmount) || 0)
     : 0;
-  const rebate = primaryRate?.rebateDollars || 0;
+  const rebate   = primaryRate?.rebateDollars  || 0;
   const discount = primaryRate?.discountDollars || 0;
   const cashToClose = downPayment + (fees?.totalClosingCosts || 0) + discount - rebate;
 
@@ -104,7 +154,7 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
                 <div>{r.program}</div>
                 <div className="capitalize">{r.lender} | {r.investor} {r.tier}</div>
                 <div className="font-mono">P&I: ${r.monthlyPI?.toLocaleString()}/mo</div>
-                {r.rebateDollars > 0 && <div className="text-green-600">Credit: ${r.rebateDollars.toLocaleString()}</div>}
+                {r.rebateDollars  > 0 && <div className="text-green-600">Credit: ${r.rebateDollars.toLocaleString()}</div>}
                 {r.discountDollars > 0 && <div className="text-red-600">Discount: ${r.discountDollars.toLocaleString()}</div>}
               </div>
             </div>
@@ -112,18 +162,83 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
         </div>
       </div>
 
-      {/* Escrow Inputs */}
-      <div className="bg-white rounded-xl border border-amber-200 p-5 shadow-sm">
-        <h3 className="text-sm font-semibold text-gray-700 mb-1">Escrow Inputs</h3>
-        <p className="text-xs text-gray-400 mb-4">
-          Override defaults from fee template. Changes update Sections F &amp; G automatically.
-          {fees?.escrowCalc && (
-            <span className="ml-2 text-cyan-600">
-              Closing {scenario.closingDate} → {fees.escrowCalc.taxMonths} tax months, {fees.escrowCalc.insuranceMonths} ins months
-              {fees.escrowCalc.perDiemInterest > 0 && `, ${fees.escrowCalc.daysToEndOfMonth} days per diem @ $${fees.escrowCalc.perDiemInterest}/day`}
-            </span>
-          )}
-        </p>
+      {/* Escrow & Prepaid Inputs */}
+      <div className="bg-white rounded-xl border border-amber-200 p-5 shadow-sm space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-gray-700">Escrow & Prepaid Inputs</h3>
+            <p className="text-xs text-gray-400 mt-0.5">All fields pre-populated — edit any value to recalculate Sections F &amp; G</p>
+          </div>
+          {/* Escrow election toggle */}
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <span className="text-sm font-medium text-gray-600">Escrowing</span>
+            <button
+              type="button"
+              onClick={() => {
+                const v = !isEscrowing;
+                setIsEscrowing(v);
+                rebuildEscrow({ escrowing: v });
+              }}
+              className={`relative inline-flex h-6 w-11 rounded-full transition-colors ${isEscrowing ? 'bg-cyan-600' : 'bg-gray-300'}`}
+            >
+              <span className={`inline-block w-5 h-5 mt-0.5 rounded-full bg-white shadow transform transition-transform ${isEscrowing ? 'translate-x-5' : 'translate-x-0.5'}`} />
+            </button>
+          </label>
+        </div>
+
+        {/* Dates row */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Funding Date</label>
+            <input
+              type="date"
+              value={fundingDate}
+              onChange={e => {
+                const v = e.target.value;
+                setFundingDate(v);
+                // Auto-fill HOI date for purchase if not already customized
+                if (isPurchase && (!hoiDate || hoiDate === fundingDate)) {
+                  setHoiDate(v);
+                  rebuildEscrow({ funding: v, hoi: v });
+                } else {
+                  rebuildEscrow({ funding: v });
+                }
+              }}
+              className="w-full rounded-lg border-gray-300 text-sm focus:ring-amber-400 focus:border-amber-400"
+            />
+            {firstPaymentDateStr && (
+              <div className={`text-[10px] mt-0.5 font-medium ${isInterestCredit ? 'text-green-600' : 'text-gray-400'}`}>
+                {isInterestCredit ? 'Interest credit' : 'Prepaid interest'} · First payment: {firstPaymentDateStr}
+              </div>
+            )}
+          </div>
+
+          {/* HOI effective date — always shown; purchase pre-fills from funding */}
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">
+              HOI Effective Date
+              {isPurchase && <span className="ml-1 text-gray-400">(starts at funding)</span>}
+              {!isPurchase && <span className="ml-1 text-gray-400">(renewal date)</span>}
+            </label>
+            <input
+              type="date"
+              value={hoiDate}
+              onChange={e => {
+                const v = e.target.value;
+                setHoiDate(v);
+                rebuildEscrow({ hoi: v });
+              }}
+              className="w-full rounded-lg border-gray-300 text-sm focus:ring-amber-400 focus:border-amber-400"
+            />
+            {!isPurchase && (
+              <div className="text-[10px] text-gray-400 mt-0.5">
+                Collect 12 months prepaid if renewal is within 60 days of funding
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Annual amounts row */}
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">Annual Property Taxes</label>
@@ -135,37 +250,152 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
                 onChange={e => {
                   const v = Number(e.target.value) || 0;
                   setAnnualTaxes(v);
-                  applyEscrowOverride(v, annualInsurance);
+                  rebuildEscrow({ taxes: v });
                 }}
                 className="w-full pl-7 rounded-lg border-gray-300 text-sm font-mono focus:ring-amber-400 focus:border-amber-400"
-                placeholder="3600"
+                placeholder="0"
               />
             </div>
-            <div className="text-[10px] text-gray-400 mt-0.5">
-              ${Math.round(annualTaxes / 12).toLocaleString()}/mo
-            </div>
+            <div className="text-[10px] text-gray-400 mt-0.5">${Math.round(annualTaxes / 12).toLocaleString()}/mo</div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Annual Homeowner&apos;s Insurance</label>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Annual HOI</label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">$</span>
               <input
                 type="number"
-                value={annualInsurance}
+                value={annualIns}
                 onChange={e => {
                   const v = Number(e.target.value) || 0;
-                  setAnnualInsurance(v);
-                  applyEscrowOverride(annualTaxes, v);
+                  setAnnualIns(v);
+                  rebuildEscrow({ ins: v });
                 }}
                 className="w-full pl-7 rounded-lg border-gray-300 text-sm font-mono focus:ring-amber-400 focus:border-amber-400"
-                placeholder="1800"
+                placeholder="0"
               />
             </div>
-            <div className="text-[10px] text-gray-400 mt-0.5">
-              ${Math.round(annualInsurance / 12).toLocaleString()}/mo
-            </div>
+            <div className="text-[10px] text-gray-400 mt-0.5">${Math.round(annualIns / 12).toLocaleString()}/mo</div>
           </div>
         </div>
+
+        {/* Flood */}
+        <div className="flex items-start gap-3 pt-1 border-t border-gray-100">
+          <label className="flex items-center gap-2 cursor-pointer mt-1 shrink-0">
+            <input
+              type="checkbox"
+              checked={hasFlood}
+              onChange={e => {
+                const v = e.target.checked;
+                setHasFlood(v);
+                rebuildEscrow({ flood: v });
+              }}
+              className="rounded border-gray-300 text-cyan-600 focus:ring-cyan-500"
+            />
+            <span className="text-xs font-medium text-gray-600 w-20">Flood Ins.</span>
+          </label>
+          {hasFlood && (
+            <div className="flex-1">
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">$</span>
+                <input
+                  type="number"
+                  value={annualFlood}
+                  onChange={e => {
+                    const v = Number(e.target.value) || 0;
+                    setAnnualFlood(v);
+                    rebuildEscrow({ floodAmt: v });
+                  }}
+                  className="w-full pl-7 rounded-lg border-gray-300 text-sm font-mono focus:ring-amber-400 focus:border-amber-400"
+                  placeholder="Annual flood premium"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* TX-only: MUD + Hail/Wind */}
+        {isTX && (
+          <div className="space-y-2 pt-1 border-t border-gray-100">
+            <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Texas</div>
+
+            {/* MUD tax */}
+            <div className="flex items-start gap-3">
+              <label className="flex items-center gap-2 cursor-pointer mt-1 shrink-0">
+                <input
+                  type="checkbox"
+                  checked={hasMud}
+                  onChange={e => {
+                    const v = e.target.checked;
+                    setHasMud(v);
+                    rebuildEscrow({ mud: v });
+                  }}
+                  className="rounded border-gray-300 text-cyan-600 focus:ring-cyan-500"
+                />
+                <span className="text-xs font-medium text-gray-600 w-20">MUD Tax</span>
+              </label>
+              {hasMud && (
+                <div className="flex-1">
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">$</span>
+                    <input
+                      type="number"
+                      value={annualMud}
+                      onChange={e => {
+                        const v = Number(e.target.value) || 0;
+                        setAnnualMud(v);
+                        rebuildEscrow({ mudAmt: v });
+                      }}
+                      className="w-full pl-7 rounded-lg border-gray-300 text-sm font-mono focus:ring-amber-400 focus:border-amber-400"
+                      placeholder="Annual MUD tax"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Hail/Wind */}
+            <div className="flex items-start gap-3">
+              <label className="flex items-center gap-2 cursor-pointer mt-1 shrink-0">
+                <input
+                  type="checkbox"
+                  checked={hasHailWind}
+                  onChange={e => {
+                    const v = e.target.checked;
+                    setHasHailWind(v);
+                    rebuildEscrow({ hw: v });
+                  }}
+                  className="rounded border-gray-300 text-cyan-600 focus:ring-cyan-500"
+                />
+                <span className="text-xs font-medium text-gray-600 w-20">Hail/Wind</span>
+              </label>
+              {hasHailWind && (
+                <div className="flex-1">
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">$</span>
+                    <input
+                      type="number"
+                      value={annualHailWind}
+                      onChange={e => {
+                        const v = Number(e.target.value) || 0;
+                        setAnnualHailWind(v);
+                        rebuildEscrow({ hwAmt: v });
+                      }}
+                      className="w-full pl-7 rounded-lg border-gray-300 text-sm font-mono focus:ring-amber-400 focus:border-amber-400"
+                      placeholder="Annual hail/wind premium"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Section G empty notice */}
+        {!isEscrowing && (
+          <div className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2 border border-amber-200">
+            Not escrowing — Section G will be empty. Borrower pays taxes and insurance directly.
+          </div>
+        )}
       </div>
 
       {/* Fee Sections */}
@@ -188,22 +418,26 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
                 >
                   <span className="text-sm font-medium text-gray-700">{section.label}</span>
                   <div className="flex items-center gap-3">
-                    <span className="text-sm font-mono font-medium">${section.total?.toLocaleString()}</span>
-                    <span className="text-gray-400 text-xs">{isOpen ? '\u25B2' : '\u25BC'}</span>
+                    <span className={`text-sm font-mono font-medium ${section.total < 0 ? 'text-green-600' : ''}`}>
+                      {section.total < 0 ? '-' : ''}${Math.abs(section.total).toLocaleString()}
+                    </span>
+                    <span className="text-gray-400 text-xs">{isOpen ? '▲' : '▼'}</span>
                   </div>
                 </button>
                 {isOpen && (
                   <div className="px-6 pb-3 space-y-1">
                     {section.items.map((item, i) => (
                       <div key={i} className="flex items-center justify-between gap-4">
-                        <span className="text-xs text-gray-600 flex-1">{item.label}</span>
+                        <span className={`text-xs flex-1 ${item.amount < 0 ? 'text-green-600' : 'text-gray-600'}`}>
+                          {item.label}
+                        </span>
                         <div className="relative w-28">
                           <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">$</span>
                           <input
                             type="number"
                             value={item.amount}
                             onChange={e => updateItem(key, i, e.target.value)}
-                            className="w-full pl-5 pr-2 py-1 text-xs text-right font-mono rounded border-gray-200 focus:ring-cyan-500 focus:border-cyan-500"
+                            className={`w-full pl-5 pr-2 py-1 text-xs text-right font-mono rounded border-gray-200 focus:ring-cyan-500 focus:border-cyan-500 ${item.amount < 0 ? 'text-green-600' : ''}`}
                           />
                         </div>
                       </div>
@@ -250,7 +484,7 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
             <span className="font-mono">${totalMonthly.toLocaleString()}/mo</span>
           </div>
           <div className="text-[10px] text-gray-400 mt-1">
-            P&I: ${monthlyPI.toLocaleString()} + Tax: ${monthlyTax.toLocaleString()} + Insurance: ${monthlyIns.toLocaleString()}
+            P&I: ${monthlyPI.toLocaleString()} + Tax: ${monthlyTax.toLocaleString()} + Ins: ${monthlyIns.toLocaleString()}
           </div>
         </div>
       </div>

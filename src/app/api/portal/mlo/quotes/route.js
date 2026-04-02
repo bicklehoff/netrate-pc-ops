@@ -143,9 +143,9 @@ export async function POST(request) {
       purpose: body.purpose,
       lenderFeeUw,
       loanAmount,
-      propertyValue,
-      closingDate: body.closingDate || null,
+      fundingDate: body.fundingDate || body.closingDate || null,
       annualRate: primaryAnnualRate,
+      isEscrowing: body.isEscrowing !== false, // default true
     });
 
     // Surface fee template warning
