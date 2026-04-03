@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { randomUUID } from 'crypto';
 import prisma from '@/lib/prisma';
 import { priceScenario } from '@/lib/rates/price-scenario';
 import { sendEmail } from '@/lib/resend';
@@ -28,7 +29,9 @@ export async function POST(request) {
       ? alertDays
       : FREQUENCY_DEFAULTS[freq];
 
-    // Create lead with scenario data
+    // Create lead with scenario data — generate viewToken in code so it's
+    // guaranteed in the response (dbgenerated defaults aren't always returned by Prisma)
+    const viewToken = randomUUID();
     const lead = await prisma.lead.create({
       data: {
         name,
@@ -36,6 +39,7 @@ export async function POST(request) {
         phone: phone || null,
         source: 'rate-tool-save',
         sourceDetail: 'saved-scenario',
+        viewToken,
         scenarioData,
         loanPurpose: scenarioData.purpose || null,
         loanAmount: scenarioData.loanAmount || null,
@@ -109,7 +113,7 @@ export async function POST(request) {
         frequency: freq,
         days,
         unsubscribeLink: `${SITE_URL}/api/saved-scenario/unsubscribe?token=${savedScenario.unsubToken}`,
-        myRatesLink: lead.viewToken ? `${SITE_URL}/portal/my-rates?token=${lead.viewToken}` : null,
+        myRatesLink: `${SITE_URL}/portal/my-rates?token=${viewToken}`,
       });
       const emailResult = await sendEmail({
         to: email.trim().toLowerCase(),
@@ -129,7 +133,7 @@ export async function POST(request) {
       success: true,
       scenarioId: savedScenario.id,
       leadId: lead.id,
-      viewToken: lead.viewToken,
+      viewToken,
       emailStatus,
     });
   } catch (err) {
