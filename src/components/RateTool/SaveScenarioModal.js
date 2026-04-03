@@ -45,11 +45,19 @@ export default function SaveScenarioModal({ scenario, onClose, prefillName, pref
     if (opt) setDays(opt.days);
   };
 
+  // Max days allowed per frequency
+  const maxDays = { daily: 5, '3x_week': 3, '2x_week': 2, weekly: 1 };
+
   const toggleDay = (day) => {
     setDays(prev => {
       if (prev.includes(day)) {
         if (prev.length <= 1) return prev; // must have at least one day
         return prev.filter(d => d !== day);
+      }
+      const max = maxDays[frequency] || 5;
+      if (prev.length >= max) {
+        // Swap: remove oldest selection, add new one
+        return [...prev.slice(1), day];
       }
       return [...prev, day];
     });
@@ -158,7 +166,9 @@ export default function SaveScenarioModal({ scenario, onClose, prefillName, pref
 
                 {/* Day picker */}
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1.5">Which days?</label>
+                  <label className="block text-xs text-gray-500 mb-1.5">
+                    Which days? <span className="text-gray-400">({days.length}/{maxDays[frequency] || 5})</span>
+                  </label>
                   <div className="flex gap-1.5">
                     {ALL_DAYS.map(d => (
                       <button key={d.value} type="button" onClick={() => toggleDay(d.value)}
