@@ -500,6 +500,9 @@ export function priceRate(rateEntry, product, scenario, lenderAdj, brokerConfig,
       if (pf.featureName === 'propertyType') {
         if (pf.productGroup === 'condo' && scenarioPropertyType !== 'condo') continue;
         if (pf.productGroup === 'manufactured' && scenarioPropertyType !== 'manufactured') continue;
+        if (pf.productGroup === '3-4unit' && scenarioPropertyType !== '3-4unit') continue;
+        if (pf.productGroup === 'secondHome' && (scenario.occupancy || 'primary') !== 'secondHome') continue;
+        if (pf.productGroup === 'investment' && (scenario.occupancy || 'primary') !== 'investment') continue;
       }
       // Occupancy adjustments only for non-primary
       if (pf.featureName === 'occupancy') continue; // skip for now — all scenarios are primary
