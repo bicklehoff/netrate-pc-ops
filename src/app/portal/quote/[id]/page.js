@@ -712,79 +712,124 @@ function CashToCloseSection({ rates, fees, loanAmount, propertyValue, quote }) {
     ? (new Date(closingDate.getFullYear(), closingDate.getMonth() + 1, 0).getDate() - closingDate.getDate() + 1)
     : 7;
 
+  const cols = '1.5fr ' + rates.map(() => '1fr').join(' ');
+
+  // Fee subtotals
+  const lenderFees = (fees?.sectionA?.total || 0) + (fees?.sectionB?.total || 0);
+  const titleFees = (fees?.sectionC?.total || 0) + (fees?.sectionE?.total || 0);
+  const prepaidEscrow = (fees?.sectionF?.total || 0) + (fees?.sectionG?.total || 0);
+
   return (
-    <div className="relative bg-[#e6e8ea] rounded-2xl overflow-hidden p-6">
-      <div className="absolute left-0 top-0 bottom-0 w-2 bg-cyan-600" />
-      <h4 className="font-extrabold text-[#191c1e] mb-4 pl-3">Total Cash to Close Summary</h4>
-      <div
-        className="grid gap-y-3 pl-3"
-        style={{ gridTemplateColumns: '1.5fr ' + rates.map(() => '1fr').join(' ') }}
-      >
-        {/* Headers */}
+    <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+      {/* Title bar */}
+      <div className="flex items-center gap-3 px-6 py-4 border-l-4 border-cyan-600 bg-[#f2f4f6]">
+        <h4 className="text-base font-extrabold text-[#191c1e]">Total Cash to Close Summary</h4>
+      </div>
+
+      {/* Column headers */}
+      <CtcRow cols={cols} alt>
         <div />
-        {rates.map((r, i) => (
+        {rates.map((_, i) => (
           <p key={i} className="text-center text-xs text-[#737783] font-semibold">Option {i + 1}</p>
         ))}
+      </CtcRow>
 
-        {/* Purchase price / appraised value */}
-        <p className="text-sm text-[#434652]">Purchase Price / Appraised Value</p>
+      {/* Purchase Price / Appraised Value */}
+      <CtcRow cols={cols}>
+        <p className="text-[#434652]">Purchase Price / Appraised Value</p>
         {rates.map((_, i) => (
-          <p key={i} className="text-center text-sm font-semibold tabular-nums">{fmtInt(propertyValue)}</p>
+          <p key={i} className="text-center font-semibold tabular-nums">{fmtInt(propertyValue)}</p>
         ))}
+      </CtcRow>
 
-        {/* Loan amount */}
-        <p className="text-sm text-[#434652]">Loan Amount</p>
+      {/* Loan Amount */}
+      <CtcRow cols={cols} alt>
+        <p className="text-[#434652]">Loan Amount</p>
         {rates.map((_, i) => (
-          <p key={i} className="text-center text-sm tabular-nums">{fmtInt(loanAmount)}</p>
+          <p key={i} className="text-center tabular-nums">{fmtInt(loanAmount)}</p>
         ))}
+      </CtcRow>
 
-        {/* Down payment or payoff */}
-        {quote.purpose === 'purchase' ? (
-          <>
-            <p className="text-sm text-[#434652]">Down Payment ({((propertyValue - loanAmount) / propertyValue * 100).toFixed(0)}%)</p>
+      {/* Down payment or payoff */}
+      {quote.purpose === 'purchase' ? (
+        <CtcRow cols={cols}>
+          <p className="text-[#434652]">Down Payment ({((propertyValue - loanAmount) / propertyValue * 100).toFixed(0)}%)</p>
+          {rates.map((_, i) => (
+            <p key={i} className="text-center font-semibold tabular-nums">{fmtInt(propertyValue - loanAmount)}</p>
+          ))}
+        </CtcRow>
+      ) : (
+        <>
+          <CtcRow cols={cols}>
+            <p className="text-[#434652]">Loan Payoff (Estimate)</p>
             {rates.map((_, i) => (
-              <p key={i} className="text-center text-sm font-semibold tabular-nums">{fmtInt(propertyValue - loanAmount)}</p>
+              <p key={i} className="text-center font-semibold tabular-nums">{fmt(quote.currentBalance || 0)}</p>
             ))}
-          </>
-        ) : (
-          <>
-            <p className="text-sm text-[#434652]">Loan Payoff (Estimate)</p>
+          </CtcRow>
+          <CtcRow cols={cols} alt>
+            <p className="text-[#434652]">Loan Amount (Credit)</p>
             {rates.map((_, i) => (
-              <p key={i} className="text-center text-sm font-semibold tabular-nums">{fmt(quote.currentBalance || 0)}</p>
+              <p key={i} className="text-center font-semibold tabular-nums text-emerald-600">({fmtInt(loanAmount)})</p>
             ))}
-            <p className="text-sm text-[#434652]">Loan Amount (Credit)</p>
-            {rates.map((_, i) => (
-              <p key={i} className="text-center text-sm font-semibold tabular-nums text-emerald-600">({fmtInt(loanAmount)})</p>
-            ))}
-          </>
-        )}
+          </CtcRow>
+        </>
+      )}
 
-        {/* Total loan charges */}
-        <p className="text-sm text-[#434652]">Total Loan Charges</p>
+      {/* Lender & Loan Fees */}
+      <CtcRow cols={cols} alt={quote.purpose === 'purchase'}>
+        <p className="text-[#434652]">Lender & Loan Fees</p>
+        {rates.map((_, i) => (
+          <p key={i} className="text-center tabular-nums">{fmt(lenderFees)}</p>
+        ))}
+      </CtcRow>
+
+      {/* Title & Recording Fees */}
+      <CtcRow cols={cols} alt={quote.purpose !== 'purchase'}>
+        <p className="text-[#434652]">Title & Recording Fees</p>
+        {rates.map((_, i) => (
+          <p key={i} className="text-center tabular-nums">{fmt(titleFees)}</p>
+        ))}
+      </CtcRow>
+
+      {/* Prepaids & Escrow */}
+      <CtcRow cols={cols} alt={quote.purpose === 'purchase'}>
+        <p className="text-[#434652]">Prepaids & Escrow</p>
+        {rates.map((_, i) => (
+          <p key={i} className="text-center tabular-nums">{fmt(prepaidEscrow)}</p>
+        ))}
+      </CtcRow>
+
+      {/* Daily Interest — varies per rate */}
+      <CtcRow cols={cols} alt={quote.purpose !== 'purchase'}>
+        <p className="text-[#434652]">Daily Interest ({daysInterest} days)</p>
         {rates.map((r, i) => {
           const daily = (loanAmount * (r.rate / 100)) / 365 * daysInterest;
-          return <p key={i} className="text-center text-sm tabular-nums">{fmt((fees?.totalClosingCosts || 0) + daily)}</p>;
+          return <p key={i} className="text-center tabular-nums">{fmt(daily)}</p>;
         })}
+      </CtcRow>
 
-        {/* Lender credit/charge */}
-        <p className="text-sm text-[#434652]">Lender Credit / (Charge)</p>
+      {/* Lender Credit / (Charge) — varies per rate */}
+      <CtcRow cols={cols} alt={quote.purpose === 'purchase'}>
+        <p className="text-[#434652]">Lender Credit / (Charge)</p>
         {rates.map((r, i) => {
           const isCredit = r.rebateDollars > 0;
           return (
-            <p key={i} className={`text-center text-sm font-bold tabular-nums ${isCredit ? 'text-emerald-600' : 'text-red-500'}`}>
-              {isCredit ? fmtInt(r.rebateDollars) : '(' + fmtInt(r.discountDollars || 0) + ')'}
+            <p key={i} className={`text-center font-bold tabular-nums ${isCredit ? 'text-emerald-600' : 'text-red-500'}`}>
+              {isCredit ? '(' + fmtInt(r.rebateDollars) + ')' : fmtInt(r.discountDollars || 0)}
             </p>
           );
         })}
+      </CtcRow>
 
-        {/* Divider */}
-        <div className="col-span-full h-px bg-[#c3c6d4]/40 my-1" />
-
-        {/* Total */}
-        <p className="text-lg font-extrabold text-cyan-700">Total Cash To Close</p>
+      {/* Total */}
+      <div
+        className="grid px-6 py-4 bg-cyan-600 text-white"
+        style={{ gridTemplateColumns: cols }}
+      >
+        <p className="font-bold text-base">Total Cash To Close</p>
         {rates.map((r, i) => {
           const daily = (loanAmount * (r.rate / 100)) / 365 * daysInterest;
-          const totalFees = (fees?.totalClosingCosts || 0) + daily;
+          const totalFees = lenderFees + titleFees + prepaidEscrow + daily;
           const credit = r.rebateDollars > 0 ? -r.rebateDollars : (r.discountDollars || 0);
           let cashToClose;
           if (quote.purpose === 'purchase') {
@@ -792,9 +837,20 @@ function CashToCloseSection({ rates, fees, loanAmount, propertyValue, quote }) {
           } else {
             cashToClose = totalFees + credit + Number(quote.currentBalance || 0) - loanAmount;
           }
-          return <p key={i} className="text-center text-xl font-extrabold tabular-nums text-[#191c1e]">{fmt(cashToClose)}</p>;
+          return <p key={i} className="text-center text-xl font-extrabold tabular-nums">{fmt(cashToClose)}</p>;
         })}
       </div>
+    </div>
+  );
+}
+
+function CtcRow({ cols, alt, children }) {
+  return (
+    <div
+      className={`grid px-6 py-3 ${alt ? 'bg-[#f8f9fb]' : 'bg-white'}`}
+      style={{ gridTemplateColumns: cols }}
+    >
+      {children}
     </div>
   );
 }
