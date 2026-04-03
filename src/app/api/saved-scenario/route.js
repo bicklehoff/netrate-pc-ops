@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { priceScenario } from '@/lib/rates/price-scenario';
+import { sendEmail } from '@/lib/resend';
+import { rateAlertWelcomeTemplate } from '@/lib/email-templates/borrower';
 
 const FREQUENCY_DEFAULTS = {
   daily: ['mon', 'tue', 'wed', 'thu', 'fri'],
@@ -88,6 +90,35 @@ export async function POST(request) {
         lastPricedAt: initialPricing ? new Date() : null,
       },
     });
+
+    // Send welcome email
+    const SITE_URL = process.env.NEXTAUTH_URL || 'https://www.netratemortgage.com';
+    try {
+      const firstName = name.split(' ')[0];
+      const welcomeEmail = rateAlertWelcomeTemplate({
+        firstName,
+        scenarioSummary: {
+          purpose: scenarioData.purpose,
+          loanAmount: scenarioData.loanAmount,
+          fico: scenarioData.fico,
+          ltv: scenarioData.ltv,
+          state: scenarioData.state,
+        },
+        initialRates: initialPricing || [],
+        frequency: freq,
+        days,
+        unsubscribeLink: `${SITE_URL}/api/saved-scenario/unsubscribe?token=${savedScenario.unsubToken}`,
+      });
+      await sendEmail({
+        to: email.trim().toLowerCase(),
+        subject: welcomeEmail.subject,
+        html: welcomeEmail.html,
+        text: welcomeEmail.text,
+      });
+    } catch (err) {
+      console.error('Welcome email failed:', err.message);
+      // Non-blocking — scenario is still saved even if email fails
+    }
 
     return NextResponse.json({
       success: true,

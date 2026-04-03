@@ -291,6 +291,102 @@ export function quoteTemplate({ firstName, quoteLink, scenarios, loanAmount, pur
   };
 }
 
+// ─── Rate Alert Welcome ────────────────────────────────────
+
+const FREQ_LABELS = {
+  daily: 'every weekday',
+  '3x_week': 'three times a week',
+  '2x_week': 'twice a week',
+  weekly: 'once a week',
+};
+
+/**
+ * Welcome email sent immediately when a borrower saves a scenario for rate alerts.
+ * @param {object} params
+ * @param {string} params.firstName
+ * @param {object} params.scenarioSummary — { purpose, loanAmount, fico, ltv, state }
+ * @param {Array}  params.initialRates — [{rate, monthlyPI}] top 3
+ * @param {string} params.frequency — alert frequency key
+ * @param {string[]} params.days — alert day abbreviations
+ * @param {string} params.unsubscribeLink
+ */
+export function rateAlertWelcomeTemplate({ firstName, scenarioSummary, initialRates, frequency, days, unsubscribeLink }) {
+  const name = firstName || 'there';
+  const s = scenarioSummary || {};
+  const purposeLabel = { purchase: 'Purchase', refi: 'Refinance', cashout: 'Cash-Out Refi' }[s.purpose] || s.purpose || '';
+  const summaryLine = [
+    purposeLabel,
+    s.loanAmount ? '$' + Number(s.loanAmount).toLocaleString('en-US', { maximumFractionDigits: 0 }) : null,
+    s.fico ? `${s.fico} FICO` : null,
+    s.state || null,
+  ].filter(Boolean).join(' · ');
+
+  const dayNames = { mon: 'Monday', tue: 'Tuesday', wed: 'Wednesday', thu: 'Thursday', fri: 'Friday' };
+  const dayList = (days || []).map(d => dayNames[d] || d).join(', ');
+  const freqText = FREQ_LABELS[frequency] || 'periodically';
+
+  const rateRows = (initialRates || []).map(r =>
+    `<tr>
+      <td style="padding:6px 12px;border-bottom:1px solid #e5e7eb;font-family:monospace;font-weight:bold;">${Number(r.rate).toFixed(3)}%</td>
+      <td style="padding:6px 12px;border-bottom:1px solid #e5e7eb;font-family:monospace;text-align:right;">$${Number(r.monthlyPI || 0).toLocaleString()}/mo</td>
+    </tr>`
+  ).join('');
+
+  const rateTable = rateRows ? `
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+    <tr style="background-color:#111827;">
+      <th style="padding:6px 12px;text-align:left;color:#ffffff;font-size:12px;">Rate</th>
+      <th style="padding:6px 12px;text-align:right;color:#ffffff;font-size:12px;">Monthly P&I</th>
+    </tr>
+    ${rateRows}
+  </table>` : '';
+
+  const html = emailLayout(`
+  <h2 style="margin:0 0 8px;font-size:20px;font-weight:600;color:#111827;">Your Scenario Is Saved</h2>
+  <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6;">
+    Hi ${name}, thanks for using our rate tool. Your scenario has been saved and you're now signed up for rate alerts.
+  </p>
+
+  <div style="background-color:#f0fdfa;border-radius:8px;padding:16px;margin:0 0 16px;">
+    <p style="margin:0 0 4px;font-size:12px;font-weight:600;color:#0e7490;text-transform:uppercase;">Your Scenario</p>
+    <p style="margin:0;font-size:14px;color:#374151;">${summaryLine}</p>
+  </div>
+
+  ${rateTable}
+
+  <h3 style="margin:20px 0 8px;font-size:16px;font-weight:600;color:#111827;">How It Works</h3>
+  <ul style="margin:0 0 16px;padding-left:20px;">
+    <li style="margin:4px 0;font-size:14px;color:#374151;line-height:1.5;">We re-price your scenario ${freqText} (${dayList})</li>
+    <li style="margin:4px 0;font-size:14px;color:#374151;line-height:1.5;">Your loan officer reviews the latest rates before each update</li>
+    <li style="margin:4px 0;font-size:14px;color:#374151;line-height:1.5;">You receive an email with your updated rates and any changes</li>
+  </ul>
+
+  <h3 style="margin:20px 0 8px;font-size:16px;font-weight:600;color:#111827;">Who We Are</h3>
+  <p style="margin:0 0 16px;font-size:14px;color:#374151;line-height:1.6;">
+    NetRate Mortgage is a licensed mortgage broker — we shop wholesale rates from multiple lenders on your behalf to find the best deal. Unlike big banks that offer one rate, we compare pricing across our lender network so you can see the real numbers before you commit to anything.
+  </p>
+
+  <p style="margin:0;font-size:13px;color:#6b7280;line-height:1.5;">
+    Have questions? Reply to this email or call us at 303-444-5251. No pressure, no pitch — just real rates.
+  </p>
+  <p style="margin:16px 0 0;font-size:11px;color:#9ca3af;">
+    <a href="${unsubscribeLink}" style="color:#9ca3af;text-decoration:underline;">Unsubscribe from rate alerts</a>
+  </p>
+`, `Your scenario is saved — here's what happens next`);
+
+  const ratesText = (initialRates || []).map(r =>
+    `${Number(r.rate).toFixed(3)}% — $${Number(r.monthlyPI || 0).toLocaleString()}/mo`
+  ).join('\n');
+
+  const text = `Hi ${name},\n\nYour scenario is saved and you're signed up for rate alerts.\n\nScenario: ${summaryLine}\n\n${ratesText ? `Today's rates:\n${ratesText}\n\n` : ''}How it works:\n- We re-price your scenario ${freqText} (${dayList})\n- Your loan officer reviews before each update\n- You receive an email with updated rates\n\nWho we are:\nNetRate Mortgage is a licensed mortgage broker — we shop wholesale rates from multiple lenders on your behalf.\n\nQuestions? Reply to this email or call 303-444-5251.\n\nUnsubscribe: ${unsubscribeLink}\n\nNetRate Mortgage LLC | NMLS #1111861`;
+
+  return {
+    subject: 'Your Scenario Is Saved — NetRate Mortgage Rate Alerts',
+    html,
+    text,
+  };
+}
+
 // ─── Scenario Rate Alert ───────────────────────────────────
 
 const PURPOSE_LABELS = { purchase: 'Purchase', refi: 'Refinance', cashout: 'Cash-Out Refi' };
