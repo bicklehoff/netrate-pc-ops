@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 
 const FREQUENCY_OPTIONS = [
   { value: 'daily', label: 'Daily (Mon–Fri)', days: ['mon', 'tue', 'wed', 'thu', 'fri'] },
@@ -19,7 +18,6 @@ const ALL_DAYS = [
 ];
 
 export default function SaveScenarioModal({ scenario, onClose, prefillName, prefillEmail, prefillPhone }) {
-  const router = useRouter();
   const [name, setName] = useState(prefillName || '');
   const [email, setEmail] = useState(prefillEmail || '');
   const [phone, setPhone] = useState(prefillPhone || '');
@@ -39,14 +37,14 @@ export default function SaveScenarioModal({ scenario, onClose, prefillName, pref
       setCountdown(prev => {
         if (prev <= 1) {
           clearInterval(timer);
-          router.push(`/portal/my-rates?token=${viewToken}`);
+          window.location.href = `/portal/my-rates?token=${viewToken}`;
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [submitted, viewToken, router]);
+  }, [submitted, viewToken]);
 
   const hasPrefill = !!(prefillName && prefillEmail);
 
