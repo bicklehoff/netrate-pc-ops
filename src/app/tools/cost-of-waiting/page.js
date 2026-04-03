@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 function dollar(n) { return '$' + Math.round(n).toLocaleString('en-US'); }
@@ -32,11 +33,12 @@ function Input({ label, prefix, suffix, value, onChange, step, min }) {
 
 const waitMonths = [1, 2, 3, 6, 9, 12, 18, 24, 36];
 
-export default function CostOfWaitingPage() {
-  const [loanAmount, setLoanAmount] = useState('400000');
-  const [currentRate, setCurrentRate] = useState('7.25');
-  const [newRate, setNewRate] = useState('6.50');
-  const [term, setTerm] = useState('30');
+function CostOfWaitingContent() {
+  const sp = useSearchParams();
+  const [loanAmount, setLoanAmount] = useState(sp.get('loanAmount') || '400000');
+  const [currentRate, setCurrentRate] = useState(sp.get('currentRate') || '7.25');
+  const [newRate, setNewRate] = useState(sp.get('newRate') || '6.50');
+  const [term, setTerm] = useState(sp.get('term') || '30');
 
   const results = useMemo(() => {
     const loan = parseFloat(loanAmount) || 0;
@@ -283,4 +285,8 @@ export default function CostOfWaitingPage() {
       )}
     </div>
   );
+}
+
+export default function CostOfWaitingPage() {
+  return <Suspense><CostOfWaitingContent /></Suspense>;
 }

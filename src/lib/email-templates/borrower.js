@@ -310,7 +310,7 @@ const FREQ_LABELS = {
  * @param {string[]} params.days — alert day abbreviations
  * @param {string} params.unsubscribeLink
  */
-export function rateAlertWelcomeTemplate({ firstName, scenarioSummary, initialRates, frequency, days, unsubscribeLink }) {
+export function rateAlertWelcomeTemplate({ firstName, scenarioSummary, initialRates, frequency, days, unsubscribeLink, myRatesLink }) {
   const name = firstName || 'there';
   const s = scenarioSummary || {};
   const purposeLabel = { purchase: 'Purchase', refi: 'Refinance', cashout: 'Cash-Out Refi' }[s.purpose] || s.purpose || '';
@@ -361,6 +361,8 @@ export function rateAlertWelcomeTemplate({ firstName, scenarioSummary, initialRa
     <li style="margin:4px 0;font-size:14px;color:#374151;line-height:1.5;">You receive an email with your updated rates and any changes</li>
   </ul>
 
+  ${myRatesLink ? ctaButton('View My Rates', myRatesLink) : ''}
+
   <h3 style="margin:20px 0 8px;font-size:16px;font-weight:600;color:#111827;">Who We Are</h3>
   <p style="margin:0 0 16px;font-size:14px;color:#374151;line-height:1.6;">
     NetRate Mortgage is a licensed mortgage broker — we shop wholesale rates from multiple lenders on your behalf to find the best deal. Unlike big banks that offer one rate, we compare pricing across our lender network so you can see the real numbers before you commit to anything.
@@ -378,7 +380,7 @@ export function rateAlertWelcomeTemplate({ firstName, scenarioSummary, initialRa
     `${Number(r.rate).toFixed(3)}% — $${Number(r.monthlyPI || 0).toLocaleString()}/mo`
   ).join('\n');
 
-  const text = `Hi ${name},\n\nYour scenario is saved and you're signed up for rate alerts.\n\nScenario: ${summaryLine}\n\n${ratesText ? `Today's rates:\n${ratesText}\n\n` : ''}How it works:\n- We re-price your scenario ${freqText} (${dayList})\n- Your loan officer reviews before each update\n- You receive an email with updated rates\n\nWho we are:\nNetRate Mortgage is a licensed mortgage broker — we shop wholesale rates from multiple lenders on your behalf.\n\nQuestions? Reply to this email or call 303-444-5251.\n\nUnsubscribe: ${unsubscribeLink}\n\nNetRate Mortgage LLC | NMLS #1111861`;
+  const text = `Hi ${name},\n\nYour scenario is saved and you're signed up for rate alerts.\n\nScenario: ${summaryLine}\n\n${ratesText ? `Today's rates:\n${ratesText}\n\n` : ''}How it works:\n- We re-price your scenario ${freqText} (${dayList})\n- Your loan officer reviews before each update\n- You receive an email with updated rates\n${myRatesLink ? `\nView My Rates: ${myRatesLink}\n` : ''}\nWho we are:\nNetRate Mortgage is a licensed mortgage broker — we shop wholesale rates from multiple lenders on your behalf.\n\nQuestions? Reply to this email or call 303-444-5251.\n\nUnsubscribe: ${unsubscribeLink}\n\nNetRate Mortgage LLC | NMLS #1111861`;
 
   return {
     subject: 'Your Scenario Is Saved — NetRate Mortgage Rate Alerts',

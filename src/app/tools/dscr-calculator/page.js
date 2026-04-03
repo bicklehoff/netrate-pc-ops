@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 function fmt(n) { return n.toLocaleString('en-US', { maximumFractionDigits: 2 }); }
@@ -26,12 +27,13 @@ function Input({ label, prefix, suffix, value, onChange, step, min }) {
   );
 }
 
-export default function DSCRCalculatorPage() {
+function DSCRCalculatorContent() {
+  const sp = useSearchParams();
   const [rentalIncome, setRentalIncome] = useState('3000');
   const [expenses, setExpenses] = useState('800');
-  const [loanAmount, setLoanAmount] = useState('300000');
-  const [rate, setRate] = useState('7.25');
-  const [term, setTerm] = useState('30');
+  const [loanAmount, setLoanAmount] = useState(sp.get('loanAmount') || '300000');
+  const [rate, setRate] = useState(sp.get('rate') || '7.25');
+  const [term, setTerm] = useState(sp.get('term') || '30');
 
   const results = useMemo(() => {
     const income = parseFloat(rentalIncome) || 0;
@@ -164,4 +166,8 @@ export default function DSCRCalculatorPage() {
       )}
     </div>
   );
+}
+
+export default function DSCRCalculatorPage() {
+  return <Suspense><DSCRCalculatorContent /></Suspense>;
 }

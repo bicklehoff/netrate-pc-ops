@@ -25,6 +25,7 @@ export default function SaveScenarioModal({ scenario, onClose, prefillName, pref
   const [days, setDays] = useState(['tue', 'thu']);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [viewToken, setViewToken] = useState(null);
   const [error, setError] = useState(null);
 
   const hasPrefill = !!(prefillName && prefillEmail);
@@ -80,10 +81,11 @@ export default function SaveScenarioModal({ scenario, onClose, prefillName, pref
           alertDays: days,
         }),
       });
+      const data = await res.json();
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
         throw new Error(data.error || 'Something went wrong. Please try again.');
       }
+      if (data.viewToken) setViewToken(data.viewToken);
       setSubmitted(true);
     } catch (err) {
       setError(err.message);
@@ -117,7 +119,15 @@ export default function SaveScenarioModal({ scenario, onClose, prefillName, pref
               <p className="text-sm text-gray-600">
                 You&apos;ll receive rate updates at <strong>{email}</strong> after review by your loan officer.
               </p>
-              <button onClick={onClose} className="mt-4 px-4 py-2 text-sm font-medium text-brand hover:text-brand-dark transition-colors">
+              {viewToken && (
+                <a
+                  href={`/portal/my-rates?token=${viewToken}`}
+                  className="mt-4 inline-block bg-brand text-white rounded-lg px-6 py-2.5 text-sm font-semibold hover:bg-brand-dark transition-colors"
+                >
+                  View My Rates →
+                </a>
+              )}
+              <button onClick={onClose} className="mt-3 block mx-auto px-4 py-2 text-sm font-medium text-gray-400 hover:text-gray-600 transition-colors">
                 Close
               </button>
             </div>

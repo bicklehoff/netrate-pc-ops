@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 function dollar(n) { return '$' + Math.round(n).toLocaleString('en-US'); }
@@ -30,11 +31,12 @@ function Input({ label, prefix, suffix, value, onChange, step, min }) {
   );
 }
 
-export default function PurchaseCalculatorPage() {
-  const [homePrice, setHomePrice] = useState('450000');
-  const [downPct, setDownPct] = useState('3');
-  const [rate, setRate] = useState('6.875');
-  const [term, setTerm] = useState('30');
+function PurchaseCalculatorContent() {
+  const sp = useSearchParams();
+  const [homePrice, setHomePrice] = useState(sp.get('homePrice') || '450000');
+  const [downPct, setDownPct] = useState(sp.get('downPct') || '3');
+  const [rate, setRate] = useState(sp.get('rate') || '6.875');
+  const [term, setTerm] = useState(sp.get('term') || '30');
   const [taxRate, setTaxRate] = useState('0.6');
   const [insurance, setInsurance] = useState('1200');
   const [hoa, setHoa] = useState('0');
@@ -203,4 +205,8 @@ export default function PurchaseCalculatorPage() {
       )}
     </div>
   );
+}
+
+export default function PurchaseCalculatorPage() {
+  return <Suspense><PurchaseCalculatorContent /></Suspense>;
 }

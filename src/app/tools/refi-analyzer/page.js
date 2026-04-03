@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 function dollar(n) { return '$' + Math.round(n).toLocaleString('en-US'); }
@@ -33,12 +34,13 @@ function Input({ label, prefix, suffix, value, onChange, step, min }) {
   );
 }
 
-export default function RefiAnalyzerPage() {
-  const [balance, setBalance] = useState('350000');
-  const [currentRate, setCurrentRate] = useState('7.50');
+function RefiAnalyzerContent() {
+  const sp = useSearchParams();
+  const [balance, setBalance] = useState(sp.get('balance') || '350000');
+  const [currentRate, setCurrentRate] = useState(sp.get('currentRate') || '7.50');
   const [remainingYears, setRemainingYears] = useState('27');
-  const [newRate, setNewRate] = useState('6.50');
-  const [newTerm, setNewTerm] = useState('30');
+  const [newRate, setNewRate] = useState(sp.get('newRate') || '6.50');
+  const [newTerm, setNewTerm] = useState(sp.get('newTerm') || '30');
   const [closingCosts, setClosingCosts] = useState('4000');
   const [holdYears, setHoldYears] = useState('7');
 
@@ -180,4 +182,8 @@ export default function RefiAnalyzerPage() {
       )}
     </div>
   );
+}
+
+export default function RefiAnalyzerPage() {
+  return <Suspense><RefiAnalyzerContent /></Suspense>;
 }

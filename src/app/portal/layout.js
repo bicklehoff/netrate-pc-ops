@@ -34,6 +34,12 @@ export default function PortalLayout({ children }) {
               My Loan
             </Link>
             <Link
+              href="/rates"
+              className="text-gray-600 hover:text-brand transition-colors"
+            >
+              Rates
+            </Link>
+            <Link
               href="/"
               className="text-gray-400 hover:text-gray-600 transition-colors"
             >

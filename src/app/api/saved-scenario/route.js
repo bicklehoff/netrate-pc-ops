@@ -108,6 +108,7 @@ export async function POST(request) {
         frequency: freq,
         days,
         unsubscribeLink: `${SITE_URL}/api/saved-scenario/unsubscribe?token=${savedScenario.unsubToken}`,
+        myRatesLink: lead.viewToken ? `${SITE_URL}/portal/my-rates?token=${lead.viewToken}` : null,
       });
       await sendEmail({
         to: email.trim().toLowerCase(),
@@ -124,6 +125,7 @@ export async function POST(request) {
       success: true,
       scenarioId: savedScenario.id,
       leadId: lead.id,
+      viewToken: lead.viewToken,
     });
   } catch (err) {
     console.error('Save scenario API error:', err);

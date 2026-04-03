@@ -117,7 +117,7 @@ export async function PATCH(request) {
           include: {
             scenario: {
               include: {
-                lead: { select: { name: true, email: true } },
+                lead: { select: { name: true, email: true, viewToken: true } },
               },
             },
           },
@@ -148,7 +148,9 @@ export async function PATCH(request) {
         }
 
         const firstName = lead.name?.split(' ')[0] || 'there';
-        const viewLink = `${SITE_URL}/rates`;
+        const viewLink = lead.viewToken
+          ? `${SITE_URL}/portal/my-rates?token=${lead.viewToken}`
+          : `${SITE_URL}/rates`;
         const unsubscribeLink = `${SITE_URL}/api/saved-scenario/unsubscribe?token=${item.scenario.unsubToken}`;
 
         const emailData = scenarioAlertTemplate({
