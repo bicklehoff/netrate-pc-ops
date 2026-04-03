@@ -47,7 +47,7 @@ function findSweetSpots(rates) {
   return { chargeSweet, creditSweet, parRate };
 }
 
-export default function QuoteRateResults({ pricing, selectedRates, onSelectRates, onReprice, loading, onNext, borrowerPaid, escrowsWaived }) {
+export default function QuoteRateResults({ pricing, selectedRates, onSelectRates, onReprice, loading, onNext, borrowerPaid, escrowsWaived, scenario }) {
   const [viewMode, setViewMode] = useState('programs'); // 'programs' | 'all'
   const [expandedPrograms, setExpandedPrograms] = useState(new Set());
   const [showAll, setShowAll] = useState(false);
@@ -169,6 +169,22 @@ export default function QuoteRateResults({ pricing, selectedRates, onSelectRates
           <span className="text-xs text-gray-400">{selectedRates.length}/3</span>
         </div>
       </div>
+
+      {/* FHA effective loan amount banner */}
+      {scenario?.loanType === 'fha' && results[0]?.ufmip > 0 && (
+        <div className="px-6 py-2 bg-amber-50 border-b border-amber-100 flex items-center gap-4 text-xs">
+          <span className="font-bold text-amber-800">FHA Loan</span>
+          <span className="text-amber-700">
+            Base: ${Number(results[0].baseLoanAmount).toLocaleString()}
+          </span>
+          <span className="text-amber-700">
+            + UFMIP (1.75%): ${Number(results[0].ufmip).toLocaleString()}
+          </span>
+          <span className="font-bold text-amber-900">
+            = Final Loan Amount: ${Number(results[0].effectiveLoanAmount).toLocaleString()}
+          </span>
+        </div>
+      )}
 
       {/* Program View */}
       {viewMode === 'programs' ? (

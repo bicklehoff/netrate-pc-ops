@@ -46,31 +46,47 @@ function addBusinessDays(dateStr, days) {
 /**
  * Default closing date: 4 business days before the last business day of the current month.
  */
+// Format Date as YYYY-MM-DD in local time (avoids toISOString UTC shift)
+function fmtDate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
+}
+
+/**
+ * Default closing date: 4 business days BEFORE the last business day of the month.
+ * Example: if last biz day is Fri May 29 → walk back 4 biz days → Mon May 25 is last,
+ *          then Fri 22, Thu 21, Wed 20 → closing = Wed May 20.
+ * Wait — re-reading: "4 business days before the last business day."
+ * If last biz day is Fri 29th: Thu 28, Wed 27, Tue 26, Mon 25 → closing = Mon 25th.
+ */
 function getDefaultClosingDate() {
   const now = new Date();
-  // Try current month first, then next month if date has already passed
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  // Try current month, then next month
   for (let offset = 0; offset <= 1; offset++) {
-    const target = new Date(now.getFullYear(), now.getMonth() + offset + 1, 0); // last calendar day
-    // Walk backward to find the last business day
-    while (target.getDay() === 0 || target.getDay() === 6) target.setDate(target.getDate() - 1);
-    // Walk back 4 more business days
+    const y = now.getFullYear();
+    const m = now.getMonth() + offset;
+    // Last calendar day of target month
+    const lastDay = new Date(y, m + 1, 0);
+    // Find last business day (walk backward past weekends)
+    while (lastDay.getDay() === 0 || lastDay.getDay() === 6) {
+      lastDay.setDate(lastDay.getDate() - 1);
+    }
+    // Walk back 4 business days from that last business day
+    const closing = new Date(lastDay);
     let count = 0;
-    const d = new Date(target);
     while (count < 4) {
-      d.setDate(d.getDate() - 1);
-      if (d.getDay() !== 0 && d.getDay() !== 6) count++;
+      closing.setDate(closing.getDate() - 1);
+      if (closing.getDay() !== 0 && closing.getDay() !== 6) count++;
     }
-    // If this date is in the future (or today), use it
-    if (d >= new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
-      return d.toISOString().split('T')[0];
-    }
+    // Use this if it's today or in the future
+    if (closing >= today) return fmtDate(closing);
   }
-  // Fallback: next month
-  const next = new Date(now.getFullYear(), now.getMonth() + 2, 0);
-  while (next.getDay() === 0 || next.getDay() === 6) next.setDate(next.getDate() - 1);
-  let c = 0;
-  while (c < 4) { next.setDate(next.getDate() - 1); if (next.getDay() !== 0 && next.getDay() !== 6) c++; }
-  return next.toISOString().split('T')[0];
+  // Fallback — next month (shouldn't reach here)
+  return fmtDate(new Date(now.getFullYear(), now.getMonth() + 1, 15));
 }
 
 /**
@@ -234,7 +250,14 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
           <SelectField label="Purpose" value={scenario.purpose} options={PURPOSES} onChange={v => {
             onChange({ ...scenario, purpose: v, ...deriveFromClosing(scenario.closingDate, scenario.state, v) });
           }} />
-          <SelectField label="Loan Type" value={scenario.loanType} options={LOAN_TYPES} onChange={v => update('loanType', v)} />
+          <SelectField label="Loan Type" value={scenario.loanType} options={LOAN_TYPES} onChange={v => {
+            const updates = { ...scenario, loanType: v };
+            if (v === 'fha' && isPurchase) {
+              updates.downPaymentPct = 3.5;
+              setLastEdited('pct');
+            }
+            onChange(updates);
+          }} />
           <SelectField label="Term" value={scenario.term} options={TERMS.map(t => ({ value: t, label: `${t} Year` }))} onChange={v => update('term', Number(v))} />
           <SelectField label="Amortization" value={scenario.productType || 'fixed'} options={[{ value: 'fixed', label: 'Fixed' }, { value: 'arm', label: 'ARM' }]} onChange={v => update('productType', v)} />
         </div>
@@ -297,7 +320,7 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
               value={zipCode}
               onChange={e => handleZipLookup(e.target.value.replace(/\D/g, ''))}
               placeholder="80027"
-              className="w-full rounded-lg border-gray-300 text-sm focus:ring-cyan-500 focus:border-cyan-500"
+              className="w-full rounded border-gray-300 text-sm focus:ring-cyan-500 focus:border-cyan-500"
             />
             {scenario.county && <div className="text-[10px] text-cyan-600 mt-0.5">{scenario.county} County, {scenario.state}</div>}
           </div>
@@ -309,7 +332,7 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
             <select
               value={scenario.county}
               onChange={e => update('county', e.target.value)}
-              className="w-full rounded-lg border-gray-300 text-sm focus:ring-cyan-500 focus:border-cyan-500"
+              className="w-full rounded border-gray-300 text-sm focus:ring-cyan-500 focus:border-cyan-500"
             >
               <option value="">Select county...</option>
               {counties.map(c => <option key={c} value={c}>{c}</option>)}
@@ -431,7 +454,7 @@ function Field({ label, value, onChange, type = 'text', placeholder, disabled, s
           placeholder={placeholder}
           disabled={disabled}
           step={step}
-          className="w-full rounded-lg border-gray-300 text-sm focus:ring-cyan-500 focus:border-cyan-500 disabled:bg-gray-50 disabled:text-gray-400"
+          className="w-full rounded border-gray-300 text-sm focus:ring-cyan-500 focus:border-cyan-500 disabled:bg-gray-50 disabled:text-gray-400"
         />
         {suffix && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">{suffix}</span>}
       </div>
@@ -455,7 +478,7 @@ function DollarField({ label, value, onChange, disabled }) {
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           disabled={disabled}
-          className="w-full pl-7 rounded-lg border-gray-300 text-sm font-mono focus:ring-cyan-500 focus:border-cyan-500 disabled:bg-gray-50 disabled:text-gray-400"
+          className="w-full pl-7 rounded border-gray-300 text-sm font-mono focus:ring-cyan-500 focus:border-cyan-500 disabled:bg-gray-50 disabled:text-gray-400"
         />
       </div>
     </div>
@@ -469,7 +492,7 @@ function SelectField({ label, value, options, onChange }) {
       <select
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="w-full rounded-lg border-gray-300 text-sm focus:ring-cyan-500 focus:border-cyan-500"
+        className="w-full rounded border-gray-300 text-sm focus:ring-cyan-500 focus:border-cyan-500"
       >
         {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>

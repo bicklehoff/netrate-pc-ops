@@ -12,11 +12,30 @@ const STEPS = [
   { key: 'fees', label: 'Fees & Preview' },
 ];
 
-// Default closing date ~30 days from today
+// Default closing date: 4 business days before the last business day of the month
 function defaultClosingDate() {
-  const d = new Date();
-  d.setDate(d.getDate() + 30);
-  return d.toISOString().split('T')[0];
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  for (let offset = 0; offset <= 1; offset++) {
+    const y = now.getFullYear();
+    const m = now.getMonth() + offset;
+    // Last calendar day of target month
+    const lastDay = new Date(y, m + 1, 0);
+    // Walk backward to last business day
+    while (lastDay.getDay() === 0 || lastDay.getDay() === 6) lastDay.setDate(lastDay.getDate() - 1);
+    // Walk back 4 business days
+    const closing = new Date(lastDay);
+    let count = 0;
+    while (count < 4) {
+      closing.setDate(closing.getDate() - 1);
+      if (closing.getDay() !== 0 && closing.getDay() !== 6) count++;
+    }
+    if (closing >= today) {
+      return `${closing.getFullYear()}-${String(closing.getMonth() + 1).padStart(2, '0')}-${String(closing.getDate()).padStart(2, '0')}`;
+    }
+  }
+  return `${now.getFullYear()}-${String(now.getMonth() + 2).padStart(2, '0')}-15`;
 }
 
 // Add N business days (skips Sat/Sun) to a date string
@@ -28,7 +47,7 @@ function addBusinessDays(dateStr, days) {
     const dow = d.getDay();
     if (dow !== 0 && dow !== 6) added++;
   }
-  return d.toISOString().split('T')[0];
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 /**
@@ -322,6 +341,7 @@ export default function QuoteWizard({ prefill }) {
             borrowerPaid={scenario.borrowerPaid}
             escrowsWaived={scenario.escrowsWaived}
             onEscrowsWaivedChange={(v) => setScenario(prev => ({ ...prev, escrowsWaived: v }))}
+            scenario={scenario}
           />
         </div>
       )}
