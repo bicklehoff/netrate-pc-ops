@@ -335,7 +335,7 @@ export default async function RateWatchPage() {
 
           {/* Row 4: Rate History Chart — full width, fixed height */}
           <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-6 shadow-sm overflow-hidden lg:h-[400px]">
-            <RateChart rateHistory={rateHistory} fredData={fredData.series} />
+            <RateChart fredData={fredData.series} />
           </div>
 
           {/* Row 5: Benchmark Index Rates — full width */}

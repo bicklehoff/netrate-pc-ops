@@ -159,6 +159,14 @@ const spreadPlugin = {
 
 Chart.register(spreadPlugin);
 
+// ─── MANUAL SPREAD CONFIGURATION ───────────────────────────────────────────
+// NetRate Mortgage spread vs national average (Freddie Mac / FRED)
+// Positive = NRM rates are this many percentage points BELOW the national avg.
+// Update this when your competitive position changes significantly.
+// Last updated: 2026-04-03 (MND 6.41% − NRM par 6.125% = 0.285%)
+const NRM_SPREAD = 0.285;
+// ────────────────────────────────────────────────────────────────────────────
+
 // Economic calendar events
 const PAST_EVENTS = [
   { date: '2025-12-18', label: 'FOMC Rate Cut' },
@@ -343,19 +351,16 @@ function buildAnnotations(days) {
   return annotations;
 }
 
-const CREDIT_MAP = { '760': '760+', '740': '740-759', '700': '700-719' };
-const CREDIT_TIERS = ['760', '740', '700'];
 const TIME_RANGES = [
   { label: '1 Mo', days: 30 },
   { label: '3 Mo', days: 90 },
   { label: 'All Time', days: 0 },
 ];
 
-export default function RateChart({ rateHistory, fredData: serverFredData }) {
+export default function RateChart({ fredData: serverFredData }) {
   const canvasRef = useRef(null);
   const chartRef = useRef(null);
-  const [creditTier, setCreditTier] = useState('760');
-  const [timeRange, setTimeRange] = useState(90);
+  const [timeRange, setTimeRange] = useState(90); // eslint-disable-line no-unused-vars
   const [fredData, setFredData] = useState(serverFredData || {});
 
   // Client-side FRED data fetch as fallback (SSR fetch often fails during build)
@@ -374,23 +379,28 @@ export default function RateChart({ rateHistory, fredData: serverFredData }) {
   const buildChart = useCallback(() => {
     if (!canvasRef.current) return;
 
-    // Filter rate history by credit tier and time range
-    const tierKey = CREDIT_MAP[creditTier];
-    let filtered = rateHistory.filter((r) => r.credit_score_tier === tierKey);
-    if (timeRange > 0) {
-      const cutoff = new Date();
-      cutoff.setDate(cutoff.getDate() - timeRange);
-      filtered = filtered.filter((r) => new Date(r.date) >= cutoff);
+    // Build daily date range (weekdays only)
+    const cutoff = new Date();
+    if (timeRange > 0) cutoff.setDate(cutoff.getDate() - timeRange);
+    const today = new Date();
+    const dates = [];
+    const cursor = new Date(cutoff);
+    while (cursor <= today) {
+      if (cursor.getDay() !== 0 && cursor.getDay() !== 6) {
+        dates.push(cursor.toISOString().split('T')[0]);
+      }
+      cursor.setDate(cursor.getDate() + 1);
     }
-    filtered.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-    const dates = filtered.map((r) => r.date);
-    const rawValues = filtered.map((r) => parseFloat(r.rate));
-    const values = smoothData(rawValues);
-
-    // Interpolate Freddie Mac data (no offset — FRED data is already accurate)
+    // National avg: FRED MORTGAGE30US interpolated to daily
     const fm30 = fredData?.MORTGAGE30US || [];
     const fmValues = interpolateFreddieMac(fm30, dates);
+
+    // NRM line: national avg minus constant spread
+    const rawNrmValues = fmValues.map((v) =>
+      v !== null ? Math.round((v - NRM_SPREAD) * 1000) / 1000 : null
+    );
+    const values = smoothData(rawNrmValues);
 
     // Extend into future
     const xMax = getXMax(timeRange);
@@ -534,7 +544,7 @@ export default function RateChart({ rateHistory, fredData: serverFredData }) {
 
     if (chartRef.current) chartRef.current.destroy();
     chartRef.current = new Chart(canvasRef.current.getContext('2d'), config);
-  }, [rateHistory, fredData, creditTier, timeRange]);
+  }, [fredData, timeRange]);
 
   useEffect(() => {
     buildChart();
@@ -550,24 +560,6 @@ export default function RateChart({ rateHistory, fredData: serverFredData }) {
 
       {/* Controls row */}
       <div className="flex flex-wrap items-center gap-2 mb-2">
-        <div className="flex items-center gap-1.5">
-          <span className="text-[10px] text-slate-500 uppercase tracking-wide">Score</span>
-          <div className="flex">
-            {CREDIT_TIERS.map((tier) => (
-              <button
-                key={tier}
-                onClick={() => setCreditTier(tier)}
-                className={`px-2 py-0.5 text-[11px] font-semibold border border-slate-600 transition-all first:rounded-l last:rounded-r ${
-                  creditTier === tier
-                    ? 'bg-brand text-white border-brand'
-                    : 'bg-surface text-slate-400 hover:text-white'
-                }`}
-              >
-                {tier === '760' ? '760+' : tier}
-              </button>
-            ))}
-          </div>
-        </div>
         <div className="flex items-center gap-1.5">
           <span className="text-[10px] text-slate-500 uppercase tracking-wide">Range</span>
           <div className="flex">
