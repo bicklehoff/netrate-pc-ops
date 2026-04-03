@@ -76,7 +76,7 @@ const FRED_BASE = 'https://api.stlouisfed.org/fred/series/observations';
 const FRED_SERIES = {
   MORTGAGE30US: '30yr Fixed (Freddie Mac)',
   MORTGAGE15US: '15yr Fixed (Freddie Mac)',
-  DGS2: '2yr Treasury', DGS5: '5yr Treasury',
+  DGS1: '1yr Treasury (CMT)', DGS2: '2yr Treasury', DGS5: '5yr Treasury',
   DGS10: '10yr Treasury', DGS30: '30yr Treasury',
   SOFR30DAYAVG: '30-Day Avg SOFR', SOFR: 'SOFR (Overnight)',
   DPRIME: 'Prime Rate', FEDFUNDS: 'Fed Funds Rate',
@@ -84,6 +84,7 @@ const FRED_SERIES = {
 const FRED_FALLBACK = {
   MORTGAGE30US: [{ date: '2026-03-26', value: 6.38 }, { date: '2026-03-20', value: 6.22 }],
   MORTGAGE15US: [{ date: '2026-03-26', value: 5.75 }, { date: '2026-03-20', value: 5.59 }],
+  DGS1: [{ date: '2026-03-27', value: 4.10 }, { date: '2026-03-26', value: 4.07 }],
   DGS2: [{ date: '2026-03-27', value: 3.919 }, { date: '2026-03-26', value: 3.978 }],
   DGS5: [{ date: '2026-03-27', value: 4.076 }, { date: '2026-03-26', value: 4.099 }],
   DGS10: [{ date: '2026-03-27', value: 4.434 }, { date: '2026-03-26', value: 4.42 }],

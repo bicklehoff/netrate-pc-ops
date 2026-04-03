@@ -1,10 +1,37 @@
 'use client';
 
+// ── Index definition ─────────────────────────────────────────────────────────
+// Groups: ARM Indexes | HELOC / Fed | Treasury Curve | Mortgage Survey
+const TICKER_ITEMS = [
+  // ARM Indexes — what variable-rate loans are priced off
+  { key: 'SOFR',        label: 'SOFR',      decimals: 3, group: 'arm' },
+  { key: 'SOFR30DAYAVG',label: '30D SOFR',  decimals: 3, group: 'arm' },
+  { key: 'DGS1',        label: '1yr CMT',   decimals: 3, group: 'arm' },
+  // HELOC & Fed — prime-based products + policy backdrop
+  { key: 'DPRIME',      label: 'Prime',     decimals: 2, group: 'fed' },
+  { key: 'FEDFUNDS',    label: 'Fed Funds', decimals: 2, group: 'fed' },
+  // Treasury curve — yield context for fixed pricing
+  { key: 'DGS2',        label: '2yr T',     decimals: 3, group: 'tsy' },
+  { key: 'DGS5',        label: '5yr T',     decimals: 3, group: 'tsy' },
+  { key: 'DGS10',       label: '10yr T',    decimals: 3, group: 'tsy' },
+  { key: 'DGS30',       label: '30yr T',    decimals: 3, group: 'tsy' },
+  // Mortgage benchmarks — Freddie Mac weekly survey
+  { key: 'MORTGAGE15US',label: '15yr Fixed',decimals: 2, group: 'mbs' },
+];
+
+// Group separator colors — thin colored rule between groups
+const GROUP_DOT = {
+  arm: 'bg-violet-300',
+  fed: 'bg-amber-300',
+  tsy: 'bg-sky-300',
+  mbs: 'bg-emerald-300',
+};
+
 function TickerStat({ label, value, change, changeColor }) {
   return (
-    <div className="flex flex-col">
-      <span className="text-slate-400 text-[10px] uppercase tracking-wider font-bold">{label}</span>
-      <span className="text-slate-900 text-sm font-bold tabular-nums">
+    <div className="flex flex-col shrink-0">
+      <span className="text-slate-400 text-[10px] uppercase tracking-wider font-bold whitespace-nowrap">{label}</span>
+      <span className="text-slate-900 text-sm font-bold tabular-nums whitespace-nowrap">
         {value}
         {change && (
           <span className={`text-xs ml-1 font-medium ${changeColor || 'text-slate-400'}`}>{change}</span>
@@ -14,120 +41,76 @@ function TickerStat({ label, value, change, changeColor }) {
   );
 }
 
-function Separator() {
-  return <div className="w-px h-6 bg-slate-200" />;
+function Separator({ group, nextGroup }) {
+  // Colored dot when the group changes, plain line otherwise
+  const isGroupBreak = group && nextGroup && group !== nextGroup;
+  if (isGroupBreak) {
+    return (
+      <div className="flex items-center shrink-0">
+        <div className={`w-1 h-1 rounded-full ${GROUP_DOT[nextGroup] || 'bg-slate-300'}`} />
+      </div>
+    );
+  }
+  return <div className="w-px h-6 bg-slate-200 shrink-0" />;
 }
 
-export default function TickerBar({ fredLatest, todayRate, rateHistory }) {
-  const now = new Date();
-  const cutoff90 = new Date(now);
-  cutoff90.setDate(cutoff90.getDate() - 90);
-  const recent = (rateHistory || []).filter(
-    (r) => r.credit_score_tier === '760+' && new Date(r.date) >= cutoff90
-  );
-  let low90 = null;
-  let high90 = null;
-  let low90Date = '';
-  let high90Date = '';
-
-  for (const r of recent) {
-    const rate = parseFloat(r.rate);
-    if (low90 === null || rate < low90) {
-      low90 = rate;
-      low90Date = new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    }
-    if (high90 === null || rate > high90) {
-      high90 = rate;
-      high90Date = new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    }
-  }
-
-  const fm30 = fredLatest?.MORTGAGE30US;
-  const spread = fm30 && todayRate ? (fm30.value - todayRate).toFixed(3) : null;
-
+export default function TickerBar({ fredLatest, todayRate }) {
   const chgColor = (val) =>
     val > 0 ? 'text-red-500' : val < 0 ? 'text-emerald-600' : 'text-slate-400';
 
+  const fmtChg = (val, decimals) => {
+    if (val == null || val === 0) return null;
+    return (val > 0 ? '+' : '') + val.toFixed(decimals);
+  };
+
+  // Build item elements
+  const elements = [];
+  for (let i = 0; i < TICKER_ITEMS.length; i++) {
+    const item = TICKER_ITEMS[i];
+    const d = fredLatest?.[item.key];
+    if (!d) continue;
+
+    if (elements.length > 0) {
+      const prevGroup = TICKER_ITEMS[i - 1]?.group;
+      elements.push(
+        <Separator key={`sep-${item.key}`} group={prevGroup} nextGroup={item.group} />
+      );
+    }
+
+    elements.push(
+      <TickerStat
+        key={item.key}
+        label={item.label}
+        value={d.value.toFixed(item.decimals) + '%'}
+        change={fmtChg(d.change, item.decimals)}
+        changeColor={chgColor(d.change)}
+      />
+    );
+  }
+
+  // Nat'l Avg with spread vs NetRate Mortgage
+  const fm30 = fredLatest?.MORTGAGE30US;
+  if (fm30) {
+    if (elements.length > 0) {
+      elements.push(<Separator key="sep-natl" group="mbs" nextGroup="mbs" />);
+    }
+    const spread = todayRate ? (fm30.value - todayRate).toFixed(3) : null;
+    elements.push(
+      <TickerStat
+        key="natl-avg"
+        label="Nat'l Avg"
+        value={fm30.value.toFixed(2) + '%'}
+        change={spread ? `+${spread} vs NRM` : null}
+        changeColor="text-emerald-600"
+      />
+    );
+  }
+
+  if (elements.length === 0) return null;
+
   return (
-    <div className="flex items-center gap-5 px-4 py-2.5 bg-white/60 backdrop-blur-sm rounded-xl border border-slate-100 overflow-x-auto scrollbar-hide">
-      {fredLatest?.MORTGAGE15US && (
-        <>
-          <TickerStat
-            label="15yr Fixed"
-            value={fredLatest.MORTGAGE15US.value.toFixed(2) + '%'}
-            change={
-              fredLatest.MORTGAGE15US.change
-                ? (fredLatest.MORTGAGE15US.change > 0 ? '+' : '') +
-                  fredLatest.MORTGAGE15US.change.toFixed(2)
-                : null
-            }
-            changeColor={chgColor(fredLatest.MORTGAGE15US.change)}
-          />
-          <Separator />
-        </>
-      )}
-      {fredLatest?.DGS10 && (
-        <>
-          <TickerStat
-            label="10yr Treasury"
-            value={fredLatest.DGS10.value.toFixed(3) + '%'}
-            change={
-              fredLatest.DGS10.change
-                ? (fredLatest.DGS10.change > 0 ? '+' : '') +
-                  fredLatest.DGS10.change.toFixed(3)
-                : null
-            }
-            changeColor={chgColor(fredLatest.DGS10.change)}
-          />
-          <Separator />
-        </>
-      )}
-      {fredLatest?.DGS30 && (
-        <>
-          <TickerStat
-            label="30yr Treasury"
-            value={fredLatest.DGS30.value.toFixed(3) + '%'}
-            change={
-              fredLatest.DGS30.change
-                ? (fredLatest.DGS30.change > 0 ? '+' : '') +
-                  fredLatest.DGS30.change.toFixed(3)
-                : null
-            }
-            changeColor={chgColor(fredLatest.DGS30.change)}
-          />
-          <Separator />
-        </>
-      )}
-      {low90 !== null && (
-        <>
-          <TickerStat
-            label="90-Day Low"
-            value={low90.toFixed(3) + '%'}
-            change={low90Date}
-            changeColor="text-slate-400"
-          />
-          <Separator />
-        </>
-      )}
-      {high90 !== null && (
-        <>
-          <TickerStat
-            label="90-Day High"
-            value={high90.toFixed(3) + '%'}
-            change={high90Date}
-            changeColor="text-slate-400"
-          />
-          <Separator />
-        </>
-      )}
-      {fm30 && spread && (
-        <TickerStat
-          label="Nat'l Avg (Freddie Mac)"
-          value={fm30.value.toFixed(2) + '%'}
-          change={`+${spread} vs NetRate Mortgage`}
-          changeColor="text-red-500"
-        />
-      )}
+    <div className="flex items-center gap-4 px-4 py-2.5 bg-white/60 backdrop-blur-sm rounded-xl border border-slate-100 overflow-x-auto scrollbar-hide">
+      {elements}
     </div>
   );
 }

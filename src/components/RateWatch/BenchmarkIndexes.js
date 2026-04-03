@@ -52,7 +52,7 @@ export default function BenchmarkIndexes({ fredLatest, cmtData }) {
     }
   }
 
-  // CMT from Treasury.gov
+  // CMT from Treasury.gov — fall back to FRED DGS1/DGS10 (same data) if Treasury.gov is unavailable
   if (cmtData?.tenYear != null) {
     data.CMT10 = {
       value: cmtData.tenYear,
@@ -61,6 +61,8 @@ export default function BenchmarkIndexes({ fredLatest, cmtData }) {
         : null,
       date: cmtData.date,
     };
+  } else if (fredLatest?.DGS10) {
+    data.CMT10 = { value: fredLatest.DGS10.value, change: fredLatest.DGS10.change, date: fredLatest.DGS10.date };
   }
   if (cmtData?.oneYear != null) {
     data.CMT1 = {
@@ -70,6 +72,8 @@ export default function BenchmarkIndexes({ fredLatest, cmtData }) {
         : null,
       date: cmtData.date,
     };
+  } else if (fredLatest?.DGS1) {
+    data.CMT1 = { value: fredLatest.DGS1.value, change: fredLatest.DGS1.change, date: fredLatest.DGS1.date };
   }
 
   const hasData = Object.keys(data).length > 0;
