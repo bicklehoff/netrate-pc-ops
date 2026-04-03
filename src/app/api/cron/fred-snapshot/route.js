@@ -145,6 +145,9 @@ export async function GET(request) {
   }
 
   // Fetch Treasury CMT
+  // CMT is best-effort — Treasury.gov blocks server-side requests intermittently.
+  // CMT failure does not mark the job as failed; FRED data is the critical path.
+  const cmtWarnings = [];
   try {
     const cmt = await fetchTreasuryCMT();
     for (const [id, rows] of Object.entries(cmt)) {
@@ -152,17 +155,18 @@ export async function GET(request) {
       results[id] = { upserted, latest: rows[rows.length - 1] };
     }
   } catch (e) {
-    errors[`CMT: ${e.message}`] = true;
+    cmtWarnings.push(`CMT unavailable: ${e.message}`);
   }
 
   const hasErrors = Object.keys(errors).length > 0;
   const today = new Date().toISOString().split('T')[0];
-  console.log(`[cron/fred-snapshot] ${today}: series=${Object.keys(results).length} errors=${Object.keys(errors).length}`);
+  console.log(`[cron/fred-snapshot] ${today}: series=${Object.keys(results).length} fred_errors=${Object.keys(errors).length} cmt_warnings=${cmtWarnings.length}`);
 
   return NextResponse.json({
     ok: !hasErrors,
     date: today,
     results,
     ...(hasErrors && { errors: Object.keys(errors) }),
-  }, { status: hasErrors ? 207 : 200 });
+    ...(cmtWarnings.length > 0 && { cmtWarnings }),
+  });
 }
