@@ -106,6 +106,7 @@ export async function POST(request) {
       lockDays: body.lockDays || 30,
       productType: body.productType || 'fixed',
       borrowerPaid: body.borrowerPaid || false,
+      escrowsWaived: body.escrowsWaived || false,
     };
 
     // Run eligibility check
@@ -145,7 +146,7 @@ export async function POST(request) {
       loanAmount,
       fundingDate: body.fundingDate || body.closingDate || null,
       annualRate: primaryAnnualRate,
-      isEscrowing: body.isEscrowing !== false, // default true
+      isEscrowing: !(body.escrowsWaived || false),
     });
 
     // Surface fee template warning
