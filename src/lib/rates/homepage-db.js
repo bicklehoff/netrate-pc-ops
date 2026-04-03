@@ -13,7 +13,6 @@ import { DEFAULT_SCENARIO } from './defaults';
 
 const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-const FALLBACK_COMP_RATE = 0.02;
 
 // ─── Homepage rate cache ─────────────────────────────────────────────
 // Rates only change when a new sheet is parsed (~once/day).
