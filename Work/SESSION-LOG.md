@@ -5,6 +5,61 @@
 
 ---
 
+## 2026-04-02/03 — Setup — Relay Migration, Neon Controls, Deploy Safety, Homepage Rate Fix
+**Actor:** pc-setup
+
+### What was done
+
+**Relay system migration**
+- Switched all PC relay calls from MCP tools to TrackerPortal REST API
+- `GET/POST/PATCH https://tracker.netratemortgage.com/api/relay` with `x-tracker-api-key`
+- Updated CLAUDE.md Ironclad Relay Protocol section + session startup step
+- Saved to memory (`feedback_relay_api.md`)
+- Bulk resolved 69 stale relays — inbox down from 137 → 15 open action items
+
+**Commission POST fix**
+- `cdWorkDriveFileId` now included in TrackerPortal payroll POST payload
+- `src/app/api/portal/mlo/loans/[id]/payroll/route.js`
+- Relayed back to Mac, resolved
+
+**Deploy safety**
+- Installed `.git/hooks/pre-push` — auto-rebase + stash before every push
+- Prevents deploy collisions between concurrent sessions
+
+**Neon DB usage controls**
+- Confirmed `PC_DATABASE_URL` uses pooled connection (`-pooler.`) in both local + Vercel
+- `seed-adjustment-rules.mjs`: added skip guard (`--force` required to re-seed) + batched inserts (50 rows/query, was 1 per query — ~50x less transfer)
+- `package.json`: `prisma migrate deploy || true` — non-blocking, survives transient DB hiccups
+- Added Neon DB Usage section to `DEV-PLAYBOOK.md`
+- Neon upgraded to Launch plan ($19/mo) — was over 5 GB transfer on day 2 (seeding + connection leak)
+
+**Homepage/rate-watch rate fix**
+- Rates were showing 5.5% / 10.5% APR — broker comp was being subtracted in pricing engine before finding "par", pushing selection to a heavily discounted rate
+- Fix: `compRate: 0` in homepage `brokerConfig` — public display shows true sheet par
+- `src/lib/rates/homepage-db.js`
+- Also cleared 2 pre-existing ESLint errors that were blocking builds
+
+### Deploys
+- `netrate-mortgage-site-ku94sxm1b` — Ready (rate fix + ESLint cleanup)
+
+### Open items (15 relays remain)
+- [ ] Wire MCR loans push endpoint to TrackerPortal
+- [ ] Replace RSS aggregator with /api/market/news endpoint
+- [ ] Disable PC national-rates scrape task (Claw taking over)
+- [ ] Disable SessionStart hook
+- [ ] DSCR Scenario Builder + Income Qualification Calculator
+- [ ] Dev batch (Tickets API, contacts, email attachments, signing queue)
+- [ ] Payroll module full build spec
+- [ ] Refinance Calculator + Term Shortening calculator
+- [ ] Outstanding items checklist status update
+- [ ] Design Refinement Brief — full site visual upgrade
+- [ ] Compliance review — 7 must-fix items before removing password wall
+- [ ] System map PDF
+- [ ] Revised MCR ingest spec
+
+
+---
+
 ## 2026-04-02 — Dev — SWMC Pricing Pipeline, Skill Refactor, Branding Fixes
 **Actor:** pc-dev
 
