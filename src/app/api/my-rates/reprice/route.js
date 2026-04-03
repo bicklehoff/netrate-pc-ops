@@ -15,7 +15,7 @@ export async function POST(request) {
     }
 
     // Validate token → get email (raw SQL — Prisma client doesn't expose viewToken)
-    const leads = await prisma.$queryRaw`SELECT email FROM leads WHERE view_token = ${token}::uuid LIMIT 1`;
+    const leads = await prisma.$queryRaw`SELECT email FROM leads WHERE view_token::text = ${token} LIMIT 1`;
     const lead = leads?.[0] || null;
 
     if (!lead?.email) {

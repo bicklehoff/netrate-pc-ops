@@ -47,7 +47,7 @@ export async function POST(request) {
     });
 
     // Fetch the DB-generated viewToken via raw query (Prisma client doesn't expose this field)
-    const tokenRow = await prisma.$queryRaw`SELECT view_token FROM leads WHERE id = ${lead.id}::uuid`;
+    const tokenRow = await prisma.$queryRaw`SELECT view_token::text FROM leads WHERE id::text = ${lead.id}`;
     const viewToken = tokenRow?.[0]?.view_token || null;
 
     // Run initial pricing snapshot

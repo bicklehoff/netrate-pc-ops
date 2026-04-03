@@ -15,11 +15,11 @@ export async function GET(request) {
 
   try {
     // Find the lead by viewToken (raw SQL — Prisma client doesn't expose this field)
-    const leads = await prisma.$queryRaw`SELECT id, email, name FROM leads WHERE view_token = ${token}::uuid LIMIT 1`;
+    const leads = await prisma.$queryRaw`SELECT id::text, email, name FROM leads WHERE view_token::text = ${token} LIMIT 1`;
     const lead = leads?.[0] || null;
 
     if (!lead || !lead.email) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+      return NextResponse.json({ error: `Invalid token (found ${leads?.length || 0} leads)` }, { status: 401 });
     }
 
     // Find ALL leads with the same email (borrower may have saved multiple scenarios)
@@ -53,7 +53,7 @@ export async function GET(request) {
       scenarios,
     });
   } catch (err) {
-    console.error('My Rates GET error:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('My Rates GET error:', err.message, err.stack);
+    return NextResponse.json({ error: `Load failed: ${err.message}` }, { status: 500 });
   }
 }

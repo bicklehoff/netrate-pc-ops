@@ -250,8 +250,11 @@ function MyRatesContent() {
       return;
     }
     fetch(`/api/my-rates?token=${encodeURIComponent(token)}`)
-      .then(res => {
-        if (!res.ok) throw new Error('Unable to load your scenarios.');
+      .then(async res => {
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.error || 'Unable to load your scenarios.');
+        }
         return res.json();
       })
       .then(setData)
