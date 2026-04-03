@@ -4,7 +4,8 @@
  * Single XLSX with one sheet ('RATESHEET'). 4,400+ rows.
  * Layout: product sections in triples (3 products side-by-side per row block).
  * Section headers are text rows naming the product, then Rate/30Day/45Day/60Day columns.
- * Prices are discount/rebate format (positive = cost, negative = rebate).
+ * Raw prices are discount/rebate format (positive = cost, negative = rebate).
+ * Parser converts to 100-based on output so the pricing engine works uniformly.
  *
  * Products: Gov (FHA/USDA/VA standard, streamline, jumbo, cashout, ARM),
  *           Agency Conforming (30/20/15/10yr, 5/6/7/6/10/6 ARM, HB, HomeReady, Investment, Super Conforming),
@@ -131,7 +132,8 @@ function extractTripleBlock(ws, headerRow, maxDataRows = 28) {
         if (isNaN(priceNum)) continue;
         // Discount format: values range from about -6 to +7
         if (priceNum < -10 || priceNum > 15) continue;
-        rates.push({ rate: rateNum, lockDays: lc.days, price: priceNum });
+        // Convert discount → 100-based (positive discount = cost → below par)
+        rates.push({ rate: rateNum, lockDays: lc.days, price: 100 - priceNum });
       }
     }
 
@@ -615,7 +617,7 @@ function parseRates(xlsxBuffer) {
         isStreamline: match.isStreamline || false,
         variant: match.variant || null,
         docType: match.docType || null,
-        priceFormat: 'discount',
+        priceFormat: '100-based',
         rates: block.rates,
         lockDays,
       });
