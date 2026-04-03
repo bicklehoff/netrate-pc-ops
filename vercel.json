@@ -3,6 +3,14 @@
     {
       "path": "/api/cron/mnd-scrape",
       "schedule": "15 21 * * 1-5"
+    },
+    {
+      "path": "/api/cron/fred-snapshot",
+      "schedule": "0 23 * * 1-5"
+    },
+    {
+      "path": "/api/cron/health-check",
+      "schedule": "0 14 * * 1-5"
     }
   ]
 }

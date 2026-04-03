@@ -1480,6 +1480,25 @@ model BrokerConfig {
 }
 
 // =============================================================================
+// FRED Series Data — daily snapshot of economic indicators (cached from FRED API)
+// Populated by /api/cron/fred-snapshot (Vercel cron, 6pm EST weekdays)
+// Series: MORTGAGE30US, MORTGAGE15US, DGS2, DGS5, DGS10, DGS30,
+//         SOFR, SOFR30DAYAVG, DPRIME, FEDFUNDS, CMT1Y, CMT10Y
+// =============================================================================
+
+model FredSeriesData {
+  id        Int      @id @default(autoincrement())
+  seriesId  String   @map("series_id") @db.VarChar(20)
+  date      DateTime @db.Date
+  value     Decimal  @db.Decimal(10, 4)
+  fetchedAt DateTime @default(now()) @map("fetched_at") @db.Timestamptz(6)
+
+  @@unique([seriesId, date])
+  @@index([seriesId, date(sort: Desc)])
+  @@map("fred_series_data")
+}
+
+// =============================================================================
 // FOMC Statements — cached Fed press releases for statement diff feature
 // =============================================================================
 

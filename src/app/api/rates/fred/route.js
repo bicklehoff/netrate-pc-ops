@@ -1,12 +1,16 @@
-// FRED API Proxy — Fetches mortgage rates and treasury yields from St. Louis Fed
+// FRED Data Route — Serves economic indicator data
+//
+// Primary:  Reads from fred_series_data table (populated by /api/cron/fred-snapshot daily at 6pm EST)
+// Fallback: Live FRED API call if DB has no data for requested range
+// Final:    Hardcoded static fallback (labeled stale)
 //
 // GET /api/rates/fred?series=MORTGAGE30US&days=90
-// GET /api/rates/fred?series=all (default — fetches all series)
+// GET /api/rates/fred?series=all (default)
 //
-// Series: MORTGAGE30US, MORTGAGE15US, DGS2, DGS5, DGS10, DGS30
-// Cache: 1-hour CDN, 5-min browser (FRED updates daily/weekly)
+// Cache: 1-hour CDN, 5-min browser
 
 import { NextResponse } from 'next/server';
+import { neon } from '@neondatabase/serverless';
 
 const FRED_BASE = 'https://api.stlouisfed.org/fred/series/observations';
 
@@ -53,6 +57,35 @@ const FALLBACK_DATA = {
 
 const FALLBACK_DATE = '2026-03-28';
 
+async function fetchFromDB(seriesIds, days) {
+  try {
+    const sql = neon(process.env.PC_DATABASE_URL || process.env.DATABASE_URL);
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+    const start = startDate.toISOString().split('T')[0];
+
+    const rows = await sql`
+      SELECT series_id, date::text, value
+      FROM fred_series_data
+      WHERE series_id = ANY(${seriesIds})
+        AND date >= ${start}::date
+      ORDER BY series_id, date DESC
+    `;
+
+    const grouped = {};
+    for (const row of rows) {
+      if (!grouped[row.series_id]) grouped[row.series_id] = [];
+      grouped[row.series_id].push({
+        date: String(row.date).split('T')[0],
+        value: parseFloat(row.value),
+      });
+    }
+    return grouped;
+  } catch {
+    return {};
+  }
+}
+
 async function fetchFredSeries(seriesId, days = 365) {
   const apiKey = process.env.FRED_API_KEY;
   if (!apiKey) return null;
@@ -93,23 +126,37 @@ export async function GET(request) {
       ? Object.keys(SERIES_CONFIG)
       : seriesParam.split(',').filter(s => SERIES_CONFIG[s]);
 
-    // Fetch all series in parallel instead of sequentially
-    const fetchResults = await Promise.all(
-      seriesToFetch.map(async (seriesId) => {
-        const data = await fetchFredSeries(seriesId, days);
-        return [seriesId, data];
-      })
-    );
+    // 1. Try DB first (populated by cron, zero latency)
+    const dbData = await fetchFromDB(seriesToFetch, days);
 
     const results = {};
     let usedFallback = false;
-    for (const [seriesId, data] of fetchResults) {
-      if (data && data.length > 0) {
-        results[seriesId] = data;
+    const missingFromDB = [];
+
+    for (const seriesId of seriesToFetch) {
+      if (dbData[seriesId]?.length > 0) {
+        results[seriesId] = dbData[seriesId];
       } else {
-        // API failed OR returned empty (weekends/holidays) — use fallback
-        results[seriesId] = FALLBACK_DATA[seriesId] || [];
-        usedFallback = true;
+        missingFromDB.push(seriesId);
+      }
+    }
+
+    // 2. For any series not in DB, try live FRED API
+    if (missingFromDB.length > 0) {
+      const liveResults = await Promise.all(
+        missingFromDB.map(async (seriesId) => {
+          const data = await fetchFredSeries(seriesId, days);
+          return [seriesId, data];
+        })
+      );
+      for (const [seriesId, data] of liveResults) {
+        if (data && data.length > 0) {
+          results[seriesId] = data;
+        } else {
+          // 3. Final fallback: hardcoded static data
+          results[seriesId] = FALLBACK_DATA[seriesId] || [];
+          usedFallback = true;
+        }
       }
     }
 
