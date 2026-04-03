@@ -167,19 +167,15 @@ export async function buildFeeBreakdown({
   const monthlyMip = isFha ? Math.round((loanAmount + ufmip) * annualMipRate / 12 * 100) / 100 : 0;
 
   // ── Section A: Origination Charges ────────────────────────────────────────
-  const sectionAItems = [
-    { label: 'Underwriting Fee', amount: lenderFeeUw },
-    ...(toNum(template?.lenderFeeOrigination) > 0
-      ? [{ label: 'Origination Fee', amount: toNum(template.lenderFeeOrigination) }]
-      : []),
-    ...(ufmip > 0
-      ? [{ label: 'FHA Upfront MIP (1.75%)', amount: ufmip, note: 'Financed into loan' }]
-      : []),
-  ];
   const sectionA = {
     label: 'A. Origination Charges',
-    items: sectionAItems,
-    total: sectionAItems.reduce((s, i) => s + i.amount, 0),
+    items: [
+      { label: 'Underwriting Fee', amount: lenderFeeUw },
+      ...(toNum(template?.lenderFeeOrigination) > 0
+        ? [{ label: 'Origination Fee', amount: toNum(template.lenderFeeOrigination) }]
+        : []),
+    ],
+    total: lenderFeeUw + toNum(template?.lenderFeeOrigination),
   };
 
   if (!template) {
@@ -201,7 +197,7 @@ export async function buildFeeBreakdown({
 
     return {
       sectionA,
-      sectionB: { label: 'B. Services You Cannot Shop For', items: [], total: 0 },
+      sectionB: { label: 'B. Services You Cannot Shop For', items: ufmip > 0 ? [{ label: 'FHA Upfront MIP (1.75%)', amount: ufmip, note: 'Financed into loan' }] : [], total: ufmip },
       sectionC: { label: 'C. Services You Can Shop For', items: [], total: 0 },
       sectionE: { label: 'E. Taxes and Other Government Fees', items: [], total: 0 },
       sectionF,
@@ -233,18 +229,22 @@ export async function buildFeeBreakdown({
   }
 
   // ── Section B: Services You Cannot Shop For ──────────────────────────────
+  const sectionBItems = [
+    ...(ufmip > 0
+      ? [{ label: 'FHA Upfront MIP (1.75%)', amount: ufmip, note: 'Financed into loan' }]
+      : []),
+    { label: 'Appraisal', amount: toNum(template.appraisal) },
+    { label: 'Credit Report', amount: toNum(template.creditReport) },
+    { label: 'MERS Fee', amount: toNum(template.mersFee) },
+    { label: 'Flood Certification', amount: toNum(template.floodCert) },
+    { label: 'Tax Service', amount: toNum(template.taxService) },
+    { label: 'Title Endorsement', amount: toNum(template.titleEndorsement) },
+  ].filter(i => i.amount > 0);
   const sectionB = {
     label: 'B. Services You Cannot Shop For',
-    items: [
-      { label: 'Appraisal', amount: toNum(template.appraisal) },
-      { label: 'Credit Report', amount: toNum(template.creditReport) },
-      { label: 'MERS Fee', amount: toNum(template.mersFee) },
-      { label: 'Flood Certification', amount: toNum(template.floodCert) },
-      { label: 'Tax Service', amount: toNum(template.taxService) },
-      { label: 'Title Endorsement', amount: toNum(template.titleEndorsement) },
-    ].filter(i => i.amount > 0),
+    items: sectionBItems,
+    total: sectionBItems.reduce((s, i) => s + i.amount, 0),
   };
-  sectionB.total = sectionB.items.reduce((s, i) => s + i.amount, 0);
 
   // ── Section C: Services You Can Shop For ─────────────────────────────────
   const sectionC = {

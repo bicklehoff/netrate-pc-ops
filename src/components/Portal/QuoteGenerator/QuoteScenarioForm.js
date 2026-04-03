@@ -48,18 +48,29 @@ function addBusinessDays(dateStr, days) {
  */
 function getDefaultClosingDate() {
   const now = new Date();
-  const y = now.getFullYear();
-  const m = now.getMonth();
-  // Start from the last day of the month and walk backward to find the last business day
-  let d = new Date(y, m + 1, 0); // last calendar day
-  while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() - 1);
-  // Now walk back 4 more business days
-  let count = 0;
-  while (count < 4) {
-    d.setDate(d.getDate() - 1);
-    if (d.getDay() !== 0 && d.getDay() !== 6) count++;
+  // Try current month first, then next month if date has already passed
+  for (let offset = 0; offset <= 1; offset++) {
+    const target = new Date(now.getFullYear(), now.getMonth() + offset + 1, 0); // last calendar day
+    // Walk backward to find the last business day
+    while (target.getDay() === 0 || target.getDay() === 6) target.setDate(target.getDate() - 1);
+    // Walk back 4 more business days
+    let count = 0;
+    const d = new Date(target);
+    while (count < 4) {
+      d.setDate(d.getDate() - 1);
+      if (d.getDay() !== 0 && d.getDay() !== 6) count++;
+    }
+    // If this date is in the future (or today), use it
+    if (d >= new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
+      return d.toISOString().split('T')[0];
+    }
   }
-  return d.toISOString().split('T')[0];
+  // Fallback: next month
+  const next = new Date(now.getFullYear(), now.getMonth() + 2, 0);
+  while (next.getDay() === 0 || next.getDay() === 6) next.setDate(next.getDate() - 1);
+  let c = 0;
+  while (c < 4) { next.setDate(next.getDate() - 1); if (next.getDay() !== 0 && next.getDay() !== 6) c++; }
+  return next.toISOString().split('T')[0];
 }
 
 /**
@@ -275,7 +286,7 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
 
         {/* FICO + Zip + State + County + Lock */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
-          <Field label="Credit Score" value={scenario.fico} onChange={v => update('fico', Number(v))} type="number" />
+          <Field label="Credit Score" value={scenario.fico || ''} onChange={v => update('fico', v === '' ? '' : Number(v))} type="number" />
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">
               Zip Code {zipLoading && <span className="text-cyan-500 ml-1">...</span>}

@@ -136,7 +136,7 @@ function QuoteViewContent() {
                 {TABS.map(tab => (
                   <button
                     key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
+                    onClick={() => { setActiveTab(tab.id); window.scrollTo(0, 0); }}
                     className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
                       activeTab === tab.id
                         ? 'text-cyan-700 bg-cyan-50'
@@ -166,7 +166,7 @@ function QuoteViewContent() {
             {TABS.map(tab => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => { setActiveTab(tab.id); window.scrollTo(0, 0); }}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
                   activeTab === tab.id
                     ? 'text-cyan-700 bg-cyan-50'
@@ -198,6 +198,7 @@ function QuoteViewContent() {
         {activeTab === 'payments' && (
           <MonthlyPaymentsTab
             scenarios={scenarios}
+            fees={fees}
             monthlyTax={monthlyTax}
             monthlyIns={monthlyIns}
           />
@@ -356,7 +357,7 @@ function LoanSummaryTab({ quote, scenarios, fees, loanAmount, propertyValue, ltv
 /* ═══════════════════════════════════════════════
    TAB 2: Monthly Payments (detailed)
    ═══════════════════════════════════════════════ */
-function MonthlyPaymentsTab({ scenarios, monthlyTax, monthlyIns }) {
+function MonthlyPaymentsTab({ scenarios, fees, monthlyTax, monthlyIns }) {
   const rates = scenarios.slice(0, 3);
 
   return (

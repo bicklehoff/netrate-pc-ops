@@ -35,8 +35,8 @@ const s = StyleSheet.create({
   /* ── Header ── */
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', paddingBottom: 12, borderBottomWidth: 0.5, borderBottomColor: OUTLINE_VAR + '30', marginBottom: 16 },
   logoBlock: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  logoIcon: { width: 28, height: 28, backgroundColor: BRAND, borderRadius: 6, justifyContent: 'center', alignItems: 'center' },
-  logoIconText: { fontFamily: 'Helvetica-Bold', fontSize: 14, color: WHITE, textAlign: 'center', lineHeight: 28 },
+  logoIcon: { width: 28, height: 28, backgroundColor: BRAND, borderRadius: 6, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
+  logoIconText: { fontFamily: 'Helvetica-Bold', fontSize: 16, color: WHITE, textAlign: 'center', marginTop: 5 },
   companyName: { fontSize: 16, fontFamily: 'Helvetica-Bold', color: BRAND_DARK },
   subtitle: { fontSize: 7, letterSpacing: 2, textTransform: 'uppercase', color: OUTLINE, marginTop: 1 },
   headerDetail: { fontSize: 8, color: OUTLINE, marginTop: 1 },
@@ -126,8 +126,8 @@ const s = StyleSheet.create({
   greenText: { color: GREEN },
   redText: { color: RED },
   note: { fontSize: 7, color: OUTLINE, lineHeight: 1.5, marginTop: 16, fontStyle: 'italic' },
-  footer: { position: 'absolute', bottom: 30, left: 40, right: 40, flexDirection: 'row', justifyContent: 'space-between', fontSize: 6.5, color: OUTLINE, borderTopWidth: 0.5, borderTopColor: OUTLINE_VAR + '30', paddingTop: 6 },
-  pageLabel: { position: 'absolute', bottom: 30, right: 40, fontSize: 6.5, color: OUTLINE },
+  footer: { position: 'absolute', bottom: 34, left: 40, right: 40, flexDirection: 'row', justifyContent: 'space-between', fontSize: 6.5, color: OUTLINE, borderTopWidth: 0.5, borderTopColor: OUTLINE_VAR + '30', paddingTop: 6 },
+  pageLabel: { position: 'absolute', bottom: 20, right: 40, fontSize: 6.5, color: OUTLINE },
 });
 
 /* ── Formatters ── */
@@ -322,12 +322,14 @@ export default function QuotePDF({ quote, scenarios, fees, closingDate, fundingD
         })}
 
         {/* Dates section */}
-        <Text style={s.sectionTitle}>Key Dates</Text>
-        <View style={{ backgroundColor: SURFACE_LOW, borderRadius: 8, padding: 12 }}>
-          <DateRow label="Closing Date" value={closingDate || 'TBD'} />
-          <DateRow label="Funding Date" value={fundingDate || 'TBD'} />
-          <DateRow label="First Payment Date" value={firstPaymentDate || 'TBD'} />
-          <DateRow label="Days Interest" value={String(daysInterest)} />
+        <View wrap={false}>
+          <Text style={s.sectionTitle}>Key Dates</Text>
+          <View style={{ backgroundColor: SURFACE_LOW, borderRadius: 8, padding: 12 }}>
+            <DateRow label="Closing Date" value={closingDate || 'TBD'} />
+            <DateRow label="Funding Date" value={fundingDate || 'TBD'} />
+            <DateRow label="First Payment Date" value={firstPaymentDate || 'TBD'} />
+            <DateRow label="Days Interest" value={String(daysInterest)} />
+          </View>
         </View>
 
         <Footer page={2} />
@@ -339,6 +341,9 @@ export default function QuotePDF({ quote, scenarios, fees, closingDate, fundingD
         <Text style={[s.sectionTitle, { marginTop: 0 }]}>Closing Costs</Text>
 
         {/* ── Loan Costs (Sections A–C) ── */}
+        <Text style={{ fontSize: 7.5, color: OUTLINE, marginBottom: 4, lineHeight: 1.4 }}>
+          Loan costs are fees charged by your lender and third-party services required to originate and close your loan.
+        </Text>
         {[
           { key: 'sectionA' },
           { key: 'sectionB' },
@@ -369,6 +374,9 @@ export default function QuotePDF({ quote, scenarios, fees, closingDate, fundingD
         </View>
 
         {/* ── Other Costs (Sections E–H) ── */}
+        <Text style={{ fontSize: 7.5, color: OUTLINE, marginTop: 6, marginBottom: 4, lineHeight: 1.4 }}>
+          Other costs include government fees, prepaid items (interest, insurance), and escrow reserves collected at closing.
+        </Text>
         {[
           { key: 'sectionE' },
           { key: 'sectionF' },
@@ -478,9 +486,11 @@ export default function QuotePDF({ quote, scenarios, fees, closingDate, fundingD
           );
         })}
 
-        <Text style={s.note}>
-          This amortization schedule shows yearly totals. Actual monthly payments may vary slightly due to rounding. Schedule assumes no prepayments or rate changes.
-        </Text>
+        <View wrap={false}>
+          <Text style={[s.note, { marginTop: 4 }]}>
+            This amortization schedule shows yearly totals. Actual monthly payments may vary slightly due to rounding. Schedule assumes no prepayments or rate changes.
+          </Text>
+        </View>
 
         <Footer page={4} />
       </Page>
