@@ -19,7 +19,7 @@ const FALLBACK_COMP_RATE = 0.02;
 // Rates only change when a new sheet is parsed (~once/day).
 // Cache keyed on effectiveDate so it auto-busts on new rate sheets.
 // 30-minute TTL as safety net; ISR already caches the rendered pages.
-let homepageCache = { data: null, sheetDate: null, fetchedAt: 0 };
+let homepageCache = { data: null, sheetDate: null, fetchedAt: 0 }; // cache busted on deploy
 const HOMEPAGE_CACHE_TTL = 30 * 60 * 1000; // 30 minutes
 
 function calculatePI(rate, amount, termYears = 30) {
@@ -68,9 +68,12 @@ async function priceProduct(loanType, termYears) {
   const lenderCode = activeSheet.lender.code;
   const lender = activeSheet.lender;
 
-  // Build broker config from DB lender data
+  // Build broker config for public display — comp is excluded.
+  // Homepage/rate-watch shows borrower-facing par rates from the sheet.
+  // Broker comp is our revenue, not a borrower cost — including it shifts
+  // the "par" selection lower and produces misleading APRs.
   const brokerConfig = {
-    compRate: lender.compRate ? Number(lender.compRate) : FALLBACK_COMP_RATE,
+    compRate: 0,
     compCapPurchase: Number(lender.maxCompCapPurchase) || 3595,
     compCapRefi: Number(lender.maxCompCapRefi) || 3595,
   };
