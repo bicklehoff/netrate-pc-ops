@@ -357,10 +357,10 @@ const TIME_RANGES = [
   { label: 'All Time', days: 0 },
 ];
 
-export default function RateChart({ fredData: serverFredData }) {
+export default function RateChart({ fredData: serverFredData, mndData = [] }) {
   const canvasRef = useRef(null);
   const chartRef = useRef(null);
-  const [timeRange, setTimeRange] = useState(90); // eslint-disable-line no-unused-vars
+  const [timeRange, setTimeRange] = useState(90);
   const [fredData, setFredData] = useState(serverFredData || {});
 
   // Client-side FRED data fetch as fallback (SSR fetch often fails during build)
@@ -392,9 +392,21 @@ export default function RateChart({ fredData: serverFredData }) {
       cursor.setDate(cursor.getDate() + 1);
     }
 
-    // National avg: FRED MORTGAGE30US interpolated to daily
+    // National avg: MND daily (preferred) blended with FRED weekly (historical fallback)
+    // MND data is exact daily values; FRED fills gaps before MND history starts.
     const fm30 = fredData?.MORTGAGE30US || [];
-    const fmValues = interpolateFreddieMac(fm30, dates);
+    const fredInterpolated = interpolateFreddieMac(fm30, dates);
+
+    // Build MND lookup by date for O(1) access
+    const mndByDate = {};
+    for (const row of mndData) {
+      mndByDate[row.date] = row.value;
+    }
+
+    // Prefer MND where available; fall back to FRED interpolation
+    const fmValues = dates.map((date, i) =>
+      mndByDate[date] != null ? mndByDate[date] : fredInterpolated[i]
+    );
 
     // NRM line: national avg minus constant spread
     const rawNrmValues = fmValues.map((v) =>
@@ -544,7 +556,7 @@ export default function RateChart({ fredData: serverFredData }) {
 
     if (chartRef.current) chartRef.current.destroy();
     chartRef.current = new Chart(canvasRef.current.getContext('2d'), config);
-  }, [fredData, timeRange]);
+  }, [fredData, mndData, timeRange]);
 
   useEffect(() => {
     buildChart();

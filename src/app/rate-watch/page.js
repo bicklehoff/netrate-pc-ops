@@ -15,23 +15,25 @@ import { getHomepageRatesFromDB } from '@/lib/rates/homepage-db';
 
 export const revalidate = 1800; // 30 min — rates change once/day when new sheet is parsed
 
-async function getRateHistory() {
+async function getMndHistory() {
   try {
     const sql = neon(process.env.PC_DATABASE_URL || process.env.DATABASE_URL);
     const rows = await sql`
-      SELECT date, rate, apr, credit_score_tier, loan_type
+      SELECT date, rate, lender AS change_str
       FROM rate_history
       WHERE loan_type = '30yr_fixed'
+        AND source = 'mnd'
+        AND credit_score_tier = 'national'
       ORDER BY date ASC
     `;
+    // Return as { date, value } array compatible with FRED format
     return rows.map((r) => ({
       date: r.date instanceof Date ? r.date.toISOString().split('T')[0] : String(r.date).split('T')[0],
-      rate: r.rate,
-      apr: r.apr,
-      credit_score_tier: r.credit_score_tier,
+      value: parseFloat(r.rate),
+      change: r.change_str ? parseFloat(r.change_str) : 0,
     }));
   } catch (error) {
-    console.error('Failed to fetch rate history:', error);
+    console.error('Failed to fetch MND history:', error);
     return [];
   }
 }
@@ -180,13 +182,9 @@ async function getTreasuryCMT() {
 export async function generateMetadata() {
   let rateStr = '';
   try {
-    const sql = neon(process.env.PC_DATABASE_URL || process.env.DATABASE_URL);
-    const rows = await sql`
-      SELECT rate FROM rate_history
-      WHERE loan_type = '30yr_fixed' AND credit_score_tier = '760+'
-      ORDER BY date DESC LIMIT 1
-    `;
-    if (rows.length > 0) rateStr = parseFloat(rows[0].rate).toFixed(2) + '%';
+    const { getHomepageRatesFromDB } = await import('@/lib/rates/homepage-db');
+    const rates = await getHomepageRatesFromDB();
+    if (rates?.conv30?.rate) rateStr = parseFloat(rates.conv30.rate).toFixed(2) + '%';
   } catch {
     // fallback
   }
@@ -225,8 +223,8 @@ const jsonLd = {
 };
 
 export default async function RateWatchPage() {
-  const [rateHistory, fredData, nationalData, cmtData] = await Promise.all([
-    getRateHistory(), getFredData(), getNationalRates(), getTreasuryCMT(),
+  const [mndHistory, fredData, nationalData, cmtData] = await Promise.all([
+    getMndHistory(), getFredData(), getNationalRates(), getTreasuryCMT(),
   ]);
 
   let liveRates = null;
@@ -234,9 +232,7 @@ export default async function RateWatchPage() {
   liveRates = await getHomepageRatesFromDB();
   realRate = liveRates?.conv30?.rate || null;
 
-  const tier760 = rateHistory.filter((r) => r.credit_score_tier === '760+');
-  const dbRate = tier760.length > 0 ? parseFloat(tier760[tier760.length - 1].rate) : null;
-  const todayRate = realRate || dbRate;
+  const todayRate = realRate || null;
 
   // Build national average rates from MND API or fall back to FRED (Freddie Mac weekly survey)
   let natRates = nationalData?.rates || null;
@@ -289,7 +285,6 @@ export default async function RateWatchPage() {
             <TickerBar
               fredLatest={fredData.latest}
               todayRate={todayRate}
-              rateHistory={rateHistory}
             />
           </div>
         </div>
@@ -335,7 +330,7 @@ export default async function RateWatchPage() {
 
           {/* Row 4: Rate History Chart — full width, fixed height */}
           <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-6 shadow-sm overflow-hidden lg:h-[400px]">
-            <RateChart fredData={fredData.series} />
+            <RateChart fredData={fredData.series} mndData={mndHistory} />
           </div>
 
           {/* Row 5: Benchmark Index Rates — full width */}
