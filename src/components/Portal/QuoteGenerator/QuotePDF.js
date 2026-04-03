@@ -686,6 +686,16 @@ function CashToClose({ rates, fees, loanAmount, propertyValue, quote, daysIntere
         })}
       </View>
 
+      {/* Individual credits (seller credit, realtor credit, etc.) */}
+      {(fees?.credits || []).filter(c => c.amount > 0).map((c, ci) => (
+        <View key={ci} style={ci % 2 === 0 ? rAlt : r}>
+          <Text style={lbl}>{c.label}</Text>
+          {rates.map((_, i) => (
+            <Text key={i} style={{ ...vBold, color: GREEN }}>({$int(c.amount)})</Text>
+          ))}
+        </View>
+      ))}
+
       {/* ── Double rule: grand total ── */}
       <View style={{ paddingHorizontal: 8, marginTop: 2 }}>
         <View style={{ flexDirection: 'row' }}>
@@ -701,11 +711,12 @@ function CashToClose({ rates, fees, loanAmount, propertyValue, quote, daysIntere
           const daily = (loanAmount * (rt.rate / 100)) / 365 * daysInterest;
           const totalFees = hardCosts + softCosts + daily;
           const credit = rt.rebateDollars > 0 ? -rt.rebateDollars : (rt.discountDollars || 0);
+          const creditTotal = (fees?.credits || []).reduce((sum, c) => sum + (c.amount || 0), 0);
           let cashToClose;
           if (quote.purpose === 'purchase') {
-            cashToClose = totalFees + credit + (propertyValue - loanAmount);
+            cashToClose = totalFees + credit - creditTotal + (propertyValue - loanAmount);
           } else {
-            cashToClose = totalFees + credit + Number(quote.currentBalance || 0) - loanAmount;
+            cashToClose = totalFees + credit - creditTotal + Number(quote.currentBalance || 0) - loanAmount;
           }
           return <Text key={i} style={s.totalVal}>{$(cashToClose)}</Text>;
         })}

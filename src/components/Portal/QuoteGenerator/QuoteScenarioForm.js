@@ -340,6 +340,15 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
+                checked={scenario.firstTimeBuyer || false}
+                onChange={e => update('firstTimeBuyer', e.target.checked)}
+                className="w-3.5 h-3.5 rounded border-gray-600 bg-gray-800 text-emerald-400 focus:ring-emerald-400"
+              />
+              <span className="text-xs text-gray-300">First-Time Buyer</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
                 checked={scenario.escrowsWaived || false}
                 onChange={e => update('escrowsWaived', e.target.checked)}
                 className="w-3.5 h-3.5 rounded border-gray-600 bg-gray-800 text-orange-400 focus:ring-orange-400"

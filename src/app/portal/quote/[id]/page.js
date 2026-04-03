@@ -825,6 +825,16 @@ function CashToCloseSection({ rates, fees, loanAmount, propertyValue, quote }) {
         })}
       </CtcRow>
 
+      {/* Individual credits (seller credit, realtor credit, etc.) */}
+      {(fees?.credits || []).filter(c => c.amount > 0).map((c, ci) => (
+        <CtcRow key={ci} cols={cols} alt={ci % 2 === 0}>
+          <p className="text-[#434652]">{c.label}</p>
+          {rates.map((_, i) => (
+            <p key={i} className="text-center font-bold tabular-nums text-emerald-600">({fmtInt(c.amount)})</p>
+          ))}
+        </CtcRow>
+      ))}
+
       {/* Double rule (accounting grand total) */}
       <div className="grid px-6" style={{ gridTemplateColumns: cols }}>
         <div />
@@ -846,11 +856,12 @@ function CashToCloseSection({ rates, fees, loanAmount, propertyValue, quote }) {
           const daily = (loanAmount * (r.rate / 100)) / 365 * daysInterest;
           const totalFees = hardCosts + softCosts + daily;
           const credit = r.rebateDollars > 0 ? -r.rebateDollars : (r.discountDollars || 0);
+          const creditTotal = (fees?.credits || []).reduce((s, c) => s + (c.amount || 0), 0);
           let cashToClose;
           if (quote.purpose === 'purchase') {
-            cashToClose = totalFees + credit + (propertyValue - loanAmount);
+            cashToClose = totalFees + credit - creditTotal + (propertyValue - loanAmount);
           } else {
-            cashToClose = totalFees + credit + Number(quote.currentBalance || 0) - loanAmount;
+            cashToClose = totalFees + credit - creditTotal + Number(quote.currentBalance || 0) - loanAmount;
           }
           return <p key={i} className="text-center text-xl font-extrabold tabular-nums">{fmt(cashToClose)}</p>;
         })}

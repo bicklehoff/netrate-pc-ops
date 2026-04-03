@@ -74,6 +74,7 @@ export async function priceScenario(body) {
     ltv: Math.round(ltv * 100) / 100,
     propertyValue,
     term: body.term || 30,
+    firstTimeBuyer: body.firstTimeBuyer || false,
   };
 
   // County-based loan classification
@@ -152,6 +153,11 @@ export async function priceScenario(body) {
       }
 
       if (body.productType && program.productType !== body.productType) continue;
+
+      // Filter HomeReady / Home Possible — require firstTimeBuyer flag
+      if (program.variant === 'homeready' || program.variant === 'homepossible') {
+        if (!scenario.firstTimeBuyer) continue;
+      }
 
       if (loanClassification) {
         if (loanClassification === 'conforming' && program.isHighBalance) continue;
