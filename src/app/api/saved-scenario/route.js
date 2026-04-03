@@ -28,9 +28,8 @@ export async function POST(request) {
       ? alertDays
       : FREQUENCY_DEFAULTS[freq];
 
-    // Create lead with scenario data — generate viewToken in code so it's
-    // guaranteed in the response (dbgenerated defaults aren't always returned by Prisma)
-    const viewToken = crypto.randomUUID();
+    // Create lead with scenario data
+    // viewToken is dbgenerated (gen_random_uuid) — must select it explicitly to get it back
     const lead = await prisma.lead.create({
       data: {
         name,
@@ -38,7 +37,6 @@ export async function POST(request) {
         phone: phone || null,
         source: 'rate-tool-save',
         sourceDetail: 'saved-scenario',
-        viewToken,
         scenarioData,
         loanPurpose: scenarioData.purpose || null,
         loanAmount: scenarioData.loanAmount || null,
@@ -47,7 +45,9 @@ export async function POST(request) {
         propertyCounty: scenarioData.county || null,
         creditScore: scenarioData.fico || null,
       },
+      select: { id: true, viewToken: true },
     });
+    const viewToken = lead.viewToken;
 
     // Run initial pricing snapshot
     let initialPricing = null;
