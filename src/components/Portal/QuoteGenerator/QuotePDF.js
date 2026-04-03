@@ -1,71 +1,133 @@
 /**
- * QuotePDF — Borrower rate quote matching the RT comparison format.
+ * QuotePDF — Borrower rate quote with Financial Architect design language.
  *
- * Page 1: 3-rate side-by-side comparison (credit/charge, monthly payment, fees summary, cash to close)
- * Page 2: Detailed fee breakdown (sections A, B, C/E, F/G/H)
- * Page 3: Dates and daily interest
+ * Page 1: Loan Summary — 3-rate side-by-side comparison, key figures, cash to close
+ * Page 2: Monthly Payments — detailed payment breakdown per rate
+ * Page 3: Closing Costs — fee sections A-G, daily interest, totals
+ * Page 4: Amortization Schedule — yearly principal/interest/balance
  */
 
 import { Document, Page, View, Text, StyleSheet } from '@react-pdf/renderer';
 
-const BRAND = '#0891b2';
-const GRAY_BG = '#f3f4f6';
-const GRAY_BORDER = '#d1d5db';
-const GRAY_500 = '#6b7280';
-const GRAY_700 = '#374151';
-const GRAY_900 = '#111827';
+/* ── Design Tokens ── */
+const BRAND = '#0891b2';       // cyan-600
+const BRAND_DARK = '#0e7490';  // cyan-700
+const SURFACE = '#f8f9fb';
+const SURFACE_LOW = '#f2f4f6';
+const SURFACE_HIGH = '#e6e8ea';
+const ON_SURFACE = '#191c1e';
+const ON_SURFACE_VAR = '#434652';
+const OUTLINE = '#737783';
+const OUTLINE_VAR = '#c3c6d4';
 const GREEN = '#059669';
 const RED = '#dc2626';
+const WHITE = '#ffffff';
 
 const s = StyleSheet.create({
-  page: { padding: 40, fontFamily: 'Helvetica', fontSize: 9, color: GRAY_900 },
-  // Header
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 },
-  headerLeft: {},
-  headerRight: { textAlign: 'right' },
-  companyName: { fontSize: 14, fontFamily: 'Helvetica-Bold' },
-  teal: { color: BRAND },
-  headerDetail: { fontSize: 8, color: GRAY_500, marginTop: 1 },
-  preparedRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4, paddingBottom: 6, borderBottomWidth: 1, borderBottomColor: GRAY_BORDER },
-  preparedLabel: { fontSize: 10 },
-  preparedValue: { fontSize: 10, fontFamily: 'Helvetica-Bold' },
-  productType: { fontSize: 11, fontFamily: 'Helvetica-Bold', marginBottom: 8 },
-  // Comparison table
-  table: { marginBottom: 0 },
-  row: { flexDirection: 'row', borderBottomWidth: 0.5, borderBottomColor: GRAY_BORDER },
-  rowAlt: { backgroundColor: '#fafafa' },
-  rowHeader: { backgroundColor: GRAY_BG },
-  rowBold: {},
-  rowHighlight: { backgroundColor: '#f0fdf4', borderBottomWidth: 1, borderBottomColor: '#86efac' },
-  labelCell: { width: '40%', paddingVertical: 5, paddingHorizontal: 8, fontSize: 9.5 },
-  labelCellBold: { width: '40%', paddingVertical: 5, paddingHorizontal: 8, fontSize: 10, fontFamily: 'Helvetica-Bold' },
-  valCell: { width: '20%', paddingVertical: 5, paddingHorizontal: 8, textAlign: 'right', fontSize: 10.5, fontFamily: 'Helvetica' },
-  valCellBold: { width: '20%', paddingVertical: 5, paddingHorizontal: 8, textAlign: 'right', fontSize: 11, fontFamily: 'Helvetica-Bold' },
-  sectionHeader: { flexDirection: 'row', backgroundColor: GRAY_900, paddingVertical: 6, paddingHorizontal: 8, marginTop: 10 },
-  sectionHeaderText: { fontSize: 9.5, fontFamily: 'Helvetica-Bold', color: '#ffffff' },
-  sectionHeaderVal: { width: '20%', fontSize: 10, fontFamily: 'Helvetica-Bold', color: '#ffffff', textAlign: 'right', paddingHorizontal: 8 },
+  page: {
+    padding: 40,
+    fontFamily: 'Helvetica',
+    fontSize: 9,
+    color: ON_SURFACE,
+    backgroundColor: WHITE,
+  },
+
+  /* ── Header ── */
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', paddingBottom: 12, borderBottomWidth: 0.5, borderBottomColor: OUTLINE_VAR + '30', marginBottom: 16 },
+  logoBlock: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  logoIcon: { width: 28, height: 28, backgroundColor: BRAND, borderRadius: 6, justifyContent: 'center', alignItems: 'center' },
+  logoIconText: { fontFamily: 'Helvetica-Bold', fontSize: 14, color: WHITE, textAlign: 'center', lineHeight: 28 },
+  companyName: { fontSize: 16, fontFamily: 'Helvetica-Bold', color: BRAND_DARK },
+  subtitle: { fontSize: 7, letterSpacing: 2, textTransform: 'uppercase', color: OUTLINE, marginTop: 1 },
+  headerDetail: { fontSize: 8, color: OUTLINE, marginTop: 1 },
+
+  /* ── Borrower / date bar ── */
+  infoBar: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 },
+  badge: { backgroundColor: SURFACE_LOW, borderRadius: 10, paddingVertical: 3, paddingHorizontal: 10 },
+  badgeText: { fontSize: 7, fontFamily: 'Helvetica-Bold', color: OUTLINE, textTransform: 'uppercase', letterSpacing: 1 },
+
+  /* ── Summary cards ── */
+  cardRow: { flexDirection: 'row', gap: 12, marginBottom: 16 },
+  card: { flex: 1, backgroundColor: SURFACE_LOW, borderRadius: 8, padding: 12 },
+  cardLabel: { fontSize: 7, textTransform: 'uppercase', letterSpacing: 1.5, color: OUTLINE, marginBottom: 2 },
+  cardValue: { fontSize: 16, fontFamily: 'Helvetica-Bold', color: ON_SURFACE },
+
+  /* ── Section title ── */
+  sectionTitle: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: BRAND_DARK, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 6, marginTop: 14 },
+
+  /* ── Comparison table ── */
+  tableHeader: { flexDirection: 'row', backgroundColor: SURFACE_LOW, borderRadius: 6, paddingVertical: 6, paddingHorizontal: 8, marginBottom: 2 },
+  tableRow: { flexDirection: 'row', paddingVertical: 5, paddingHorizontal: 8 },
+  tableRowAlt: { backgroundColor: SURFACE },
+  labelCol: { width: '40%', fontSize: 9 },
+  labelColBold: { width: '40%', fontSize: 9.5, fontFamily: 'Helvetica-Bold' },
+  valCol: { width: '20%', textAlign: 'center', fontSize: 10 },
+  valColBold: { width: '20%', textAlign: 'center', fontSize: 11, fontFamily: 'Helvetica-Bold' },
+  headerLabel: { width: '40%' },
+  headerVal: { width: '20%', textAlign: 'center' },
+  headerValRate: { fontSize: 14, fontFamily: 'Helvetica-Bold', color: ON_SURFACE },
+  headerValLabel: { fontSize: 7, color: OUTLINE },
+
+  /* ── Total row (brand bar) ── */
+  totalRow: { flexDirection: 'row', backgroundColor: BRAND, borderRadius: 8, paddingVertical: 8, paddingHorizontal: 8, marginTop: 4 },
+  totalLabel: { width: '40%', fontSize: 10, fontFamily: 'Helvetica-Bold', color: WHITE },
+  totalVal: { width: '20%', textAlign: 'center', fontSize: 13, fontFamily: 'Helvetica-Bold', color: WHITE },
+
+  /* ── Cash to close card ── */
+  ctcCard: { backgroundColor: SURFACE_HIGH, borderRadius: 10, padding: 14, marginTop: 14, borderLeftWidth: 3, borderLeftColor: BRAND },
+  ctcTitle: { fontSize: 11, fontFamily: 'Helvetica-Bold', color: ON_SURFACE, marginBottom: 8 },
+
+  /* ── Page 2: Payment cards ── */
+  paymentCard: { backgroundColor: SURFACE_LOW, borderRadius: 8, padding: 12, marginBottom: 10 },
+  paymentRate: { fontSize: 18, fontFamily: 'Helvetica-Bold', color: ON_SURFACE },
+  paymentProgram: { fontSize: 8, color: OUTLINE, marginTop: 1, marginBottom: 8 },
+  paymentRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3 },
+  paymentLabel: { fontSize: 9, color: ON_SURFACE_VAR },
+  paymentAmount: { fontSize: 9.5, fontFamily: 'Helvetica-Bold' },
+  paymentTotal: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: 6, marginTop: 6, borderTopWidth: 0.5, borderTopColor: OUTLINE_VAR + '40' },
+  paymentTotalLabel: { fontSize: 10, fontFamily: 'Helvetica-Bold', color: ON_SURFACE },
+  paymentTotalAmount: { fontSize: 14, fontFamily: 'Helvetica-Bold', color: BRAND_DARK },
+  creditBadge: { marginTop: 4, paddingVertical: 2, paddingHorizontal: 6, borderRadius: 8, alignSelf: 'flex-start' },
+  creditBadgeGreen: { backgroundColor: '#ecfdf5' },
+  creditBadgeRed: { backgroundColor: '#fef2f2' },
+
+  /* ── Page 3: Fee sections ── */
+  feeSectionHeader: { flexDirection: 'row', justifyContent: 'space-between', backgroundColor: SURFACE_LOW, paddingVertical: 5, paddingHorizontal: 8, borderRadius: 4, marginTop: 10 },
+  feeSectionLabel: { fontSize: 9, fontFamily: 'Helvetica-Bold', color: ON_SURFACE },
+  feeSectionTotal: { fontSize: 9, fontFamily: 'Helvetica-Bold', color: ON_SURFACE },
+  feeIcon: { width: 14, height: 14, backgroundColor: BRAND, borderRadius: 3, justifyContent: 'center', alignItems: 'center', marginRight: 6 },
+  feeIconText: { fontSize: 7, fontFamily: 'Helvetica-Bold', color: WHITE, textAlign: 'center', lineHeight: 14 },
+  feeRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3, paddingHorizontal: 8, paddingLeft: 28 },
+  feeRowAlt: { backgroundColor: SURFACE },
+  feeLabel: { fontSize: 9, color: ON_SURFACE_VAR },
+  feeAmount: { fontSize: 9.5, color: ON_SURFACE },
+  feeTotalBar: { flexDirection: 'row', justifyContent: 'space-between', backgroundColor: ON_SURFACE, borderRadius: 6, paddingVertical: 6, paddingHorizontal: 8, marginTop: 10 },
+  feeTotalLabel: { fontSize: 10, fontFamily: 'Helvetica-Bold', color: WHITE },
+  feeTotalAmount: { fontSize: 10, fontFamily: 'Helvetica-Bold', color: WHITE },
+
+  /* ── Page 4: Amortization ── */
+  amortHeader: { flexDirection: 'row', backgroundColor: ON_SURFACE, borderRadius: 6, paddingVertical: 5, paddingHorizontal: 8, marginBottom: 2 },
+  amortHeaderText: { fontSize: 7, fontFamily: 'Helvetica-Bold', color: WHITE, textTransform: 'uppercase', letterSpacing: 1 },
+  amortRow: { flexDirection: 'row', paddingVertical: 3.5, paddingHorizontal: 8 },
+  amortRowAlt: { backgroundColor: SURFACE },
+  amortCell: { fontSize: 8.5, color: ON_SURFACE, textAlign: 'right' },
+  amortCellBold: { fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: ON_SURFACE, textAlign: 'right' },
+  amortLabelCell: { fontSize: 8.5, color: ON_SURFACE_VAR },
+  milestoneBadge: { backgroundColor: '#ecfdf5', borderRadius: 8, paddingVertical: 3, paddingHorizontal: 8, marginRight: 8, marginBottom: 6 },
+  milestoneBadgeBlue: { backgroundColor: '#ecfeff' },
+  milestoneText: { fontSize: 7, fontFamily: 'Helvetica-Bold' },
+  milestoneGreen: { color: GREEN },
+  milestoneCyan: { color: BRAND_DARK },
+
+  /* ── Shared ── */
   greenText: { color: GREEN },
   redText: { color: RED },
-  // Page 2 - fees
-  feeTitle: { fontSize: 12, fontFamily: 'Helvetica-Bold', marginBottom: 10, marginTop: 4 },
-  feeSectionHeader: { flexDirection: 'row', justifyContent: 'space-between', backgroundColor: GRAY_BG, paddingVertical: 5, paddingHorizontal: 8, marginTop: 10, borderBottomWidth: 1, borderBottomColor: GRAY_900 },
-  feeSectionLabel: { fontSize: 10, fontFamily: 'Helvetica-Bold' },
-  feeSectionTotal: { fontSize: 10, fontFamily: 'Courier-Bold' },
-  feeRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3, paddingHorizontal: 8, borderBottomWidth: 0.5, borderBottomColor: GRAY_BORDER },
-  feeLabel: { fontSize: 9.5, color: GRAY_700 },
-  feeAmount: { fontSize: 10, fontFamily: 'Helvetica' },
-  feeTotalRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, paddingHorizontal: 8, borderTopWidth: 1.5, borderTopColor: GRAY_900, marginTop: 6 },
-  feeTotalLabel: { fontSize: 11, fontFamily: 'Helvetica-Bold' },
-  feeTotalAmount: { fontSize: 11, fontFamily: 'Courier-Bold' },
-  // Page 3
-  dateRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5, paddingHorizontal: 8, borderBottomWidth: 0.5, borderBottomColor: GRAY_BORDER },
-  dateLabel: { fontSize: 10, fontFamily: 'Helvetica-Bold' },
-  dateValue: { fontSize: 10.5, fontFamily: 'Helvetica' },
-  note: { fontSize: 8, color: GRAY_500, lineHeight: 1.5, marginTop: 16, maxWidth: 300 },
-  // Footer
-  footer: { position: 'absolute', bottom: 30, left: 40, right: 40, flexDirection: 'row', justifyContent: 'space-between', fontSize: 7, color: GRAY_500, borderTopWidth: 0.5, borderTopColor: GRAY_BORDER, paddingTop: 6 },
+  note: { fontSize: 7, color: OUTLINE, lineHeight: 1.5, marginTop: 16, fontStyle: 'italic' },
+  footer: { position: 'absolute', bottom: 30, left: 40, right: 40, flexDirection: 'row', justifyContent: 'space-between', fontSize: 6.5, color: OUTLINE, borderTopWidth: 0.5, borderTopColor: OUTLINE_VAR + '30', paddingTop: 6 },
+  pageLabel: { position: 'absolute', bottom: 30, right: 40, fontSize: 6.5, color: OUTLINE },
 });
 
+/* ── Formatters ── */
 function $(n) {
   if (n == null) return '$0';
   const num = Number(n);
@@ -85,6 +147,44 @@ function pct(n) {
   return Number(n).toFixed(3) + '%';
 }
 
+/* ── Amortization calculator ── */
+function buildAmortization(loanAmount, annualRate, termYears) {
+  const monthlyRate = annualRate / 100 / 12;
+  const totalPayments = termYears * 12;
+  const payment = monthlyRate > 0
+    ? loanAmount * (monthlyRate * Math.pow(1 + monthlyRate, totalPayments)) / (Math.pow(1 + monthlyRate, totalPayments) - 1)
+    : loanAmount / totalPayments;
+
+  const yearly = [];
+  let balance = loanAmount;
+  let yearPrincipal = 0;
+  let yearInterest = 0;
+
+  for (let m = 1; m <= totalPayments; m++) {
+    const interest = balance * monthlyRate;
+    const principal = payment - interest;
+    balance -= principal;
+    yearPrincipal += principal;
+    yearInterest += interest;
+
+    if (m % 12 === 0) {
+      yearly.push({
+        year: m / 12,
+        principal: yearPrincipal,
+        interest: yearInterest,
+        totalPayment: yearPrincipal + yearInterest,
+        balance: Math.max(0, balance),
+      });
+      yearPrincipal = 0;
+      yearInterest = 0;
+    }
+  }
+  return yearly;
+}
+
+/* ══════════════════════════════════════════════════
+   QuotePDF Component
+   ══════════════════════════════════════════════════ */
 export default function QuotePDF({ quote, scenarios, fees, closingDate, fundingDate, firstPaymentDate }) {
   const borrowerName = quote.borrowerName || 'Valued Client';
   const date = new Date().toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' });
@@ -94,170 +194,167 @@ export default function QuotePDF({ quote, scenarios, fees, closingDate, fundingD
   const ltv = Number(quote.ltv);
   const term = quote.term || 30;
 
-  // Calculate daily interest for each rate
   const closingDay = closingDate ? new Date(closingDate) : null;
   const daysInterest = closingDay ? (new Date(closingDay.getFullYear(), closingDay.getMonth() + 1, 0).getDate() - closingDay.getDate() + 1) : 7;
 
-  // Monthly payment components
   const monthlyTax = fees?.monthlyTax || 0;
   const monthlyIns = fees?.monthlyInsurance || 0;
 
+  // Amortization for the first rate (PDF shows one schedule, web lets user toggle)
+  const amortSchedule = rates[0] ? buildAmortization(loanAmount, rates[0].rate, term) : [];
+  const totalInterest = amortSchedule.reduce((sum, y) => sum + y.interest, 0);
+  const totalPaid = amortSchedule.reduce((sum, y) => sum + y.totalPayment, 0);
+  const crossoverYear = amortSchedule.find(y => y.principal > y.interest);
+  const halfwayYear = amortSchedule.find(y => y.balance <= loanAmount / 2);
+
   return (
     <Document>
-      {/* PAGE 1 — Comparison of Three Rates */}
+      {/* ═══ PAGE 1: Loan Summary ═══ */}
       <Page size="LETTER" style={s.page}>
-        {/* Header */}
-        <View style={s.headerRow}>
-          <View style={s.headerLeft}>
-            <Text style={s.companyName}>
-              <Text>Net</Text><Text style={s.teal}>Rate</Text><Text> Mortgage</Text>
-              <Text style={{ fontSize: 10, fontFamily: 'Helvetica', color: GRAY_500 }}> | David Burson</Text>
-            </Text>
-            <Text style={s.headerDetail}>357 South McCaslin Blvd., #200, Louisville, CO 80027</Text>
-            <Text style={s.headerDetail}>david@netratemortgage.com</Text>
-          </View>
-          <View style={s.headerRight}>
-            <Text style={s.headerDetail}>Phone and Text: 303-444-5251</Text>
-            <Text style={s.headerDetail}>NMLS #641790 | Company NMLS #1111861</Text>
-          </View>
-        </View>
+        <Header borrowerName={borrowerName} date={date} />
 
-        {/* Prepared for + Date */}
-        <View style={s.preparedRow}>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            <Text style={s.preparedLabel}>Prepared For: </Text>
-            <Text style={s.preparedValue}>{borrowerName}</Text>
+        {/* Summary cards */}
+        <View style={s.cardRow}>
+          <View style={s.card}>
+            <Text style={s.cardLabel}>Appraised Value</Text>
+            <Text style={s.cardValue}>{$int(propertyValue)}</Text>
           </View>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            <Text style={s.preparedLabel}>Date Prepared</Text>
-            <Text style={s.preparedValue}>{date}</Text>
+          <View style={s.card}>
+            <Text style={s.cardLabel}>Loan Amount</Text>
+            <Text style={s.cardValue}>{$int(loanAmount)}</Text>
+          </View>
+          <View style={s.card}>
+            <Text style={s.cardLabel}>Loan to Value (LTV)</Text>
+            <Text style={s.cardValue}>{ltv.toFixed(1)}%</Text>
           </View>
         </View>
 
-        {/* Product type */}
-        <Text style={s.productType}>{term} Year {rates[0]?.program?.includes('ARM') ? 'ARM' : 'Fixed'} — {(quote.loanType || 'conventional').toUpperCase()}</Text>
+        {/* Rate comparison */}
+        <Text style={s.sectionTitle}>Comparison of Rates</Text>
+        <RateHeaders rates={rates} />
+        <CompRow label="Lender Credit / (Charge) %" values={rates.map(r => {
+          const isCredit = r.rebateDollars > 0;
+          const price = r.price || 100;
+          const val = isCredit ? (price - 100).toFixed(3) : (100 - price).toFixed(3);
+          return { text: isCredit ? val + '%' : '(' + val + '%)', color: isCredit ? GREEN : RED };
+        })} />
+        <CompRow label="Lender Credit / (Charge) $" values={rates.map(r => {
+          const isCredit = r.rebateDollars > 0;
+          return isCredit
+            ? { text: $int(r.rebateDollars), color: GREEN }
+            : { text: '(' + $int(r.discountDollars || 0) + ')', color: RED };
+        })} alt />
 
-        {/* Comparison of Three Rates */}
-        <View style={s.sectionHeader}>
-          <Text style={[s.sectionHeaderText, { width: '40%' }]}>Comparison of Three Rates:</Text>
+        {/* Monthly payment */}
+        <Text style={s.sectionTitle}>Monthly Payment Comparison</Text>
+        <RateHeaders rates={rates} />
+        <CompRow label="Principal & Interest" values={rates.map(r => ({ text: $(r.monthlyPI) }))} />
+        <CompRow label={`Taxes (${new Date().getFullYear()})`} values={rates.map(() => ({ text: $(monthlyTax) }))} alt />
+        <CompRow label="Insurance (est)" values={rates.map(() => ({ text: $(monthlyIns) }))} />
+        <CompRow label="PMI" values={rates.map(() => ({ text: '$0.00' }))} alt />
+        <View style={s.totalRow}>
+          <Text style={s.totalLabel}>Total Monthly Payment</Text>
           {rates.map((r, i) => (
-            <Text key={i} style={s.sectionHeaderVal}>{pct(r.rate)}</Text>
+            <Text key={i} style={s.totalVal}>{$(Number(r.monthlyPI || 0) + monthlyTax + monthlyIns)}</Text>
           ))}
         </View>
 
-        <View style={s.table}>
-          {/* Credit/Charge — use rebateDollars as single source of truth for color */}
-          <CompRow label="Lender (Credit) or Charge for Rate as %" values={rates.map(r => {
-            const isCredit = r.rebateDollars > 0;
-            const price = r.price || 100;
-            const pctVal = isCredit ? (price - 100).toFixed(3) : (100 - price).toFixed(3);
-            return { text: isCredit ? '-' + pctVal + '%' : pctVal + '%', color: isCredit ? GREEN : RED };
-          })} />
-          <CompRow label="Lender (Credit) or Charge for Rate as $" values={rates.map(r => {
-            const isCredit = r.rebateDollars > 0;
-            return isCredit
-              ? { text: '(' + $int(r.rebateDollars) + ')', color: GREEN }
-              : { text: $int(r.discountDollars || 0), color: RED };
-          })} alt />
-          <CompRow label="Appraised Value" values={rates.map(() => ({ text: $int(propertyValue) }))} />
-          <CompRow label="Loan Amount" values={rates.map(() => ({ text: $int(loanAmount) }))} bold />
-          <CompRow label="Loan To Value" values={rates.map(() => ({ text: ltv.toFixed(3) + '%' }))} alt />
-        </View>
+        {/* Cash to close */}
+        <CashToClose rates={rates} fees={fees} loanAmount={loanAmount} propertyValue={propertyValue} quote={quote} daysInterest={daysInterest} />
 
-        {/* Monthly Payment */}
-        <View style={s.sectionHeader}>
-          <Text style={[s.sectionHeaderText, { width: '40%' }]}>Monthly Payment Comparison:</Text>
-          {rates.map((r, i) => (
-            <Text key={i} style={s.sectionHeaderVal}>{pct(r.rate)}</Text>
-          ))}
-        </View>
-        <View style={s.table}>
-          <CompRow label="Principal and Interest" values={rates.map(r => ({ text: $(r.monthlyPI) }))} />
-          <CompRow label={`Taxes (${new Date().getFullYear()})`} values={rates.map(() => ({ text: $(monthlyTax) }))} alt />
-          <CompRow label="Insurance (est)" values={rates.map(() => ({ text: $(monthlyIns) }))} />
-          <CompRow label="PMI" values={rates.map(() => ({ text: '$0.00' }))} alt />
-          <CompRow label="Total Payment" values={rates.map(r => ({ text: $(Number(r.monthlyPI || 0) + monthlyTax + monthlyIns) }))} bold highlight />
-        </View>
-
-        {/* Fees Summary */}
-        <View style={s.sectionHeader}>
-          <Text style={[s.sectionHeaderText, { width: '40%' }]}>Fees Information:</Text>
-          {rates.map((r, i) => (
-            <Text key={i} style={s.sectionHeaderVal}>{pct(r.rate)}</Text>
-          ))}
-        </View>
-        <View style={s.table}>
-          <CompRow label="Lender Fees and Loan Fees (A+B)" values={rates.map(() => ({ text: $((fees?.sectionA?.total || 0) + (fees?.sectionB?.total || 0)) }))} />
-          <CompRow label="Title Fees and Recording Fees (C)" values={rates.map(() => ({ text: $((fees?.sectionC?.total || 0) + (fees?.sectionE?.total || 0)) }))} alt />
-          <CompRow label="Prepaids, Escrow, and Other (F+G+H)" values={rates.map(() => ({ text: $((fees?.sectionF?.total || 0) + (fees?.sectionG?.total || 0)) }))} />
-          <CompRow label="Daily Interest" values={rates.map(r => {
-            const daily = (loanAmount * (r.rate / 100)) / 365 * daysInterest;
-            return { text: $(daily) };
-          })} alt />
-          <CompRow label="Total of All Loan Costs" values={rates.map(r => {
-            const daily = (loanAmount * (r.rate / 100)) / 365 * daysInterest;
-            return { text: $((fees?.totalClosingCosts || 0) + daily) };
-          })} bold />
-        </View>
-
-        {/* Cash to Close */}
-        <View style={s.sectionHeader}>
-          <Text style={[s.sectionHeaderText, { width: '40%' }]}>Total Cash to Close (for each rate):</Text>
-          {rates.map((r, i) => (
-            <Text key={i} style={s.sectionHeaderVal}>{pct(r.rate)}</Text>
-          ))}
-        </View>
-        <View style={s.table}>
-          <CompRow label="Total of All Loan Charges" values={rates.map(r => {
-            const daily = (loanAmount * (r.rate / 100)) / 365 * daysInterest;
-            return { text: $((fees?.totalClosingCosts || 0) + daily) };
-          })} />
-          <CompRow label="Lender (Credit) or Charge" values={rates.map(r => {
-            if (r.rebateDollars > 0) return { text: '(' + $int(r.rebateDollars) + ')', color: GREEN };
-            return { text: $int(r.discountDollars || 0), color: RED };
-          })} alt />
-          {quote.purpose !== 'purchase' && (
-            <CompRow label="Loan Payoff (Estimate)" values={rates.map(() => ({ text: $(quote.currentBalance || 0) }))} />
-          )}
-          {quote.purpose !== 'purchase' && (
-            <CompRow label="Loan Amount (Calculated as a Credit)" values={rates.map(() => ({ text: $(-loanAmount) }))} alt />
-          )}
-          {quote.purpose === 'purchase' && (
-            <CompRow label="Down Payment" values={rates.map(() => ({ text: $(propertyValue - loanAmount) }))} />
-          )}
-          <CompRow label={quote.purpose === 'purchase' ? 'Total Cash to Close' : 'Total Cash to Close or (Cash Back to You)'} values={rates.map(r => {
-            const daily = (loanAmount * (r.rate / 100)) / 365 * daysInterest;
-            const totalFees = (fees?.totalClosingCosts || 0) + daily;
-            const credit = r.rebateDollars > 0 ? -r.rebateDollars : (r.discountDollars || 0);
-            if (quote.purpose === 'purchase') {
-              return { text: $(totalFees + credit + (propertyValue - loanAmount)) };
-            }
-            const payoff = Number(quote.currentBalance || 0);
-            return { text: $(totalFees + credit + payoff - loanAmount) };
-          })} bold highlight />
-        </View>
-
-        <View style={s.footer} fixed>
-          <Text>NetRate Mortgage LLC | NMLS #1111861 | Equal Housing Lender</Text>
-          <Text>357 S McCaslin Blvd #200, Louisville, CO 80027</Text>
-        </View>
+        <Footer page={1} />
       </Page>
 
-      {/* PAGE 2 — Detailed Fee Breakdown */}
+      {/* ═══ PAGE 2: Monthly Payments ═══ */}
       <Page size="LETTER" style={s.page}>
-        <Text style={s.feeTitle}>Loan Costs (These fields match the Loan Estimate Form Page 2 A-J)</Text>
+        <Header borrowerName={borrowerName} date={date} />
+        <Text style={[s.sectionTitle, { marginTop: 0 }]}>Monthly Payment Breakdown</Text>
 
-        {['sectionA', 'sectionB', 'sectionC', 'sectionE', 'sectionF', 'sectionG'].map(key => {
+        {rates.map((r, i) => {
+          const total = Number(r.monthlyPI || 0) + monthlyTax + monthlyIns;
+          return (
+            <View key={i} style={s.paymentCard}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <View>
+                  <Text style={{ fontSize: 7, textTransform: 'uppercase', letterSpacing: 1.5, color: OUTLINE }}>Option {i + 1}</Text>
+                  <Text style={s.paymentRate}>{pct(r.rate)}</Text>
+                  <Text style={s.paymentProgram}>{r.program || 'Fixed Rate'}</Text>
+                </View>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={s.paymentTotalAmount}>{$(total)}</Text>
+                  <Text style={{ fontSize: 7, color: OUTLINE }}>per month</Text>
+                </View>
+              </View>
+
+              <View style={s.paymentRow}>
+                <Text style={s.paymentLabel}>Principal & Interest</Text>
+                <Text style={s.paymentAmount}>{$(r.monthlyPI)}</Text>
+              </View>
+              <View style={s.paymentRow}>
+                <Text style={s.paymentLabel}>Taxes ({new Date().getFullYear()})</Text>
+                <Text style={s.paymentAmount}>{$(monthlyTax)}</Text>
+              </View>
+              <View style={s.paymentRow}>
+                <Text style={s.paymentLabel}>Insurance (est)</Text>
+                <Text style={s.paymentAmount}>{$(monthlyIns)}</Text>
+              </View>
+              <View style={s.paymentRow}>
+                <Text style={s.paymentLabel}>PMI</Text>
+                <Text style={s.paymentAmount}>$0.00</Text>
+              </View>
+
+              {r.rebateDollars > 0 && (
+                <View style={[s.creditBadge, s.creditBadgeGreen]}>
+                  <Text style={{ fontSize: 7, fontFamily: 'Helvetica-Bold', color: GREEN }}>Lender credit: {$int(r.rebateDollars)}</Text>
+                </View>
+              )}
+              {r.discountDollars > 0 && (
+                <View style={[s.creditBadge, s.creditBadgeRed]}>
+                  <Text style={{ fontSize: 7, fontFamily: 'Helvetica-Bold', color: RED }}>Discount points: {$int(r.discountDollars)}</Text>
+                </View>
+              )}
+            </View>
+          );
+        })}
+
+        {/* Dates section */}
+        <Text style={s.sectionTitle}>Key Dates</Text>
+        <View style={{ backgroundColor: SURFACE_LOW, borderRadius: 8, padding: 12 }}>
+          <DateRow label="Closing Date" value={closingDate || 'TBD'} />
+          <DateRow label="Funding Date" value={fundingDate || 'TBD'} />
+          <DateRow label="First Payment Date" value={firstPaymentDate || 'TBD'} />
+          <DateRow label="Days Interest" value={String(daysInterest)} />
+        </View>
+
+        <Footer page={2} />
+      </Page>
+
+      {/* ═══ PAGE 3: Closing Costs ═══ */}
+      <Page size="LETTER" style={s.page}>
+        <Header borrowerName={borrowerName} date={date} />
+        <Text style={[s.sectionTitle, { marginTop: 0 }]}>Closing Costs — Loan Estimate Sections A–H</Text>
+
+        {[
+          { key: 'sectionA', icon: 'A' },
+          { key: 'sectionB', icon: 'B' },
+          { key: 'sectionC', icon: 'C' },
+          { key: 'sectionE', icon: 'E' },
+          { key: 'sectionF', icon: 'F' },
+          { key: 'sectionG', icon: 'G' },
+        ].map(({ key, icon }) => {
           const section = fees?.[key];
           if (!section) return null;
           return (
             <View key={key}>
               <View style={s.feeSectionHeader}>
-                <Text style={s.feeSectionLabel}>{section.label}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={s.feeIcon}><Text style={s.feeIconText}>{icon}</Text></View>
+                  <Text style={s.feeSectionLabel}>{section.label}</Text>
+                </View>
                 <Text style={s.feeSectionTotal}>{$(section.total)}</Text>
               </View>
               {(section.items || []).map((item, i) => (
-                <View key={i} style={s.feeRow}>
+                <View key={i} style={[s.feeRow, i % 2 !== 0 && s.feeRowAlt]}>
                   <Text style={s.feeLabel}>{item.label}</Text>
                   <Text style={s.feeAmount}>{$(item.amount)}</Text>
                 </View>
@@ -266,71 +363,258 @@ export default function QuotePDF({ quote, scenarios, fees, closingDate, fundingD
           );
         })}
 
-        <View style={s.feeTotalRow}>
-          <Text style={s.feeTotalLabel}>Total of all charges A, B, C, E, F, G, H</Text>
+        {/* Daily interest per rate */}
+        <View style={s.feeSectionHeader}>
+          <Text style={s.feeSectionLabel}>Daily Interest ({daysInterest} days, per rate)</Text>
+          <Text style={s.feeSectionTotal}></Text>
+        </View>
+        {rates.map((r, i) => {
+          const daily = (loanAmount * (r.rate / 100)) / 365 * daysInterest;
+          return (
+            <View key={i} style={[s.feeRow, i % 2 !== 0 && s.feeRowAlt]}>
+              <Text style={s.feeLabel}>Option {i + 1} — {pct(r.rate)}</Text>
+              <Text style={s.feeAmount}>{$(daily)}</Text>
+            </View>
+          );
+        })}
+
+        <View style={s.feeTotalBar}>
+          <Text style={s.feeTotalLabel}>Total of All Loan Costs</Text>
           <Text style={s.feeTotalAmount}>{$(fees?.totalClosingCosts)}</Text>
         </View>
 
-        <View style={s.footer} fixed>
-          <Text>NetRate Mortgage LLC | NMLS #1111861 | Equal Housing Lender</Text>
-          <Text>357 S McCaslin Blvd #200, Louisville, CO 80027</Text>
-        </View>
-      </Page>
-
-      {/* PAGE 3 — Dates and Daily Interest */}
-      <Page size="LETTER" style={s.page}>
-        <View style={s.feeSectionHeader}>
-          <Text style={s.feeSectionLabel}>Dates for Escrow and Daily Interest</Text>
-          <Text style={s.feeSectionTotal}></Text>
-        </View>
-        <View style={s.dateRow}>
-          <Text style={s.dateLabel}>Closing Date</Text>
-          <Text style={s.dateValue}>{closingDate || 'TBD'}</Text>
-        </View>
-        <View style={s.dateRow}>
-          <Text style={s.dateLabel}>Funding Date</Text>
-          <Text style={s.dateValue}>{fundingDate || 'TBD'}</Text>
-        </View>
-        <View style={s.dateRow}>
-          <Text style={s.dateLabel}>First Payment Date</Text>
-          <Text style={s.dateValue}>{firstPaymentDate || 'TBD'}</Text>
-        </View>
-        <View style={s.dateRow}>
-          <Text style={s.dateLabel}>Days Interest</Text>
-          <Text style={s.dateValue}>{daysInterest}</Text>
-        </View>
+        {/* Cash to close */}
+        <CashToClose rates={rates} fees={fees} loanAmount={loanAmount} propertyValue={propertyValue} quote={quote} daysInterest={daysInterest} />
 
         <Text style={s.note}>
-          {"Daily interest charges are calculated based on the loan\u2019s interest rate and the number of days between the loan\u2019s closing date and the last day of the month. This ensures the lender collects interest for the time the loan is active before the first regular payment is due."}
-        </Text>
-
-        <Text style={[s.note, { marginTop: 24, fontSize: 7 }]}>
           This quote is an estimate based on current wholesale pricing. Actual rates, fees, and terms may vary based on full credit review, property appraisal, and underwriting. This is not a commitment to lend. Rate locks are subject to lender availability. Rates may change without notice.
         </Text>
 
-        <View style={s.footer} fixed>
-          <Text>NetRate Mortgage LLC | NMLS #1111861 | Equal Housing Lender</Text>
-          <Text>357 S McCaslin Blvd #200, Louisville, CO 80027</Text>
+        <Footer page={3} />
+      </Page>
+
+      {/* ═══ PAGE 4: Amortization ═══ */}
+      <Page size="LETTER" style={s.page}>
+        <Header borrowerName={borrowerName} date={date} />
+        <Text style={[s.sectionTitle, { marginTop: 0 }]}>Amortization Schedule — {pct(rates[0]?.rate)}</Text>
+
+        {/* Summary cards */}
+        <View style={s.cardRow}>
+          <View style={s.card}>
+            <Text style={s.cardLabel}>Total Interest Paid</Text>
+            <Text style={[s.cardValue, { fontSize: 14 }]}>{$int(totalInterest)}</Text>
+          </View>
+          <View style={s.card}>
+            <Text style={s.cardLabel}>Total Amount Paid</Text>
+            <Text style={[s.cardValue, { fontSize: 14 }]}>{$int(totalPaid)}</Text>
+          </View>
+          <View style={s.card}>
+            <Text style={s.cardLabel}>Interest vs Principal</Text>
+            <Text style={[s.cardValue, { fontSize: 14 }]}>{((totalInterest / totalPaid) * 100).toFixed(1)}%</Text>
+          </View>
         </View>
+
+        {/* Milestones */}
+        {(crossoverYear || halfwayYear) && (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 8 }}>
+            {crossoverYear && (
+              <View style={s.milestoneBadge}>
+                <Text style={[s.milestoneText, s.milestoneGreen]}>Year {crossoverYear.year}: Principal exceeds interest</Text>
+              </View>
+            )}
+            {halfwayYear && (
+              <View style={[s.milestoneBadge, s.milestoneBadgeBlue]}>
+                <Text style={[s.milestoneText, s.milestoneCyan]}>Year {halfwayYear.year}: 50% of principal paid off</Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Table header */}
+        <View style={s.amortHeader}>
+          <Text style={[s.amortHeaderText, { width: '12%', textAlign: 'left' }]}>Year</Text>
+          <Text style={[s.amortHeaderText, { width: '22%', textAlign: 'right' }]}>Principal</Text>
+          <Text style={[s.amortHeaderText, { width: '22%', textAlign: 'right' }]}>Interest</Text>
+          <Text style={[s.amortHeaderText, { width: '22%', textAlign: 'right' }]}>Total Paid</Text>
+          <Text style={[s.amortHeaderText, { width: '22%', textAlign: 'right' }]}>Balance</Text>
+        </View>
+
+        {/* Table rows */}
+        {amortSchedule.map((row, i) => {
+          const isMilestone = row.year % 5 === 0;
+          return (
+            <View key={row.year} style={[s.amortRow, i % 2 !== 0 && s.amortRowAlt]}>
+              <Text style={[s.amortLabelCell, { width: '12%' }, isMilestone && { fontFamily: 'Helvetica-Bold' }]}>{row.year}</Text>
+              <Text style={[isMilestone ? s.amortCellBold : s.amortCell, { width: '22%' }]}>{$int(row.principal)}</Text>
+              <Text style={[isMilestone ? s.amortCellBold : s.amortCell, { width: '22%' }]}>{$int(row.interest)}</Text>
+              <Text style={[isMilestone ? s.amortCellBold : s.amortCell, { width: '22%' }]}>{$int(row.totalPayment)}</Text>
+              <Text style={[isMilestone ? s.amortCellBold : s.amortCell, { width: '22%' }]}>{$int(row.balance)}</Text>
+            </View>
+          );
+        })}
+
+        <Text style={s.note}>
+          This amortization schedule shows yearly totals. Actual monthly payments may vary slightly due to rounding. Schedule assumes no prepayments or rate changes.
+        </Text>
+
+        <Footer page={4} />
       </Page>
     </Document>
   );
 }
 
-function CompRow({ label, values, bold, alt, highlight }) {
-  const rowStyle = [s.row, alt && s.rowAlt, highlight && s.rowHighlight];
+/* ═══ Shared PDF sub-components ═══ */
+
+function Header({ borrowerName, date }) {
   return (
-    <View style={rowStyle}>
-      <Text style={bold ? s.labelCellBold : s.labelCell}>{label}</Text>
+    <>
+      <View style={s.headerRow}>
+        <View>
+          <View style={s.logoBlock}>
+            <View style={s.logoIcon}><Text style={s.logoIconText}>N</Text></View>
+            <View>
+              <Text style={s.companyName}>NetRate Mortgage</Text>
+              <Text style={s.subtitle}>Personalized Rate Quote</Text>
+            </View>
+          </View>
+          <Text style={[s.headerDetail, { marginTop: 4 }]}>David Burson | NMLS #641790</Text>
+          <Text style={s.headerDetail}>357 S McCaslin Blvd #200, Louisville, CO 80027</Text>
+        </View>
+        <View style={{ alignItems: 'flex-end' }}>
+          <View style={s.badge}><Text style={s.badgeText}>Official Quote Report</Text></View>
+          <Text style={[s.headerDetail, { fontSize: 10, fontFamily: 'Helvetica-Bold', color: ON_SURFACE, marginTop: 6 }]}>Borrower: {borrowerName}</Text>
+          <Text style={s.headerDetail}>Date Prepared: {date}</Text>
+        </View>
+      </View>
+    </>
+  );
+}
+
+function Footer({ page }) {
+  return (
+    <>
+      <View style={s.footer} fixed>
+        <Text>NetRate Mortgage LLC | NMLS #1111861 | Equal Housing Lender</Text>
+        <Text>303-444-5251 | david@netratemortgage.com</Text>
+      </View>
+      <Text style={s.pageLabel} fixed>Page {page} of 4</Text>
+    </>
+  );
+}
+
+function RateHeaders({ rates }) {
+  return (
+    <View style={s.tableHeader}>
+      <View style={s.headerLabel} />
+      {rates.map((r, i) => (
+        <View key={i} style={s.headerVal}>
+          <Text style={s.headerValLabel}>Option {i + 1}</Text>
+          <Text style={s.headerValRate}>{pct(r.rate)}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function CompRow({ label, values, alt, bold }) {
+  return (
+    <View style={[s.tableRow, alt && s.tableRowAlt]}>
+      <Text style={bold ? s.labelColBold : s.labelCol}>{label}</Text>
       {values.map((v, i) => (
-        <Text key={i} style={[bold ? s.valCellBold : s.valCell, v.color === GREEN && s.greenText, v.color === RED && s.redText]}>
+        <Text key={i} style={[
+          bold ? s.valColBold : s.valCol,
+          v.color === GREEN && s.greenText,
+          v.color === RED && s.redText,
+        ]}>
           {v.text}
         </Text>
       ))}
-      {/* Pad if fewer than 3 rates */}
       {values.length < 3 && Array.from({ length: 3 - values.length }).map((_, i) => (
-        <Text key={`pad${i}`} style={s.valCell}>—</Text>
+        <Text key={`pad${i}`} style={s.valCol}>—</Text>
       ))}
+    </View>
+  );
+}
+
+function DateRow({ label, value }) {
+  return (
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 }}>
+      <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold', color: ON_SURFACE }}>{label}</Text>
+      <Text style={{ fontSize: 9.5, color: ON_SURFACE_VAR }}>{value}</Text>
+    </View>
+  );
+}
+
+function CashToClose({ rates, fees, loanAmount, propertyValue, quote, daysInterest }) {
+  return (
+    <View style={s.ctcCard}>
+      <Text style={s.ctcTitle}>Total Cash to Close Summary</Text>
+      {/* Headers */}
+      <View style={{ flexDirection: 'row', marginBottom: 4 }}>
+        <Text style={{ width: '40%' }} />
+        {rates.map((r, i) => (
+          <Text key={i} style={{ width: '20%', textAlign: 'center', fontSize: 7, color: OUTLINE, fontFamily: 'Helvetica-Bold' }}>Option {i + 1}</Text>
+        ))}
+      </View>
+
+      {/* Down payment / payoff */}
+      {quote.purpose === 'purchase' ? (
+        <View style={{ flexDirection: 'row', paddingVertical: 3 }}>
+          <Text style={{ width: '40%', fontSize: 9, color: ON_SURFACE_VAR }}>Down Payment ({((propertyValue - loanAmount) / propertyValue * 100).toFixed(0)}%)</Text>
+          {rates.map((_, i) => (
+            <Text key={i} style={{ width: '20%', textAlign: 'center', fontSize: 9, fontFamily: 'Helvetica-Bold' }}>{$int(propertyValue - loanAmount)}</Text>
+          ))}
+        </View>
+      ) : (
+        <View style={{ flexDirection: 'row', paddingVertical: 3 }}>
+          <Text style={{ width: '40%', fontSize: 9, color: ON_SURFACE_VAR }}>Loan Payoff (Estimate)</Text>
+          {rates.map((_, i) => (
+            <Text key={i} style={{ width: '20%', textAlign: 'center', fontSize: 9, fontFamily: 'Helvetica-Bold' }}>{$(quote.currentBalance || 0)}</Text>
+          ))}
+        </View>
+      )}
+
+      {/* Total loan charges */}
+      <View style={{ flexDirection: 'row', paddingVertical: 3 }}>
+        <Text style={{ width: '40%', fontSize: 9, color: ON_SURFACE_VAR }}>Total Loan Charges</Text>
+        {rates.map((r, i) => {
+          const daily = (loanAmount * (r.rate / 100)) / 365 * daysInterest;
+          return <Text key={i} style={{ width: '20%', textAlign: 'center', fontSize: 9 }}>{$((fees?.totalClosingCosts || 0) + daily)}</Text>;
+        })}
+      </View>
+
+      {/* Credits */}
+      <View style={{ flexDirection: 'row', paddingVertical: 3 }}>
+        <Text style={{ width: '40%', fontSize: 9, color: ON_SURFACE_VAR }}>Lender Credit / (Charge)</Text>
+        {rates.map((r, i) => {
+          const isCredit = r.rebateDollars > 0;
+          return (
+            <Text key={i} style={{ width: '20%', textAlign: 'center', fontSize: 9, fontFamily: 'Helvetica-Bold', color: isCredit ? GREEN : RED }}>
+              {isCredit ? $int(r.rebateDollars) : '(' + $int(r.discountDollars || 0) + ')'}
+            </Text>
+          );
+        })}
+      </View>
+
+      {/* Divider */}
+      <View style={{ height: 0.5, backgroundColor: OUTLINE_VAR + '60', marginVertical: 6 }} />
+
+      {/* Total */}
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <Text style={{ width: '40%', fontSize: 11, fontFamily: 'Helvetica-Bold', color: BRAND_DARK }}>Total Cash To Close</Text>
+        {rates.map((r, i) => {
+          const daily = (loanAmount * (r.rate / 100)) / 365 * daysInterest;
+          const totalFees = (fees?.totalClosingCosts || 0) + daily;
+          const credit = r.rebateDollars > 0 ? -r.rebateDollars : (r.discountDollars || 0);
+          let cashToClose;
+          if (quote.purpose === 'purchase') {
+            cashToClose = totalFees + credit + (propertyValue - loanAmount);
+          } else {
+            cashToClose = totalFees + credit + Number(quote.currentBalance || 0) - loanAmount;
+          }
+          return <Text key={i} style={{ width: '20%', textAlign: 'center', fontSize: 13, fontFamily: 'Helvetica-Bold', color: ON_SURFACE }}>{$(cashToClose)}</Text>;
+        })}
+      </View>
     </View>
   );
 }
