@@ -388,6 +388,12 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
             <span className="text-gray-400 text-xs">Loan</span>
             <div className="font-mono font-bold">${fmt(effectiveLoan)}</div>
           </div>
+          {scenario.loanType === 'fha' && effectiveLoan > 0 && (
+            <div>
+              <span className="text-amber-400 text-xs">+ UFMIP (1.75%)</span>
+              <div className="font-mono font-bold text-amber-300">${fmt(effectiveLoan + Math.round(effectiveLoan * 0.0175))}</div>
+            </div>
+          )}
           <div>
             <span className="text-gray-400 text-xs">LTV</span>
             <div className="font-mono font-bold">{effectiveLtv}%</div>
