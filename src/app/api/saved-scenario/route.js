@@ -29,7 +29,6 @@ export async function POST(request) {
       : FREQUENCY_DEFAULTS[freq];
 
     // Create lead with scenario data
-    // viewToken is dbgenerated (gen_random_uuid) — must select it explicitly to get it back
     const lead = await prisma.lead.create({
       data: {
         name,
@@ -45,9 +44,11 @@ export async function POST(request) {
         propertyCounty: scenarioData.county || null,
         creditScore: scenarioData.fico || null,
       },
-      select: { id: true, viewToken: true },
     });
-    const viewToken = lead.viewToken;
+
+    // Fetch the DB-generated viewToken via raw query (Prisma client doesn't expose this field)
+    const tokenRow = await prisma.$queryRaw`SELECT view_token FROM leads WHERE id = ${lead.id}::uuid`;
+    const viewToken = tokenRow?.[0]?.view_token || null;
 
     // Run initial pricing snapshot
     let initialPricing = null;
