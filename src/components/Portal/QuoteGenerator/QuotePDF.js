@@ -254,11 +254,11 @@ export default function QuotePDF({ quote, scenarios, fees, closingDate, fundingD
         <CompRow label="Principal & Interest" values={rates.map(r => ({ text: $(r.monthlyPI) }))} />
         <CompRow label={`Taxes (${new Date().getFullYear()})`} values={rates.map(() => ({ text: $(monthlyTax) }))} alt />
         <CompRow label="Insurance (est)" values={rates.map(() => ({ text: $(monthlyIns) }))} />
-        <CompRow label="PMI" values={rates.map(() => ({ text: '$0.00' }))} alt />
+        <CompRow label={fees?.monthlyMip > 0 ? 'MIP' : 'PMI'} values={rates.map(() => ({ text: $(fees?.monthlyMip || 0) }))} alt />
         <View style={s.totalRow}>
           <Text style={s.totalLabel}>Total Monthly Payment</Text>
           {rates.map((r, i) => (
-            <Text key={i} style={s.totalVal}>{$(Number(r.monthlyPI || 0) + monthlyTax + monthlyIns)}</Text>
+            <Text key={i} style={s.totalVal}>{$(Number(r.monthlyPI || 0) + monthlyTax + monthlyIns + (fees?.monthlyMip || 0))}</Text>
           ))}
         </View>
 
@@ -274,7 +274,8 @@ export default function QuotePDF({ quote, scenarios, fees, closingDate, fundingD
         <Text style={[s.sectionTitle, { marginTop: 0 }]}>Monthly Payment Breakdown</Text>
 
         {rates.map((r, i) => {
-          const total = Number(r.monthlyPI || 0) + monthlyTax + monthlyIns;
+          const mip = fees?.monthlyMip || 0;
+          const total = Number(r.monthlyPI || 0) + monthlyTax + monthlyIns + mip;
           return (
             <View key={i} style={s.paymentCard}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -302,8 +303,8 @@ export default function QuotePDF({ quote, scenarios, fees, closingDate, fundingD
                 <Text style={s.paymentAmount}>{$(monthlyIns)}</Text>
               </View>
               <View style={s.paymentRow}>
-                <Text style={s.paymentLabel}>PMI</Text>
-                <Text style={s.paymentAmount}>$0.00</Text>
+                <Text style={s.paymentLabel}>{mip > 0 ? 'MIP' : 'PMI'}</Text>
+                <Text style={s.paymentAmount}>{$(mip)}</Text>
               </View>
 
               {r.rebateDollars > 0 && (

@@ -66,6 +66,22 @@ function toNum(val) {
 }
 
 /**
+ * FHA annual MIP rate based on term, LTV, and base loan amount.
+ * Current schedule (case numbers assigned on/after 3/20/2023).
+ * Returns annual rate as a decimal (e.g. 0.0055 = 55 bps).
+ */
+function getFhaMipRate(term, ltv, baseLoanAmount) {
+  const isHighBalance = baseLoanAmount > 726200;
+  const extra = isHighBalance ? 0.0025 : 0;
+  if (term <= 15) {
+    return (ltv <= 90 ? 0.0015 : 0.0040) + extra;
+  }
+  return (ltv <= 95 ? 0.0050 : 0.0055) + extra;
+}
+
+const FHA_UFMIP_RATE = 0.0175; // 1.75%
+
+/**
  * Build fee breakdown for a quote.
  *
  * @param {Object} params
@@ -86,6 +102,9 @@ function toNum(val) {
  * @param {number}      [params.annualMud]
  * @param {boolean}     [params.hasHailWind]      — TX hail/wind separate policy
  * @param {number}      [params.annualHailWind]
+ * @param {string}      [params.loanType]         — conventional/fha/va
+ * @param {number}      [params.ltv]              — LTV % for FHA MIP lookup
+ * @param {number}      [params.term]             — loan term for FHA MIP lookup
  *
  * @returns {Object} Fee breakdown with sections A-G, totals, and escrow metadata
  */
@@ -107,6 +126,9 @@ export async function buildFeeBreakdown({
   annualMud = 0,
   hasHailWind = false,
   annualHailWind = 0,
+  loanType = 'conventional',
+  ltv = 75,
+  term = 30,
 }) {
   const mappedPurpose = purpose === 'cashout' ? 'refinance' : purpose;
   const template = await loadTemplate(state, county, mappedPurpose);
@@ -137,16 +159,27 @@ export async function buildFeeBreakdown({
     annualHailWind: resolvedAnnualHailWind,
   });
 
+  // ── FHA calculations ────────────────────────────────────────────────────
+  const isFha = loanType === 'fha';
+  const ufmip = isFha ? Math.round(loanAmount * FHA_UFMIP_RATE) : 0;
+  const annualMipRate = isFha ? getFhaMipRate(term, ltv, loanAmount) : 0;
+  // Monthly MIP is on the total loan amount (base + financed UFMIP)
+  const monthlyMip = isFha ? Math.round((loanAmount + ufmip) * annualMipRate / 12 * 100) / 100 : 0;
+
   // ── Section A: Origination Charges ────────────────────────────────────────
+  const sectionAItems = [
+    { label: 'Underwriting Fee', amount: lenderFeeUw },
+    ...(toNum(template?.lenderFeeOrigination) > 0
+      ? [{ label: 'Origination Fee', amount: toNum(template.lenderFeeOrigination) }]
+      : []),
+    ...(ufmip > 0
+      ? [{ label: 'FHA Upfront MIP (1.75%)', amount: ufmip, note: 'Financed into loan' }]
+      : []),
+  ];
   const sectionA = {
     label: 'A. Origination Charges',
-    items: [
-      { label: 'Underwriting Fee', amount: lenderFeeUw },
-      ...(toNum(template?.lenderFeeOrigination) > 0
-        ? [{ label: 'Origination Fee', amount: toNum(template.lenderFeeOrigination) }]
-        : []),
-    ],
-    total: lenderFeeUw + toNum(template?.lenderFeeOrigination),
+    items: sectionAItems,
+    total: sectionAItems.reduce((s, i) => s + i.amount, 0),
   };
 
   if (!template) {
@@ -190,6 +223,9 @@ export async function buildFeeBreakdown({
       hasFlood,   annualFlood: resolvedAnnualFlood,
       hasMud,     annualMud: resolvedAnnualMud,
       hasHailWind, annualHailWind: resolvedAnnualHailWind,
+      monthlyMip,
+      ufmip,
+      annualMipRate,
       escrowCalc: escrow,
       templateId: null,
       configWarning: `No fee template for ${state}/${county || 'any county'}/${mappedPurpose} — add a row to fee_templates for accurate closing costs.`,
@@ -278,6 +314,9 @@ export async function buildFeeBreakdown({
     hasFlood,   annualFlood: resolvedAnnualFlood,
     hasMud,     annualMud: resolvedAnnualMud,
     hasHailWind, annualHailWind: resolvedAnnualHailWind,
+    monthlyMip,
+    ufmip,
+    annualMipRate,
     escrowCalc: escrow,
     templateId: template.id,
   };

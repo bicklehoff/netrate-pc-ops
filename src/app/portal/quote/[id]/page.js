@@ -334,9 +334,9 @@ function LoanSummaryTab({ quote, scenarios, fees, loanAmount, propertyValue, ltv
           <CompRow label="Principal & Interest" values={rates.map(r => ({ text: fmt(r.monthlyPI) }))} />
           <CompRow label={`Taxes (${new Date().getFullYear()})`} values={rates.map(() => ({ text: fmt(monthlyTax) }))} alt />
           <CompRow label="Insurance (est)" values={rates.map(() => ({ text: fmt(monthlyIns) }))} />
-          <CompRow label="PMI" values={rates.map(() => ({ text: '$0.00' }))} alt />
+          <CompRow label={fees?.monthlyMip > 0 ? 'MIP' : 'PMI'} values={rates.map(() => ({ text: fmt(fees?.monthlyMip || 0) }))} alt />
           <TotalRow label="Total Monthly Payment" values={rates.map(r => ({
-            text: fmt(Number(r.monthlyPI || 0) + monthlyTax + monthlyIns),
+            text: fmt(Number(r.monthlyPI || 0) + monthlyTax + monthlyIns + (fees?.monthlyMip || 0)),
           }))} />
         </ComparisonTable>
       </div>
@@ -369,10 +369,12 @@ function MonthlyPaymentsTab({ scenarios, monthlyTax, monthlyIns }) {
       {/* Per-rate cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {rates.map((r, i) => {
-          const total = Number(r.monthlyPI || 0) + monthlyTax + monthlyIns;
+          const mip = fees?.monthlyMip || 0;
+          const total = Number(r.monthlyPI || 0) + monthlyTax + monthlyIns + mip;
           const piPct = (Number(r.monthlyPI || 0) / total * 100).toFixed(0);
           const taxPct = (monthlyTax / total * 100).toFixed(0);
           const insPct = (monthlyIns / total * 100).toFixed(0);
+          const mipPct = (mip / total * 100).toFixed(0);
 
           return (
             <div key={i} className="bg-white rounded-2xl p-6 shadow-sm">
@@ -385,6 +387,7 @@ function MonthlyPaymentsTab({ scenarios, monthlyTax, monthlyIns }) {
                 <div className="bg-cyan-600" style={{ width: piPct + '%' }} />
                 <div className="bg-amber-400" style={{ width: taxPct + '%' }} />
                 <div className="bg-emerald-400" style={{ width: insPct + '%' }} />
+                {mip > 0 && <div className="bg-violet-400" style={{ width: mipPct + '%' }} />}
               </div>
 
               {/* Line items */}
@@ -392,7 +395,7 @@ function MonthlyPaymentsTab({ scenarios, monthlyTax, monthlyIns }) {
                 <PaymentLineItem color="bg-cyan-600" label="Principal & Interest" amount={fmt(r.monthlyPI)} />
                 <PaymentLineItem color="bg-amber-400" label={`Taxes (${new Date().getFullYear()})`} amount={fmt(monthlyTax)} />
                 <PaymentLineItem color="bg-emerald-400" label="Insurance (est)" amount={fmt(monthlyIns)} />
-                <PaymentLineItem color="bg-gray-200" label="PMI" amount="$0.00" />
+                <PaymentLineItem color={mip > 0 ? 'bg-violet-400' : 'bg-gray-200'} label={mip > 0 ? 'MIP' : 'PMI'} amount={fmt(mip)} />
               </div>
 
               {/* Total */}

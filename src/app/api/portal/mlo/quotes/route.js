@@ -107,6 +107,7 @@ export async function POST(request) {
       productType: body.productType || 'fixed',
       borrowerPaid: body.borrowerPaid || false,
       escrowsWaived: body.escrowsWaived || false,
+      firstTimeBuyer: body.firstTimeBuyer || false,
     };
 
     // Run eligibility check
@@ -147,6 +148,9 @@ export async function POST(request) {
       fundingDate: body.fundingDate || body.closingDate || null,
       annualRate: primaryAnnualRate,
       isEscrowing: !(body.escrowsWaived || false),
+      loanType: pricingInput.loanType,
+      ltv,
+      term: pricingInput.term,
     });
 
     // Surface fee template warning
@@ -159,12 +163,14 @@ export async function POST(request) {
 
     // Calculate monthly payment for primary scenario
     const primaryRate = topScenarios[0];
+    const fhaEffective = primaryRate?.effectiveLoanAmount || loanAmount;
     const monthlyPI = primaryRate
-      ? calculateMonthlyPI(loanAmount, primaryRate.rate, body.term || 30)
+      ? calculateMonthlyPI(fhaEffective, primaryRate.rate, body.term || 30)
       : null;
     const monthlyTax = fees?.monthlyTax || 0;
     const monthlyInsurance = fees?.monthlyInsurance || 0;
-    const monthlyPayment = monthlyPI ? monthlyPI + monthlyTax + monthlyInsurance : null;
+    const monthlyMip = fees?.monthlyMip || 0;
+    const monthlyPayment = monthlyPI ? monthlyPI + monthlyTax + monthlyInsurance + monthlyMip : null;
 
     // Compute safe property value (avoid Infinity from ltv=0)
     const safePropertyValue = propertyValue || (ltv > 0 ? Math.round(loanAmount / (ltv / 100)) : loanAmount);
@@ -323,11 +329,13 @@ function pickTopScenarios(results, n) {
       investor: r.investor,
       tier: r.tier,
       lockDays: 30,
-      monthlyPI: calculateMonthlyPI(r.baseLoanAmount || r.effectiveLoanAmount, r.rate, 30),
+      monthlyPI: calculateMonthlyPI(r.effectiveLoanAmount || r.baseLoanAmount, r.rate, 30),
       rebateDollars: r.rebateDollars || 0,
       discountDollars: r.discountDollars || 0,
       compDollars: r.compDollars || 0,
       lenderFee: r.lenderFee || 0,
+      ufmip: r.ufmip || 0,
+      effectiveLoanAmount: r.effectiveLoanAmount || r.baseLoanAmount || 0,
       breakdown: r.breakdown || [],
     }));
 }

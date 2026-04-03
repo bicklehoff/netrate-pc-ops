@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import { getCountiesByState, classifyLoan, getLoanLimits } from '@/data/county-loan-limits';
 
 const STATES = ['CA', 'CO', 'OR', 'TX'];
@@ -44,6 +44,25 @@ function addBusinessDays(dateStr, days) {
 }
 
 /**
+ * Default closing date: 4 business days before the last business day of the current month.
+ */
+function getDefaultClosingDate() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  // Start from the last day of the month and walk backward to find the last business day
+  let d = new Date(y, m + 1, 0); // last calendar day
+  while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() - 1);
+  // Now walk back 4 more business days
+  let count = 0;
+  while (count < 4) {
+    d.setDate(d.getDate() - 1);
+    if (d.getDay() !== 0 && d.getDay() !== 6) count++;
+  }
+  return d.toISOString().split('T')[0];
+}
+
+/**
  * From a closing date, derive funding date and first payment date.
  * CO + TX purchase: same day. CA + OR purchase: +3 biz days. All refis: +3 biz days.
  * firstPaymentDate: 1st of 2nd month after closing (estimate; fee editor refines from funding day).
@@ -65,6 +84,15 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
   // Persist zip from scenario so it survives back-navigation
   const [zipCode, setZipCode] = useState(scenario.zipCode || '');
   const [zipLoading, setZipLoading] = useState(false);
+
+  // Auto-set default closing date if not yet set
+  useEffect(() => {
+    if (!scenario.closingDate) {
+      const closing = getDefaultClosingDate();
+      onChange({ ...scenario, closingDate: closing, ...deriveFromClosing(closing, scenario.state, scenario.purpose) });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const isPurchase = scenario.purpose === 'purchase';
 
@@ -125,6 +153,10 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
       downPct = Number(scenario.downPaymentPct) || 0;
       loanAmount = Math.floor(pv * (1 - downPct / 100));
       downDollars = pv - loanAmount;
+    } else if (lastEdited === 'dollars') {
+      downDollars = Math.floor(Number(scenario.downPaymentDollars) || 0);
+      loanAmount = pv - downDollars;
+      downPct = pv > 0 ? Math.round((downDollars / pv) * 10000) / 100 : 0;
     } else if (lastEdited === 'loan') {
       loanAmount = Math.floor(Number(scenario.loanAmount) || 0);
       downDollars = pv - loanAmount;
@@ -133,15 +165,21 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
 
     const ltv = pv > 0 ? Math.floor((loanAmount / pv) * 10000) / 100 : 0;
     return { loanAmount, downPct, downDollars, ltv };
-  }, [scenario.propertyValue, scenario.downPaymentPct, scenario.loanAmount, lastEdited]);
+  }, [scenario.propertyValue, scenario.downPaymentPct, scenario.downPaymentDollars, scenario.loanAmount, lastEdited]);
 
-  // Refi: loan amount direct
+  // Refi: loan amount or LTV — bidirectional
+  const [refiLastEdited, setRefiLastEdited] = useState('loan');
   const refiCalc = useMemo(() => {
     const pv = Number(scenario.propertyValue) || 0;
+    if (refiLastEdited === 'ltv') {
+      const ltv = Number(scenario.refiLtv) || 0;
+      const loan = Math.floor(pv * (ltv / 100));
+      return { loanAmount: loan, ltv };
+    }
     const loan = Math.floor(Number(scenario.loanAmount) || 0);
     const ltv = pv > 0 ? Math.floor((loan / pv) * 10000) / 100 : 0;
     return { loanAmount: loan, ltv };
-  }, [scenario.propertyValue, scenario.loanAmount]);
+  }, [scenario.propertyValue, scenario.loanAmount, scenario.refiLtv, refiLastEdited]);
 
   const effectiveLoan = isPurchase ? purchaseCalc.loanAmount : refiCalc.loanAmount;
   const effectiveLtv = isPurchase ? purchaseCalc.ltv : refiCalc.ltv;
@@ -208,8 +246,8 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
               />
               <DollarField
                 label="Down Payment $"
-                value={purchaseCalc.downDollars}
-                disabled
+                value={lastEdited === 'dollars' ? scenario.downPaymentDollars : purchaseCalc.downDollars}
+                onChange={v => { setLastEdited('dollars'); update('downPaymentDollars', v); }}
               />
               <DollarField
                 label="Loan Amount"
@@ -221,15 +259,16 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
             <>
               <DollarField
                 label="Loan Amount"
-                value={scenario.loanAmount}
-                onChange={v => update('loanAmount', v)}
+                value={refiLastEdited === 'loan' ? scenario.loanAmount : refiCalc.loanAmount}
+                onChange={v => { setRefiLastEdited('loan'); update('loanAmount', v); }}
               />
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">LTV</label>
-                <div className="px-3 py-2 bg-gray-50 rounded-lg border border-gray-200 text-sm font-mono text-gray-700">
-                  {refiCalc.ltv}%
-                </div>
-              </div>
+              <Field
+                label="LTV"
+                value={refiLastEdited === 'ltv' ? scenario.refiLtv : refiCalc.ltv}
+                onChange={v => { setRefiLastEdited('ltv'); update('refiLtv', v); }}
+                type="number"
+                suffix="%"
+              />
             </>
           )}
         </div>
