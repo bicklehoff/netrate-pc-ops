@@ -483,7 +483,7 @@ export default function QuotePDF({ quote, scenarios, fees, closingDate, fundingD
           );
         })}
 
-        <Text style={[s.note, { marginTop: 6, marginBottom: 20 }]}>
+        <Text style={[s.note, { marginTop: 6 }]} wrap={false}>
           This amortization schedule shows yearly totals. Actual monthly payments may vary slightly due to rounding. Schedule assumes no prepayments or rate changes.
         </Text>
 
