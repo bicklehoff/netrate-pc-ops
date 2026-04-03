@@ -5,6 +5,56 @@
 
 ---
 
+## 2026-04-02 — Dev — SWMC Pricing Pipeline, Skill Refactor, Branding Fixes
+**Actor:** pc-dev
+
+### What was built
+
+**SWMC Integration (completed)**
+- Seeded 1,368 rate prices for 21 agency products (FHA/VA 30/15yr, HB, conv 30/20/15/10yr, ARMs, HomeReady, HomePossible, HomeOne, Super-conforming)
+- Created `src/data/lender-adjustments/swmc/` — 3 JSON files: `conv-llpa.json` (conforming FICO/LTV grids), `gov-adj.json` (raw reference), `lender-config.json` (pre-negated values for seeding)
+- Seeded 233 adjustment_rules: 207 ficoLtv rows (purchase/refi/cashout), 26 productFeature rows (gov FICO adj, state adj, property adj, loan amt adj, monthly promos)
+- Fixed `parseFico()` for `"<=639 or NTC"` edge case and `parseLtv()` for `">95"` edge case in `seed-adjustment-rules.mjs`
+- Sign convention documented: conforming FICO/LTV positive=cost (no negation), gov adj negative=credit in sheet → pre-negated in lender-config.json
+
+**parse-rate-sheet Skill Refactor**
+- Split 395-line monolithic SKILL.md into ~200-line shared rules file + per-lender reference files in `.claude/skills/parse-rate-sheet/lenders/`
+- Created: `everstream.md`, `swmc.md`, `tls.md`, `keystone.md`, `amwest.md`, `windsor.md`
+- Migrated per-lender section maps (row numbers) from `Work/Dev/PARSER-REWRITE-TASKS.md`
+
+**Branding Fixes**
+- Removed all "NetRate Wholesale" and self-referential "wholesale rates" labels from public-facing components
+- Fixed all bare "NetRate" → "NetRate Mortgage" in user-visible content
+- Files changed: HeroStrip.js, RateChart.js, BelowFold.js, TickerBar.js, RateResults.js, page.js, state pages (TX/CA/OR/CO)
+- Added two branding rules to CLAUDE.md under `## Brand`
+
+**Quote Generator (uncommitted from previous session — cleaned up and committed)**
+- `QuoteScenarioForm.js`: `deriveFromClosing()` now computes both fundingDate and firstPaymentDate; CO/TX purchase = same day, CA/OR + all refis = +3 biz days
+- `QuoteRateResults.js`: removed escrows waived toggle (superseded)
+
+### Key decisions
+- Gov adj sign convention: SWMC gov adj stored pre-negated in lender-config.json so productFeature engine (`price += pf.value`) produces correct result
+- `">95"` LTV band mapped to `{ ltvMin: 95.01, ltvMax: 100 }` — added to `parseLtv()` generically (will work for any lender using this format)
+- Branding: "wholesale lenders" language in body copy kept where it refers to the lenders we access (accurate) — only self-referential wholesale labels were changed
+
+### Relay inbox (2 open from Claw)
+- `cmni4gq6a0000y4wq0e78imnm` — Kill RSS aggregator on site, replace with `/api/market/news` endpoint. Claw will POST curated headlines daily.
+- `cmnhszup10000y43j0t01do2l` — Disable PC national-rates scrape scheduled task (Claw taking it over)
+
+### Open items
+- [ ] **Claw relay**: Kill RSS aggregator + build `/api/market/news` + MarketNews UI on /rate-watch
+- [ ] **Claw relay**: Disable PC national-rates scrape scheduled task
+- [ ] SWMC phase 2: Conforming additional adj (condo, investment, ARM, 2-4 units, manufactured, HB, subordinate financing)
+- [ ] Other lenders adjustment_rules: AmWest (0), Windsor (0), Keystone (0), TLS (0)
+- [ ] NonQM pricer spec ready at `Work/Dev/Products/NONQM-PRICER-SPEC.md` — not built
+- [ ] Rate Watch benchmark indexes (SOFR, Prime, CMT) — spec at `Work/Dev/SPEC-benchmark-indexes.md`
+- [ ] Fee templates seed — fees show $0 in quote engine
+- [ ] County loan limits → pricing engine (plan at `C:\Users\bickl\.claude\plans\virtual-finding-shannon.md`)
+- [ ] Twilio A2P Attempt 9 under review — new brand NetRate Mortgage LLC (BN9b673f...), check in 2-3 weeks
+- [ ] Verify new messaging service (MG9a4cff...) has phone number linked and .env updated
+
+---
+
 ## 2026-04-01 — Dev — Economic Calendar, DB Connection Fix, ISR Revalidation, Treasury Yields
 **Actor:** pc-dev
 
