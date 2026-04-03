@@ -47,7 +47,7 @@ function findSweetSpots(rates) {
   return { chargeSweet, creditSweet, parRate };
 }
 
-export default function QuoteRateResults({ pricing, selectedRates, onSelectRates, onReprice, loading, onNext, borrowerPaid, escrowsWaived, onEscrowsWaivedChange }) {
+export default function QuoteRateResults({ pricing, selectedRates, onSelectRates, onReprice, loading, onNext, borrowerPaid, escrowsWaived, onEscrowsWaivedChange: _onEscrowsWaivedChange }) {
   const [viewMode, setViewMode] = useState('programs'); // 'programs' | 'all'
   const [expandedPrograms, setExpandedPrograms] = useState(new Set());
   const [showAll, setShowAll] = useState(false);
