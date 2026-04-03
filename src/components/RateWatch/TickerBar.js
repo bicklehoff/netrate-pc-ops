@@ -12,11 +12,7 @@ const TICKER_ITEMS = [
   { key: 'FEDFUNDS',    label: 'Fed Funds', decimals: 2, group: 'fed' },
   // Treasury curve — yield context for fixed pricing
   { key: 'DGS2',        label: '2yr T',     decimals: 3, group: 'tsy' },
-  { key: 'DGS5',        label: '5yr T',     decimals: 3, group: 'tsy' },
   { key: 'DGS10',       label: '10yr T',    decimals: 3, group: 'tsy' },
-  { key: 'DGS30',       label: '30yr T',    decimals: 3, group: 'tsy' },
-  // Mortgage benchmarks — Freddie Mac weekly survey
-  { key: 'MORTGAGE15US',label: '15yr Fixed',decimals: 2, group: 'mbs' },
 ];
 
 // Group separator colors — thin colored rule between groups
