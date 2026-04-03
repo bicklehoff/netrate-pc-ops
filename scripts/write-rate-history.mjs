@@ -31,7 +31,7 @@ const CREDIT_TIERS = [
 // ─── Compute par rate via API ────────────────────────────────────
 
 const API_BASE = process.env.NEXT_PUBLIC_SITE_URL
-  || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+  || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://www.netratemortgage.com');
 
 async function computeParRate(loanType, term, creditScore) {
   try {
