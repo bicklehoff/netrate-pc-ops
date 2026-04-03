@@ -93,6 +93,7 @@ export async function POST(request) {
 
     // Send welcome email
     const SITE_URL = process.env.NEXTAUTH_URL || 'https://www.netratemortgage.com';
+    let emailStatus = 'not_attempted';
     try {
       const firstName = name.split(' ')[0];
       const welcomeEmail = rateAlertWelcomeTemplate({
@@ -110,14 +111,17 @@ export async function POST(request) {
         unsubscribeLink: `${SITE_URL}/api/saved-scenario/unsubscribe?token=${savedScenario.unsubToken}`,
         myRatesLink: lead.viewToken ? `${SITE_URL}/portal/my-rates?token=${lead.viewToken}` : null,
       });
-      await sendEmail({
+      const emailResult = await sendEmail({
         to: email.trim().toLowerCase(),
         subject: welcomeEmail.subject,
         html: welcomeEmail.html,
         text: welcomeEmail.text,
       });
+      emailStatus = emailResult?.skipped ? 'skipped_no_api_key' : 'sent';
+      console.log('Welcome email result:', emailStatus, emailResult?.id);
     } catch (err) {
-      console.error('Welcome email failed:', err.message);
+      emailStatus = 'failed';
+      console.error('Welcome email failed:', err.message, err.stack);
       // Non-blocking — scenario is still saved even if email fails
     }
 
@@ -126,6 +130,7 @@ export async function POST(request) {
       scenarioId: savedScenario.id,
       leadId: lead.id,
       viewToken: lead.viewToken,
+      emailStatus,
     });
   } catch (err) {
     console.error('Save scenario API error:', err);

@@ -234,16 +234,19 @@ export default function RateResults({ scenario, rateData, apiResults, loading, c
 
       {/* Save Scenario CTA — shown when results are loaded */}
       {compareRates.length === 0 && (
-        <div className="px-5 py-3 border-t border-gray-100 print:hidden">
+        <div className="px-5 py-4 border-t border-gray-100 print:hidden bg-gradient-to-b from-white to-cyan-50/30">
           <button
             onClick={() => onSaveScenario?.()}
-            className="w-full flex items-center justify-center gap-2 py-2.5 border border-brand/30 rounded-lg text-sm font-medium text-brand hover:bg-brand/5 transition-colors"
+            className="w-full bg-brand text-white rounded-lg py-3 font-semibold text-sm hover:bg-brand-dark transition-colors flex items-center justify-center gap-2"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
             </svg>
             Save This Scenario &amp; Get Rate Alerts
           </button>
+          <p className="text-xs text-gray-400 text-center mt-2">
+            We&apos;ll re-price this exact scenario on your schedule and email you when rates move. Reviewed by a human, not a bot.
+          </p>
         </div>
       )}
 
