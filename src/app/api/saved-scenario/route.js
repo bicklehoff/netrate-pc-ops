@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { randomUUID } from 'crypto';
 import prisma from '@/lib/prisma';
 import { priceScenario } from '@/lib/rates/price-scenario';
 import { sendEmail } from '@/lib/resend';
@@ -31,7 +30,7 @@ export async function POST(request) {
 
     // Create lead with scenario data — generate viewToken in code so it's
     // guaranteed in the response (dbgenerated defaults aren't always returned by Prisma)
-    const viewToken = randomUUID();
+    const viewToken = crypto.randomUUID();
     const lead = await prisma.lead.create({
       data: {
         name,
@@ -137,7 +136,7 @@ export async function POST(request) {
       emailStatus,
     });
   } catch (err) {
-    console.error('Save scenario API error:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('Save scenario API error:', err.message, err.stack);
+    return NextResponse.json({ error: `Save failed: ${err.message}` }, { status: 500 });
   }
 }
