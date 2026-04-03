@@ -136,7 +136,7 @@ function QuoteViewContent() {
                 {TABS.map(tab => (
                   <button
                     key={tab.id}
-                    onClick={() => { setActiveTab(tab.id); window.scrollTo(0, 0); }}
+                    onClick={() => { setActiveTab(tab.id); setTimeout(() => window.scrollTo({ top: 0, behavior: 'instant' }), 0); }}
                     className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
                       activeTab === tab.id
                         ? 'text-cyan-700 bg-cyan-50'
@@ -166,7 +166,7 @@ function QuoteViewContent() {
             {TABS.map(tab => (
               <button
                 key={tab.id}
-                onClick={() => { setActiveTab(tab.id); window.scrollTo(0, 0); }}
+                onClick={() => { setActiveTab(tab.id); setTimeout(() => window.scrollTo({ top: 0, behavior: 'instant' }), 0); }}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
                   activeTab === tab.id
                     ? 'text-cyan-700 bg-cyan-50'

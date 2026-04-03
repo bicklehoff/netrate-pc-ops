@@ -238,6 +238,23 @@ export default function ScenarioForm({ scenario, onChange, onSubmit, loading }) 
             )}
           </>
         )}
+        {/* First-Time Buyer — shows HomeReady/HomePossible products */}
+        {isPurchase && (
+          <div className="flex items-center gap-3 py-1">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={scenario.firstTimeBuyer || false}
+                onChange={e => update("firstTimeBuyer", e.target.checked)}
+                className="rounded border-gray-300 text-brand focus:ring-brand/30" />
+              <span className="text-xs font-medium text-gray-600">First-Time Home Buyer</span>
+            </label>
+            <div className="group relative">
+              <span className="text-gray-400 cursor-help text-xs">ⓘ</span>
+              <div className="hidden group-hover:block absolute bottom-full left-0 mb-1 w-64 bg-gray-800 text-white text-xs rounded-lg p-2 z-50">
+                Includes HomeReady and Home Possible products with reduced down payment and flexible income requirements for first-time buyers.
+              </div>
+            </div>
+          </div>
+        )}
         {!isPurchase && (
           <div>
             <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Current Rate</label>

@@ -35,8 +35,8 @@ const s = StyleSheet.create({
   /* ── Header ── */
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', paddingBottom: 12, borderBottomWidth: 0.5, borderBottomColor: OUTLINE_VAR + '30', marginBottom: 16 },
   logoBlock: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  logoIcon: { width: 28, height: 28, backgroundColor: BRAND, borderRadius: 6, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
-  logoIconText: { fontFamily: 'Helvetica-Bold', fontSize: 16, color: WHITE, textAlign: 'center', marginTop: 5 },
+  logoIcon: { width: 28, height: 28, backgroundColor: BRAND, borderRadius: 6, justifyContent: 'center', alignItems: 'center' },
+  logoIconText: { fontFamily: 'Helvetica-Bold', fontSize: 15, color: WHITE, textAlign: 'center', marginTop: 3 },
   companyName: { fontSize: 16, fontFamily: 'Helvetica-Bold', color: BRAND_DARK },
   subtitle: { fontSize: 7, letterSpacing: 2, textTransform: 'uppercase', color: OUTLINE, marginTop: 1 },
   headerDetail: { fontSize: 8, color: OUTLINE, marginTop: 1 },
@@ -125,7 +125,7 @@ const s = StyleSheet.create({
   /* ── Shared ── */
   greenText: { color: GREEN },
   redText: { color: RED },
-  note: { fontSize: 7, color: OUTLINE, lineHeight: 1.5, marginTop: 16 },
+  note: { fontSize: 7, color: OUTLINE, lineHeight: 1.5, marginTop: 16, textDecoration: 'none' },
   footer: { position: 'absolute', bottom: 34, left: 40, right: 40, flexDirection: 'row', justifyContent: 'space-between', fontSize: 6.5, color: OUTLINE, borderTopWidth: 0.5, borderTopColor: OUTLINE_VAR + '30', paddingTop: 6 },
   pageLabel: { position: 'absolute', bottom: 20, right: 40, fontSize: 6.5, color: OUTLINE },
 });
@@ -423,14 +423,7 @@ export default function QuotePDF({ quote, scenarios, fees, closingDate, fundingD
         <Footer page={3} />
       </Page>
 
-      {/* ═══ PAGE 4: Cash to Close ═══ */}
-      <Page size="LETTER" style={s.page}>
-        <Header borrowerName={borrowerName} date={date} />
-        <CashToClose rates={rates} fees={fees} loanAmount={loanAmount} propertyValue={propertyValue} quote={quote} daysInterest={daysInterest} />
-        <Footer page={4} />
-      </Page>
-
-      {/* ═══ PAGE 5: Amortization ═══ */}
+      {/* ═══ PAGE 4: Amortization ═══ */}
       <Page size="LETTER" style={s.page}>
         <Header borrowerName={borrowerName} date={date} />
         <Text style={[s.sectionTitle, { marginTop: 0 }]}>Amortization Schedule — {pct(rates[0]?.rate)}</Text>
@@ -490,13 +483,11 @@ export default function QuotePDF({ quote, scenarios, fees, closingDate, fundingD
           );
         })}
 
-        <View wrap={false}>
-          <Text style={[s.note, { marginTop: 4 }]}>
-            This amortization schedule shows yearly totals. Actual monthly payments may vary slightly due to rounding. Schedule assumes no prepayments or rate changes.
-          </Text>
-        </View>
+        <Text style={[s.note, { marginTop: 6, marginBottom: 20 }]}>
+          This amortization schedule shows yearly totals. Actual monthly payments may vary slightly due to rounding. Schedule assumes no prepayments or rate changes.
+        </Text>
 
-        <Footer page={5} />
+        <Footer page={4} />
       </Page>
     </Document>
   );
@@ -513,14 +504,13 @@ function Header({ borrowerName, date }) {
             <View style={s.logoIcon}><Text style={s.logoIconText}>N</Text></View>
             <View>
               <Text style={s.companyName}>NetRate Mortgage</Text>
-              <Text style={s.subtitle}>Personalized Rate Quote</Text>
             </View>
           </View>
           <Text style={[s.headerDetail, { marginTop: 4 }]}>David Burson | NMLS #641790</Text>
           <Text style={s.headerDetail}>357 S McCaslin Blvd #200, Louisville, CO 80027</Text>
         </View>
         <View style={{ alignItems: 'flex-end' }}>
-          <View style={s.badge}><Text style={s.badgeText}>Official Quote Report</Text></View>
+          <View style={s.badge}><Text style={s.badgeText}>Personalized Rate Quote</Text></View>
           <Text style={[s.headerDetail, { fontSize: 10, fontFamily: 'Helvetica-Bold', color: ON_SURFACE, marginTop: 6 }]}>Borrower: {borrowerName}</Text>
           <Text style={s.headerDetail}>Date Prepared: {date}</Text>
         </View>
@@ -536,7 +526,7 @@ function Footer({ page }) {
         <Text>NetRate Mortgage LLC | NMLS #1111861 | Equal Housing Lender</Text>
         <Text>303-444-5251 | david@netratemortgage.com</Text>
       </View>
-      <Text style={s.pageLabel} fixed>Page {page} of 5</Text>
+      <Text style={s.pageLabel} fixed>Page {page} of 4</Text>
     </>
   );
 }

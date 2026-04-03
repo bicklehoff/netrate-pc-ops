@@ -141,9 +141,21 @@ export async function priceScenario(body) {
     const lenderAdj = await getDbLenderAdj(lenderId, scenario.loanType);
     if (!lenderAdj) continue;
 
+    // Pre-load conventional adjustments if FTHB is checked and main type isn't conventional
+    // (needed for HomeReady/HomePossible cross-type pricing)
+    let convAdj = null;
+    if (scenario.firstTimeBuyer && scenario.loanType !== 'conventional') {
+      convAdj = await getDbLenderAdj(lenderId, 'conventional');
+    }
+
     for (const program of lenderData.programs) {
       if (program.term !== termFilter) continue;
-      if (scenario.loanType && program.loanType !== scenario.loanType) continue;
+      // Loan type filter — but when firstTimeBuyer, also allow HomeReady/HomePossible
+      // (conventional products) through even if FHA/VA is selected
+      const isFthbVariant = (program.variant === 'homeready' || program.variant === 'homepossible');
+      if (scenario.loanType && program.loanType !== scenario.loanType) {
+        if (!(scenario.firstTimeBuyer && isFthbVariant && program.loanType === 'conventional')) continue;
+      }
       if (program.occupancy && program.occupancy !== 'primary') continue;
 
       if (program.loanAmountRange) {
@@ -155,9 +167,7 @@ export async function priceScenario(body) {
       if (body.productType && program.productType !== body.productType) continue;
 
       // Filter HomeReady / Home Possible — require firstTimeBuyer flag
-      if (program.variant === 'homeready' || program.variant === 'homepossible') {
-        if (!scenario.firstTimeBuyer) continue;
-      }
+      if (isFthbVariant && !scenario.firstTimeBuyer) continue;
 
       if (loanClassification) {
         if (loanClassification === 'conforming' && program.isHighBalance) continue;
@@ -179,8 +189,14 @@ export async function priceScenario(body) {
 
       const llpaGrids = lenderData.llpas || null;
 
+      // Use conventional adjustments for FTHB cross-type programs
+      const useAdj = (isFthbVariant && program.loanType === 'conventional' && convAdj) ? convAdj : lenderAdj;
+      const pricingScenario = (isFthbVariant && program.loanType === 'conventional' && scenario.loanType !== 'conventional')
+        ? { ...scenario, loanType: 'conventional' }
+        : scenario;
+
       for (const rateEntry of lockRates) {
-        const result = priceRate(rateEntry, product, scenario, lenderAdj, brokerConfig, llpaGrids);
+        const result = priceRate(rateEntry, product, pricingScenario, useAdj, brokerConfig, llpaGrids);
         results.push(result);
       }
     }

@@ -50,6 +50,7 @@ export function useApiPricing(scenario) {
           county: scenario.county || null,
           vaFundingFeeExempt: scenario.vaFundingFeeExempt || false,
           vaSubsequentUse: scenario.vaSubsequentUse || false,
+          firstTimeBuyer: scenario.firstTimeBuyer || false,
         }),
       });
       const data = await resp.json();
@@ -116,7 +117,7 @@ export function useApiPricing(scenario) {
       if (err.name !== 'AbortError') setResults(null);
     }
     setLoading(false);
-  }, [scenario.loanAmount, scenario.fico, scenario.propertyValue, scenario.purpose, scenario.loanType, scenario.propertyType, scenario.productType, scenario.term, scenario.state, scenario.county, scenario.currentRate, scenario.vaFundingFeeExempt, scenario.vaSubsequentUse]);
+  }, [scenario.loanAmount, scenario.fico, scenario.propertyValue, scenario.purpose, scenario.loanType, scenario.propertyType, scenario.productType, scenario.term, scenario.state, scenario.county, scenario.currentRate, scenario.vaFundingFeeExempt, scenario.vaSubsequentUse, scenario.firstTimeBuyer]);
 
   return { results, loading, fetchRates, effectiveDate };
 }

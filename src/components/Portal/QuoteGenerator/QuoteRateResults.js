@@ -142,6 +142,12 @@ export default function QuoteRateResults({ pricing, selectedRates, onSelectRates
             Effective: {pricing?.effectiveDate || 'N/A'} | All prices after LLPA adjustments
             {borrowerPaid && <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded font-medium">BORROWER-PAID (no comp)</span>}
             {escrowsWaived && <span className="px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded font-medium">ESCROWS WAIVED</span>}
+            <span className="relative group cursor-help text-gray-400 hover:text-gray-600">
+              ℹ
+              <span className="absolute bottom-full left-0 mb-1 w-64 p-2 bg-gray-900 text-white text-[10px] rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 leading-relaxed">
+                By default, all eligible products for your selected loan type are shown. Check &quot;First-Time Buyer&quot; to also include HomeReady and Home Possible products.
+              </span>
+            </span>
           </p>
         </div>
         <div className="flex items-center gap-2">
