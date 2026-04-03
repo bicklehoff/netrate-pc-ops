@@ -94,7 +94,7 @@ export function EconomicCalendar() {
                     <span className="text-[10px] text-slate-500">
                       {ev.actual}{ev.forecast ? ` (est. ${ev.forecast})` : ''}
                     </span>
-                    <ResultBadge result={ev.result} />
+                    <ResultBadge result={ev.result || ev.impact} />
                   </div>
                 ) : ev.forecast ? (
                   <div className="text-[10px] text-slate-400 mt-0.5">
