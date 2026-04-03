@@ -141,6 +141,7 @@ export default function QuoteWizard({ prefill }) {
       setSelectedRates([]);
 
       setStep(1);
+      window.scrollTo(0, 0);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -276,7 +277,7 @@ export default function QuoteWizard({ prefill }) {
         {STEPS.map((s, i) => (
           <button
             key={s.key}
-            onClick={() => i <= step ? setStep(i) : null}
+            onClick={() => { if (i <= step) { setStep(i); window.scrollTo(0, 0); } }}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               i === step
                 ? 'bg-cyan-600 text-white'
@@ -337,7 +338,7 @@ export default function QuoteWizard({ prefill }) {
             onSelectRates={setSelectedRates}
             onReprice={handleReprice}
             loading={loading}
-            onNext={() => setStep(2)}
+            onNext={() => { setStep(2); window.scrollTo(0, 0); }}
             borrowerPaid={scenario.borrowerPaid}
             escrowsWaived={scenario.escrowsWaived}
             onEscrowsWaivedChange={(v) => setScenario(prev => ({ ...prev, escrowsWaived: v }))}

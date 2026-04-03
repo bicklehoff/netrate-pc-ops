@@ -125,7 +125,7 @@ const s = StyleSheet.create({
   /* ── Shared ── */
   greenText: { color: GREEN },
   redText: { color: RED },
-  note: { fontSize: 7, color: OUTLINE, lineHeight: 1.5, marginTop: 16, fontStyle: 'italic' },
+  note: { fontSize: 7, color: OUTLINE, lineHeight: 1.5, marginTop: 16 },
   footer: { position: 'absolute', bottom: 34, left: 40, right: 40, flexDirection: 'row', justifyContent: 'space-between', fontSize: 6.5, color: OUTLINE, borderTopWidth: 0.5, borderTopColor: OUTLINE_VAR + '30', paddingTop: 6 },
   pageLabel: { position: 'absolute', bottom: 20, right: 40, fontSize: 6.5, color: OUTLINE },
 });
@@ -191,7 +191,7 @@ function buildAmortization(loanAmount, annualRate, termYears) {
 export default function QuotePDF({ quote, scenarios, fees, closingDate, fundingDate, firstPaymentDate }) {
   const borrowerName = quote.borrowerName || 'Valued Client';
   const date = new Date().toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' });
-  const rates = (scenarios || []).slice(0, 3);
+  const rates = (scenarios || []).slice(0, 3).sort((a, b) => b.rate - a.rate);
   const loanAmount = Number(quote.loanAmount);
   const propertyValue = Number(quote.propertyValue);
   const ltv = Number(quote.ltv);
@@ -415,9 +415,6 @@ export default function QuotePDF({ quote, scenarios, fees, closingDate, fundingD
           <Text style={s.feeTotalAmount}>{$(fees?.totalClosingCosts)}</Text>
         </View>
 
-        {/* Cash to close */}
-        <CashToClose rates={rates} fees={fees} loanAmount={loanAmount} propertyValue={propertyValue} quote={quote} daysInterest={daysInterest} />
-
         {/* Disclaimer */}
         <Text style={s.note}>
           IMPORTANT: This document is NOT a Loan Estimate (LE) as defined under TRID/TILA-RESPA. It is an informal quote for informational and comparison purposes only. Actual rates, fees, and terms may vary based on full credit review, property appraisal, and underwriting. A formal Loan Estimate will be provided within three business days of receiving your completed loan application.
@@ -426,7 +423,14 @@ export default function QuotePDF({ quote, scenarios, fees, closingDate, fundingD
         <Footer page={3} />
       </Page>
 
-      {/* ═══ PAGE 4: Amortization ═══ */}
+      {/* ═══ PAGE 4: Cash to Close ═══ */}
+      <Page size="LETTER" style={s.page}>
+        <Header borrowerName={borrowerName} date={date} />
+        <CashToClose rates={rates} fees={fees} loanAmount={loanAmount} propertyValue={propertyValue} quote={quote} daysInterest={daysInterest} />
+        <Footer page={4} />
+      </Page>
+
+      {/* ═══ PAGE 5: Amortization ═══ */}
       <Page size="LETTER" style={s.page}>
         <Header borrowerName={borrowerName} date={date} />
         <Text style={[s.sectionTitle, { marginTop: 0 }]}>Amortization Schedule — {pct(rates[0]?.rate)}</Text>
@@ -492,7 +496,7 @@ export default function QuotePDF({ quote, scenarios, fees, closingDate, fundingD
           </Text>
         </View>
 
-        <Footer page={4} />
+        <Footer page={5} />
       </Page>
     </Document>
   );
@@ -532,7 +536,7 @@ function Footer({ page }) {
         <Text>NetRate Mortgage LLC | NMLS #1111861 | Equal Housing Lender</Text>
         <Text>303-444-5251 | david@netratemortgage.com</Text>
       </View>
-      <Text style={s.pageLabel} fixed>Page {page} of 4</Text>
+      <Text style={s.pageLabel} fixed>Page {page} of 5</Text>
     </>
   );
 }
@@ -614,7 +618,7 @@ function CashToClose({ rates, fees, loanAmount, propertyValue, quote, daysIntere
       <View style={r}>
         <Text style={lbl}>Purchase Price / Appraised Value</Text>
         {rates.map((_, i) => (
-          <Text key={i} style={vBold}>{$int(propertyValue)}</Text>
+          <Text key={i} style={v}>{$int(propertyValue)}</Text>
         ))}
       </View>
 
@@ -631,7 +635,7 @@ function CashToClose({ rates, fees, loanAmount, propertyValue, quote, daysIntere
         <View style={r}>
           <Text style={lbl}>Down Payment ({((propertyValue - loanAmount) / propertyValue * 100).toFixed(0)}%)</Text>
           {rates.map((_, i) => (
-            <Text key={i} style={vBold}>{$int(propertyValue - loanAmount)}</Text>
+            <Text key={i} style={v}>{$int(propertyValue - loanAmount)}</Text>
           ))}
         </View>
       ) : (
@@ -639,13 +643,13 @@ function CashToClose({ rates, fees, loanAmount, propertyValue, quote, daysIntere
           <View style={r}>
             <Text style={lbl}>Loan Payoff (Estimate)</Text>
             {rates.map((_, i) => (
-              <Text key={i} style={vBold}>{$(quote.currentBalance || 0)}</Text>
+              <Text key={i} style={v}>{$(quote.currentBalance || 0)}</Text>
             ))}
           </View>
           <View style={rAlt}>
             <Text style={lbl}>Loan Amount (Credit)</Text>
             {rates.map((_, i) => (
-              <Text key={i} style={{ ...vBold, color: GREEN }}>({$int(loanAmount)})</Text>
+              <Text key={i} style={{ ...v, color: GREEN }}>({$int(loanAmount)})</Text>
             ))}
           </View>
         </>
@@ -661,17 +665,17 @@ function CashToClose({ rates, fees, loanAmount, propertyValue, quote, daysIntere
 
       {/* Hard Costs (Section D) */}
       <View style={rAlt}>
-        <Text style={lblBold}>Loan Costs (D)</Text>
+        <Text style={lbl}>Loan Costs (D)</Text>
         {rates.map((_, i) => (
-          <Text key={i} style={vBold}>{$(hardCosts)}</Text>
+          <Text key={i} style={v}>{$(hardCosts)}</Text>
         ))}
       </View>
 
       {/* Soft Costs (Section I) */}
       <View style={r}>
-        <Text style={lblBold}>Other Costs (I)</Text>
+        <Text style={lbl}>Other Costs (I)</Text>
         {rates.map((_, i) => (
-          <Text key={i} style={vBold}>{$(softCosts)}</Text>
+          <Text key={i} style={v}>{$(softCosts)}</Text>
         ))}
       </View>
 
@@ -690,7 +694,7 @@ function CashToClose({ rates, fees, loanAmount, propertyValue, quote, daysIntere
         {rates.map((rt, i) => {
           const isCredit = rt.rebateDollars > 0;
           return (
-            <Text key={i} style={{ ...vBold, color: isCredit ? GREEN : RED }}>
+            <Text key={i} style={{ ...v, color: isCredit ? GREEN : RED }}>
               {isCredit ? '(' + $int(rt.rebateDollars) + ')' : $int(rt.discountDollars || 0)}
             </Text>
           );
@@ -702,7 +706,7 @@ function CashToClose({ rates, fees, loanAmount, propertyValue, quote, daysIntere
         <View key={ci} style={ci % 2 === 0 ? rAlt : r}>
           <Text style={lbl}>{c.label}</Text>
           {rates.map((_, i) => (
-            <Text key={i} style={{ ...vBold, color: GREEN }}>({$int(c.amount)})</Text>
+            <Text key={i} style={{ ...v, color: GREEN }}>({$int(c.amount)})</Text>
           ))}
         </View>
       ))}
@@ -716,8 +720,8 @@ function CashToClose({ rates, fees, loanAmount, propertyValue, quote, daysIntere
       </View>
 
       {/* Total Cash to Close */}
-      <View style={s.totalRow}>
-        <Text style={s.totalLabel}>Total Cash To Close</Text>
+      <View style={r}>
+        <Text style={lblBold}>Total Cash To Close</Text>
         {rates.map((rt, i) => {
           const daily = (loanAmount * (rt.rate / 100)) / 365 * daysInterest;
           const totalFees = hardCosts + softCosts + daily;
@@ -729,7 +733,7 @@ function CashToClose({ rates, fees, loanAmount, propertyValue, quote, daysIntere
           } else {
             cashToClose = totalFees + credit - creditTotal + Number(quote.currentBalance || 0) - loanAmount;
           }
-          return <Text key={i} style={s.totalVal}>{$(cashToClose)}</Text>;
+          return <Text key={i} style={vBold}>{$(cashToClose)}</Text>;
         })}
       </View>
     </View>

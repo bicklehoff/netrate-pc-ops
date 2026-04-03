@@ -113,7 +113,7 @@ function QuoteViewContent() {
     );
   }
 
-  const scenarios = quote.scenarios || [];
+  const scenarios = (quote.scenarios || []).sort((a, b) => b.rate - a.rate);
   const fees = quote.feeBreakdown;
   const loanAmount = Number(quote.loanAmount);
   const propertyValue = Number(quote.propertyValue);
