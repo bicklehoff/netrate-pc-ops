@@ -2,12 +2,16 @@
  * Fee template builder — loads state/county/purpose fee templates
  * and builds the sections A-H JSON for BorrowerQuote.feeBreakdown.
  *
- * Section A: Lender/origination fees (from lender data, not template)
- * Section B: Third-party services (appraisal, credit, flood cert, tax service, MERS, title endorsement)
- * Section C: Title/settlement (lender's title policy, closing protection, settlement agent)
- * Section E: Recording fees
- * Section F: Prepaid items — from calculateEscrowSections (HOI, flood, hail/wind, interest ±)
- * Section G: Initial escrow reserves — from calculateEscrowSections (RESPA aggregate; empty if not escrowing)
+ * Section A: Origination Charges
+ * Section B: Services You Cannot Shop For
+ * Section C: Services You Can Shop For
+ * Section D: TOTAL LOAN COSTS (A + B + C)
+ * Section E: Taxes and Other Government Fees
+ * Section F: Prepaids
+ * Section G: Initial Escrow Payment at Closing
+ * Section H: Other (MLO-entered manual fees)
+ * Section I: TOTAL OTHER COSTS (E + F + G + H)
+ * Section J: TOTAL CLOSING COSTS (D + I)
  */
 
 import prisma from '@/lib/prisma';
@@ -133,9 +137,9 @@ export async function buildFeeBreakdown({
     annualHailWind: resolvedAnnualHailWind,
   });
 
-  // ── Section A: Lender fees ────────────────────────────────────────────────
+  // ── Section A: Origination Charges ────────────────────────────────────────
   const sectionA = {
-    label: 'Lender Fees',
+    label: 'A. Origination Charges',
     items: [
       { label: 'Underwriting Fee', amount: lenderFeeUw },
       ...(toNum(template?.lenderFeeOrigination) > 0
@@ -148,24 +152,30 @@ export async function buildFeeBreakdown({
   if (!template) {
     // No template — return minimal skeleton with escrow still calculated from dates
     const sectionF = {
-      label: 'Prepaid Items',
+      label: 'F. Prepaids',
       items: escrow.sectionFItems,
       total: escrow.sectionFItems.reduce((s, i) => s + i.amount, 0),
     };
     const sectionG = {
-      label: 'Initial Escrow',
+      label: 'G. Initial Escrow Payment at Closing',
       items: escrow.sectionGItems,
       total: escrow.sectionGItems.reduce((s, i) => s + i.amount, 0),
     };
-    const totalClosingCosts = sectionA.total + sectionF.total + sectionG.total;
+    const sectionH = { label: 'H. Other', items: [], total: 0 };
+    const sectionD = sectionA.total;
+    const sectionI = sectionF.total + sectionG.total + sectionH.total;
+    const totalClosingCosts = sectionD + sectionI;
 
     return {
       sectionA,
-      sectionB: { label: 'Third-Party Services', items: [], total: 0 },
-      sectionC: { label: 'Title & Settlement', items: [], total: 0 },
-      sectionE: { label: 'Recording Fees', items: [], total: 0 },
+      sectionB: { label: 'B. Services You Cannot Shop For', items: [], total: 0 },
+      sectionC: { label: 'C. Services You Can Shop For', items: [], total: 0 },
+      sectionE: { label: 'E. Taxes and Other Government Fees', items: [], total: 0 },
       sectionF,
       sectionG,
+      sectionH,
+      sectionD,
+      sectionI,
       totalClosingCosts,
       monthlyTax:      escrow.escrowMonthly.taxes,
       monthlyInsurance: escrow.escrowMonthly.insurance,
@@ -186,9 +196,9 @@ export async function buildFeeBreakdown({
     };
   }
 
-  // ── Section B: Third-party services ──────────────────────────────────────
+  // ── Section B: Services You Cannot Shop For ──────────────────────────────
   const sectionB = {
-    label: 'Third-Party Services',
+    label: 'B. Services You Cannot Shop For',
     items: [
       { label: 'Appraisal', amount: toNum(template.appraisal) },
       { label: 'Credit Report', amount: toNum(template.creditReport) },
@@ -200,9 +210,9 @@ export async function buildFeeBreakdown({
   };
   sectionB.total = sectionB.items.reduce((s, i) => s + i.amount, 0);
 
-  // ── Section C: Title & settlement ────────────────────────────────────────
+  // ── Section C: Services You Can Shop For ─────────────────────────────────
   const sectionC = {
-    label: 'Title & Settlement',
+    label: 'C. Services You Can Shop For',
     items: [
       { label: "Lender's Title Policy", amount: toNum(template.titleLendersPolicy) },
       { label: 'Closing Protection Letter', amount: toNum(template.closingProtectionLetter) },
@@ -211,9 +221,9 @@ export async function buildFeeBreakdown({
   };
   sectionC.total = sectionC.items.reduce((s, i) => s + i.amount, 0);
 
-  // ── Section E: Recording fees ─────────────────────────────────────────────
+  // ── Section E: Taxes and Other Government Fees ────────────────────────────
   const sectionE = {
-    label: 'Recording Fees',
+    label: 'E. Taxes and Other Government Fees',
     items: [
       { label: 'Recording Service Fee', amount: toNum(template.recordingServiceFee) },
       { label: 'Recording Fees', amount: toNum(template.recordingFees) },
@@ -224,21 +234,25 @@ export async function buildFeeBreakdown({
 
   // ── Section F: Prepaids (from escrow calc) ────────────────────────────────
   const sectionF = {
-    label: 'Prepaid Items',
+    label: 'F. Prepaids',
     items: escrow.sectionFItems,
     total: escrow.sectionFItems.reduce((s, i) => s + i.amount, 0),
   };
 
-  // ── Section G: Initial escrow reserves (from escrow calc) ────────────────
+  // ── Section G: Initial Escrow Payment at Closing ─────────────────────────
   const sectionG = {
-    label: 'Initial Escrow',
+    label: 'G. Initial Escrow Payment at Closing',
     items: escrow.sectionGItems,
     total: escrow.sectionGItems.reduce((s, i) => s + i.amount, 0),
   };
 
-  const totalClosingCosts =
-    sectionA.total + sectionB.total + sectionC.total + sectionE.total +
-    sectionF.total + sectionG.total;
+  // ── Section H: Other (MLO-entered manual fees) ───────────────────────────
+  const sectionH = { label: 'H. Other', items: [], total: 0 };
+
+  // ── Subtotals (LE format) ───────────────────────────────────────────────
+  const sectionD = sectionA.total + sectionB.total + sectionC.total;
+  const sectionI = sectionE.total + sectionF.total + sectionG.total + sectionH.total;
+  const totalClosingCosts = sectionD + sectionI;
 
   return {
     sectionA,
@@ -247,6 +261,9 @@ export async function buildFeeBreakdown({
     sectionE,
     sectionF,
     sectionG,
+    sectionH,
+    sectionD,
+    sectionI,
     totalClosingCosts,
     monthlyTax:       escrow.escrowMonthly.taxes,
     monthlyInsurance: escrow.escrowMonthly.insurance,

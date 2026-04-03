@@ -101,6 +101,9 @@ const s = StyleSheet.create({
   feeRowAlt: { backgroundColor: SURFACE },
   feeLabel: { fontSize: 9, color: ON_SURFACE_VAR },
   feeAmount: { fontSize: 9.5, color: ON_SURFACE },
+  subtotalRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5, paddingHorizontal: 8, marginTop: 2, borderTopWidth: 1, borderTopColor: ON_SURFACE, borderBottomWidth: 0.5, borderBottomColor: OUTLINE_VAR },
+  subtotalLabel: { fontSize: 9.5, fontFamily: 'Helvetica-Bold', color: ON_SURFACE },
+  subtotalAmount: { fontSize: 9.5, fontFamily: 'Helvetica-Bold', color: ON_SURFACE },
   feeTotalBar: { flexDirection: 'row', justifyContent: 'space-between', backgroundColor: ON_SURFACE, borderRadius: 6, paddingVertical: 6, paddingHorizontal: 8, marginTop: 10 },
   feeTotalLabel: { fontSize: 10, fontFamily: 'Helvetica-Bold', color: WHITE },
   feeTotalAmount: { fontSize: 10, fontFamily: 'Helvetica-Bold', color: WHITE },
@@ -332,25 +335,20 @@ export default function QuotePDF({ quote, scenarios, fees, closingDate, fundingD
       {/* ═══ PAGE 3: Closing Costs ═══ */}
       <Page size="LETTER" style={s.page}>
         <Header borrowerName={borrowerName} date={date} />
-        <Text style={[s.sectionTitle, { marginTop: 0 }]}>Closing Costs — Loan Estimate Sections A–H</Text>
+        <Text style={[s.sectionTitle, { marginTop: 0 }]}>Closing Costs</Text>
 
+        {/* ── Loan Costs (Sections A–C) ── */}
         {[
-          { key: 'sectionA', icon: 'A' },
-          { key: 'sectionB', icon: 'B' },
-          { key: 'sectionC', icon: 'C' },
-          { key: 'sectionE', icon: 'E' },
-          { key: 'sectionF', icon: 'F' },
-          { key: 'sectionG', icon: 'G' },
-        ].map(({ key, icon }) => {
+          { key: 'sectionA' },
+          { key: 'sectionB' },
+          { key: 'sectionC' },
+        ].map(({ key }) => {
           const section = fees?.[key];
           if (!section) return null;
           return (
             <View key={key}>
               <View style={s.feeSectionHeader}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <View style={s.feeIcon}><Text style={s.feeIconText}>{icon}</Text></View>
-                  <Text style={s.feeSectionLabel}>{section.label}</Text>
-                </View>
+                <Text style={s.feeSectionLabel}>{section.label}</Text>
                 <Text style={s.feeSectionTotal}>{$(section.total)}</Text>
               </View>
               {(section.items || []).map((item, i) => (
@@ -363,31 +361,57 @@ export default function QuotePDF({ quote, scenarios, fees, closingDate, fundingD
           );
         })}
 
-        {/* Daily interest per rate */}
-        <View style={s.feeSectionHeader}>
-          <Text style={s.feeSectionLabel}>Daily Interest ({daysInterest} days, per rate)</Text>
-          <Text style={s.feeSectionTotal}></Text>
+        {/* D. Total Loan Costs subtotal */}
+        <View style={s.subtotalRow}>
+          <Text style={s.subtotalLabel}>D. Total Loan Costs (A + B + C)</Text>
+          <Text style={s.subtotalAmount}>{$(fees?.sectionD ?? ((fees?.sectionA?.total||0) + (fees?.sectionB?.total||0) + (fees?.sectionC?.total||0)))}</Text>
         </View>
-        {rates.map((r, i) => {
-          const daily = (loanAmount * (r.rate / 100)) / 365 * daysInterest;
+
+        {/* ── Other Costs (Sections E–H) ── */}
+        {[
+          { key: 'sectionE' },
+          { key: 'sectionF' },
+          { key: 'sectionG' },
+          { key: 'sectionH' },
+        ].map(({ key }) => {
+          const section = fees?.[key];
+          if (!section || (section.items?.length === 0 && key !== 'sectionH')) return null;
+          // Only show H if it has items
+          if (key === 'sectionH' && (!section.items || section.items.length === 0)) return null;
           return (
-            <View key={i} style={[s.feeRow, i % 2 !== 0 && s.feeRowAlt]}>
-              <Text style={s.feeLabel}>Option {i + 1} — {pct(r.rate)}</Text>
-              <Text style={s.feeAmount}>{$(daily)}</Text>
+            <View key={key}>
+              <View style={s.feeSectionHeader}>
+                <Text style={s.feeSectionLabel}>{section.label}</Text>
+                <Text style={s.feeSectionTotal}>{$(section.total)}</Text>
+              </View>
+              {(section.items || []).map((item, i) => (
+                <View key={i} style={[s.feeRow, i % 2 !== 0 && s.feeRowAlt]}>
+                  <Text style={s.feeLabel}>{item.label}</Text>
+                  <Text style={s.feeAmount}>{$(item.amount)}</Text>
+                </View>
+              ))}
             </View>
           );
         })}
 
+        {/* I. Total Other Costs subtotal */}
+        <View style={s.subtotalRow}>
+          <Text style={s.subtotalLabel}>I. Total Other Costs (E + F + G + H)</Text>
+          <Text style={s.subtotalAmount}>{$(fees?.sectionI ?? ((fees?.sectionE?.total||0) + (fees?.sectionF?.total||0) + (fees?.sectionG?.total||0) + (fees?.sectionH?.total||0)))}</Text>
+        </View>
+
+        {/* J. Total Closing Costs */}
         <View style={s.feeTotalBar}>
-          <Text style={s.feeTotalLabel}>Total of All Loan Costs</Text>
+          <Text style={s.feeTotalLabel}>J. Total Closing Costs (D + I)</Text>
           <Text style={s.feeTotalAmount}>{$(fees?.totalClosingCosts)}</Text>
         </View>
 
         {/* Cash to close */}
         <CashToClose rates={rates} fees={fees} loanAmount={loanAmount} propertyValue={propertyValue} quote={quote} daysInterest={daysInterest} />
 
+        {/* Disclaimer */}
         <Text style={s.note}>
-          This quote is an estimate based on current wholesale pricing. Actual rates, fees, and terms may vary based on full credit review, property appraisal, and underwriting. This is not a commitment to lend. Rate locks are subject to lender availability. Rates may change without notice.
+          IMPORTANT: This document is NOT a Loan Estimate (LE) as defined under TRID/TILA-RESPA. It is an informal quote for informational and comparison purposes only. Actual rates, fees, and terms may vary based on full credit review, property appraisal, and underwriting. A formal Loan Estimate will be provided within three business days of receiving your completed loan application.
         </Text>
 
         <Footer page={3} />
@@ -546,25 +570,29 @@ function DateRow({ label, value }) {
 }
 
 function CashToClose({ rates, fees, loanAmount, propertyValue, quote, daysInterest }) {
-  const lenderFees = (fees?.sectionA?.total || 0) + (fees?.sectionB?.total || 0);
-  const titleFees = (fees?.sectionC?.total || 0) + (fees?.sectionE?.total || 0);
-  const prepaidEscrow = (fees?.sectionF?.total || 0) + (fees?.sectionG?.total || 0);
+  // LE subtotals
+  const hardCosts = fees?.sectionD ?? ((fees?.sectionA?.total||0) + (fees?.sectionB?.total||0) + (fees?.sectionC?.total||0));
+  const softCosts = fees?.sectionI ?? ((fees?.sectionE?.total||0) + (fees?.sectionF?.total||0) + (fees?.sectionG?.total||0) + (fees?.sectionH?.total||0));
 
-  const label = { width: '40%', fontSize: 9.5, color: ON_SURFACE_VAR };
-  const val = { width: '20%', textAlign: 'center', fontSize: 10 };
-  const valBold = { ...val, fontFamily: 'Helvetica-Bold' };
-  const row = { flexDirection: 'row', paddingVertical: 4, paddingHorizontal: 8 };
-  const rowAlt = { ...row, backgroundColor: SURFACE };
+  const lbl = { width: '40%', fontSize: 9.5, color: ON_SURFACE_VAR };
+  const lblBold = { width: '40%', fontSize: 9.5, fontFamily: 'Helvetica-Bold', color: ON_SURFACE };
+  const v = { width: '20%', textAlign: 'center', fontSize: 10 };
+  const vBold = { ...v, fontFamily: 'Helvetica-Bold' };
+  const r = { flexDirection: 'row', paddingVertical: 4, paddingHorizontal: 8 };
+  const rAlt = { ...r, backgroundColor: SURFACE };
+  // Accounting lines: single rule = subtotal, double rule = grand total
+  const singleRule = { height: 0.75, backgroundColor: ON_SURFACE };
+  const doubleRule = { height: 2.5, borderTopWidth: 0.75, borderBottomWidth: 0.75, borderColor: ON_SURFACE, backgroundColor: WHITE, marginTop: 1 };
 
   return (
     <View style={{ marginTop: 14 }}>
       {/* Title bar */}
       <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: SURFACE_LOW, borderRadius: 6, borderLeftWidth: 3, borderLeftColor: BRAND, paddingVertical: 6, paddingHorizontal: 10, marginBottom: 2 }}>
-        <Text style={{ fontSize: 10.5, fontFamily: 'Helvetica-Bold', color: ON_SURFACE }}>Total Cash to Close Summary</Text>
+        <Text style={{ fontSize: 10.5, fontFamily: 'Helvetica-Bold', color: ON_SURFACE }}>Estimated Cash to Close</Text>
       </View>
 
       {/* Column headers */}
-      <View style={rowAlt}>
+      <View style={rAlt}>
         <Text style={{ width: '40%' }} />
         {rates.map((_, i) => (
           <Text key={i} style={{ width: '20%', textAlign: 'center', fontSize: 7.5, color: OUTLINE, fontFamily: 'Helvetica-Bold' }}>Option {i + 1}</Text>
@@ -572,99 +600,107 @@ function CashToClose({ rates, fees, loanAmount, propertyValue, quote, daysIntere
       </View>
 
       {/* Purchase Price / Appraised Value */}
-      <View style={row}>
-        <Text style={label}>Purchase Price / Appraised Value</Text>
+      <View style={r}>
+        <Text style={lbl}>Purchase Price / Appraised Value</Text>
         {rates.map((_, i) => (
-          <Text key={i} style={valBold}>{$int(propertyValue)}</Text>
+          <Text key={i} style={vBold}>{$int(propertyValue)}</Text>
         ))}
       </View>
 
       {/* Loan Amount */}
-      <View style={rowAlt}>
-        <Text style={label}>Loan Amount</Text>
+      <View style={rAlt}>
+        <Text style={lbl}>Loan Amount</Text>
         {rates.map((_, i) => (
-          <Text key={i} style={val}>{$int(loanAmount)}</Text>
+          <Text key={i} style={v}>{$int(loanAmount)}</Text>
         ))}
       </View>
 
-      {/* Down payment / payoff */}
+      {/* Down Payment / Payoff */}
       {quote.purpose === 'purchase' ? (
-        <View style={row}>
-          <Text style={label}>Down Payment ({((propertyValue - loanAmount) / propertyValue * 100).toFixed(0)}%)</Text>
+        <View style={r}>
+          <Text style={lbl}>Down Payment ({((propertyValue - loanAmount) / propertyValue * 100).toFixed(0)}%)</Text>
           {rates.map((_, i) => (
-            <Text key={i} style={valBold}>{$int(propertyValue - loanAmount)}</Text>
+            <Text key={i} style={vBold}>{$int(propertyValue - loanAmount)}</Text>
           ))}
         </View>
       ) : (
         <>
-          <View style={row}>
-            <Text style={label}>Loan Payoff (Estimate)</Text>
+          <View style={r}>
+            <Text style={lbl}>Loan Payoff (Estimate)</Text>
             {rates.map((_, i) => (
-              <Text key={i} style={valBold}>{$(quote.currentBalance || 0)}</Text>
+              <Text key={i} style={vBold}>{$(quote.currentBalance || 0)}</Text>
             ))}
           </View>
-          <View style={rowAlt}>
-            <Text style={label}>Loan Amount (Credit)</Text>
+          <View style={rAlt}>
+            <Text style={lbl}>Loan Amount (Credit)</Text>
             {rates.map((_, i) => (
-              <Text key={i} style={{ ...valBold, color: GREEN }}>({$int(loanAmount)})</Text>
+              <Text key={i} style={{ ...vBold, color: GREEN }}>({$int(loanAmount)})</Text>
             ))}
           </View>
         </>
       )}
 
-      {/* Lender & Loan Fees */}
-      <View style={rowAlt}>
-        <Text style={label}>Lender & Loan Fees</Text>
+      {/* ── Single rule: subtotal line ── */}
+      <View style={{ paddingHorizontal: 8, marginTop: 2, marginBottom: 2 }}>
+        <View style={{ flexDirection: 'row' }}>
+          <View style={{ width: '40%' }} />
+          {rates.map((_, i) => <View key={i} style={{ width: '20%', paddingHorizontal: 4 }}><View style={singleRule} /></View>)}
+        </View>
+      </View>
+
+      {/* Hard Costs (Section D) */}
+      <View style={rAlt}>
+        <Text style={lblBold}>Loan Costs (D)</Text>
         {rates.map((_, i) => (
-          <Text key={i} style={val}>{$(lenderFees)}</Text>
+          <Text key={i} style={vBold}>{$(hardCosts)}</Text>
         ))}
       </View>
 
-      {/* Title & Recording Fees */}
-      <View style={row}>
-        <Text style={label}>Title & Recording Fees</Text>
+      {/* Soft Costs (Section I) */}
+      <View style={r}>
+        <Text style={lblBold}>Other Costs (I)</Text>
         {rates.map((_, i) => (
-          <Text key={i} style={val}>{$(titleFees)}</Text>
-        ))}
-      </View>
-
-      {/* Prepaids & Escrow */}
-      <View style={rowAlt}>
-        <Text style={label}>Prepaids & Escrow</Text>
-        {rates.map((_, i) => (
-          <Text key={i} style={val}>{$(prepaidEscrow)}</Text>
+          <Text key={i} style={vBold}>{$(softCosts)}</Text>
         ))}
       </View>
 
       {/* Daily Interest — varies per rate */}
-      <View style={row}>
-        <Text style={label}>Daily Interest ({daysInterest} days)</Text>
-        {rates.map((r, i) => {
-          const daily = (loanAmount * (r.rate / 100)) / 365 * daysInterest;
-          return <Text key={i} style={val}>{$(daily)}</Text>;
+      <View style={rAlt}>
+        <Text style={lbl}>Daily Interest ({daysInterest} days)</Text>
+        {rates.map((rt, i) => {
+          const daily = (loanAmount * (rt.rate / 100)) / 365 * daysInterest;
+          return <Text key={i} style={v}>{$(daily)}</Text>;
         })}
       </View>
 
       {/* Lender Credit / (Charge) — varies per rate */}
-      <View style={rowAlt}>
-        <Text style={label}>Lender Credit / (Charge)</Text>
-        {rates.map((r, i) => {
-          const isCredit = r.rebateDollars > 0;
+      <View style={r}>
+        <Text style={lbl}>Lender Credit / (Charge)</Text>
+        {rates.map((rt, i) => {
+          const isCredit = rt.rebateDollars > 0;
           return (
-            <Text key={i} style={{ ...valBold, color: isCredit ? GREEN : RED }}>
-              {isCredit ? '(' + $int(r.rebateDollars) + ')' : $int(r.discountDollars || 0)}
+            <Text key={i} style={{ ...vBold, color: isCredit ? GREEN : RED }}>
+              {isCredit ? '(' + $int(rt.rebateDollars) + ')' : $int(rt.discountDollars || 0)}
             </Text>
           );
         })}
       </View>
 
-      {/* Total */}
+      {/* ── Double rule: grand total ── */}
+      <View style={{ paddingHorizontal: 8, marginTop: 2 }}>
+        <View style={{ flexDirection: 'row' }}>
+          <View style={{ width: '40%' }} />
+          {rates.map((_, i) => <View key={i} style={{ width: '20%', paddingHorizontal: 4 }}><View style={doubleRule} /></View>)}
+        </View>
+      </View>
+
+      {/* Total Cash to Close */}
       <View style={s.totalRow}>
         <Text style={s.totalLabel}>Total Cash To Close</Text>
-        {rates.map((r, i) => {
-          const daily = (loanAmount * (r.rate / 100)) / 365 * daysInterest;
-          const totalFees = lenderFees + titleFees + prepaidEscrow + daily;
-          const credit = r.rebateDollars > 0 ? -r.rebateDollars : (r.discountDollars || 0);
+        {rates.map((rt, i) => {
+          const daily = (loanAmount * (rt.rate / 100)) / 365 * daysInterest;
+          const totalFees = hardCosts + softCosts + daily;
+          const credit = rt.rebateDollars > 0 ? -rt.rebateDollars : (rt.discountDollars || 0);
           let cashToClose;
           if (quote.purpose === 'purchase') {
             cashToClose = totalFees + credit + (propertyValue - loanAmount);

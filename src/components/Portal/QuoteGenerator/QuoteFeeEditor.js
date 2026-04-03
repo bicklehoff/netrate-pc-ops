@@ -91,8 +91,9 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
       hasHailWind: hw, annualHailWind: hwAmt,
       dueDateOverrides: dueDates, escrowCalc: escrow,
     };
-    updated.totalClosingCosts = ['sectionA','sectionB','sectionC','sectionE','sectionF','sectionG']
-      .reduce((s,k) => s + (updated[k]?.total||0), 0);
+    updated.sectionD = ['sectionA','sectionB','sectionC'].reduce((s,k) => s + (updated[k]?.total||0), 0);
+    updated.sectionI = ['sectionE','sectionF','sectionG','sectionH'].reduce((s,k) => s + (updated[k]?.total||0), 0);
+    updated.totalClosingCosts = updated.sectionD + updated.sectionI;
     onFeesChange(updated);
   };
 
@@ -111,8 +112,9 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
     section.items[idx] = { ...section.items[idx], amount: Number(newAmount) || 0 };
     section.total = section.items.reduce((s,i) => s + i.amount, 0);
     updated[sectionKey] = section;
-    updated.totalClosingCosts = ['sectionA','sectionB','sectionC','sectionE','sectionF','sectionG']
-      .reduce((s,k) => s + (updated[k]?.total||0), 0);
+    updated.sectionD = ['sectionA','sectionB','sectionC'].reduce((s,k) => s + (updated[k]?.total||0), 0);
+    updated.sectionI = ['sectionE','sectionF','sectionG','sectionH'].reduce((s,k) => s + (updated[k]?.total||0), 0);
+    updated.totalClosingCosts = updated.sectionD + updated.sectionI;
     onFeesChange(updated);
   };
 
@@ -121,8 +123,9 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
     const section = { ...updated[sectionKey], items: updated[sectionKey].items.filter((_,i) => i !== idx) };
     section.total = section.items.reduce((s,i) => s + i.amount, 0);
     updated[sectionKey] = section;
-    updated.totalClosingCosts = ['sectionA','sectionB','sectionC','sectionE','sectionF','sectionG']
-      .reduce((s,k) => s + (updated[k]?.total||0), 0);
+    updated.sectionD = ['sectionA','sectionB','sectionC'].reduce((s,k) => s + (updated[k]?.total||0), 0);
+    updated.sectionI = ['sectionE','sectionF','sectionG','sectionH'].reduce((s,k) => s + (updated[k]?.total||0), 0);
+    updated.totalClosingCosts = updated.sectionD + updated.sectionI;
     onFeesChange(updated);
   };
 
@@ -132,8 +135,9 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
     const section = { ...updated[sectionKey], items: [...updated[sectionKey].items, { label: newFeeLabel.trim(), amount: Number(newFeeAmount) || 0 }] };
     section.total = section.items.reduce((s,i) => s + i.amount, 0);
     updated[sectionKey] = section;
-    updated.totalClosingCosts = ['sectionA','sectionB','sectionC','sectionE','sectionF','sectionG']
-      .reduce((s,k) => s + (updated[k]?.total||0), 0);
+    updated.sectionD = ['sectionA','sectionB','sectionC'].reduce((s,k) => s + (updated[k]?.total||0), 0);
+    updated.sectionI = ['sectionE','sectionF','sectionG','sectionH'].reduce((s,k) => s + (updated[k]?.total||0), 0);
+    updated.totalClosingCosts = updated.sectionD + updated.sectionI;
     onFeesChange(updated);
     setNewFeeLabel(''); setNewFeeAmount(''); setAddingToSection(null);
   };
@@ -161,7 +165,7 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
   // ── Payment / CTC calcs ────────────────────────────────────────────────────
   const loanAmount = Number(scenario?.loanAmount) || 0;
   const downPayment = isPurchase ? (Number(scenario?.propertyValue)||0) - loanAmount : 0;
-  const fixedFees = ['sectionA','sectionB','sectionC','sectionE','sectionG']
+  const fixedFees = ['sectionA','sectionB','sectionC','sectionE','sectionG','sectionH']
     .reduce((s,k) => s + (fees?.[k]?.total||0), 0);
   const otherFItems = (fees?.sectionF?.items||[])
     .filter(i => !i.label.includes('Interest') && !i.label.includes('Credit'))
@@ -196,8 +200,8 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
   const monthlyTax = fees?.monthlyTax || 0;
   const monthlyIns = fees?.monthlyInsurance || 0;
 
-  const sections = ['sectionA','sectionB','sectionC','sectionE','sectionF','sectionG'];
-  const editableSections = new Set(['sectionA','sectionB','sectionC','sectionE']);
+  const sections = ['sectionA','sectionB','sectionC','sectionE','sectionF','sectionG','sectionH'];
+  const editableSections = new Set(['sectionA','sectionB','sectionC','sectionE','sectionH']);
 
   const escrowItems = (escrowDetail || fees?.escrowCalc)?.escrowItems || [];
   const respa = (escrowDetail || fees?.escrowCalc)?.respa || {};
@@ -420,7 +424,11 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
         </div>
         <div className="divide-y divide-gray-100">
           {sections.map(key => {
-            const section = fees?.[key];
+            let section = fees?.[key];
+            // Initialize sectionH for older quotes that don't have it
+            if (!section && key === 'sectionH') {
+              section = { label: 'H. Other', items: [], total: 0 };
+            }
             if (!section) return null;
             if (section.items.length === 0 && !editableSections.has(key)) return null;
             const isOpen = expanded[key] !== false;

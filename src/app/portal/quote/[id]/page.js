@@ -432,74 +432,79 @@ function MonthlyPaymentsTab({ scenarios, monthlyTax, monthlyIns }) {
 function ClosingCostsTab({ scenarios, fees, loanAmount, propertyValue, quote }) {
   const rates = scenarios.slice(0, 3);
 
-  // Calculate daily interest per rate
-  const closingDate = fees?.closingDate ? new Date(fees.closingDate) : null;
-  const daysInterest = closingDate
-    ? (new Date(closingDate.getFullYear(), closingDate.getMonth() + 1, 0).getDate() - closingDate.getDate() + 1)
-    : 7;
+  // LE subtotals
+  const hardCosts = fees?.sectionD ?? ((fees?.sectionA?.total||0) + (fees?.sectionB?.total||0) + (fees?.sectionC?.total||0));
+  const softCosts = fees?.sectionI ?? ((fees?.sectionE?.total||0) + (fees?.sectionF?.total||0) + (fees?.sectionG?.total||0) + (fees?.sectionH?.total||0));
 
-  const feeSections = [
-    { key: 'sectionA', icon: 'A' },
-    { key: 'sectionB', icon: 'B' },
-    { key: 'sectionC', icon: 'C' },
-    { key: 'sectionE', icon: 'E' },
-    { key: 'sectionF', icon: 'F' },
-    { key: 'sectionG', icon: 'G' },
+  const loanCostSections = [
+    { key: 'sectionA' },
+    { key: 'sectionB' },
+    { key: 'sectionC' },
   ];
+  const otherCostSections = [
+    { key: 'sectionE' },
+    { key: 'sectionF' },
+    { key: 'sectionG' },
+    { key: 'sectionH' },
+  ];
+
+  const renderFeeSection = ({ key }) => {
+    const section = fees?.[key];
+    if (!section || section.items?.length === 0) return null;
+    return (
+      <div key={key}>
+        <div className="flex justify-between items-center px-6 py-3 bg-[#f2f4f6]">
+          <span className="font-bold text-sm text-[#191c1e]">{section.label}</span>
+          <span className="font-bold text-sm text-[#191c1e] tabular-nums">{fmt(section.total)}</span>
+        </div>
+        {section.items?.map((item, i) => (
+          <div key={i} className={`flex justify-between items-center px-6 py-2.5 ${i % 2 === 0 ? 'bg-white' : 'bg-[#f8f9fb]'}`}>
+            <span className="text-sm text-[#434652] pl-6">{item.label}</span>
+            <span className="text-sm tabular-nums text-[#191c1e]">{fmt(item.amount)}</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-8">
       <div>
         <h2 className="text-2xl font-extrabold tracking-tight text-[#191c1e] mb-1">Closing Costs</h2>
-        <p className="text-sm text-[#737783]">Detailed breakdown of all fees. These match the Loan Estimate form sections A through H.</p>
+        <p className="text-sm text-[#737783]">Detailed breakdown of all fees, matching the Loan Estimate format.</p>
       </div>
 
-      {/* Fee breakdown sections */}
+      {/* Fee breakdown */}
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-        {feeSections.map(({ key, icon }) => {
-          const section = fees?.[key];
-          if (!section || section.items?.length === 0) return null;
-          return (
-            <div key={key}>
-              {/* Section header */}
-              <div className="flex justify-between items-center px-6 py-3 bg-[#f2f4f6]">
-                <div className="flex items-center gap-3">
-                  <span className="w-6 h-6 rounded-md bg-cyan-600 text-white text-xs font-bold flex items-center justify-center">{icon}</span>
-                  <span className="font-bold text-sm text-[#191c1e]">{section.label}</span>
-                </div>
-                <span className="font-bold text-sm text-[#191c1e] tabular-nums">{fmt(section.total)}</span>
-              </div>
-              {/* Items */}
-              {section.items?.map((item, i) => (
-                <div key={i} className={`flex justify-between items-center px-6 py-2.5 ${i % 2 === 0 ? 'bg-white' : 'bg-[#f8f9fb]'}`}>
-                  <span className="text-sm text-[#434652] pl-9">{item.label}</span>
-                  <span className="text-sm tabular-nums text-[#191c1e]">{fmt(item.amount)}</span>
-                </div>
-              ))}
-            </div>
-          );
-        })}
+        {/* Loan Costs A-C */}
+        {loanCostSections.map(renderFeeSection)}
 
-        {/* Daily interest per rate */}
-        <div className="px-6 py-3 bg-[#f2f4f6]">
-          <span className="font-bold text-sm text-[#191c1e]">Daily Interest ({daysInterest} days, per rate)</span>
+        {/* D. Total Loan Costs subtotal */}
+        <div className="flex justify-between items-center px-6 py-3 border-t-2 border-[#191c1e]">
+          <span className="font-bold text-sm text-[#191c1e]">D. Total Loan Costs (A + B + C)</span>
+          <span className="font-bold text-sm tabular-nums text-[#191c1e]">{fmt(hardCosts)}</span>
         </div>
-        {rates.map((r, i) => {
-          const daily = (loanAmount * (r.rate / 100)) / 365 * daysInterest;
-          return (
-            <div key={i} className={`flex justify-between items-center px-6 py-2.5 ${i % 2 === 0 ? 'bg-white' : 'bg-[#f8f9fb]'}`}>
-              <span className="text-sm text-[#434652] pl-9">Option {i + 1} — {pct(r.rate)}</span>
-              <span className="text-sm tabular-nums text-[#191c1e]">{fmt(daily)}</span>
-            </div>
-          );
-        })}
 
-        {/* Total */}
+        {/* Other Costs E-H */}
+        {otherCostSections.map(renderFeeSection)}
+
+        {/* I. Total Other Costs subtotal */}
+        <div className="flex justify-between items-center px-6 py-3 border-t-2 border-[#191c1e]">
+          <span className="font-bold text-sm text-[#191c1e]">I. Total Other Costs (E + F + G + H)</span>
+          <span className="font-bold text-sm tabular-nums text-[#191c1e]">{fmt(softCosts)}</span>
+        </div>
+
+        {/* J. Total Closing Costs */}
         <div className="flex justify-between items-center px-6 py-4 bg-[#191c1e] text-white">
-          <span className="font-extrabold">Total of All Loan Costs</span>
+          <span className="font-extrabold">J. Total Closing Costs (D + I)</span>
           <span className="font-extrabold tabular-nums">{fmt(fees?.totalClosingCosts)}</span>
         </div>
       </div>
+
+      {/* Disclaimer */}
+      <p className="text-[10px] text-[#737783] italic leading-relaxed">
+        This document is NOT a Loan Estimate (LE) as defined under TRID/TILA-RESPA. It is an informal quote for informational and comparison purposes only. A formal Loan Estimate will be provided within three business days of receiving your completed loan application.
+      </p>
 
       {/* Cash to close */}
       <CashToCloseSection
@@ -714,16 +719,15 @@ function CashToCloseSection({ rates, fees, loanAmount, propertyValue, quote }) {
 
   const cols = '1.5fr ' + rates.map(() => '1fr').join(' ');
 
-  // Fee subtotals
-  const lenderFees = (fees?.sectionA?.total || 0) + (fees?.sectionB?.total || 0);
-  const titleFees = (fees?.sectionC?.total || 0) + (fees?.sectionE?.total || 0);
-  const prepaidEscrow = (fees?.sectionF?.total || 0) + (fees?.sectionG?.total || 0);
+  // LE subtotals
+  const hardCosts = fees?.sectionD ?? ((fees?.sectionA?.total||0) + (fees?.sectionB?.total||0) + (fees?.sectionC?.total||0));
+  const softCosts = fees?.sectionI ?? ((fees?.sectionE?.total||0) + (fees?.sectionF?.total||0) + (fees?.sectionG?.total||0) + (fees?.sectionH?.total||0));
 
   return (
     <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
       {/* Title bar */}
       <div className="flex items-center gap-3 px-6 py-4 border-l-4 border-cyan-600 bg-[#f2f4f6]">
-        <h4 className="text-base font-extrabold text-[#191c1e]">Total Cash to Close Summary</h4>
+        <h4 className="text-base font-extrabold text-[#191c1e]">Estimated Cash to Close</h4>
       </div>
 
       {/* Column headers */}
@@ -775,32 +779,32 @@ function CashToCloseSection({ rates, fees, loanAmount, propertyValue, quote }) {
         </>
       )}
 
-      {/* Lender & Loan Fees */}
-      <CtcRow cols={cols} alt={quote.purpose === 'purchase'}>
-        <p className="text-[#434652]">Lender & Loan Fees</p>
+      {/* Subtotal rule */}
+      <div className="grid px-6" style={{ gridTemplateColumns: cols }}>
+        <div />
         {rates.map((_, i) => (
-          <p key={i} className="text-center tabular-nums">{fmt(lenderFees)}</p>
+          <div key={i} className="px-2"><div className="border-t border-[#191c1e]" /></div>
+        ))}
+      </div>
+
+      {/* Loan Costs (D) */}
+      <CtcRow cols={cols} alt>
+        <p className="font-bold text-[#191c1e]">Loan Costs (D)</p>
+        {rates.map((_, i) => (
+          <p key={i} className="text-center font-bold tabular-nums">{fmt(hardCosts)}</p>
         ))}
       </CtcRow>
 
-      {/* Title & Recording Fees */}
-      <CtcRow cols={cols} alt={quote.purpose !== 'purchase'}>
-        <p className="text-[#434652]">Title & Recording Fees</p>
+      {/* Other Costs (I) */}
+      <CtcRow cols={cols}>
+        <p className="font-bold text-[#191c1e]">Other Costs (I)</p>
         {rates.map((_, i) => (
-          <p key={i} className="text-center tabular-nums">{fmt(titleFees)}</p>
-        ))}
-      </CtcRow>
-
-      {/* Prepaids & Escrow */}
-      <CtcRow cols={cols} alt={quote.purpose === 'purchase'}>
-        <p className="text-[#434652]">Prepaids & Escrow</p>
-        {rates.map((_, i) => (
-          <p key={i} className="text-center tabular-nums">{fmt(prepaidEscrow)}</p>
+          <p key={i} className="text-center font-bold tabular-nums">{fmt(softCosts)}</p>
         ))}
       </CtcRow>
 
       {/* Daily Interest — varies per rate */}
-      <CtcRow cols={cols} alt={quote.purpose !== 'purchase'}>
+      <CtcRow cols={cols} alt>
         <p className="text-[#434652]">Daily Interest ({daysInterest} days)</p>
         {rates.map((r, i) => {
           const daily = (loanAmount * (r.rate / 100)) / 365 * daysInterest;
@@ -809,7 +813,7 @@ function CashToCloseSection({ rates, fees, loanAmount, propertyValue, quote }) {
       </CtcRow>
 
       {/* Lender Credit / (Charge) — varies per rate */}
-      <CtcRow cols={cols} alt={quote.purpose === 'purchase'}>
+      <CtcRow cols={cols}>
         <p className="text-[#434652]">Lender Credit / (Charge)</p>
         {rates.map((r, i) => {
           const isCredit = r.rebateDollars > 0;
@@ -821,6 +825,17 @@ function CashToCloseSection({ rates, fees, loanAmount, propertyValue, quote }) {
         })}
       </CtcRow>
 
+      {/* Double rule (accounting grand total) */}
+      <div className="grid px-6" style={{ gridTemplateColumns: cols }}>
+        <div />
+        {rates.map((_, i) => (
+          <div key={i} className="px-2 space-y-0.5">
+            <div className="border-t border-[#191c1e]" />
+            <div className="border-t border-[#191c1e]" />
+          </div>
+        ))}
+      </div>
+
       {/* Total */}
       <div
         className="grid px-6 py-4 bg-cyan-600 text-white"
@@ -829,7 +844,7 @@ function CashToCloseSection({ rates, fees, loanAmount, propertyValue, quote }) {
         <p className="font-bold text-base">Total Cash To Close</p>
         {rates.map((r, i) => {
           const daily = (loanAmount * (r.rate / 100)) / 365 * daysInterest;
-          const totalFees = lenderFees + titleFees + prepaidEscrow + daily;
+          const totalFees = hardCosts + softCosts + daily;
           const credit = r.rebateDollars > 0 ? -r.rebateDollars : (r.discountDollars || 0);
           let cashToClose;
           if (quote.purpose === 'purchase') {
