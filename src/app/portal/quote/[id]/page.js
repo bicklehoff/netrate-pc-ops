@@ -726,6 +726,18 @@ function CashToCloseSection({ rates, fees, loanAmount, propertyValue, quote }) {
           <p key={i} className="text-center text-xs text-[#737783] font-semibold">Option {i + 1}</p>
         ))}
 
+        {/* Purchase price / appraised value */}
+        <p className="text-sm text-[#434652]">Purchase Price / Appraised Value</p>
+        {rates.map((_, i) => (
+          <p key={i} className="text-center text-sm font-semibold tabular-nums">{fmtInt(propertyValue)}</p>
+        ))}
+
+        {/* Loan amount */}
+        <p className="text-sm text-[#434652]">Loan Amount</p>
+        {rates.map((_, i) => (
+          <p key={i} className="text-center text-sm tabular-nums">{fmtInt(loanAmount)}</p>
+        ))}
+
         {/* Down payment or payoff */}
         {quote.purpose === 'purchase' ? (
           <>
@@ -739,6 +751,10 @@ function CashToCloseSection({ rates, fees, loanAmount, propertyValue, quote }) {
             <p className="text-sm text-[#434652]">Loan Payoff (Estimate)</p>
             {rates.map((_, i) => (
               <p key={i} className="text-center text-sm font-semibold tabular-nums">{fmt(quote.currentBalance || 0)}</p>
+            ))}
+            <p className="text-sm text-[#434652]">Loan Amount (Credit)</p>
+            {rates.map((_, i) => (
+              <p key={i} className="text-center text-sm font-semibold tabular-nums text-emerald-600">({fmtInt(loanAmount)})</p>
             ))}
           </>
         )}
