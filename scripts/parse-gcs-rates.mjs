@@ -2,8 +2,8 @@
  * Parse Rate Sheets from GCS
  *
  * Pulls raw rate sheet files from gs://netrate-rates/raw/{lender}/,
- * runs them through the appropriate parser, and writes parsed JSON
- * back to gs://netrate-rates/parsed/{lender}.json + manifest.
+ * runs them through the appropriate parser, writes parsed JSON
+ * to GCS, and seeds the pricing engine DB for active lenders.
  *
  * Run: node scripts/parse-gcs-rates.mjs
  * Schedule: daily after OC's morning rate sheet upload (~6:30 AM)
@@ -18,14 +18,16 @@
  */
 
 import { SignJWT, importPKCS8 } from 'jose';
-import { readFileSync } from 'fs';
 import { createRequire } from 'module';
-import { writeRateHistory } from './write-rate-history.mjs';
 import dotenv from 'dotenv';
 
 dotenv.config({ path: new URL('../.env', import.meta.url).pathname.replace(/^\/([A-Z]:)/, '$1') });
 
 const require = createRequire(import.meta.url);
+const { writeRatesToDB } = require('../src/lib/rates/db-writer');
+
+// Lenders with DB pipeline ready — parsed rates get seeded to rate_prices
+const DB_READY_LENDERS = new Set(['everstream', 'swmc']);
 
 // Parsers (CommonJS)
 const tlsParser = require('../src/lib/rates/parsers/tls.js');
@@ -362,8 +364,19 @@ async function main() {
       const result = await parser(files);
       results.push(result);
 
-      // Upload parsed JSON
+      // Upload parsed JSON to GCS
       await uploadJson(`parsed/${lender}.json`, result);
+
+      // Seed pricing engine DB for active lenders
+      if (DB_READY_LENDERS.has(lender) && result.sheetDate) {
+        try {
+          const dbResult = await writeRatesToDB(lender, result.programs, result.sheetDate, `gcs-parse-${new Date().toISOString().slice(0, 10)}`);
+          console.log(`  ✓ DB: ${dbResult.pricesInserted} prices, ${dbResult.productsMatched} matched, ${dbResult.productsCreated} new products`);
+        } catch (dbErr) {
+          console.error(`  ✗ DB write failed for ${lender}: ${dbErr.message}`);
+          errors.push({ lender, error: `DB: ${dbErr.message}` });
+        }
+      }
     } catch (err) {
       console.error(`  ✗ ${lender} failed: ${err.message}`);
       errors.push({ lender, error: err.message });
@@ -384,44 +397,7 @@ async function main() {
   };
   await uploadJson('parsed/manifest.json', manifest);
 
-  // Save parsed-rates.json locally (per-lender structure for pricing engine)
   const totalPrograms = results.reduce((sum, r) => sum + r.programs.length, 0);
-  const combined = {
-    lenders: results.map(r => ({
-      lenderId: r.lenderId,
-      sheetDate: r.sheetDate,
-      programs: r.programs,
-      llpas: r.llpas || null,
-      loanAmountAdj: r.loanAmountAdj || null,
-      stateAdj: r.stateAdj || null,
-      specPayups: r.specPayups || null,
-      pricingSpecials: r.pricingSpecials || null,
-      occupancyAdj: r.occupancyAdj || null,
-      lenderFee: r.lenderFee || null,
-      compCap: r.compCap || null,
-      // Lender-specific extended data
-      ...(r.fastTrackLlpas ? { fastTrackLlpas: r.fastTrackLlpas } : {}),
-      ...(r.agencyLlpas ? { agencyLlpas: r.agencyLlpas } : {}),
-      ...(r.govAdj ? { govAdj: r.govAdj } : {}),
-      ...(r.jumboAdj ? { jumboAdj: r.jumboAdj } : {}),
-    })),
-    date: results[0]?.sheetDate || new Date().toISOString().slice(0, 10),
-    lenderCount: results.length,
-    totalPrograms,
-    generatedAt: new Date().toISOString(),
-  };
-  const localPath = new URL('../src/data/parsed-rates.json', import.meta.url).pathname.replace(/^\/([A-Z]:)/, '$1');
-  const { writeFileSync } = await import('fs');
-  writeFileSync(localPath, JSON.stringify(combined, null, 2));
-  console.log(`\n✓ Saved ${localPath} (${totalPrograms} products, ${results.length} lenders)`);
-
-  // Write today's par rates to rate_history DB
-  const rateDate = combined.date;
-  try {
-    await writeRateHistory(combined.lenders, rateDate);
-  } catch (err) {
-    console.error('Rate history write failed:', err.message);
-  }
 
   // Summary
   console.log('\n=== Summary ===');
