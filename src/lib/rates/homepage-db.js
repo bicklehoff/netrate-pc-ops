@@ -18,7 +18,7 @@ const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'S
 // Rates only change when a new sheet is parsed (~once/day).
 // Cache keyed on effectiveDate so it auto-busts on new rate sheets.
 // 30-minute TTL as safety net; ISR already caches the rendered pages.
-let homepageCache = { data: null, sheetDate: null, fetchedAt: 0 }; // cache busted on deploy
+let homepageCache = { data: null, sheetDate: null, fetchedAt: 0 }; // cache busted on deploy (cleared 2026-04-02)
 const HOMEPAGE_CACHE_TTL = 30 * 60 * 1000; // 30 minutes
 
 function calculatePI(rate, amount, termYears = 30) {
