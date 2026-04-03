@@ -15,6 +15,10 @@
     {
       "path": "/api/cron/calendar-seed",
       "schedule": "0 8 * * 1"
+    },
+    {
+      "path": "/api/cron/scenario-alerts",
+      "schedule": "0 13 * * 1-5"
     }
   ]
 }

@@ -290,3 +290,109 @@ export function quoteTemplate({ firstName, quoteLink, scenarios, loanAmount, pur
     text,
   };
 }
+
+// ─── Scenario Rate Alert ───────────────────────────────────
+
+const PURPOSE_LABELS = { purchase: 'Purchase', refi: 'Refinance', cashout: 'Cash-Out Refi' };
+
+function fmtDollar(n) {
+  return '$' + Number(n || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
+}
+
+/**
+ * Rate alert email — sent after MLO approves a queued alert.
+ * @param {object} params
+ * @param {string} params.firstName
+ * @param {object} params.scenarioSummary — { purpose, loanAmount, fico, ltv, state }
+ * @param {Array} params.currentRates — [{rate, monthlyPI, lenderName, rebateDollars, discountDollars}]
+ * @param {Array} [params.previousRates] — same shape, for comparison
+ * @param {string} params.viewLink — link to view live scenario
+ * @param {string} params.unsubscribeLink
+ * @param {string} [params.mloNotes] — optional note from the loan officer
+ */
+export function scenarioAlertTemplate({ firstName, scenarioSummary, currentRates, previousRates, viewLink, unsubscribeLink, mloNotes }) {
+  const name = firstName || 'there';
+  const s = scenarioSummary || {};
+  const summaryLine = [
+    PURPOSE_LABELS[s.purpose] || s.purpose,
+    s.loanAmount ? fmtDollar(s.loanAmount) : null,
+    s.fico ? `${s.fico} FICO` : null,
+    s.ltv ? `${Math.round(s.ltv)}% LTV` : null,
+    s.state || null,
+  ].filter(Boolean).join(' | ');
+
+  // Build previous rate lookup for comparison
+  const prevMap = {};
+  if (previousRates?.length) {
+    previousRates.forEach((r, i) => { prevMap[i] = r; });
+  }
+
+  const rateRows = (currentRates || []).map((r, i) => {
+    const prev = prevMap[i];
+    let changeCell = '<td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#9ca3af;text-align:center;">—</td>';
+    if (prev) {
+      const diff = r.rate - prev.rate;
+      if (Math.abs(diff) >= 0.001) {
+        const color = diff < 0 ? '#059669' : '#dc2626';
+        const arrow = diff < 0 ? '▼' : '▲';
+        changeCell = `<td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:12px;font-weight:600;color:${color};text-align:center;">${arrow} ${Math.abs(diff).toFixed(3)}%</td>`;
+      } else {
+        changeCell = '<td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#9ca3af;text-align:center;">No change</td>';
+      }
+    }
+
+    return `<tr>
+      <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-family:monospace;font-weight:bold;">${r.rate.toFixed(3)}%</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-family:monospace;text-align:right;">${fmtDollar(r.monthlyPI)}/mo</td>
+      ${changeCell}
+    </tr>`;
+  }).join('');
+
+  const mloNotesHtml = mloNotes
+    ? `<div style="margin:20px 0;padding:16px;background-color:#f0fdfa;border-left:4px solid ${BRAND_COLOR};border-radius:4px;">
+        <p style="margin:0 0 4px;font-size:12px;font-weight:600;color:#0e7490;">Note from your loan officer:</p>
+        <p style="margin:0;font-size:14px;color:#374151;line-height:1.5;">${mloNotes}</p>
+      </div>`
+    : '';
+
+  const html = emailLayout(`
+  <h2 style="margin:0 0 8px;font-size:20px;font-weight:600;color:#111827;">Your Rate Update</h2>
+  <p style="margin:0 0 4px;font-size:13px;color:#6b7280;">
+    Hi ${name}, here's your latest rate update for your saved scenario.
+  </p>
+  <p style="margin:0 0 20px;font-size:13px;color:#9ca3af;">${summaryLine}</p>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+    <tr style="background-color:#111827;">
+      <th style="padding:8px 12px;text-align:left;color:#ffffff;font-size:12px;">Rate</th>
+      <th style="padding:8px 12px;text-align:right;color:#ffffff;font-size:12px;">Monthly P&I</th>
+      <th style="padding:8px 12px;text-align:center;color:#ffffff;font-size:12px;">Change</th>
+    </tr>
+    ${rateRows}
+  </table>
+
+  ${mloNotesHtml}
+
+  ${ctaButton('View Live Rates', viewLink)}
+
+  <p style="margin:16px 0 0;font-size:13px;color:#6b7280;line-height:1.5;">
+    Rates are based on current wholesale pricing and are subject to change.
+    Questions? Reply to this email or call us at 303-444-5251.
+  </p>
+  <p style="margin:16px 0 0;font-size:11px;color:#9ca3af;">
+    <a href="${unsubscribeLink}" style="color:#9ca3af;text-decoration:underline;">Unsubscribe from these alerts</a>
+  </p>
+`, `Rate update: ${currentRates?.[0] ? currentRates[0].rate.toFixed(3) + '%' : 'new rates available'}`);
+
+  const ratesText = (currentRates || []).map(r =>
+    `${r.rate.toFixed(3)}% — ${fmtDollar(r.monthlyPI)}/mo`
+  ).join('\n');
+
+  const text = `Hi ${name},\n\nYour rate update for: ${summaryLine}\n\n${ratesText}\n\nView live rates: ${viewLink}\n\n${mloNotes ? `Note from your loan officer: ${mloNotes}\n\n` : ''}Unsubscribe: ${unsubscribeLink}\n\nNetRate Mortgage LLC | NMLS #1111861`;
+
+  return {
+    subject: `Rate Update: ${currentRates?.[0] ? currentRates[0].rate.toFixed(3) + '%' : 'New rates'} — NetRate Mortgage`,
+    html,
+    text,
+  };
+}

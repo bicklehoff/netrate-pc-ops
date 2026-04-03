@@ -12,7 +12,7 @@ import { getUtmParams, formatUtmString } from '@/lib/utm';
 import { PURPOSE_LABELS, PROP_LABELS, fmtDollar, fmtPI, getAutoPickRates } from './reportUtils';
 import MobileRateCarousel from './MobileRateCarousel';
 
-export default function ComparisonReport({ compareRates, scenario, rateData, onClose }) {
+export default function ComparisonReport({ compareRates, scenario, rateData, onClose, onLeadSubmitted, onSaveScenario }) {
   const [showFeeDetail, setShowFeeDetail] = useState(false);
   const [form, setForm] = useState({ name: '', phone: '', email: '' });
   const [submitting, setSubmitting] = useState(false);
@@ -79,6 +79,7 @@ export default function ComparisonReport({ compareRates, scenario, rateData, onC
       });
       if (!res.ok) throw new Error('Something went wrong. Please try again or call us directly.');
       setSubmitted(true);
+      onLeadSubmitted?.({ name: form.name, email: form.email, phone: form.phone });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -503,6 +504,15 @@ export default function ComparisonReport({ compareRates, scenario, rateData, onC
                 <p className="text-sm text-brand font-medium mt-3">
                   &mdash; {LO_CONFIG.name}, {LO_CONFIG.phone}
                 </p>
+                <button
+                  onClick={() => onSaveScenario?.()}
+                  className="mt-4 inline-flex items-center gap-2 px-4 py-2 border border-brand/30 rounded-lg text-sm font-medium text-brand hover:bg-brand/5 transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                  </svg>
+                  Want rate alerts? Save this scenario
+                </button>
               </div>
             ) : (
               <div className="max-w-md mx-auto">

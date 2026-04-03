@@ -7,6 +7,7 @@ import RateResults from './RateResults';
 import RateEducation from './RateEducation';
 import LeadCapture from './LeadCapture';
 import ComparisonReport from './ComparisonReport';
+import SaveScenarioModal from './SaveScenarioModal';
 import { LO_CONFIG } from '@/lib/rates/config';
 import { DEFAULT_SCENARIO } from '@/lib/rates/defaults';
 import { useApiPricing } from './useApiPricing';
@@ -60,6 +61,8 @@ export default function RateTool({ initialRateData, defaultState }) {
 
   const [compareRates, setCompareRates] = useState([]);
   const [showReport, setShowReport] = useState(false);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [leadFormData, setLeadFormData] = useState(null);
 
   const handleToggleCompare = (rate) => {
     setCompareRates(prev => {
@@ -89,6 +92,7 @@ export default function RateTool({ initialRateData, defaultState }) {
           compareRates={compareRates}
           onToggleCompare={handleToggleCompare}
           onViewReport={() => setShowReport(true)}
+          onSaveScenario={() => setShowSaveModal(true)}
         />
         <RateEducation />
         <LeadCapture scenario={scenario} />
@@ -101,6 +105,19 @@ export default function RateTool({ initialRateData, defaultState }) {
           scenario={scenario}
           rateData={rateData}
           onClose={() => setShowReport(false)}
+          onLeadSubmitted={(data) => setLeadFormData(data)}
+          onSaveScenario={() => { setShowReport(false); setShowSaveModal(true); }}
+        />
+      )}
+
+      {/* Save Scenario Modal */}
+      {showSaveModal && (
+        <SaveScenarioModal
+          scenario={scenario}
+          onClose={() => setShowSaveModal(false)}
+          prefillName={leadFormData?.name}
+          prefillEmail={leadFormData?.email}
+          prefillPhone={leadFormData?.phone}
         />
       )}
 

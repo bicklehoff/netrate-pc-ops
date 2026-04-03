@@ -878,6 +878,7 @@ model Lead {
   mloId              String?   @map("mlo_id") @db.Uuid
   contact            Contact?  @relation(fields: [contactId], references: [id])
   quotes             LeadQuote[]
+  savedScenarios     SavedScenario[]
 
   @@map("leads")
 }
@@ -1511,4 +1512,51 @@ model FomcStatement {
   scrapedAt     DateTime @default(now()) @map("scraped_at") @db.Timestamptz(6)
 
   @@map("fomc_statements")
+}
+
+model SavedScenario {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  leadId          String    @map("lead_id") @db.Uuid
+  scenarioData    Json      @map("scenario_data")
+  alertFrequency  String    @default("2x_week") @map("alert_frequency")
+  alertDays       String[]  @default(["tue", "thu"]) @map("alert_days")
+  alertStatus     String    @default("active") @map("alert_status")
+  lastPricingData Json?     @map("last_pricing_data")
+  lastPricedAt    DateTime? @map("last_priced_at") @db.Timestamptz(6)
+  lastSentAt      DateTime? @map("last_sent_at") @db.Timestamptz(6)
+  sendCount       Int       @default(0) @map("send_count")
+  unsubToken      String    @default(dbgenerated("gen_random_uuid()")) @map("unsub_token")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  lead            Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  alertQueue      ScenarioAlertQueue[]
+
+  @@index([alertStatus])
+  @@index([leadId])
+  @@index([unsubToken])
+  @@map("saved_scenarios")
+}
+
+model ScenarioAlertQueue {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  scenarioId      String    @map("scenario_id") @db.Uuid
+  pricingData     Json      @map("pricing_data")
+  previousData    Json?     @map("previous_data")
+  bestRate        Decimal?  @map("best_rate") @db.Decimal(5, 3)
+  bestRatePrev    Decimal?  @map("best_rate_prev") @db.Decimal(5, 3)
+  rateChange      Decimal?  @map("rate_change") @db.Decimal(5, 3)
+  status          String    @default("pending")
+  reviewedBy      String?   @map("reviewed_by") @db.Uuid
+  reviewedAt      DateTime? @map("reviewed_at") @db.Timestamptz(6)
+  sentAt          DateTime? @map("sent_at") @db.Timestamptz(6)
+  errorMessage    String?   @map("error_message")
+  mloNotes        String?   @map("mlo_notes")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  scenario        SavedScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("scenario_alert_queue")
 }
