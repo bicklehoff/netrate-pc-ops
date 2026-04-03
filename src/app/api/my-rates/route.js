@@ -14,11 +14,9 @@ export async function GET(request) {
   }
 
   try {
-    // Find the lead by viewToken
-    const lead = await prisma.lead.findFirst({
-      where: { viewToken: token },
-      select: { id: true, email: true, name: true },
-    });
+    // Find the lead by viewToken (raw SQL — Prisma client doesn't expose this field)
+    const leads = await prisma.$queryRaw`SELECT id, email, name FROM leads WHERE view_token = ${token}::uuid LIMIT 1`;
+    const lead = leads?.[0] || null;
 
     if (!lead || !lead.email) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });

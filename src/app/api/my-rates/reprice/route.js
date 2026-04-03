@@ -14,11 +14,9 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Token and scenarioId required' }, { status: 400 });
     }
 
-    // Validate token → get email
-    const lead = await prisma.lead.findFirst({
-      where: { viewToken: token },
-      select: { email: true },
-    });
+    // Validate token → get email (raw SQL — Prisma client doesn't expose viewToken)
+    const leads = await prisma.$queryRaw`SELECT email FROM leads WHERE view_token = ${token}::uuid LIMIT 1`;
+    const lead = leads?.[0] || null;
 
     if (!lead?.email) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });

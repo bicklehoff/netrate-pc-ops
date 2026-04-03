@@ -117,7 +117,7 @@ export async function PATCH(request) {
           include: {
             scenario: {
               include: {
-                lead: { select: { name: true, email: true, viewToken: true } },
+                lead: { select: { id: true, name: true, email: true } },
               },
             },
           },
@@ -148,8 +148,11 @@ export async function PATCH(request) {
         }
 
         const firstName = lead.name?.split(' ')[0] || 'there';
-        const viewLink = lead.viewToken
-          ? `${SITE_URL}/portal/my-rates?token=${lead.viewToken}`
+        // Fetch viewToken via raw SQL (Prisma client doesn't expose it)
+        const tokenRows = await prisma.$queryRaw`SELECT view_token FROM leads WHERE id = ${lead.id}::uuid`;
+        const leadViewToken = tokenRows?.[0]?.view_token || null;
+        const viewLink = leadViewToken
+          ? `${SITE_URL}/portal/my-rates?token=${leadViewToken}`
           : `${SITE_URL}/rates`;
         const unsubscribeLink = `${SITE_URL}/api/saved-scenario/unsubscribe?token=${item.scenario.unsubToken}`;
 
