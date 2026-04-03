@@ -95,13 +95,13 @@ export async function loadRateDataFromDB() {
         lenderId,
         lenderName: lender.name,
         sheetDate: sheet.effectiveDate?.toISOString()?.split('T')[0] || null,
-        lenderFee: Number(lender.uwFee) || 0,
+        lenderFee: lender.uwFee != null ? Number(lender.uwFee) : null,
         compCap: {
-          purchase: Number(lender.maxCompCapPurchase) || null,
-          refinance: Number(lender.maxCompCapRefi) || null,
+          purchase: lender.maxCompCapPurchase != null ? Number(lender.maxCompCapPurchase) : null,
+          refinance: lender.maxCompCapRefi != null ? Number(lender.maxCompCapRefi) : null,
         },
-        compRate: lender.compRate ? Number(lender.compRate) : 0.02,
-        fhaUfmip: lender.fhaUfmip ? Number(lender.fhaUfmip) : 0.0175,
+        compRate: lender.compRate != null ? Number(lender.compRate) : null,
+        fhaUfmip: lender.fhaUfmip != null ? Number(lender.fhaUfmip) : null,
         priceFormat: lender.priceFormat || '100-based',
         programs: [],
       };
