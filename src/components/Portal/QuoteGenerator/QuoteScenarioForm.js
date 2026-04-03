@@ -31,12 +31,32 @@ function unfmt(s) {
   return s.replace(/,/g, '');
 }
 
-// Compute 1st of 2nd month after a closing date string (YYYY-MM-DD)
-function firstPaymentFromClosing(closingStr) {
-  if (!closingStr) return '';
-  const [y, m] = closingStr.split('-').map(Number); // m is 1-indexed
+// Add N business days (skip weekends)
+function addBusinessDays(dateStr, days) {
+  const d = new Date(dateStr + 'T12:00:00');
+  let added = 0;
+  while (added < days) {
+    d.setDate(d.getDate() + 1);
+    const dow = d.getDay();
+    if (dow !== 0 && dow !== 6) added++;
+  }
+  return d.toISOString().split('T')[0];
+}
+
+/**
+ * From a closing date, derive funding date and first payment date.
+ * CO + TX purchase: same day. CA + OR purchase: +3 biz days. All refis: +3 biz days.
+ * firstPaymentDate: 1st of 2nd month after closing (estimate; fee editor refines from funding day).
+ */
+function deriveFromClosing(closing, state, purpose) {
+  if (!closing) return {};
+  const isRefi = purpose === 'refinance' || purpose === 'cashout';
+  const needsDelay = isRefi || state === 'CA' || state === 'OR';
+  const fundingDate = needsDelay ? addBusinessDays(closing, 3) : closing;
+  const [y, m] = closing.split('-').map(Number);
   const fp = new Date(y, m + 1, 1);
-  return `${fp.getFullYear()}-${String(fp.getMonth() + 1).padStart(2, '0')}-01`;
+  const firstPaymentDate = `${fp.getFullYear()}-${String(fp.getMonth() + 1).padStart(2, '0')}-01`;
+  return { fundingDate, firstPaymentDate };
 }
 
 export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loading }) {
@@ -162,7 +182,9 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
 
         {/* Purpose + Type + Term + Product Type */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-          <SelectField label="Purpose" value={scenario.purpose} options={PURPOSES} onChange={v => update('purpose', v)} />
+          <SelectField label="Purpose" value={scenario.purpose} options={PURPOSES} onChange={v => {
+            onChange({ ...scenario, purpose: v, ...deriveFromClosing(scenario.closingDate, scenario.state, v) });
+          }} />
           <SelectField label="Loan Type" value={scenario.loanType} options={LOAN_TYPES} onChange={v => update('loanType', v)} />
           <SelectField label="Term" value={scenario.term} options={TERMS.map(t => ({ value: t, label: `${t} Year` }))} onChange={v => update('term', Number(v))} />
           <SelectField label="Amortization" value={scenario.productType || 'fixed'} options={[{ value: 'fixed', label: 'Fixed' }, { value: 'arm', label: 'ARM' }]} onChange={v => update('productType', v)} />
@@ -229,7 +251,9 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
             />
             {scenario.county && <div className="text-[10px] text-cyan-600 mt-0.5">{scenario.county} County, {scenario.state}</div>}
           </div>
-          <SelectField label="State" value={scenario.state} options={STATES.map(s => ({ value: s, label: s }))} onChange={v => { update('state', v); update('county', ''); }} />
+          <SelectField label="State" value={scenario.state} options={STATES.map(s => ({ value: s, label: s }))} onChange={v => {
+            onChange({ ...scenario, state: v, county: '', ...deriveFromClosing(scenario.closingDate, v, scenario.purpose) });
+          }} />
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">County</label>
             <select
@@ -249,17 +273,7 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
           <Field
             label="Closing Date"
             value={scenario.closingDate || ''}
-            onChange={v => {
-              const fp = firstPaymentFromClosing(v);
-              onChange({
-                ...scenario,
-                closingDate: v,
-                // Auto-fill first payment only if not already manually set to a different value
-                firstPaymentDate: scenario.firstPaymentDate === firstPaymentFromClosing(scenario.closingDate)
-                  ? fp
-                  : scenario.firstPaymentDate,
-              });
-            }}
+            onChange={v => onChange({ ...scenario, closingDate: v, ...deriveFromClosing(v, scenario.state, scenario.purpose) })}
             type="date"
           />
           <Field label="Funding Date" value={scenario.fundingDate || ''} onChange={v => update('fundingDate', v)} type="date" />
@@ -313,7 +327,7 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
             <span className="text-gray-400 text-xs">Type</span>
             <div className="font-bold uppercase text-xs">{scenario.loanType}</div>
           </div>
-          <div className="border-l border-gray-700 pl-4">
+          <div className="border-l border-gray-700 pl-4 flex items-center gap-4">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -322,6 +336,15 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
                 className="w-3.5 h-3.5 rounded border-gray-600 bg-gray-800 text-cyan-500 focus:ring-cyan-500"
               />
               <span className="text-xs text-gray-300">Borrower-Paid</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={scenario.escrowsWaived || false}
+                onChange={e => update('escrowsWaived', e.target.checked)}
+                className="w-3.5 h-3.5 rounded border-gray-600 bg-gray-800 text-orange-400 focus:ring-orange-400"
+              />
+              <span className="text-xs text-gray-300">Waive Escrows</span>
             </label>
           </div>
         </div>

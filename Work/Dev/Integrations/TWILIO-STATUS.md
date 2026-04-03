@@ -1,8 +1,15 @@
 # Twilio Integration — Status Tracker
 
-**Last Updated:** 2026-04-01
-**Status:** A2P CAMPAIGN UNDER REVIEW — Attempt 8 submitted 2026-04-01. SID: QE2c6890da8086d771620e9b13fadeba0b
-**Last Checked:** 2026-04-01 — UNDER REVIEW. All previously known rejection causes addressed (direct lending attribute, placeholder URLs, embedded phone numbers).
+**Last Updated:** 2026-04-02
+**Status:** NEW BRAND + NEW CAMPAIGN UNDER REVIEW (Attempt 9)
+- Old brand "Locus Companies, LLC" (BN833ac569c1da950777cb4f5eedf3cfc2) deleted. Old campaign (CMd3230a74143a2db28fcf459a27de0604) deleted.
+- New brand: **NetRate Mortgage LLC** — Brand SID: BN9b673f9a4e57fd7fd349d5edc2418e84 | TCR ID: B9DIMGN | Status: Registered
+- New campaign: Campaign SID: CM7a8462a7c33e59df8a3ea3b610e0ff4a | Status: In progress (under review)
+- New messaging service: MG9a4cff84c48e6540c709ff5e59f12e39 (⚠️ different from old MG0eb6cca59bd54081d648905dbe9ce469 — verify phone number is linked and .env is updated)
+- Trust Hub A2P Bundle SID: BUfb70ed0b042c6d1117a4bf33f7003dff
+- Customer Profile SID: BUdcf0050723a1627790403f09f5aec130 (unchanged)
+- Cost: $4.50 brand + $15 campaign vetting = $19.50
+**Last Checked:** 2026-04-02 — Campaign submitted, under review. May take 2-3 weeks.
 
 ---
 
@@ -122,7 +129,8 @@ The approved privacy policy at locusmortgage.com/privacy-policy-2/ included:
 | +1 (720) 573-1236 | NetRate Dialer Line | Voice dialer + SMS | Low Volume Mixed A2P Messaging Service |
 
 **Voice webhook:** POST https://www.netratemortgage.com/api/dialer/incoming
-**Messaging:** Routed through "Low Volume Mixed A2P Messaging Service" (MG0eb6cca59bd54081d648905dbe9ce469)
+**Messaging:** Routed through "Low Volume Mixed A2P Messaging Service" (MG9a4cff84c48e6540c709ff5e59f12e39)
+**Old messaging service:** MG0eb6cca59bd54081d648905dbe9ce469 (deleted with old brand)
 
 Note: There was originally a SECOND phone number purchased during early campaign attempts. The first campaign was on the wrong number/service, so we started fresh with the current setup. Only one active number now.
 
@@ -130,17 +138,40 @@ Note: There was originally a SECOND phone number purchased during early campaign
 
 ## A2P 10DLC Campaign — Full Timeline
 
-### Brand Registration
+### Brand Registration (CURRENT — April 2, 2026)
+- **Brand SID:** BN9b673f9a4e57fd7fd349d5edc2418e84
+- **TCR ID:** B9DIMGN
+- **Entity:** NetRate Mortgage LLC
+- **Trust Hub A2P Bundle SID:** BUfb70ed0b042c6d1117a4bf33f7003dff
+- **Customer Profile SID:** BUdcf0050723a1627790403f09f5aec130
+- **Status:** REGISTERED
+- **Cost:** $4.50
+
+### Brand Registration (OLD — DELETED)
 - **Brand SID:** BN833ac569c1da950777cb4f5eedf3cfc2
 - **TCR ID:** BE8HMXR
 - **Entity:** Locus Companies LLC (legal name — DBA NetRate Mortgage)
-- **Status:** APPROVED, identity VERIFIED
+- **Status:** DELETED 2026-04-02
 
-### Campaign Submissions (8 attempts = $85.60 in registration fees @ $10.70 each)
+### Campaign Submissions (9 attempts = $100.60 total — 8 × $10.70 + 1 × $15.00)
 
-#### Attempt 8 — April 1, 2026 (UNDER REVIEW)
-- **Status:** UNDER REVIEW — all known blockers addressed
-- **Campaign SID:** QE2c6890da8086d771620e9b13fadeba0b
+#### Attempt 9 — April 2, 2026 (CURRENT — UNDER REVIEW)
+- **Status:** UNDER REVIEW — new brand "NetRate Mortgage LLC", fresh campaign
+- **Campaign SID:** CM7a8462a7c33e59df8a3ea3b610e0ff4a
+- **Messaging Service:** MG9a4cff84c48e6540c709ff5e59f12e39
+- **Brand:** NetRate Mortgage LLC (BN9b673f9a4e57fd7fd349d5edc2418e84)
+- **Submitted:** 2026-04-02
+- **What changed from attempt 8:**
+  - Registered NEW brand as "NetRate Mortgage LLC" (LLC name changed from Locus Companies LLC)
+  - Deleted old brand + old campaign + old messaging service entirely
+  - Fresh campaign under new brand — all config identical to attempt 8
+  - Phone number (+17205731236) re-linked to new messaging service
+  - 5 samples submitted (was 4 in attempt 8)
+- **Cost:** $4.50 (brand) + $15.00 (campaign vetting) = $19.50
+
+#### Attempt 8 — April 1, 2026 (DELETED — replaced by attempt 9)
+- **Status:** DELETED — old brand "Locus Companies, LLC" couldn't be renamed
+- **Campaign SID:** QE2c6890da8086d771620e9b13fadeba0b (deleted)
 - **Submitted:** 2026-04-01
 - **Fixes applied:**
   - Checked "Direct Lending or Loan Arrangement" content attribute (cause of attempt 7 instant rejection)

@@ -145,18 +145,6 @@ export default function QuoteRateResults({ pricing, selectedRates, onSelectRates
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {/* Escrows Waived toggle */}
-          <button
-            onClick={() => onEscrowsWaivedChange?.(!escrowsWaived)}
-            className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
-              escrowsWaived
-                ? 'bg-orange-100 text-orange-700 border-orange-300 hover:bg-orange-50'
-                : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
-            }`}
-            title="Toggle escrow waiver — affects LLPA"
-          >
-            {escrowsWaived ? 'Escrows Waived ✓' : 'Waive Escrows'}
-          </button>
           <div className="flex bg-gray-100 rounded-lg p-0.5">
             <button
               onClick={() => setViewMode('programs')}
