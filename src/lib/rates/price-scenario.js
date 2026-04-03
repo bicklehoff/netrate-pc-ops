@@ -126,7 +126,10 @@ export async function priceScenario(body) {
       continue;
     }
 
-    if (scenario.loanType === 'fha' && lenderData.fhaUfmip == null) {
+    // For FTHB cross-type, don't skip lenders missing FHA config — they may have HomeReady/HomePossible
+    const needsFha = scenario.loanType === 'fha';
+    const hasFthbCrossType = scenario.firstTimeBuyer && needsFha;
+    if (needsFha && lenderData.fhaUfmip == null && !hasFthbCrossType) {
       configWarnings.push(`${lenderName}: missing fhaUfmip in rate_lenders — set FHA UFMIP rate for FHA pricing`);
       continue;
     }
@@ -139,7 +142,8 @@ export async function priceScenario(body) {
     };
 
     const lenderAdj = await getDbLenderAdj(lenderId, scenario.loanType);
-    if (!lenderAdj) continue;
+    // If no adjustments for the selected loan type, skip — unless FTHB cross-type can still use convAdj
+    if (!lenderAdj && !hasFthbCrossType) continue;
 
     // Pre-load conventional adjustments if FTHB is checked and main type isn't conventional
     // (needed for HomeReady/HomePossible cross-type pricing)
@@ -191,6 +195,7 @@ export async function priceScenario(body) {
 
       // Use conventional adjustments for FTHB cross-type programs
       const useAdj = (isFthbVariant && program.loanType === 'conventional' && convAdj) ? convAdj : lenderAdj;
+      if (!useAdj) continue; // No adjustments available for this program type
       const pricingScenario = (isFthbVariant && program.loanType === 'conventional' && scenario.loanType !== 'conventional')
         ? { ...scenario, loanType: 'conventional' }
         : scenario;
