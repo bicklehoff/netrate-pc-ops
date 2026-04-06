@@ -12,9 +12,9 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("PC_DATABASE_URL")
-  directUrl = env("PC_DIRECT_URL")
+  provider = "postgresql"
+  url      = env("PC_DATABASE_URL")
+  // directUrl moved to prisma.config.ts (safe process.env with fallback)
 }
 
 // =============================================================================
@@ -876,10 +876,12 @@ model Lead {
   currentBalance     Decimal?  @map("current_balance") @db.Decimal(12, 2)
   currentLender      String?   @map("current_lender")
   mloId              String?   @map("mlo_id") @db.Uuid
+  viewToken          String?   @default(dbgenerated("gen_random_uuid()")) @map("view_token")
   contact            Contact?  @relation(fields: [contactId], references: [id])
   quotes             LeadQuote[]
   savedScenarios     SavedScenario[]
 
+  @@index([viewToken])
   @@map("leads")
 }
 

@@ -24,7 +24,7 @@ const FREQ_LABELS = { daily: 'Daily (Mon-Fri)', '3x_week': '3x / week', '2x_week
 const DAY_NAMES = { mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri' };
 const PROP_LABELS = { sfr: 'Single Family', condo: 'Condo', townhouse: 'Townhouse', '2unit': '2-Unit', '3unit': '3-Unit', '4unit': '4-Unit', mfr: 'Manufactured' };
 
-function ScenarioView({ scenario, token }) {
+function ScenarioView({ scenario }) {
   const sd = scenario.scenarioData || {};
   const rates = scenario.lastPricingData || [];
   const bestRate = rates[0];
@@ -364,7 +364,7 @@ function MyRatesContent() {
           </Link>
         </div>
       ) : (
-        <ScenarioView scenario={scenario} token={token} />
+        <ScenarioView scenario={scenario} />
       )}
 
       {/* Footer links */}
