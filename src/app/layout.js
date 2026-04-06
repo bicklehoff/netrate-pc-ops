@@ -176,6 +176,7 @@ export default function RootLayout({ children }) {
               </div>
               <a href="/about" className="text-gray-600 hover:text-brand transition-colors">About</a>
               <a href="/contact" className="text-gray-600 hover:text-brand transition-colors">Contact</a>
+              <a href="/portal/my-rates/access" className="text-gray-600 hover:text-brand transition-colors">My Rates</a>
               <a href="/portal/apply" className="bg-brand text-white px-4 py-2 rounded-lg hover:bg-brand-dark glow-brand transition-all">
                 Apply Now
               </a>
