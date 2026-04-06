@@ -224,6 +224,11 @@ export function ApplicationProvider({ children }) {
   const initialized = useRef(false);
 
   // BRP pre-fill: if ?from=brp&token=xxx, fetch lead data and merge
+  const [brpLoading, setBrpLoading] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const params = new URLSearchParams(window.location.search);
+    return params.get('from') === 'brp' && !!params.get('token');
+  });
   const brpLoaded = useRef(false);
   useEffect(() => {
     if (typeof window === 'undefined' || brpLoaded.current) return;
@@ -243,7 +248,6 @@ export function ApplicationProvider({ children }) {
           scenario?.scenarioData
         );
         setData(prev => {
-          // Only fill empty fields — don't overwrite existing data
           const merged = { ...prev };
           for (const [key, val] of Object.entries(prefill)) {
             if (val && !prev[key]) merged[key] = val;
@@ -251,7 +255,8 @@ export function ApplicationProvider({ children }) {
           return merged;
         });
       })
-      .catch(() => {}); // Non-blocking — form still works without pre-fill
+      .catch(() => {})
+      .finally(() => setBrpLoading(false));
   }, []);
 
   // Save to sessionStorage when data or step changes (skip initial)
@@ -359,6 +364,7 @@ export function ApplicationProvider({ children }) {
         addCoBorrower,
         removeCoBorrower,
         updateCoBorrower,
+        brpLoading,
       }}
     >
       {children}

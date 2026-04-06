@@ -309,11 +309,31 @@ export async function POST(request) {
       },
     });
 
-    // ─── Create LoanBorrower for Primary ─────────────────────
-    await prisma.loanBorrower.create({
-      data: {
+    // ─── Create/Update LoanBorrower for Primary ────────────────
+    await prisma.loanBorrower.upsert({
+      where: {
+        loanId_borrowerId: { loanId: loan.id, borrowerId: borrower.id },
+      },
+      create: {
         loanId: loan.id,
         borrowerId: borrower.id,
+        borrowerType: 'primary',
+        ordinal: 0,
+        maritalStatus: body.maritalStatus || null,
+        currentAddress: safeJson(body.currentAddress),
+        addressYears: safeInt(body.addressYears),
+        addressMonths: safeInt(body.addressMonths),
+        mailingAddress: body.mailingAddressSame ? null : safeJson(body.mailingAddress),
+        employmentStatus: body.employmentStatus || null,
+        employerName: body.employerName || null,
+        positionTitle: body.positionTitle || null,
+        yearsInPosition: safeInt(body.yearsInPosition),
+        monthlyBaseIncome: safeDecimal(body.monthlyBaseIncome),
+        otherMonthlyIncome: safeDecimal(body.otherMonthlyIncome),
+        otherIncomeSource: body.otherIncomeSource || null,
+        declarations,
+      },
+      update: {
         borrowerType: 'primary',
         ordinal: 0,
         maritalStatus: body.maritalStatus || null,
@@ -348,14 +368,35 @@ export async function POST(request) {
         dob: cb.dob,
       });
 
-      await prisma.loanBorrower.create({
-        data: {
+      await prisma.loanBorrower.upsert({
+        where: {
+          loanId_borrowerId: { loanId: loan.id, borrowerId: cbBorrower.id },
+        },
+        create: {
           loanId: loan.id,
           borrowerId: cbBorrower.id,
           borrowerType: 'co_borrower',
           ordinal: i + 1,
           relationship: cb.relationship || null,
-          maritalStatus: body.maritalStatus || null, // Shared marital status
+          maritalStatus: body.maritalStatus || null,
+          currentAddress: safeJson(cb.currentAddress),
+          addressYears: safeInt(cb.addressYears),
+          addressMonths: safeInt(cb.addressMonths),
+          mailingAddress: cb.mailingAddressSame ? null : safeJson(cb.mailingAddress),
+          employmentStatus: cb.employmentStatus || null,
+          employerName: cb.employerName || null,
+          positionTitle: cb.positionTitle || null,
+          yearsInPosition: safeInt(cb.yearsInPosition),
+          monthlyBaseIncome: safeDecimal(cb.monthlyBaseIncome),
+          otherMonthlyIncome: safeDecimal(cb.otherMonthlyIncome),
+          otherIncomeSource: cb.otherIncomeSource || null,
+          declarations: cb.declarations || null,
+        },
+        update: {
+          borrowerType: 'co_borrower',
+          ordinal: i + 1,
+          relationship: cb.relationship || null,
+          maritalStatus: body.maritalStatus || null,
           currentAddress: safeJson(cb.currentAddress),
           addressYears: safeInt(cb.addressYears),
           addressMonths: safeInt(cb.addressMonths),
