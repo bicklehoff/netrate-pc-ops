@@ -5,13 +5,44 @@
 'use client';
 
 import Link from 'next/link';
+import { useState } from 'react';
 import { ApplicationProvider } from '@/components/Portal/ApplicationContext';
+
+function SaveExitButton() {
+  const [saving, setSaving] = useState(false);
+
+  const handleSaveExit = () => {
+    // Data auto-saves to sessionStorage on every change —
+    // this button confirms it visually, then exits.
+    setSaving(true);
+    setTimeout(() => {
+      window.location.href = '/';
+    }, 800);
+  };
+
+  return saving ? (
+    <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600 font-medium">
+      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+      </svg>
+      Progress saved!
+    </span>
+  ) : (
+    <button
+      type="button"
+      onClick={handleSaveExit}
+      className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+    >
+      Save &amp; Exit
+    </button>
+  );
+}
 
 export default function ApplyLayout({ children }) {
   return (
     <ApplicationProvider>
       {/* Fixed full-screen overlay — hides portal nav/footer */}
-      <div className="fixed inset-0 z-[60] bg-gray-50 flex flex-col overflow-auto">
+      <div id="apply-scroll-container" className="fixed inset-0 z-[60] bg-gray-50 flex flex-col overflow-auto">
         {/* Minimal header — logo + security + exit */}
         <header className="bg-white border-b border-gray-200 sticky top-0 z-50 shrink-0">
           <div className="max-w-3xl mx-auto px-6 py-3.5 flex items-center justify-between">
@@ -27,12 +58,7 @@ export default function ApplyLayout({ children }) {
                 </svg>
                 AES-256 Encrypted
               </span>
-              <Link
-                href="/"
-                className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                ✕ Exit
-              </Link>
+              <SaveExitButton />
             </div>
           </div>
         </header>
@@ -45,7 +71,7 @@ export default function ApplyLayout({ children }) {
         {/* Minimal footer */}
         <footer className="border-t border-gray-100 shrink-0">
           <div className="max-w-3xl mx-auto px-6 py-4 text-center text-[11px] text-gray-400">
-            <p>Your information is encrypted and secure. We never share your data without consent.</p>
+            <p>Your progress is saved automatically. Your information is encrypted and secure.</p>
             <p className="mt-1">
               NetRate Mortgage | NMLS #1111861 | Equal Housing Opportunity
             </p>

@@ -250,9 +250,7 @@ export default async function RateWatchPage() {
     natDate = fl.MORTGAGE30US?.date || null;
   }
 
-  const rateChange = natRates?.conv30?.change
-    || fredData.latest?.MORTGAGE30US?.change
-    || 0;
+  const rateChange = natRates?.conv30?.change ?? 0;
 
   return (
     <div className="bg-slate-50 min-h-screen">

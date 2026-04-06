@@ -3,10 +3,20 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 
 export default function BorrowerLoginPage() {
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
+
+  // Pre-fill email from URL param (e.g., from success page)
+  useEffect(() => {
+    const prefillEmail = searchParams.get('email');
+    if (prefillEmail && !email) {
+      setEmail(prefillEmail);
+    }
+  }, [searchParams]);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);

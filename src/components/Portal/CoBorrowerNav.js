@@ -67,7 +67,9 @@ export default function CoBorrowerNav({
           type="button"
           onClick={() => {
             onTabChange(nextIncompleteTab);
-            window.scrollTo({ top: 200, behavior: 'smooth' });
+            const container = document.getElementById('apply-scroll-container');
+            if (container) container.scrollTo({ top: 0, behavior: 'smooth' });
+            else window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
           className="bg-brand text-white px-6 py-2.5 rounded-lg font-medium hover:bg-brand-dark transition-colors"
         >

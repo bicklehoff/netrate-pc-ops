@@ -185,7 +185,11 @@ function mapBrpToApplication(lead, scenarioData) {
   // Scenario → application mapping
   if (scenarioData) {
     const sd = scenarioData;
-    if (sd.purpose) prefill.purpose = sd.purpose === 'cashout' ? 'refinance' : sd.purpose;
+    if (sd.purpose) {
+      // Rate tool uses 'refi'/'cashout'; application uses 'purchase'/'refinance'
+      const purposeMap = { purchase: 'purchase', refi: 'refinance', cashout: 'refinance', refinance: 'refinance' };
+      prefill.purpose = purposeMap[sd.purpose] || sd.purpose;
+    }
     if (sd.propertyType) prefill.propertyType = sd.propertyType;
 
     if (sd.purpose === 'purchase') {
@@ -251,9 +255,11 @@ export function ApplicationProvider({ children }) {
           scenario?.scenarioData
         );
         setData(prev => {
+          // BRP data overrides sessionStorage — the borrower explicitly
+          // clicked "Apply with This Scenario" so their BRP data is authoritative.
           const merged = { ...prev };
           for (const [key, val] of Object.entries(prefill)) {
-            if (val && !prev[key]) merged[key] = val;
+            if (val) merged[key] = val;
           }
           return merged;
         });

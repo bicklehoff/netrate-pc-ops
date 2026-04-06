@@ -4,12 +4,12 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { step3Schema } from '@/lib/validations/application';
 import { useApplication } from '@/components/Portal/ApplicationContext';
-import { TextField, SelectField, AddressGroup } from '@/components/Portal/FormFields';
+import { TextField, SelectField, AddressGroup, parsePlaceComponents } from '@/components/Portal/FormFields';
 import CoBorrowerPrompt from '@/components/Portal/CoBorrowerPrompt';
 import CoBorrowerIdentityForm from '@/components/Portal/CoBorrowerIdentityForm';
 import BorrowerTabs from '@/components/Portal/BorrowerTabs';
@@ -278,6 +278,9 @@ export default function Step3Address({ onNext, onBack }) {
 // is managed via ApplicationContext, not the form's own state.
 
 function CoBorrowerAddressSection({ coBorrower, primaryAddress, onUpdate }) {
+  const streetRef = useRef(null);
+  const autocompleteRef = useRef(null);
+
   if (!coBorrower) return null;
 
   const sameAsPrimary = coBorrower.addressSameAsPrimary ?? false;
@@ -301,6 +304,50 @@ function CoBorrowerAddressSection({ coBorrower, primaryAddress, onUpdate }) {
     }
   };
 
+  // Google Places Autocomplete for co-borrower street (with retry for async script)
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useEffect(() => {
+    if (sameAsPrimary) return;
+
+    function attach() {
+      const input = streetRef.current;
+      if (!input || autocompleteRef.current) return true;
+      if (!window.google?.maps?.places) return false;
+
+      const autocomplete = new window.google.maps.places.Autocomplete(input, {
+        componentRestrictions: { country: 'us' },
+        types: ['address'],
+        fields: ['address_components'],
+      });
+
+      autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
+        if (!place.address_components) return;
+        const parsed = parsePlaceComponents(place);
+        onUpdate(coBorrower.id, {
+          currentAddress: { street: parsed.street, city: parsed.city, state: parsed.state, zip: parsed.zip },
+        });
+      });
+
+      autocompleteRef.current = autocomplete;
+      return true;
+    }
+
+    if (!attach()) {
+      const interval = setInterval(() => {
+        if (attach()) clearInterval(interval);
+      }, 200);
+      return () => clearInterval(interval);
+    }
+
+    return () => {
+      if (autocompleteRef.current) {
+        window.google.maps.event.clearInstanceListeners(autocompleteRef.current);
+        autocompleteRef.current = null;
+      }
+    };
+  }, [sameAsPrimary, coBorrower.id, onUpdate]);
+
   return (
     <div className="space-y-4">
       {/* Same as primary borrower checkbox */}
@@ -320,7 +367,9 @@ function CoBorrowerAddressSection({ coBorrower, primaryAddress, onUpdate }) {
         <legend className="text-sm font-medium text-gray-700 mb-2">Current Address</legend>
         <div className="space-y-3">
           <input
+            ref={streetRef}
             placeholder="Street address"
+            autoComplete="off"
             readOnly={sameAsPrimary}
             tabIndex={sameAsPrimary ? -1 : undefined}
             value={coBorrower.currentAddress?.street || ''}

@@ -333,13 +333,13 @@ export default function Step5Declarations({ onNext, onBack }) {
 }
 
 // ─── Co-Borrower Declarations Section ────────────────────────────
-// Simplified declarations for co-borrowers using controlled inputs.
-// Focuses on Section 5b (finances) + citizenship since 5a is property-specific.
+// Same structure as primary borrower — Section 5a (property) + 5b (finances).
 
-function CoBorrowerDeclarationsSection({ coBorrower, onUpdate }) {
+function CoBorrowerDeclarationsSection({ coBorrower, onUpdate, isPurchase }) {
   if (!coBorrower) return null;
 
   const decl = coBorrower.declarations || {};
+  const name = coBorrower.firstName || 'Co-Borrower';
 
   const setDecl = (field, value) => {
     onUpdate(coBorrower.id, {
@@ -350,10 +350,10 @@ function CoBorrowerDeclarationsSection({ coBorrower, onUpdate }) {
   return (
     <div className="space-y-6">
       <p className="text-sm text-gray-500 -mt-1">
-        Please answer these questions for {coBorrower.firstName || 'the co-borrower'}.
+        Please answer these questions for {name}.
       </p>
 
-      {/* Citizenship (moved to top) */}
+      {/* Citizenship */}
       <div>
         <h3 className="text-sm font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
           Citizenship
@@ -375,10 +375,77 @@ function CoBorrowerDeclarationsSection({ coBorrower, onUpdate }) {
         </div>
       </div>
 
+      {/* Section 5a — Property & Money */}
+      <div>
+        <h3 className="text-sm font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
+          About this Property and {name}&apos;s Money
+        </h3>
+        <div className="space-y-5">
+          <CoBorrowerYesNo
+            label="A. Will this property be the primary residence?"
+            value={decl.primaryResidence ?? true}
+            onChange={(v) => setDecl('primaryResidence', v)}
+          />
+
+          {(decl.primaryResidence ?? true) && (
+            <CoBorrowerYesNo
+              label="A1. Has the co-borrower owned any other property in the last 3 years?"
+              value={decl.priorOwnership3Years ?? false}
+              onChange={(v) => setDecl('priorOwnership3Years', v)}
+            />
+          )}
+
+          {(decl.primaryResidence ?? true) && decl.priorOwnership3Years && (
+            <div className="grid grid-cols-2 gap-4 pl-4 border-l-2 border-gray-100">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">A2. Type of property owned</label>
+                <select
+                  value={decl.priorPropertyType || ''}
+                  onChange={(e) => setDecl('priorPropertyType', e.target.value)}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg outline-none transition-colors bg-white focus:ring-2 focus:ring-brand/20 focus:border-brand"
+                >
+                  <option value="">Select...</option>
+                  {PROPERTY_TYPE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">How was title held?</label>
+                <select
+                  value={decl.priorPropertyTitleHeld || ''}
+                  onChange={(e) => setDecl('priorPropertyTitleHeld', e.target.value)}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg outline-none transition-colors bg-white focus:ring-2 focus:ring-brand/20 focus:border-brand"
+                >
+                  <option value="">Select...</option>
+                  {TITLE_HELD_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+
+          {isPurchase && (
+            <CoBorrowerYesNo
+              label="B. Does the co-borrower have a family relationship or business affiliation with the seller?"
+              value={decl.familyRelationshipSeller ?? false}
+              onChange={(v) => setDecl('familyRelationshipSeller', v)}
+            />
+          )}
+
+          <CoBorrowerYesNo
+            label="C. Is the co-borrower borrowing any money for this transaction that is not disclosed?"
+            value={decl.undisclosedBorrowing ?? false}
+            onChange={(v) => setDecl('undisclosedBorrowing', v)}
+          />
+        </div>
+      </div>
+
       {/* Section 5b — Finances */}
       <div>
         <h3 className="text-sm font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
-          About {coBorrower.firstName || 'Co-Borrower'}&apos;s Finances
+          About {name}&apos;s Finances
         </h3>
         <div className="space-y-5">
           <CoBorrowerYesNo label="F. Co-signer or guarantor on any undisclosed debt?" value={decl.coSignerOnDebt} onChange={(v) => setDecl('coSignerOnDebt', v)} />

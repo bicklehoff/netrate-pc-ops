@@ -442,7 +442,7 @@ export function PhoneField({ label = 'Phone', name, errors, setValue, watch, hel
 /**
  * Parse a Google Places result into street, city, state, zip.
  */
-function parsePlaceComponents(place) {
+export function parsePlaceComponents(place) {
   const components = place.address_components || [];
   const get = (type, form = 'long_name') =>
     components.find((c) => c.types.includes(type))?.[form] || '';
