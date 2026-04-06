@@ -20,6 +20,15 @@ const EMPLOYMENT_OPTIONS = [
   { value: 'other', label: 'Other' },
 ];
 
+const BUSINESS_TYPE_OPTIONS = [
+  { value: 'sole_proprietorship', label: 'Sole Proprietorship' },
+  { value: 'llc', label: 'LLC' },
+  { value: 's_corp', label: 'S-Corporation' },
+  { value: 'c_corp', label: 'C-Corporation' },
+  { value: 'partnership', label: 'Partnership' },
+  { value: 'other', label: 'Other' },
+];
+
 export default function Step4Employment({ onNext, onBack }) {
   const { data, updateData, updateCoBorrower } = useApplication();
 
@@ -39,6 +48,9 @@ export default function Step4Employment({ onNext, onBack }) {
       employerName: data.employerName || '',
       positionTitle: data.positionTitle || '',
       yearsInPosition: data.yearsInPosition ?? '',
+      selfEmployedOwnership: data.selfEmployedOwnership ?? '',
+      selfEmployedBusinessType: data.selfEmployedBusinessType || '',
+      selfEmployedYearsInBusiness: data.selfEmployedYearsInBusiness ?? '',
       monthlyBaseIncome: data.monthlyBaseIncome ?? '',
       otherMonthlyIncome: data.otherMonthlyIncome ?? '',
       otherIncomeSource: data.otherIncomeSource || '',
@@ -110,7 +122,7 @@ export default function Step4Employment({ onNext, onBack }) {
                   name="employerName"
                   register={register}
                   errors={errors}
-                  placeholder="Acme Corp"
+                  placeholder={employmentStatus === 'self_employed' ? 'My Business LLC' : 'Acme Corp'}
                 />
                 <div className="grid grid-cols-2 gap-4">
                   <TextField
@@ -118,7 +130,7 @@ export default function Step4Employment({ onNext, onBack }) {
                     name="positionTitle"
                     register={register}
                     errors={errors}
-                    placeholder="Senior Engineer"
+                    placeholder={employmentStatus === 'self_employed' ? 'Owner' : 'Senior Engineer'}
                   />
                   <TextField
                     label="Years in Position"
@@ -129,6 +141,45 @@ export default function Step4Employment({ onNext, onBack }) {
                     placeholder="3"
                   />
                 </div>
+
+                {/* Self-employed ownership questions */}
+                {employmentStatus === 'self_employed' && (
+                  <>
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                      <p className="text-sm font-medium text-amber-800 mb-1">Ownership Details</p>
+                      <p className="text-xs text-amber-600">
+                        If you own 25% or more of this business, we&apos;ll need some additional details.
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <TextField
+                        label="Ownership %"
+                        name="selfEmployedOwnership"
+                        type="number"
+                        register={register}
+                        errors={errors}
+                        placeholder="100"
+                        required
+                      />
+                      <SelectField
+                        label="Business Type"
+                        name="selfEmployedBusinessType"
+                        register={register}
+                        errors={errors}
+                        options={BUSINESS_TYPE_OPTIONS}
+                        required
+                      />
+                      <TextField
+                        label="Years in Business"
+                        name="selfEmployedYearsInBusiness"
+                        type="number"
+                        register={register}
+                        errors={errors}
+                        placeholder="5"
+                      />
+                    </div>
+                  </>
+                )}
               </>
             )}
 
@@ -182,6 +233,7 @@ export default function Step4Employment({ onNext, onBack }) {
             onTabChange={setActiveTab}
             nextStepLabel="Declarations"
             isTabComplete={isTabComplete}
+            sectionLabel="Employment"
           />
         ) : (
           <div className="flex justify-between pt-4">
@@ -246,7 +298,7 @@ function CoBorrowerEmploymentSection({ coBorrower, onUpdate }) {
               type="text"
               value={coBorrower.employerName || ''}
               onChange={(e) => handleChange('employerName', e.target.value)}
-              placeholder="Acme Corp"
+              placeholder={coBorrower.employmentStatus === 'self_employed' ? 'My Business LLC' : 'Acme Corp'}
               className="w-full px-4 py-2.5 border border-gray-300 rounded-lg outline-none transition-colors focus:ring-2 focus:ring-brand/20 focus:border-brand"
             />
           </div>
@@ -257,7 +309,7 @@ function CoBorrowerEmploymentSection({ coBorrower, onUpdate }) {
                 type="text"
                 value={coBorrower.positionTitle || ''}
                 onChange={(e) => handleChange('positionTitle', e.target.value)}
-                placeholder="Senior Engineer"
+                placeholder={coBorrower.employmentStatus === 'self_employed' ? 'Owner' : 'Senior Engineer'}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg outline-none transition-colors focus:ring-2 focus:ring-brand/20 focus:border-brand"
               />
             </div>
@@ -272,6 +324,57 @@ function CoBorrowerEmploymentSection({ coBorrower, onUpdate }) {
               />
             </div>
           </div>
+
+          {/* Self-employed ownership questions */}
+          {coBorrower.employmentStatus === 'self_employed' && (
+            <>
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <p className="text-sm font-medium text-amber-800 mb-1">Ownership Details</p>
+                <p className="text-xs text-amber-600">
+                  If {coBorrower.firstName || 'co-borrower'} owns 25% or more of this business, we&apos;ll need some additional details.
+                </p>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Ownership % <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={coBorrower.selfEmployedOwnership ?? ''}
+                    onChange={(e) => handleChange('selfEmployedOwnership', e.target.value)}
+                    placeholder="100"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg outline-none transition-colors focus:ring-2 focus:ring-brand/20 focus:border-brand"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Business Type <span className="text-red-400">*</span>
+                  </label>
+                  <select
+                    value={coBorrower.selfEmployedBusinessType || ''}
+                    onChange={(e) => handleChange('selfEmployedBusinessType', e.target.value)}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg outline-none transition-colors bg-white focus:ring-2 focus:ring-brand/20 focus:border-brand"
+                  >
+                    <option value="">Select...</option>
+                    {BUSINESS_TYPE_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Years in Business</label>
+                  <input
+                    type="number"
+                    value={coBorrower.selfEmployedYearsInBusiness ?? ''}
+                    onChange={(e) => handleChange('selfEmployedYearsInBusiness', e.target.value)}
+                    placeholder="5"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg outline-none transition-colors focus:ring-2 focus:ring-brand/20 focus:border-brand"
+                  />
+                </div>
+              </div>
+            </>
+          )}
         </>
       )}
 

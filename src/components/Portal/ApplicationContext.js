@@ -59,6 +59,9 @@ const DEFAULT_DATA = {
   employerName: '',
   positionTitle: '',
   yearsInPosition: '',
+  selfEmployedOwnership: '',    // 25%+ ownership percentage
+  selfEmployedBusinessType: '', // LLC, S-Corp, etc.
+  selfEmployedYearsInBusiness: '',
   monthlyBaseIncome: '',
   otherMonthlyIncome: '',
   otherIncomeSource: '',

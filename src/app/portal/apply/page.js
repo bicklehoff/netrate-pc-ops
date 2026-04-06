@@ -13,7 +13,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { step1Schema } from '@/lib/validations/application';
 import { useApplication } from '@/components/Portal/ApplicationContext';
 import StepIndicator from '@/components/Portal/StepIndicator';
-import { TextField, SSNField, SelectField } from '@/components/Portal/FormFields';
+import { TextField, SSNField, SelectField, PhoneField } from '@/components/Portal/FormFields';
 
 const STEPS = ['About You', 'Property', 'Address', 'Employment', 'Declarations', 'Review'];
 
@@ -156,45 +156,13 @@ export default function ApplyPage() {
             />
 
             {/* Phone — auto-formatted as (XXX) XXX-XXXX */}
-            <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-                Phone <span className="text-red-400">*</span>
-              </label>
-              <input
-                id="phone"
-                type="tel"
-                inputMode="tel"
-                placeholder="(303) 555-1234"
-                value={watch('phone') || ''}
-                onChange={(e) => {
-                  const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
-                  let formatted = digits;
-                  if (digits.length > 6) {
-                    formatted = `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
-                  } else if (digits.length > 3) {
-                    formatted = `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
-                  } else if (digits.length > 0) {
-                    formatted = `(${digits}`;
-                  }
-                  setValue('phone', formatted, { shouldValidate: true });
-                }}
-                className={`
-                  w-full px-4 py-2.5 border rounded-lg outline-none transition-colors
-                  ${errors?.phone
-                    ? 'border-red-300 focus:ring-2 focus:ring-red-100 focus:border-red-400'
-                    : 'border-gray-300 focus:ring-2 focus:ring-brand/20 focus:border-brand'
-                  }
-                `}
-              />
-              {!errors?.phone && (
-                <p className="text-xs text-gray-400 mt-1">
-                  We&apos;ll text a verification code to this number when you log in to check your loan status.
-                </p>
-              )}
-              {errors?.phone && (
-                <p className="text-xs text-red-500 mt-1">{errors.phone.message}</p>
-              )}
-            </div>
+            <PhoneField
+              name="phone"
+              setValue={setValue}
+              watch={watch}
+              errors={errors}
+              helper="We'll text a verification code to this number when you log in to check your loan status."
+            />
 
             {/* Security callout before PII fields */}
             <div className="flex items-start gap-3 bg-gray-50 border border-gray-200 rounded-lg p-4 -mb-1">

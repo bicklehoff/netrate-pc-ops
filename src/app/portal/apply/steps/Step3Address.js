@@ -202,6 +202,7 @@ export default function Step3Address({ onNext, onBack }) {
         {hasCoBorrowers && activeAddressTab !== 'primary' && (
           <CoBorrowerAddressSection
             coBorrower={data.coBorrowers.find((cb) => cb.id === activeAddressTab)}
+            primaryAddress={data.currentAddress}
             onUpdate={updateCoBorrower}
           />
         )}
@@ -247,6 +248,7 @@ export default function Step3Address({ onNext, onBack }) {
             onTabChange={setActiveAddressTab}
             nextStepLabel="Employment"
             isTabComplete={isAddressTabComplete}
+            sectionLabel="Address"
           />
         ) : (
           <div className="flex justify-between pt-4">
@@ -275,8 +277,10 @@ export default function Step3Address({ onNext, onBack }) {
 // Uses controlled inputs (not react-hook-form) since co-borrower data
 // is managed via ApplicationContext, not the form's own state.
 
-function CoBorrowerAddressSection({ coBorrower, onUpdate }) {
+function CoBorrowerAddressSection({ coBorrower, primaryAddress, onUpdate }) {
   if (!coBorrower) return null;
+
+  const sameAsPrimary = coBorrower.addressSameAsPrimary ?? false;
 
   const handleChange = (field, value) => {
     onUpdate(coBorrower.id, { [field]: value });
@@ -288,36 +292,66 @@ function CoBorrowerAddressSection({ coBorrower, onUpdate }) {
     });
   };
 
+  const handleSameAsPrimary = (checked) => {
+    onUpdate(coBorrower.id, { addressSameAsPrimary: checked });
+    if (checked && primaryAddress) {
+      onUpdate(coBorrower.id, {
+        currentAddress: { ...primaryAddress },
+      });
+    }
+  };
+
   return (
     <div className="space-y-4">
+      {/* Same as primary borrower checkbox */}
+      {primaryAddress?.street && (
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={sameAsPrimary}
+            onChange={(e) => handleSameAsPrimary(e.target.checked)}
+            className="w-4 h-4 rounded border-gray-300 text-brand focus:ring-brand"
+          />
+          <span className="text-sm text-gray-700">Same address as primary borrower</span>
+        </label>
+      )}
+
       <fieldset>
         <legend className="text-sm font-medium text-gray-700 mb-2">Current Address</legend>
         <div className="space-y-3">
           <input
             placeholder="Street address"
+            readOnly={sameAsPrimary}
+            tabIndex={sameAsPrimary ? -1 : undefined}
             value={coBorrower.currentAddress?.street || ''}
             onChange={(e) => handleAddressChange('street', e.target.value)}
-            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg outline-none transition-colors focus:ring-2 focus:ring-brand/20 focus:border-brand"
+            className={`w-full px-4 py-2.5 border border-gray-300 rounded-lg outline-none transition-colors focus:ring-2 focus:ring-brand/20 focus:border-brand ${sameAsPrimary ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''}`}
           />
           <div className="grid grid-cols-6 gap-3">
             <input
-              className="col-span-3 px-4 py-2.5 border border-gray-300 rounded-lg outline-none transition-colors focus:ring-2 focus:ring-brand/20 focus:border-brand"
+              className={`col-span-3 px-4 py-2.5 border border-gray-300 rounded-lg outline-none transition-colors focus:ring-2 focus:ring-brand/20 focus:border-brand ${sameAsPrimary ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''}`}
               placeholder="City"
+              readOnly={sameAsPrimary}
+              tabIndex={sameAsPrimary ? -1 : undefined}
               value={coBorrower.currentAddress?.city || ''}
               onChange={(e) => handleAddressChange('city', e.target.value)}
             />
             <input
-              className="col-span-1 px-4 py-2.5 border border-gray-300 rounded-lg outline-none transition-colors uppercase focus:ring-2 focus:ring-brand/20 focus:border-brand"
+              className={`col-span-1 px-4 py-2.5 border border-gray-300 rounded-lg outline-none transition-colors uppercase focus:ring-2 focus:ring-brand/20 focus:border-brand ${sameAsPrimary ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''}`}
               placeholder="ST"
               maxLength={2}
+              readOnly={sameAsPrimary}
+              tabIndex={sameAsPrimary ? -1 : undefined}
               value={coBorrower.currentAddress?.state || ''}
               onChange={(e) => handleAddressChange('state', e.target.value)}
             />
             <input
-              className="col-span-2 px-4 py-2.5 border border-gray-300 rounded-lg outline-none transition-colors focus:ring-2 focus:ring-brand/20 focus:border-brand"
+              className={`col-span-2 px-4 py-2.5 border border-gray-300 rounded-lg outline-none transition-colors focus:ring-2 focus:ring-brand/20 focus:border-brand ${sameAsPrimary ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''}`}
               placeholder="ZIP"
               maxLength={5}
               inputMode="numeric"
+              readOnly={sameAsPrimary}
+              tabIndex={sameAsPrimary ? -1 : undefined}
               value={coBorrower.currentAddress?.zip || ''}
               onChange={(e) => handleAddressChange('zip', e.target.value)}
             />

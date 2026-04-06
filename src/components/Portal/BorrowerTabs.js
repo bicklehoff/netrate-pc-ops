@@ -1,6 +1,7 @@
 // Borrower Tab Bar — switches between primary and co-borrower forms
 // Shows "You" tab + one tab per co-borrower with their name.
 // Displays a green checkmark badge when a tab's data is complete.
+// Prominent styling makes it clear this is the way to switch between borrowers.
 
 'use client';
 
@@ -14,35 +15,43 @@ export default function BorrowerTabs({ coBorrowers, activeTab, onTabChange, isTa
   ];
 
   return (
-    <div className="flex gap-1 border-b border-gray-200 mb-6">
-      {tabs.map((tab) => {
-        const isActive = activeTab === tab.id;
-        const complete = isTabComplete?.(tab.id);
+    <div className="bg-gray-50 border border-gray-200 rounded-lg p-1 mb-6">
+      <p className="text-[11px] text-gray-400 px-2 pt-1 pb-2">
+        Switch between borrowers to fill in each person&apos;s details:
+      </p>
+      <div className="flex gap-1">
+        {tabs.map((tab) => {
+          const isActive = activeTab === tab.id;
+          const complete = isTabComplete?.(tab.id);
 
-        return (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => onTabChange(tab.id)}
-            className={`
-              relative px-4 py-2.5 text-sm font-medium transition-colors rounded-t-lg
-              ${isActive
-                ? 'text-brand border-b-2 border-brand bg-white'
-                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-              }
-            `}
-          >
-            <span className="flex items-center gap-1.5">
-              {tab.label}
-              {complete && (
-                <svg className="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => onTabChange(tab.id)}
+              className={`
+                flex-1 px-4 py-2.5 text-sm font-medium transition-colors rounded-lg
+                ${isActive
+                  ? 'bg-white text-brand shadow-sm border border-brand/30'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-white/50'
+                }
+              `}
+            >
+              <span className="flex items-center justify-center gap-1.5">
+                <svg className={`w-4 h-4 ${isActive ? 'text-brand' : 'text-gray-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
-              )}
-            </span>
-          </button>
-        );
-      })}
+                {tab.label}
+                {complete && (
+                  <svg className="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </span>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
