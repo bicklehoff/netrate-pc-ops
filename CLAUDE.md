@@ -109,7 +109,10 @@ All departments have full access to code and docs. Ownership rules apply to **do
 Ask: "Which department should I work as? (Dev, Admin, or Setup)"
 
 **Critical Dev Rules:**
-- **Commit often** with descriptive messages. Push to main = Vercel auto-deploys.
+- **NEVER push directly to main.** Branch protection is enabled — direct pushes are rejected.
+- **All work happens on a branch.** Workflow: `git checkout -b fix/description` → commit → `git push -u origin fix/description` → create PR. David merges when ready.
+- **Branch naming:** `fix/` for bug fixes, `feature/` for new features, `docs/` for documentation.
+- **Commit often** with descriptive messages within your branch.
 - **No tracker writes.** All trackers live on Mac. Log your work in SESSION-LOG; David relays to Mac.
 - **Read DEV-PLAYBOOK.md** for hard-won patterns (Prisma, deployment, etc.)
 
@@ -229,7 +232,7 @@ Mac writes marketing copy → pushes to netrate-ops → PC reads from GitHub
 Claw writes content pages → pushes to netrate-claw-ops → Claw deploys
 Mac writes rate tool source → pushes to netrate-ops → PC reads for porting
 Mac updates trackers → Neon Postgres reflects changes → TrackerPortal dashboard
-PC builds website → pushes to netrate-pc-ops → Vercel auto-deploys from repo root
+PC builds website → pushes branch to netrate-pc-ops → PR merged to main → Vercel auto-deploys
 PC completes tracked work → writes completion report to RELAY.md → Mac validates via enforcement system
 All devices share context → MCP knowledge layer (Neon Postgres) → get_briefing / log_session / capture_thought
 Cross-device proposals/questions → post to RELAY.md in netrate-governance → other device pulls and reads
