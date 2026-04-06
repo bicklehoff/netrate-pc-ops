@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 
 const FREQUENCY_OPTIONS = [
-  { value: 'daily', label: 'Daily (Mon–Fri)', days: ['mon', 'tue', 'wed', 'thu', 'fri'] },
+  { value: 'daily', label: 'Daily (Mon-Fri)', days: ['mon', 'tue', 'wed', 'thu', 'fri'] },
   { value: '3x_week', label: '3x / week', days: ['mon', 'wed', 'fri'] },
   { value: '2x_week', label: '2x / week', days: ['tue', 'thu'] },
   { value: 'weekly', label: 'Weekly', days: ['mon'] },
@@ -17,7 +17,10 @@ const ALL_DAYS = [
   { value: 'fri', label: 'Fri' },
 ];
 
-export default function SaveScenarioModal({ scenario, onClose, prefillName, prefillEmail, prefillPhone }) {
+export default function SaveScenarioModal({ scenario, onClose, prefillName, prefillEmail, prefillPhone, brpToken }) {
+  // If brpToken is present, this is an update from the BRP — skip contact info
+  const isUpdate = !!brpToken;
+
   const [name, setName] = useState(prefillName || '');
   const [email, setEmail] = useState(prefillEmail || '');
   const [phone, setPhone] = useState(prefillPhone || '');
@@ -25,7 +28,7 @@ export default function SaveScenarioModal({ scenario, onClose, prefillName, pref
   const [days, setDays] = useState(['tue', 'thu']);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [viewToken, setViewToken] = useState(null);
+  const [viewToken, setViewToken] = useState(brpToken || null);
   const [countdown, setCountdown] = useState(null);
   const [error, setError] = useState(null);
 
@@ -87,24 +90,42 @@ export default function SaveScenarioModal({ scenario, onClose, prefillName, pref
     setSubmitting(true);
     setError(null);
     try {
-      const res = await fetch('/api/saved-scenario', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name,
-          email,
-          phone: phone || undefined,
-          scenarioData: scenario,
-          alertFrequency: frequency,
-          alertDays: days,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Something went wrong. Please try again.');
+      if (isUpdate) {
+        // Update existing scenario via BRP token
+        const res = await fetch('/api/saved-scenario/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            token: brpToken,
+            scenarioData: scenario,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || 'Update failed. Please try again.');
+        }
+        setSubmitted(true);
+      } else {
+        // New save — requires contact info
+        const res = await fetch('/api/saved-scenario', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name,
+            email,
+            phone: phone || undefined,
+            scenarioData: scenario,
+            alertFrequency: frequency,
+            alertDays: days,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || 'Something went wrong. Please try again.');
+        }
+        if (data.viewToken) setViewToken(data.viewToken);
+        setSubmitted(true);
       }
-      if (data.viewToken) setViewToken(data.viewToken);
-      setSubmitted(true);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -118,7 +139,7 @@ export default function SaveScenarioModal({ scenario, onClose, prefillName, pref
         {/* Header */}
         <div className="bg-brand px-6 py-4 flex items-center justify-between">
           <h2 className="text-white font-semibold text-lg">
-            {submitted ? 'You\u2019re All Set' : 'Save & Track Your Rates'}
+            {submitted ? 'You\u2019re All Set' : isUpdate ? 'Update Your Scenario' : 'Save & Track Your Rates'}
           </h2>
           <button onClick={onClose} className="text-white/70 hover:text-white transition-colors">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -135,20 +156,27 @@ export default function SaveScenarioModal({ scenario, onClose, prefillName, pref
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h3 className="text-lg font-bold text-gray-900 mb-2">Scenario Saved</h3>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">
+                {isUpdate ? 'Scenario Updated' : 'Scenario Saved'}
+              </h3>
               <p className="text-sm text-gray-600 mb-1">
-                We&apos;ll send rate updates to <strong>{email}</strong> — each one reviewed by your loan officer before it reaches you.
+                {isUpdate
+                  ? 'Your scenario has been updated with the latest pricing.'
+                  : <>We&apos;ll send rate updates to <strong>{email}</strong> — each one reviewed by your loan officer before it reaches you.</>
+                }
               </p>
-              <p className="text-xs text-gray-400 mb-4">
-                Check your inbox for a welcome email with your scenario details.
-              </p>
+              {!isUpdate && (
+                <p className="text-xs text-gray-400 mb-4">
+                  Check your inbox for a welcome email with your scenario details.
+                </p>
+              )}
               {viewToken ? (
                 <>
                   <a
                     href={`/portal/my-rates?token=${viewToken}`}
                     className="inline-block bg-brand text-white rounded-lg px-6 py-2.5 text-sm font-semibold hover:bg-brand-dark transition-colors"
                   >
-                    Go to My Rates Portal →
+                    Go to My Rates Portal
                   </a>
                   {countdown != null && countdown > 0 && (
                     <p className="text-xs text-gray-400 mt-2">Redirecting in {countdown}...</p>
@@ -160,7 +188,26 @@ export default function SaveScenarioModal({ scenario, onClose, prefillName, pref
                 </button>
               )}
             </div>
+          ) : isUpdate ? (
+            // Update mode — no contact info needed, just confirm
+            <>
+              <div className="bg-cyan-50 rounded-lg p-4 mb-4 border border-cyan-100">
+                <p className="text-sm text-gray-700">
+                  Update your saved scenario with these new inputs? Your rate alerts will use this updated scenario going forward.
+                </p>
+              </div>
+
+              <form onSubmit={handleSubmit}>
+                {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
+
+                <button type="submit" disabled={submitting}
+                  className="w-full bg-brand text-white rounded-lg py-3 font-semibold hover:bg-brand-dark transition-colors disabled:opacity-50">
+                  {submitting ? 'Updating...' : 'Update My Scenario'}
+                </button>
+              </form>
+            </>
           ) : (
+            // New save mode — full form
             <>
               {/* Value prop explainer */}
               <div className="bg-cyan-50 rounded-lg p-4 mb-4 border border-cyan-100">

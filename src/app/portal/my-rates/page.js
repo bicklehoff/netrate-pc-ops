@@ -24,7 +24,26 @@ const FREQ_LABELS = { daily: 'Daily (Mon-Fri)', '3x_week': '3x / week', '2x_week
 const DAY_NAMES = { mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri' };
 const PROP_LABELS = { sfr: 'Single Family', condo: 'Condo', townhouse: 'Townhouse', '2unit': '2-Unit', '3unit': '3-Unit', '4unit': '4-Unit', mfr: 'Manufactured' };
 
-function ScenarioView({ scenario }) {
+/** Build a /rates URL pre-filled with scenario inputs + BRP token */
+function buildRepriceUrl(sd, token) {
+  const params = new URLSearchParams();
+  if (token) params.set('token', token);
+  if (sd.purpose) params.set('purpose', sd.purpose);
+  if (sd.loanType) params.set('loanType', sd.loanType);
+  if (sd.propertyType) params.set('propertyType', sd.propertyType);
+  if (sd.propertyValue) params.set('propertyValue', sd.propertyValue);
+  if (sd.downPaymentPct) params.set('downPaymentPct', sd.downPaymentPct);
+  if (sd.loanAmount) params.set('loanAmount', sd.loanAmount);
+  if (sd.fico) params.set('fico', sd.fico);
+  if (sd.term) params.set('term', sd.term);
+  if (sd.state) params.set('state', sd.state);
+  if (sd.county) params.set('county', sd.county);
+  if (sd.currentPayoff) params.set('currentPayoff', sd.currentPayoff);
+  if (sd.currentRate) params.set('currentRate', sd.currentRate);
+  return `/rates?${params.toString()}`;
+}
+
+function ScenarioView({ scenario, token }) {
   const sd = scenario.scenarioData || {};
   const rates = scenario.lastPricingData || [];
   const bestRate = rates[0];
@@ -204,7 +223,7 @@ function ScenarioView({ scenario }) {
                   })()}
                 </div>
                 <Link
-                  href="/rates"
+                  href={buildRepriceUrl(sd, token)}
                   className="bg-brand text-white rounded-lg px-5 py-2.5 text-sm font-semibold hover:bg-brand-dark transition-colors"
                 >
                   Reprice Now
@@ -364,7 +383,7 @@ function MyRatesContent() {
           </Link>
         </div>
       ) : (
-        <ScenarioView scenario={scenario} />
+        <ScenarioView scenario={scenario} token={token} />
       )}
 
       {/* Footer links */}

@@ -49,6 +49,23 @@ export default async function RatesPage({ searchParams }) {
   const sp = await searchParams;
   const defaultState = sp?.state || null;
 
+  // BRP reprice flow: pre-fill scenario from URL params
+  const prefill = {};
+  if (sp?.purpose) prefill.purpose = sp.purpose;
+  if (sp?.loanType) prefill.loanType = sp.loanType;
+  if (sp?.propertyType) prefill.propertyType = sp.propertyType;
+  if (sp?.propertyValue) prefill.propertyValue = Number(sp.propertyValue);
+  if (sp?.downPaymentPct) prefill.downPaymentPct = Number(sp.downPaymentPct);
+  if (sp?.loanAmount) prefill.loanAmount = Number(sp.loanAmount);
+  if (sp?.fico) prefill.fico = Number(sp.fico);
+  if (sp?.term) prefill.term = Number(sp.term);
+  if (sp?.county) prefill.county = sp.county;
+  if (sp?.currentPayoff) prefill.currentPayoff = Number(sp.currentPayoff);
+  if (sp?.currentRate) prefill.currentRate = Number(sp.currentRate);
+
+  // BRP token — if present, user came from their rate portal
+  const brpToken = sp?.token || null;
+
   return (
     <div>
       <TrustBar />
@@ -58,7 +75,7 @@ export default async function RatesPage({ searchParams }) {
         </p>
       </div>
       <div className="max-w-3xl mx-auto px-4 py-4">
-      <RateTool initialRateData={rateData} defaultState={defaultState} />
+      <RateTool initialRateData={rateData} defaultState={defaultState} prefill={Object.keys(prefill).length ? prefill : null} brpToken={brpToken} />
 
       {/* Strike Rate / Rate Alert signup */}
       <div className="mt-10">
