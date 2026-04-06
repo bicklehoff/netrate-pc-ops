@@ -6,6 +6,7 @@
 
 export const STATUS_LABELS = {
   draft: 'Prospect',
+  rate_alert: 'Rate Alert',
   applied: 'Applied',
   processing: 'Processing',
   submitted_uw: 'Submitted to UW',

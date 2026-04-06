@@ -14,6 +14,7 @@ import { createLoanFolder } from '@/lib/zoho-workdrive';
 import { checkApplicationGate } from '@/lib/application-gate';
 import { sendEmail } from '@/lib/resend';
 import { statusChangeTemplate } from '@/lib/email-templates/borrower';
+import { getInitialDocList } from '@/lib/constants/initial-doc-list';
 
 // ─── Rate Limiting (in-memory, per IP) ──────────────────────
 // 5 submissions per hour per IP. Map auto-cleans expired entries.
@@ -422,7 +423,7 @@ export async function POST(request) {
         eventType: 'status_change',
         actorType: 'borrower',
         actorId: borrower.id,
-        oldValue: 'draft',
+        oldValue: 'rate_alert',
         newValue: 'applied',
         details: {
           source: 'web_application',
@@ -431,6 +432,32 @@ export async function POST(request) {
         },
       },
     });
+
+    // ─── Create Initial Document Requests ───────────────────
+    try {
+      const docList = getInitialDocList({
+        purpose: body.purpose,
+        employmentStatus: body.employmentStatus,
+        coBorrowers: (body.coBorrowers || []).map((cb) => ({
+          firstName: cb.firstName,
+          employmentStatus: cb.employmentStatus,
+        })),
+      });
+
+      if (docList.length > 0) {
+        await prisma.document.createMany({
+          data: docList.map((item) => ({
+            loanId: loan.id,
+            docType: item.docType,
+            label: item.label,
+            status: 'requested',
+            notes: item.notes || null,
+          })),
+        });
+      }
+    } catch (docListErr) {
+      console.error('Initial doc list creation failed (non-fatal):', docListErr?.message);
+    }
 
     // ─── Link Contact + Application Gate (non-blocking) ───
     try {
