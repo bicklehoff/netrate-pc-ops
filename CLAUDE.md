@@ -184,6 +184,10 @@ src/
 
 Must use `www.netratemortgage.com` (not bare domain — Vercel redirects bare → www, causing 405).
 
+## Vercel — CRITICAL SAFETY RULE
+
+**The Vercel project is `netrate-mortgage-site`.** NEVER run `vercel link`, `vercel --yes`, or any Vercel CLI command that could create a new project. Always use `--project netrate-mortgage-site` when linking. Before any `vercel` command, run `cat .vercel/project.json` to confirm you're linked to the correct project. See DEV-PLAYBOOK.md for details.
+
 ## Dev Commands
 
 ```bash

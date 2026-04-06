@@ -88,9 +88,29 @@ Vercel shows "Ready" when the build succeeds. Runtime errors (bad DB queries, mi
 3. Check for `PrismaClientKnownRequestError` or 500s on API routes
 4. If clean, verify the affected page loads in browser
 
-### Vercel dashboard URL
-The team slug is `bicklehoffs-projects` (not `bicklehoff`):
-`https://vercel.com/bicklehoffs-projects/netrate-mortgage-site/`
+### Vercel project: netrate-mortgage-site (NEVER create a new project)
+The production site deploys from the Vercel project **`netrate-mortgage-site`** — NOT `netrate-pc-ops` or any other name. This project has all env vars, the custom domain (`www.netratemortgage.com`), and the GitHub integration.
+
+**NEVER run `vercel link --yes` or `vercel --yes` without `--project netrate-mortgage-site`.** The `--yes` flag skips the "link to existing project?" prompt and silently creates a NEW empty project, which then auto-connects to the same GitHub repo — causing duplicate builds, one of which always fails (no env vars). This happened on 2026-04-03 and caused 3 days of failed deploy noise.
+
+**Safe commands:**
+```bash
+# Link this repo (only if .vercel/project.json is missing)
+vercel link --yes --project netrate-mortgage-site
+
+# Add an env var
+vercel env add VAR_NAME production
+
+# Check what project you're linked to
+cat .vercel/project.json
+```
+
+**Before ANY `vercel` CLI command**, verify you're linked to the right project:
+```bash
+cat .vercel/project.json   # Should show projectName: netrate-mortgage-site
+```
+
+Dashboard: `https://vercel.com/bicklehoffs-projects/netrate-mortgage-site/`
 
 ---
 
