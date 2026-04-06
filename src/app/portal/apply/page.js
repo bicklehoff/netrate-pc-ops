@@ -24,7 +24,7 @@ const PURPOSE_OPTIONS = [
 
 export default function ApplyPage() {
   const router = useRouter();
-  const { data, updateData, setCurrentStep, stepCompletions } = useApplication();
+  const { data, updateData, setCurrentStep, stepCompletions, brpLoading } = useApplication();
 
   // Detect if the user already has data in later steps (returning to re-enter PII)
   const hasLaterStepsData = stepCompletions[2] || stepCompletions[3] || stepCompletions[4] || stepCompletions[5];
@@ -74,6 +74,18 @@ export default function ApplyPage() {
     }
     router.push(`/portal/apply/${targetStep}`);
   };
+
+  // Wait for BRP pre-fill before rendering form (prevents stale defaultValues)
+  if (brpLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-brand border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm text-gray-500">Loading your scenario details...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
