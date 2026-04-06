@@ -5,6 +5,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { priceScenario } from '@/lib/rates/price-scenario';
+import { calcMonthlyPI } from '@/lib/rates/math';
 
 export async function POST(request) {
   try {
@@ -52,15 +53,18 @@ export async function POST(request) {
     };
 
     const result = await priceScenario(pricingInput);
+    const loanAmt = sd.loanAmount;
+    const term = sd.term || 30;
     const topRates = (result.results || [])
       .sort((a, b) => a.rate - b.rate)
       .slice(0, 3)
       .map(r => ({
         rate: r.rate,
-        apr: r.apr,
-        monthlyPI: r.monthlyPI,
-        price: r.price,
-        lenderName: r.lenderName,
+        apr: r.apr || null,
+        monthlyPI: r.monthlyPI || calcMonthlyPI(r.rate, loanAmt, term),
+        price: r.finalPrice || r.price || null,
+        lenderName: r.lender || r.lenderName || null,
+        program: r.program || null,
         rebateDollars: r.rebateDollars,
         discountDollars: r.discountDollars,
         lenderFee: r.lenderFee,

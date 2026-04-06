@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma';
 import { priceScenario } from '@/lib/rates/price-scenario';
 import { sendEmail } from '@/lib/resend';
 import { rateAlertWelcomeTemplate } from '@/lib/email-templates/borrower';
+import { calcMonthlyPI } from '@/lib/rates/math';
 
 const FREQUENCY_DEFAULTS = {
   daily: ['mon', 'tue', 'wed', 'thu', 'fri'],
@@ -65,15 +66,18 @@ export async function POST(request) {
       };
       const result = await priceScenario(pricingInput);
       // Store top 3 results as initial snapshot
+      const loanAmt = scenarioData.loanAmount;
+      const term = scenarioData.term || 30;
       initialPricing = (result.results || [])
         .sort((a, b) => a.rate - b.rate)
         .slice(0, 3)
         .map(r => ({
           rate: r.rate,
-          apr: r.apr,
-          monthlyPI: r.monthlyPI,
-          price: r.price,
-          lenderName: r.lenderName,
+          apr: r.apr || null,
+          monthlyPI: r.monthlyPI || calcMonthlyPI(r.rate, loanAmt, term),
+          price: r.finalPrice || r.price || null,
+          lenderName: r.lender || r.lenderName || null,
+          program: r.program || null,
           rebateDollars: r.rebateDollars,
           discountDollars: r.discountDollars,
           lenderFee: r.lenderFee,

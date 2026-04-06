@@ -29,10 +29,11 @@ export async function GET(request) {
     });
     const leadIds = allLeads.map(l => l.id);
 
-    // Fetch all saved scenarios for those leads
+    // Fetch the LATEST saved scenario for this borrower (one email = one active scenario)
     const scenarios = await prisma.savedScenario.findMany({
       where: { leadId: { in: leadIds } },
       orderBy: { createdAt: 'desc' },
+      take: 1,
       select: {
         id: true,
         scenarioData: true,

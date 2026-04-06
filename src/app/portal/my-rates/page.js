@@ -9,225 +9,275 @@ function formatDollar(n) {
   return '$' + Number(n || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
 }
 
+/** Calculate monthly P&I from rate, loan amount, and term */
+function calcMonthlyPI(rate, loanAmount, termYears = 30) {
+  if (!rate || !loanAmount) return null;
+  const r = rate / 100 / 12;
+  const n = termYears * 12;
+  if (r === 0) return loanAmount / n;
+  return (loanAmount * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+}
+
 const PURPOSE_LABELS = { purchase: 'Purchase', refi: 'Refinance', cashout: 'Cash-Out Refi' };
-const FREQ_LABELS = { daily: 'Daily (Mon–Fri)', '3x_week': '3x / week', '2x_week': '2x / week', weekly: 'Weekly' };
+const LOAN_TYPE_LABELS = { conventional: 'Conventional', fha: 'FHA', va: 'VA', usda: 'USDA', jumbo: 'Jumbo' };
+const FREQ_LABELS = { daily: 'Daily (Mon-Fri)', '3x_week': '3x / week', '2x_week': '2x / week', weekly: 'Weekly' };
 const DAY_NAMES = { mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri' };
+const PROP_LABELS = { sfr: 'Single Family', condo: 'Condo', townhouse: 'Townhouse', '2unit': '2-Unit', '3unit': '3-Unit', '4unit': '4-Unit', mfr: 'Manufactured' };
 
-function ScenarioCard({ scenario, token, onReprice }) {
-  const [expanded, setExpanded] = useState(false);
-  const [repricing, setRepricing] = useState(false);
-  const [localRates, setLocalRates] = useState(scenario.lastPricingData);
-  const [pricedAt, setPricedAt] = useState(scenario.lastPricedAt);
-
+function ScenarioView({ scenario, token }) {
   const sd = scenario.scenarioData || {};
+  const rates = scenario.lastPricingData || [];
+  const bestRate = rates[0];
+
   const purposeLabel = PURPOSE_LABELS[sd.purpose] || sd.purpose || 'Loan';
-  const loanType = (sd.loanType || '').toUpperCase();
-  const bestRate = localRates?.[0]?.rate;
-  const calcs = getMatchedCalculators(sd, bestRate);
-
-  const handleReprice = async () => {
-    setRepricing(true);
-    try {
-      const res = await fetch('/api/my-rates/reprice', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, scenarioId: scenario.id }),
-      });
-      if (!res.ok) throw new Error('Reprice failed');
-      const data = await res.json();
-      setLocalRates(data.rates);
-      setPricedAt(data.pricedAt);
-      onReprice?.(scenario.id, data.rates, data.pricedAt);
-    } catch {
-      // silent — user sees no rate change
-    } finally {
-      setRepricing(false);
-    }
-  };
-
-  const summaryParts = [
-    purposeLabel,
-    loanType && loanType !== purposeLabel.toUpperCase() ? loanType : null,
-    sd.loanAmount ? formatDollar(sd.loanAmount) : null,
-    sd.fico ? `${sd.fico} FICO` : null,
-    sd.state || null,
-  ].filter(Boolean);
+  const loanTypeLabel = LOAN_TYPE_LABELS[(sd.loanType || '').toLowerCase()] || (sd.loanType || '').toUpperCase();
+  const propLabel = PROP_LABELS[sd.propertyType] || sd.propertyType;
+  const calcs = getMatchedCalculators(sd, bestRate?.rate);
 
   const savedDate = new Date(scenario.createdAt).toLocaleDateString('en-US', {
-    month: 'short', day: 'numeric', year: 'numeric',
+    month: 'long', day: 'numeric', year: 'numeric',
   });
 
-  const pricedDate = pricedAt
-    ? new Date(pricedAt).toLocaleDateString('en-US', {
+  const pricedDate = scenario.lastPricedAt
+    ? new Date(scenario.lastPricedAt).toLocaleDateString('en-US', {
         month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit',
       })
     : null;
 
+  // Down payment for purchase
+  const downPayment = sd.purpose === 'purchase' && sd.propertyValue && sd.loanAmount
+    ? sd.propertyValue - sd.loanAmount
+    : null;
+
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-      {/* Card Header */}
-      <div className="px-6 py-4 flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="text-base font-semibold text-gray-900">{purposeLabel}</h3>
-            {loanType && (
-              <span className="text-xs font-medium bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{loanType}</span>
-            )}
-            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-              scenario.alertStatus === 'active' ? 'bg-green-50 text-green-700' :
-              scenario.alertStatus === 'paused' ? 'bg-yellow-50 text-yellow-700' :
-              'bg-gray-100 text-gray-500'
-            }`}>
-              {scenario.alertStatus === 'active' ? 'Alerts Active' :
-               scenario.alertStatus === 'paused' ? 'Alerts Paused' :
-               scenario.alertStatus}
-            </span>
+    <div className="space-y-6">
+      {/* Scenario Summary Header */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="bg-brand/5 border-b border-brand/10 px-6 py-4">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">
+                {purposeLabel} - {loanTypeLabel}
+              </h2>
+              <p className="text-sm text-gray-500 mt-0.5">Saved {savedDate}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+                scenario.alertStatus === 'active' ? 'bg-green-50 text-green-700 border border-green-200' :
+                scenario.alertStatus === 'paused' ? 'bg-yellow-50 text-yellow-700 border border-yellow-200' :
+                'bg-gray-100 text-gray-500 border border-gray-200'
+              }`}>
+                {scenario.alertStatus === 'active' ? 'Alerts Active' :
+                 scenario.alertStatus === 'paused' ? 'Alerts Paused' :
+                 scenario.alertStatus}
+              </span>
+            </div>
           </div>
-          <p className="text-sm text-gray-500 mt-1">{summaryParts.join(' · ')}</p>
-          <p className="text-xs text-gray-400 mt-1">Saved {savedDate}</p>
         </div>
 
-        {/* Best Rate */}
-        {bestRate != null && (
-          <div className="text-right shrink-0">
-            <p className="text-2xl font-bold text-brand tabular-nums">{Number(bestRate).toFixed(3)}%</p>
-            <p className="text-xs text-gray-400">best rate</p>
-          </div>
-        )}
-      </div>
-
-      {/* Rate Table */}
-      {localRates?.length > 0 && (
-        <div className="px-6 pb-3">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-xs text-gray-400 uppercase">
-                <th className="text-left pb-2 font-medium">Rate</th>
-                <th className="text-right pb-2 font-medium">Monthly P&I</th>
-                <th className="text-right pb-2 font-medium">Cost/Credit</th>
-              </tr>
-            </thead>
-            <tbody>
-              {localRates.map((r, i) => (
-                <tr key={i} className="border-t border-gray-100">
-                  <td className="py-2 font-mono font-semibold text-gray-900">{Number(r.rate).toFixed(3)}%</td>
-                  <td className="py-2 text-right text-gray-700">{formatDollar(r.monthlyPI)}/mo</td>
-                  <td className="py-2 text-right">
-                    {r.rebateDollars > 0 ? (
-                      <span className="text-green-600">-{formatDollar(r.rebateDollars)}</span>
-                    ) : r.discountDollars > 0 ? (
-                      <span className="text-red-600">+{formatDollar(r.discountDollars)}</span>
-                    ) : (
-                      <span className="text-gray-400">Par</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {pricedDate && (
-            <p className="text-xs text-gray-400 mt-1">Priced {pricedDate}</p>
-          )}
-        </div>
-      )}
-
-      {/* Actions Bar */}
-      <div className="px-6 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={handleReprice}
-            disabled={repricing}
-            className="text-sm font-medium text-brand hover:text-brand-dark transition-colors disabled:opacity-50"
-          >
-            {repricing ? 'Repricing...' : 'Reprice Now'}
-          </button>
-          <span className="text-gray-300">|</span>
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
-          >
-            {expanded ? 'Hide Details' : 'Details'}
-          </button>
-        </div>
-
-        {/* Calculator Links */}
-        {calcs.length > 0 && (
-          <div className="flex items-center gap-2 flex-wrap">
-            {calcs.map(c => (
-              <Link
-                key={c.name}
-                href={c.url}
-                className="text-xs font-medium text-brand bg-brand/5 hover:bg-brand/10 px-3 py-1.5 rounded-full transition-colors"
-              >
-                {c.label} →
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Expanded Details */}
-      {expanded && (
-        <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/50">
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
-            {sd.loanAmount && (
+        {/* Scenario Details Grid */}
+        <div className="px-6 py-5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4">
+            {sd.loanAmount > 0 && (
               <div>
-                <p className="text-xs text-gray-400">Loan Amount</p>
-                <p className="font-medium text-gray-900">{formatDollar(sd.loanAmount)}</p>
+                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Loan Amount</p>
+                <p className="text-base font-semibold text-gray-900 mt-0.5">{formatDollar(sd.loanAmount)}</p>
               </div>
             )}
-            {sd.propertyValue && (
+            {sd.propertyValue > 0 && (
               <div>
-                <p className="text-xs text-gray-400">Property Value</p>
-                <p className="font-medium text-gray-900">{formatDollar(sd.propertyValue)}</p>
+                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">
+                  {sd.purpose === 'purchase' ? 'Home Price' : 'Property Value'}
+                </p>
+                <p className="text-base font-semibold text-gray-900 mt-0.5">{formatDollar(sd.propertyValue)}</p>
               </div>
             )}
-            {sd.ltv && (
+            {downPayment > 0 && (
               <div>
-                <p className="text-xs text-gray-400">LTV</p>
-                <p className="font-medium text-gray-900">{Math.round(sd.ltv)}%</p>
+                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Down Payment</p>
+                <p className="text-base font-semibold text-gray-900 mt-0.5">
+                  {formatDollar(downPayment)}
+                  {sd.downPaymentPct ? <span className="text-sm text-gray-400 ml-1">({sd.downPaymentPct}%)</span> : null}
+                </p>
               </div>
             )}
-            {sd.fico && (
+            {sd.ltv > 0 && (
               <div>
-                <p className="text-xs text-gray-400">Credit Score</p>
-                <p className="font-medium text-gray-900">{sd.fico}</p>
+                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">LTV</p>
+                <p className="text-base font-semibold text-gray-900 mt-0.5">{Math.round(sd.ltv * 10) / 10}%</p>
               </div>
             )}
-            {sd.term && (
+            {sd.fico > 0 && (
               <div>
-                <p className="text-xs text-gray-400">Term</p>
-                <p className="font-medium text-gray-900">{sd.term} years</p>
+                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Credit Score</p>
+                <p className="text-base font-semibold text-gray-900 mt-0.5">{sd.fico}</p>
+              </div>
+            )}
+            {sd.term > 0 && (
+              <div>
+                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Term</p>
+                <p className="text-base font-semibold text-gray-900 mt-0.5">{sd.term}-year {sd.productType === 'fixed' ? 'Fixed' : sd.productType || 'Fixed'}</p>
               </div>
             )}
             {sd.state && (
               <div>
-                <p className="text-xs text-gray-400">State</p>
-                <p className="font-medium text-gray-900">{sd.state}</p>
+                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Location</p>
+                <p className="text-base font-semibold text-gray-900 mt-0.5">
+                  {sd.county ? `${sd.county}, ` : ''}{sd.state}
+                </p>
               </div>
             )}
-            {sd.county && (
+            {propLabel && (
               <div>
-                <p className="text-xs text-gray-400">County</p>
-                <p className="font-medium text-gray-900">{sd.county}</p>
+                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Property Type</p>
+                <p className="text-base font-semibold text-gray-900 mt-0.5">{propLabel}</p>
               </div>
             )}
           </div>
+        </div>
+      </div>
 
-          <div className="mt-4 pt-3 border-t border-gray-200">
-            <p className="text-xs text-gray-400 mb-1">Alert Schedule</p>
-            <p className="text-sm text-gray-700">
-              {FREQ_LABELS[scenario.alertFrequency] || scenario.alertFrequency}
-              {scenario.alertDays?.length > 0 && (
-                <span className="text-gray-400"> — {scenario.alertDays.map(d => DAY_NAMES[d] || d).join(', ')}</span>
+      {/* Rate Table */}
+      {rates.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold text-gray-900">Your Rates</h3>
+              {pricedDate && (
+                <p className="text-xs text-gray-400">Last priced {pricedDate}</p>
               )}
-            </p>
-            {scenario.sendCount > 0 && (
-              <p className="text-xs text-gray-400 mt-1">
-                {scenario.sendCount} update{scenario.sendCount !== 1 ? 's' : ''} sent
-                {scenario.lastSentAt && ` · Last: ${new Date(scenario.lastSentAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+            </div>
+          </div>
+          <div className="px-6 py-3">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-xs text-gray-400 uppercase tracking-wide">
+                  <th className="text-left pb-3 font-medium">Rate</th>
+                  <th className="text-right pb-3 font-medium">Est. Monthly P&I</th>
+                  <th className="text-right pb-3 font-medium">Points / Credit</th>
+                  <th className="text-right pb-3 font-medium">Lender Fee</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rates.map((r, i) => {
+                  const pi = r.monthlyPI || calcMonthlyPI(r.rate, sd.loanAmount, sd.term);
+                  return (
+                    <tr key={i} className={`border-t border-gray-100 ${i === 0 ? 'bg-brand/3' : ''}`}>
+                      <td className="py-3">
+                        <span className="font-mono font-bold text-gray-900 text-base">{Number(r.rate).toFixed(3)}%</span>
+                        {i === 0 && <span className="ml-2 text-[10px] font-semibold text-brand bg-brand/10 px-1.5 py-0.5 rounded">BEST</span>}
+                      </td>
+                      <td className="py-3 text-right font-medium text-gray-900">
+                        {pi ? formatDollar(Math.round(pi)) + '/mo' : '-'}
+                      </td>
+                      <td className="py-3 text-right">
+                        {r.rebateDollars > 0 ? (
+                          <span className="font-medium text-green-600">-{formatDollar(r.rebateDollars)} credit</span>
+                        ) : r.discountDollars > 0 ? (
+                          <span className="font-medium text-red-600">+{formatDollar(r.discountDollars)} cost</span>
+                        ) : (
+                          <span className="text-gray-400">Par</span>
+                        )}
+                      </td>
+                      <td className="py-3 text-right text-gray-600">
+                        {r.lenderFee ? formatDollar(r.lenderFee) : '-'}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Best rate highlight */}
+          {bestRate && (
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div>
+                  <p className="text-sm text-gray-500">Best available rate</p>
+                  <p className="text-2xl font-bold text-brand tabular-nums">{Number(bestRate.rate).toFixed(3)}%</p>
+                  {(() => {
+                    const pi = bestRate.monthlyPI || calcMonthlyPI(bestRate.rate, sd.loanAmount, sd.term);
+                    return pi ? (
+                      <p className="text-sm text-gray-500">{formatDollar(Math.round(pi))}/mo estimated payment</p>
+                    ) : null;
+                  })()}
+                </div>
+                <Link
+                  href="/rates"
+                  className="bg-brand text-white rounded-lg px-5 py-2.5 text-sm font-semibold hover:bg-brand-dark transition-colors"
+                >
+                  Reprice Now
+                </Link>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Alert Schedule */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="px-6 py-4">
+          <h3 className="text-base font-semibold text-gray-900 mb-3">Alert Schedule</h3>
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="bg-gray-50 rounded-lg px-4 py-2.5">
+              <p className="text-xs text-gray-400 mb-0.5">Frequency</p>
+              <p className="text-sm font-medium text-gray-900">
+                {FREQ_LABELS[scenario.alertFrequency] || scenario.alertFrequency}
               </p>
+            </div>
+            {scenario.alertDays?.length > 0 && (
+              <div className="bg-gray-50 rounded-lg px-4 py-2.5">
+                <p className="text-xs text-gray-400 mb-0.5">Days</p>
+                <p className="text-sm font-medium text-gray-900">
+                  {scenario.alertDays.map(d => DAY_NAMES[d] || d).join(', ')}
+                </p>
+              </div>
             )}
+            {scenario.sendCount > 0 && (
+              <div className="bg-gray-50 rounded-lg px-4 py-2.5">
+                <p className="text-xs text-gray-400 mb-0.5">Updates Sent</p>
+                <p className="text-sm font-medium text-gray-900">
+                  {scenario.sendCount}
+                  {scenario.lastSentAt && (
+                    <span className="text-gray-400 text-xs ml-1">
+                      (last: {new Date(scenario.lastSentAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})
+                    </span>
+                  )}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Calculator Links */}
+      {calcs.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="px-6 py-4">
+            <h3 className="text-base font-semibold text-gray-900 mb-1">Run the Numbers</h3>
+            <p className="text-sm text-gray-500 mb-4">These calculators are pre-filled with your scenario details.</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {calcs.map(c => (
+                <Link
+                  key={c.name}
+                  href={c.url}
+                  className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-brand/30 hover:bg-brand/3 transition-colors group"
+                >
+                  <div className="w-8 h-8 rounded-full bg-brand/10 flex items-center justify-center shrink-0">
+                    <svg className="w-4 h-4 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 group-hover:text-brand transition-colors">{c.label}</p>
+                  </div>
+                  <svg className="w-4 h-4 text-gray-300 group-hover:text-brand ml-auto transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -267,7 +317,7 @@ function MyRatesContent() {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <div className="w-8 h-8 border-2 border-brand border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-sm text-gray-500">Loading your scenarios...</p>
+          <p className="text-sm text-gray-500">Loading your rates...</p>
         </div>
       </div>
     );
@@ -284,7 +334,7 @@ function MyRatesContent() {
           </div>
           <p className="text-sm text-gray-600 mb-4">{error}</p>
           <Link href="/rates" className="text-sm font-medium text-brand hover:text-brand-dark">
-            Go to Rate Tool →
+            Go to Rate Tool
           </Link>
         </div>
       </div>
@@ -292,38 +342,37 @@ function MyRatesContent() {
   }
 
   const scenarios = data?.scenarios || [];
+  const scenario = scenarios[0]; // Single scenario view
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">
-          {data?.name ? `Hi ${data.name.split(' ')[0]},` : 'My Rates'}
+          {data?.name ? `${data.name.split(' ')[0]}, here are your rates.` : 'Your Rates'}
         </h1>
-        <p className="text-gray-500 mt-1">Your saved rate scenarios and alerts.</p>
+        <p className="text-gray-500 mt-1">
+          Your saved scenario and current pricing from NetRate Mortgage.
+        </p>
       </div>
 
-      {scenarios.length === 0 ? (
+      {!scenario ? (
         <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
-          <p className="text-gray-500 mb-4">You don&apos;t have any saved scenarios yet.</p>
+          <p className="text-gray-500 mb-4">You don&apos;t have a saved scenario yet.</p>
           <Link href="/rates" className="inline-block bg-brand text-white rounded-lg px-6 py-2.5 text-sm font-semibold hover:bg-brand-dark transition-colors">
-            Search Rates →
+            Search Rates
           </Link>
         </div>
       ) : (
-        <div className="space-y-4">
-          {scenarios.map(s => (
-            <ScenarioCard key={s.id} scenario={s} token={token} />
-          ))}
-        </div>
+        <ScenarioView scenario={scenario} token={token} />
       )}
 
-      {/* Cross-links */}
+      {/* Footer links */}
       <div className="mt-10 pt-6 border-t border-gray-200">
         <div className="flex flex-wrap gap-4 text-sm">
           <Link href="/rates" className="text-brand hover:text-brand-dark font-medium">Search New Rates</Link>
           <Link href="/portal/apply" className="text-brand hover:text-brand-dark font-medium">Apply Now</Link>
-          <Link href="/portal/auth/login" className="text-brand hover:text-brand-dark font-medium">My Loan Portal</Link>
+          <Link href="/contact" className="text-brand hover:text-brand-dark font-medium">Contact Us</Link>
         </div>
       </div>
     </div>
