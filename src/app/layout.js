@@ -177,8 +177,8 @@ export default function RootLayout({ children }) {
               <a href="/about" className="text-gray-600 hover:text-brand transition-colors">About</a>
               <a href="/contact" className="text-gray-600 hover:text-brand transition-colors">Contact</a>
               <a href="/portal/my-rates/access" className="text-gray-600 hover:text-brand transition-colors">My Rates</a>
-              <a href="/portal/apply" className="bg-brand text-white px-4 py-2 rounded-lg hover:bg-brand-dark glow-brand transition-all">
-                Apply Now
+              <a href="/portal/apply" className="bg-brand text-white px-4 py-2 rounded-lg hover:bg-brand-dark transition-all flex items-center gap-1.5">
+                Apply Now <span className="text-[#fff000] font-bold">&rarr;</span>
               </a>
             </nav>
           </div>
@@ -190,7 +190,7 @@ export default function RootLayout({ children }) {
         </main>
 
         {/* Google Reviews Banner — site-wide */}
-        <div className="bg-surface border-t border-white/10">
+        <div className="bg-[#F5F7FA] border-t border-gray-200">
           <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-center gap-3">
             {/* Google "G" logo */}
             <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -203,13 +203,13 @@ export default function RootLayout({ children }) {
             <svg className="w-4 h-4 text-yellow-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
               <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
             </svg>
-            <span className="text-white text-sm font-semibold">4.9</span>
+            <span className="text-[#111827] text-sm font-semibold">4.9</span>
             {/* TODO: Update Google Maps link after GBP name change from Locus → NetRate */}
             <a
               href="https://www.google.com/maps/search/?api=1&query=Locus+Mortgage&query_place_id=ChIJa5-5jCXza4cRptwJxaP23eU"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-gray-300 text-sm hover:text-white transition-colors underline underline-offset-2"
+              className="text-brand text-sm hover:text-brand-dark transition-colors underline underline-offset-2"
             >
               35 reviews
             </a>
@@ -217,7 +217,7 @@ export default function RootLayout({ children }) {
         </div>
 
         {/* Footer */}
-        <footer className="bg-deep text-gray-400 mt-auto">
+        <footer className="bg-deep text-white/70 mt-auto">
           <div className="max-w-6xl mx-auto px-6 py-12">
             <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-8">
               {/* Company */}
@@ -227,7 +227,7 @@ export default function RootLayout({ children }) {
                   <span className="text-lg font-bold text-brand">Rate</span>
                   <span className="text-sm font-normal text-gray-500 ml-1">Mortgage</span>
                 </div>
-                <p className="text-sm leading-relaxed">
+                <p className="text-sm leading-relaxed text-white/60">
                   David Burson — Mortgage Broker<br />
                   NMLS #641790 | Company NMLS #1111861<br />
                   303-444-5251 | david@netratemortgage.com
@@ -236,58 +236,58 @@ export default function RootLayout({ children }) {
 
               {/* Services */}
               <div>
-                <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-3">Services</h3>
+                <h3 className="text-sm font-semibold text-white/90 uppercase tracking-wider mb-3">Services</h3>
                 <ul className="space-y-2 text-sm">
-                  <li><a href="/rates" className="hover:text-white transition-colors">Today&apos;s Rates</a></li>
-                  <li><a href="/services" className="hover:text-white transition-colors">Refinance</a></li>
-                  <li><a href="/services" className="hover:text-white transition-colors">Home Purchase</a></li>
-                  <li><a href="/contact" className="hover:text-white transition-colors">See My Rate</a></li>
-                  <li><a href="/portal/apply" className="hover:text-white transition-colors">Apply Now</a></li>
+                  <li><a href="/rates" className="hover:text-white/100 transition-colors">Today&apos;s Rates</a></li>
+                  <li><a href="/services" className="hover:text-white/100 transition-colors">Refinance</a></li>
+                  <li><a href="/services" className="hover:text-white/100 transition-colors">Home Purchase</a></li>
+                  <li><a href="/contact" className="hover:text-white/100 transition-colors">See My Rate</a></li>
+                  <li><a href="/portal/apply" className="hover:text-white/100 transition-colors">Apply Now</a></li>
                 </ul>
               </div>
 
               {/* Resources */}
               <div>
-                <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-3">Resources</h3>
+                <h3 className="text-sm font-semibold text-white/90 uppercase tracking-wider mb-3">Resources</h3>
                 <ul className="space-y-2 text-sm">
-                  <li><a href="/how-pricing-works" className="hover:text-white transition-colors">How Pricing Works</a></li>
-                  <li><a href="/points-and-credits" className="hover:text-white transition-colors">Points &amp; Credits</a></li>
-                  <li><a href="/closing-costs" className="hover:text-white transition-colors">Closing Costs</a></li>
-                  <li><a href="/breakeven" className="hover:text-white transition-colors">Breakeven Math</a></li>
-                  <li><a href="/refinance-playbook" className="hover:text-white transition-colors">Refinance Playbook</a></li>
-                  <li><a href="/reverse-mortgage" className="hover:text-white transition-colors">Reverse Mortgages</a></li>
-                  <li><a href="/condo-rules-changed" className="hover:text-white transition-colors">Condo Rules Changed</a></li>
-                  <li><a href="/equity-without-losing-rate" className="hover:text-white transition-colors">Home Equity Options</a></li>
-                  <li><a href="/why-netrate" className="hover:text-white transition-colors">Why NetRate</a></li>
-                  <li><a href="/good-deal" className="hover:text-white transition-colors">Is It a Good Deal?</a></li>
+                  <li><a href="/how-pricing-works" className="hover:text-white/100 transition-colors">How Pricing Works</a></li>
+                  <li><a href="/points-and-credits" className="hover:text-white/100 transition-colors">Points &amp; Credits</a></li>
+                  <li><a href="/closing-costs" className="hover:text-white/100 transition-colors">Closing Costs</a></li>
+                  <li><a href="/breakeven" className="hover:text-white/100 transition-colors">Breakeven Math</a></li>
+                  <li><a href="/refinance-playbook" className="hover:text-white/100 transition-colors">Refinance Playbook</a></li>
+                  <li><a href="/reverse-mortgage" className="hover:text-white/100 transition-colors">Reverse Mortgages</a></li>
+                  <li><a href="/condo-rules-changed" className="hover:text-white/100 transition-colors">Condo Rules Changed</a></li>
+                  <li><a href="/equity-without-losing-rate" className="hover:text-white/100 transition-colors">Home Equity Options</a></li>
+                  <li><a href="/why-netrate" className="hover:text-white/100 transition-colors">Why NetRate</a></li>
+                  <li><a href="/good-deal" className="hover:text-white/100 transition-colors">Is It a Good Deal?</a></li>
                 </ul>
               </div>
 
               {/* States */}
               <div>
-                <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-3">States</h3>
+                <h3 className="text-sm font-semibold text-white/90 uppercase tracking-wider mb-3">States</h3>
                 <ul className="space-y-2 text-sm">
-                  <li><a href="/colorado" className="hover:text-white transition-colors">Colorado</a></li>
-                  <li><a href="/california" className="hover:text-white transition-colors">California</a></li>
-                  <li><a href="/texas" className="hover:text-white transition-colors">Texas</a></li>
-                  <li><a href="/oregon" className="hover:text-white transition-colors">Oregon</a></li>
+                  <li><a href="/colorado" className="hover:text-white/100 transition-colors">Colorado</a></li>
+                  <li><a href="/california" className="hover:text-white/100 transition-colors">California</a></li>
+                  <li><a href="/texas" className="hover:text-white/100 transition-colors">Texas</a></li>
+                  <li><a href="/oregon" className="hover:text-white/100 transition-colors">Oregon</a></li>
                 </ul>
               </div>
 
               {/* Legal */}
               <div>
-                <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-3">Legal</h3>
+                <h3 className="text-sm font-semibold text-white/90 uppercase tracking-wider mb-3">Legal</h3>
                 <ul className="space-y-2 text-sm">
-                  <li><a href="/privacy" className="hover:text-white transition-colors">Privacy Policy</a></li>
-                  <li><a href="/terms" className="hover:text-white transition-colors">Terms &amp; Conditions</a></li>
-                  <li><a href="/licensing" className="hover:text-white transition-colors">Licensing</a></li>
-                  <li><a href="/accessibility" className="hover:text-white transition-colors">Accessibility</a></li>
-                  <li><a href="/do-not-sell" className="hover:text-white transition-colors">Do Not Sell My Info</a></li>
+                  <li><a href="/privacy" className="hover:text-white/100 transition-colors">Privacy Policy</a></li>
+                  <li><a href="/terms" className="hover:text-white/100 transition-colors">Terms &amp; Conditions</a></li>
+                  <li><a href="/licensing" className="hover:text-white/100 transition-colors">Licensing</a></li>
+                  <li><a href="/accessibility" className="hover:text-white/100 transition-colors">Accessibility</a></li>
+                  <li><a href="/do-not-sell" className="hover:text-white/100 transition-colors">Do Not Sell My Info</a></li>
                 </ul>
               </div>
             </div>
 
-            <div className="border-t border-gray-800 pt-6 text-xs leading-relaxed space-y-3">
+            <div className="border-t border-white/20 pt-6 text-xs leading-relaxed space-y-3 text-white/50">
               <p>
                 NetRate Mortgage | NMLS #1111861 | 357 South McCaslin Blvd., #200, Louisville, CO 80027.
                 Rates shown are approximate based on wholesale pricing and standard loan-level adjustments.

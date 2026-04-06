@@ -9,12 +9,12 @@ module.exports = {
     extend: {
       colors: {
         brand: {
-          DEFAULT: '#0891b2',
-          dark: '#0e7490',
-          light: '#22d3ee',
+          DEFAULT: '#024c4f',
+          dark: '#013638',
+          light: '#afc8c7',
         },
-        deep: '#0B1218',
-        surface: '#161F27',
+        deep: '#024c4f',
+        surface: '#F5F7FA',
       },
       fontFamily: {
         sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
