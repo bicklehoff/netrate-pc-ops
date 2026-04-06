@@ -164,6 +164,48 @@ function saveToStorage(data, currentStep) {
   }
 }
 
+/**
+ * Load BRP lead data from token and map scenario fields to application fields.
+ * Called once on mount if ?from=brp&token=xxx is in the URL.
+ */
+function mapBrpToApplication(lead, scenarioData) {
+  const prefill = {};
+
+  // Contact info from lead
+  if (lead.name) {
+    const parts = lead.name.trim().split(/\s+/);
+    prefill.firstName = parts[0] || '';
+    prefill.lastName = parts.slice(1).join(' ') || '';
+  }
+  if (lead.email) prefill.email = lead.email;
+
+  // Scenario → application mapping
+  if (scenarioData) {
+    const sd = scenarioData;
+    if (sd.purpose) prefill.purpose = sd.purpose === 'cashout' ? 'refinance' : sd.purpose;
+    if (sd.propertyType) prefill.propertyType = sd.propertyType;
+
+    if (sd.purpose === 'purchase') {
+      if (sd.propertyValue) prefill.purchasePrice = String(sd.propertyValue);
+      if (sd.propertyValue && sd.loanAmount) {
+        prefill.downPayment = String(sd.propertyValue - sd.loanAmount);
+      }
+    } else {
+      // Refi / cashout
+      if (sd.propertyValue) prefill.estimatedValue = String(sd.propertyValue);
+      if (sd.loanAmount) prefill.currentBalance = String(sd.loanAmount);
+      if (sd.purpose === 'cashout') prefill.refiPurpose = 'cash-out';
+      else prefill.refiPurpose = 'lower-rate';
+    }
+
+    if (sd.state) {
+      prefill.propertyAddress = { street: '', city: '', state: sd.state, zip: '' };
+    }
+  }
+
+  return prefill;
+}
+
 export function ApplicationProvider({ children }) {
   // Initialize state synchronously from sessionStorage to avoid race conditions
   const [data, setData] = useState(() => {
@@ -180,6 +222,37 @@ export function ApplicationProvider({ children }) {
 
   // Track whether we've done the initial load (skip first save)
   const initialized = useRef(false);
+
+  // BRP pre-fill: if ?from=brp&token=xxx, fetch lead data and merge
+  const brpLoaded = useRef(false);
+  useEffect(() => {
+    if (typeof window === 'undefined' || brpLoaded.current) return;
+    const params = new URLSearchParams(window.location.search);
+    const from = params.get('from');
+    const token = params.get('token');
+    if (from !== 'brp' || !token) return;
+    brpLoaded.current = true;
+
+    fetch(`/api/my-rates?token=${encodeURIComponent(token)}`)
+      .then(res => res.ok ? res.json() : null)
+      .then(result => {
+        if (!result) return;
+        const scenario = result.scenarios?.[0];
+        const prefill = mapBrpToApplication(
+          { name: result.name, email: result.email },
+          scenario?.scenarioData
+        );
+        setData(prev => {
+          // Only fill empty fields — don't overwrite existing data
+          const merged = { ...prev };
+          for (const [key, val] of Object.entries(prefill)) {
+            if (val && !prev[key]) merged[key] = val;
+          }
+          return merged;
+        });
+      })
+      .catch(() => {}); // Non-blocking — form still works without pre-fill
+  }, []);
 
   // Save to sessionStorage when data or step changes (skip initial)
   useEffect(() => {
