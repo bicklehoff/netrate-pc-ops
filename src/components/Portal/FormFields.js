@@ -380,7 +380,6 @@ export function PhoneField({ label = 'Phone', name, errors, setValue, watch, hel
 
   const handleChange = (e) => {
     const input = e.target;
-    const prevValue = watch(name) || '';
     const digits = input.value.replace(/\D/g, '').slice(0, 10);
     const formatted = formatPhone(digits);
 
