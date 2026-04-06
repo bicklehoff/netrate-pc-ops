@@ -87,6 +87,33 @@ export function magicLinkTemplate({ firstName, magicLink }) {
   };
 }
 
+// ─── BRP Access Link ───────────────────────────────────────
+
+export function brpAccessTemplate({ firstName, accessLink }) {
+  const name = firstName || 'there';
+  const html = emailLayout(`
+  <h2 style="margin:0 0 16px;font-size:20px;font-weight:600;color:#111827;">Access Your Rates</h2>
+  <p style="margin:0 0 8px;font-size:15px;color:#374151;line-height:1.6;">
+    Hi ${name}, click the button below to view your saved rate scenario and current pricing.
+  </p>
+  ${ctaButton('View My Rates', accessLink)}
+  <p style="margin:0;font-size:13px;color:#6b7280;line-height:1.5;">
+    If you didn't request this, you can safely ignore this email.
+  </p>
+  <p style="margin:12px 0 0;font-size:12px;color:#9ca3af;word-break:break-all;">
+    Or copy this link: ${accessLink}
+  </p>
+`, `View your saved rates at NetRate Mortgage`);
+
+  const text = `Hi ${name},\n\nView your saved rates:\n${accessLink}\n\nNetRate Mortgage LLC | NMLS #1111861`;
+
+  return {
+    subject: 'Your NetRate Mortgage Rates',
+    html,
+    text,
+  };
+}
+
 // ─── Status Change ──────────────────────────────────────────
 
 const STATUS_MESSAGES = {

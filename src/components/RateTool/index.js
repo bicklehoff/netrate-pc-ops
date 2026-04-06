@@ -14,11 +14,11 @@ import { useApiPricing } from './useApiPricing';
 import { trackRateToolInteraction, startEngagementTimer } from '@/lib/analytics';
 import { getThirdPartyCosts } from '@/lib/rates/closing-costs';
 
-export default function RateTool({ initialRateData, defaultState }) {
+export default function RateTool({ initialRateData, defaultState, prefill, brpToken }) {
   // Use GCS data if available, fall back to static bundled data
   const rateData = initialRateData?.lenders?.[0] || staticSunwestData;
 
-  const initialState = defaultState || 'CO';
+  const initialState = prefill?.state || defaultState || 'CO';
 
   // 30-second engagement timer
   useEffect(() => {
@@ -37,23 +37,23 @@ export default function RateTool({ initialRateData, defaultState }) {
   }, []);
 
   const [scenario, setScenario] = useState({
-    purpose: DEFAULT_SCENARIO.loanPurpose,
-    loanType: 'conventional',
-    propertyType: DEFAULT_SCENARIO.propertyType,
-    propertyValue: DEFAULT_SCENARIO.propertyValue,
-    downPaymentPct: DEFAULT_SCENARIO.downPaymentPct,
-    currentPayoff: DEFAULT_SCENARIO.currentPayoff,
-    newLoanAmount: DEFAULT_SCENARIO.currentPayoff,
-    currentRate: DEFAULT_SCENARIO.currentRate,
-    fico: DEFAULT_SCENARIO.fico,
-    term: 30,
+    purpose: prefill?.purpose || DEFAULT_SCENARIO.loanPurpose,
+    loanType: prefill?.loanType || 'conventional',
+    propertyType: prefill?.propertyType || DEFAULT_SCENARIO.propertyType,
+    propertyValue: prefill?.propertyValue || DEFAULT_SCENARIO.propertyValue,
+    downPaymentPct: prefill?.downPaymentPct || DEFAULT_SCENARIO.downPaymentPct,
+    currentPayoff: prefill?.currentPayoff || DEFAULT_SCENARIO.currentPayoff,
+    newLoanAmount: prefill?.currentPayoff || DEFAULT_SCENARIO.currentPayoff,
+    currentRate: prefill?.currentRate || DEFAULT_SCENARIO.currentRate,
+    fico: prefill?.fico || DEFAULT_SCENARIO.fico,
+    term: prefill?.term || 30,
     productType: 'fixed',
     vaFundingFeeExempt: false,
     vaSubsequentUse: false,
-    loanAmount: 0,
+    loanAmount: prefill?.loanAmount || 0,
     ltv: 0,
     state: initialState,
-    county: initialState === 'CO' ? 'Denver' : initialState === 'CA' ? 'Los Angeles' : initialState === 'TX' ? 'Dallas' : initialState === 'OR' ? 'Multnomah' : '',
+    county: prefill?.county || (initialState === 'CO' ? 'Denver' : initialState === 'CA' ? 'Los Angeles' : initialState === 'TX' ? 'Dallas' : initialState === 'OR' ? 'Multnomah' : ''),
     thirdPartyCosts: getThirdPartyCosts(initialState),
   });
 
@@ -118,6 +118,7 @@ export default function RateTool({ initialRateData, defaultState }) {
           prefillName={leadFormData?.name}
           prefillEmail={leadFormData?.email}
           prefillPhone={leadFormData?.phone}
+          brpToken={brpToken}
         />
       )}
 

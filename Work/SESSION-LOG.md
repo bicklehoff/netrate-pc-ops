@@ -5,6 +5,80 @@
 
 ---
 
+## 2026-04-03 — Dev — Rate Watch Overhaul, Data Pipeline, Cron Jobs, Claw Coordination
+**Actor:** pc-dev
+
+### What was done
+
+**Homepage rate bug (prior session carry-over)**
+- All products showing 5.5% / 10.5% APR — SWMC prices stored as discount points, not 100-based
+- Fix: `UPDATE rate_prices SET price = 100 - price WHERE lender = SWMC` + force deploy to clear ISR cache
+- `src/lib/rates/homepage-db.js` — cache bust comment added
+
+**escrowsWaived pass-through**
+- `src/app/api/portal/mlo/quotes/route.js` — added `escrowsWaived` to pricingInput, `isEscrowing` now derived from it
+
+**Rate Watch trend chart redesign**
+- Removed credit tier buttons + live FRED calls per render
+- Now: national avg (MND) minus constant NRM_SPREAD (0.285%) = NRM historical line
+- `src/components/RateWatch/RateChart.js` — `NRM_SPREAD = 0.285` (last updated 2026-04-03)
+
+**MND daily scrape cron** — `/api/cron/mnd-scrape`
+- Scrapes mortgagenewsdaily.com at 4:15pm EST weekdays → `rate_history` table (source='mnd')
+- Added second run at 8:30am EST so rate trend bar updates morning + afternoon
+- `vercel.json` — two schedule entries for same path
+
+**FRED → DB pipeline** — `/api/cron/fred-snapshot`
+- Daily 6pm EST weekdays: fetches 11 FRED series + CMT1Y/CMT10Y aliases from DGS1/DGS10
+- Stores in `fred_series_data` table; eliminates 10+ live API calls per Rate Watch page load
+- CMT source: switched from Treasury.gov (blocked server-side) to FRED DGS1/DGS10
+
+**Health check cron** — `/api/cron/health-check`
+- Runs 8am EST weekdays: validates MND freshness, rate sanity (5-9%), FRED staleness
+- POSTs relay to TrackerPortal on failure
+
+**Rate Watch TickerBar expansion**
+- Now shows full index strip: SOFR, 30D SOFR, 1yr CMT, Prime, Fed Funds, 2yr T, 10yr T, Nat'l Avg
+- Colored group dots separate ARM / HELOC+Fed / Treasury / MBS sections
+- `src/components/RateWatch/TickerBar.js`
+
+**BenchmarkIndexes CMT fix**
+- CMT1Y/CMT10Y fell back to `—` because Treasury.gov is blocked server-side
+- Now falls back to DGS1/DGS10 from fredLatest
+- `src/components/RateWatch/BenchmarkIndexes.js`
+
+**Economic Calendar seed cron** — `/api/cron/calendar-seed`
+- Runs Mondays 8am UTC: fetches upcoming release dates from FRED releases API
+- Seeds Jobs Report, CPI, PCE, PPI, FOMC, GDP, Retail Sales 90 days out as skeleton events
+- Never overwrites Claw-owned fields (actual/result/forecast/prior)
+
+**Calendar UI fix**
+- `ResultBadge` falls back to `ev.impact` when `ev.result` is null — fixes bad data on ids 8 and 3
+- Deleted duplicate "Jobs Report" Apr 3 (id=13) — Claw's richer entry (id=5) is canonical
+
+### Claw coordination
+- Resolved relay: calendar UI changes + seed cron ownership
+- Ownership model confirmed: PC seeds skeleton dates, Claw enriches with actuals/results/forecasts
+- Canonical event names relayed to Claw for upsert key matching
+- Relayed: pulsing dot / bearish indicator = Claw-owned via POST /api/market/summary
+- Relayed: MND scrape cron schedule (8:30am + 4:15pm EST)
+
+### Deploys (all to main, auto-deployed via Vercel)
+- `56c5806` — rate-watch: expand ticker bar to show all rate indices
+- `d233908` — rate-watch: trim ticker bar to fit one line
+- `a418f3a` — calendar: fix result/impact display + seed from FRED
+- `cc483d3` — cron: add morning MND scrape at 8:30am EST
+- (prior session) `1347bc0` — fred-snapshot: CMT from FRED instead of Treasury.gov
+
+### Open items
+- [ ] Fix FRED release IDs for CPI, PCE, PPI, FOMC, GDP, Retail Sales in calendar-seed cron (only Jobs Report seeding correctly — Claw covering the gap manually for now)
+- [ ] Update NRM_SPREAD in RateChart.js when competitive position changes (currently 0.285%)
+- [ ] Rotate TRACKER_API_KEY — exposed in session chat log
+- [ ] Claw bar sentiment relay still open (cmnj636pz, cmnjeqrd5) — David monitoring, not actioning
+- [ ] Pre-existing: SWMC phase 2 adjustments, other lenders adjustment_rules, fee templates seed, county loan limits
+
+---
+
 ## 2026-04-02/03 — Setup — Relay Migration, Neon Controls, Deploy Safety, Homepage Rate Fix
 **Actor:** pc-setup
 
