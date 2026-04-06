@@ -364,6 +364,83 @@ export function YesNoField({ label, name, errors, watch, setValue }) {
 }
 
 /**
+ * Phone input with auto-formatting as (XXX) XXX-XXXX.
+ * Preserves cursor position during formatting to avoid jump.
+ */
+export function PhoneField({ label = 'Phone', name, errors, setValue, watch, helper }) {
+  const inputRef = useRef(null);
+  const error = name.split('.').reduce((e, k) => e?.[k], errors);
+
+  function formatPhone(digits) {
+    if (digits.length > 6) return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+    if (digits.length > 3) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+    if (digits.length > 0) return `(${digits}`;
+    return '';
+  }
+
+  const handleChange = (e) => {
+    const input = e.target;
+    const prevValue = watch(name) || '';
+    const digits = input.value.replace(/\D/g, '').slice(0, 10);
+    const formatted = formatPhone(digits);
+
+    // Calculate cursor position: count digits before cursor in raw input,
+    // then find that position in the formatted string.
+    const rawCursorPos = input.selectionStart;
+    const digitsBeforeCursor = input.value.slice(0, rawCursorPos).replace(/\D/g, '').length;
+
+    setValue(name, formatted, { shouldValidate: true });
+
+    // Restore cursor after React re-renders
+    requestAnimationFrame(() => {
+      if (!inputRef.current) return;
+      let digitsSeen = 0;
+      let newPos = formatted.length;
+      for (let i = 0; i < formatted.length; i++) {
+        if (/\d/.test(formatted[i])) {
+          digitsSeen++;
+          if (digitsSeen === digitsBeforeCursor) {
+            newPos = i + 1;
+            break;
+          }
+        }
+      }
+      inputRef.current.setSelectionRange(newPos, newPos);
+    });
+  };
+
+  return (
+    <div>
+      <label htmlFor={name} className="block text-sm font-medium text-gray-700 mb-1">
+        {label} <span className="text-red-400">*</span>
+      </label>
+      <input
+        id={name}
+        ref={inputRef}
+        type="tel"
+        inputMode="tel"
+        placeholder="(303) 555-1234"
+        value={watch(name) || ''}
+        onChange={handleChange}
+        className={`
+          w-full px-4 py-2.5 border rounded-lg outline-none transition-colors
+          ${error
+            ? 'border-red-300 focus:ring-2 focus:ring-red-100 focus:border-red-400'
+            : 'border-gray-300 focus:ring-2 focus:ring-brand/20 focus:border-brand'
+          }
+        `}
+      />
+      {!error && helper && (
+        <p className="text-xs text-gray-400 mt-1">{helper}</p>
+      )}
+      {error && (
+        <p className="text-xs text-red-500 mt-1">{error.message}</p>
+      )}
+    </div>
+  );
+}
+
+/**
  * Parse a Google Places result into street, city, state, zip.
  */
 function parsePlaceComponents(place) {
@@ -411,32 +488,44 @@ export function AddressGroup({ prefix, register, errors, label = 'Address', disa
     [registerRef]
   );
 
-  // Attach Google Places Autocomplete
+  // Attach Google Places Autocomplete (with retry for async script loading)
   useEffect(() => {
-    const input = streetRef.current;
-    if (!input || disabled || !setValue || autocompleteRef.current) return;
-    if (typeof window === 'undefined' || !window.google?.maps?.places) return;
+    if (disabled || !setValue) return;
 
-    const autocomplete = new window.google.maps.places.Autocomplete(input, {
-      componentRestrictions: { country: 'us' },
-      types: ['address'],
-      fields: ['address_components'],
-    });
+    function attach() {
+      const input = streetRef.current;
+      if (!input || autocompleteRef.current) return true; // already attached or no input
+      if (!window.google?.maps?.places) return false; // script not loaded yet
 
-    autocomplete.addListener('place_changed', () => {
-      const place = autocomplete.getPlace();
-      if (!place.address_components) return;
+      const autocomplete = new window.google.maps.places.Autocomplete(input, {
+        componentRestrictions: { country: 'us' },
+        types: ['address'],
+        fields: ['address_components'],
+      });
 
-      const parsed = parsePlaceComponents(place);
+      autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
+        if (!place.address_components) return;
 
-      // Update all fields via react-hook-form
-      setValue(`${prefix}.street`, parsed.street, { shouldValidate: true });
-      setValue(`${prefix}.city`, parsed.city, { shouldValidate: true });
-      setValue(`${prefix}.state`, parsed.state, { shouldValidate: true });
-      setValue(`${prefix}.zip`, parsed.zip, { shouldValidate: true });
-    });
+        const parsed = parsePlaceComponents(place);
 
-    autocompleteRef.current = autocomplete;
+        setValue(`${prefix}.street`, parsed.street, { shouldValidate: true });
+        setValue(`${prefix}.city`, parsed.city, { shouldValidate: true });
+        setValue(`${prefix}.state`, parsed.state, { shouldValidate: true });
+        setValue(`${prefix}.zip`, parsed.zip, { shouldValidate: true });
+      });
+
+      autocompleteRef.current = autocomplete;
+      return true;
+    }
+
+    // Try immediately, then poll until Google Maps script loads
+    if (!attach()) {
+      const interval = setInterval(() => {
+        if (attach()) clearInterval(interval);
+      }, 200);
+      return () => clearInterval(interval);
+    }
 
     return () => {
       if (autocompleteRef.current) {

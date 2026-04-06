@@ -308,6 +308,7 @@ export default function Step5Declarations({ onNext, onBack }) {
             onTabChange={setActiveTab}
             nextStepLabel="Review"
             isTabComplete={isTabComplete}
+            sectionLabel="Declarations"
           />
         ) : (
           <div className="flex justify-between pt-4">
