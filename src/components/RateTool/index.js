@@ -93,6 +93,7 @@ export default function RateTool({ initialRateData, defaultState, prefill, brpTo
           onToggleCompare={handleToggleCompare}
           onViewReport={() => setShowReport(true)}
           onSaveScenario={() => setShowSaveModal(true)}
+          brpToken={brpToken}
         />
         <RateEducation />
         <LeadCapture scenario={scenario} />
