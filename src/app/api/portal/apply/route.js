@@ -12,6 +12,8 @@ import prisma from '@/lib/prisma';
 import { encrypt, ssnLastFour } from '@/lib/encryption';
 import { createLoanFolder } from '@/lib/zoho-workdrive';
 import { checkApplicationGate } from '@/lib/application-gate';
+import { sendEmail } from '@/lib/resend';
+import { statusChangeTemplate } from '@/lib/email-templates/borrower';
 
 // ─── Rate Limiting (in-memory, per IP) ──────────────────────
 // 5 submissions per hour per IP. Map auto-cleans expired entries.
@@ -502,6 +504,46 @@ export async function POST(request) {
     } catch (wdError) {
       // Log but don't fail the application
       console.error('WorkDrive folder creation failed (non-fatal):', wdError?.message);
+    }
+
+    // ─── Send Confirmation Emails ────────────────────────────
+    try {
+      const propertyAddr = body.propertyAddress?.street
+        ? `${body.propertyAddress.street}, ${body.propertyAddress.city}, ${body.propertyAddress.state}`
+        : null;
+
+      // Primary borrower confirmation
+      const primaryEmail = statusChangeTemplate({
+        firstName: body.firstName,
+        status: 'applied',
+        propertyAddress: propertyAddr,
+      });
+      await sendEmail({
+        to: body.email,
+        subject: primaryEmail.subject,
+        html: primaryEmail.html,
+        text: primaryEmail.text,
+      });
+
+      // Co-borrower confirmation emails
+      for (const cb of (body.coBorrowers || [])) {
+        if (cb.email) {
+          const cbEmail = statusChangeTemplate({
+            firstName: cb.firstName,
+            status: 'applied',
+            propertyAddress: propertyAddr,
+          });
+          await sendEmail({
+            to: cb.email,
+            subject: cbEmail.subject,
+            html: cbEmail.html,
+            text: cbEmail.text,
+          });
+        }
+      }
+    } catch (emailError) {
+      // Log but don't fail the application
+      console.error('Confirmation email failed (non-fatal):', emailError?.message);
     }
 
     return NextResponse.json({

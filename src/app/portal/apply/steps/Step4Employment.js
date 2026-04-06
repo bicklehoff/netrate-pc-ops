@@ -14,8 +14,8 @@ import BorrowerTabs from '@/components/Portal/BorrowerTabs';
 import CoBorrowerNav from '@/components/Portal/CoBorrowerNav';
 
 const EMPLOYMENT_OPTIONS = [
-  { value: 'employed', label: 'Employed' },
-  { value: 'self_employed', label: 'Self-Employed' },
+  { value: 'employed', label: 'Employed (W-2)' },
+  { value: 'self_employed', label: 'Self-Employed (1099 / Business Owner)' },
   { value: 'retired', label: 'Retired' },
   { value: 'other', label: 'Other' },
 ];

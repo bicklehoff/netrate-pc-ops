@@ -1,9 +1,21 @@
 // Portal Apply — Success Page
 // Shown after the borrower submits their application.
+// Reads the submitted email from ApplicationContext to pre-fill the login link.
+
+'use client';
 
 import Link from 'next/link';
+import { useApplication } from '@/components/Portal/ApplicationContext';
 
 export default function SuccessPage() {
+  const { data, resetData } = useApplication();
+  const email = data?.email || '';
+
+  // Build login URL with email pre-filled
+  const loginUrl = email
+    ? `/portal/auth/login?email=${encodeURIComponent(email)}`
+    : '/portal/auth/login';
+
   return (
     <div className="max-w-2xl mx-auto text-center py-16">
       {/* Checkmark Icon */}
@@ -26,9 +38,9 @@ export default function SuccessPage() {
       <h1 className="text-2xl font-bold text-gray-900 mb-3">
         Application Received!
       </h1>
-      <p className="text-gray-500 max-w-md mx-auto mb-8">
-        We&apos;ve received your application. A member of our team will review it
-        and reach out to you within 1 business day.
+      <p className="text-gray-500 max-w-md mx-auto mb-4">
+        We&apos;ve received your application and sent a confirmation to <strong className="text-gray-700">{email || 'your email'}</strong>.
+        A member of our team will review it and reach out within 1 business day.
       </p>
 
       <div className="bg-blue-50 border border-blue-100 rounded-xl p-6 mb-8 max-w-md mx-auto">
@@ -60,13 +72,14 @@ export default function SuccessPage() {
 
       <div className="flex items-center justify-center gap-4">
         <Link
-          href="/portal/auth/login"
+          href={loginUrl}
           className="bg-brand text-white px-6 py-2.5 rounded-lg font-medium hover:bg-brand-dark transition-colors"
         >
           Check My Status
         </Link>
         <Link
           href="/"
+          onClick={() => resetData()}
           className="text-gray-500 hover:text-gray-700 px-4 py-2.5 font-medium transition-colors"
         >
           Back to Main Site

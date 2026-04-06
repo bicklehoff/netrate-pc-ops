@@ -6,6 +6,7 @@
 
 'use client';
 
+import { useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useApplication } from '@/components/Portal/ApplicationContext';
 import StepIndicator from '@/components/Portal/StepIndicator';
@@ -39,6 +40,12 @@ export default function StepPage() {
   }
 
   const { title, description } = STEP_TITLES[step] || {};
+
+  // Scroll to top of the apply overlay when step changes
+  useEffect(() => {
+    const container = document.getElementById('apply-scroll-container');
+    if (container) container.scrollTo({ top: 0 });
+  }, [step]);
 
   const handleBack = () => {
     const prevStep = step - 1;
