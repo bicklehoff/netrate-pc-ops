@@ -103,7 +103,8 @@ export function useApiPricing(scenario) {
           };
         })
         .sort((a, b) => a.rate - b.rate)
-        .filter(r => r.rate >= 4 && r.rate <= 9);
+        .filter(r => r.rate >= 4 && r.rate <= 9)
+        .filter(r => Math.abs(r.finalPrice - 100) <= 2.5);
 
       // Enforce minimum spinner time
       const elapsed = Date.now() - spinnerStart;

@@ -120,6 +120,8 @@ export default function RateTool({ initialRateData, defaultState, prefill, brpTo
           prefillEmail={leadFormData?.email}
           prefillPhone={leadFormData?.phone}
           brpToken={brpToken}
+          compareRates={compareRates}
+          allRates={apiResults}
         />
       )}
 

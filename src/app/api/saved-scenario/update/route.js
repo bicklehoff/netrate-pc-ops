@@ -9,7 +9,7 @@ import { calcMonthlyPI } from '@/lib/rates/math';
 
 export async function POST(request) {
   try {
-    const { token, scenarioData } = await request.json();
+    const { token, scenarioData, selectedRates } = await request.json();
 
     if (!token) {
       return NextResponse.json({ error: 'Token required' }, { status: 401 });
@@ -46,38 +46,42 @@ export async function POST(request) {
       return NextResponse.json({ error: 'No saved scenario found' }, { status: 404 });
     }
 
-    // Run fresh pricing
+    // Use client-side selected rates if provided, otherwise run server-side pricing
     let pricingData = null;
-    try {
-      const pricingInput = {
-        loanAmount: scenarioData.loanAmount,
-        propertyValue: scenarioData.propertyValue,
-        loanPurpose: scenarioData.purpose,
-        loanType: scenarioData.loanType,
-        creditScore: scenarioData.fico,
-        state: scenarioData.state,
-        county: scenarioData.county,
-        term: scenarioData.term,
-      };
-      const result = await priceScenario(pricingInput);
-      const loanAmt = scenarioData.loanAmount;
-      const term = scenarioData.term || 30;
-      pricingData = (result.results || [])
-        .sort((a, b) => a.rate - b.rate)
-        .slice(0, 3)
-        .map(r => ({
-          rate: r.rate,
-          apr: r.apr || null,
-          monthlyPI: r.monthlyPI || calcMonthlyPI(r.rate, loanAmt, term),
-          price: r.finalPrice || r.price || null,
-          lenderName: r.lender || r.lenderName || null,
-          program: r.program || null,
-          rebateDollars: r.rebateDollars,
-          discountDollars: r.discountDollars,
-          lenderFee: r.lenderFee,
-        }));
-    } catch (err) {
-      console.error('Update pricing failed:', err.message);
+    if (selectedRates?.length > 0) {
+      pricingData = selectedRates;
+    } else {
+      try {
+        const pricingInput = {
+          loanAmount: scenarioData.loanAmount,
+          propertyValue: scenarioData.propertyValue,
+          loanPurpose: scenarioData.purpose,
+          loanType: scenarioData.loanType,
+          creditScore: scenarioData.fico,
+          state: scenarioData.state,
+          county: scenarioData.county,
+          term: scenarioData.term,
+        };
+        const result = await priceScenario(pricingInput);
+        const loanAmt = scenarioData.loanAmount;
+        const term = scenarioData.term || 30;
+        pricingData = (result.results || [])
+          .sort((a, b) => a.rate - b.rate)
+          .slice(0, 3)
+          .map(r => ({
+            rate: r.rate,
+            apr: r.apr || null,
+            monthlyPI: r.monthlyPI || calcMonthlyPI(r.rate, loanAmt, term),
+            price: r.finalPrice || r.price || null,
+            lenderName: r.lender || r.lenderName || null,
+            program: r.program || null,
+            rebateDollars: r.rebateDollars,
+            discountDollars: r.discountDollars,
+            lenderFee: r.lenderFee,
+          }));
+      } catch (err) {
+        console.error('Update pricing failed:', err.message);
+      }
     }
 
     // Update the scenario with new inputs + pricing

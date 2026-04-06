@@ -17,7 +17,68 @@ const ALL_DAYS = [
   { value: 'fri', label: 'Fri' },
 ];
 
-export default function SaveScenarioModal({ scenario, onClose, prefillName, prefillEmail, prefillPhone, brpToken }) {
+/**
+ * Pick 3 representative rates: sweet spot below par, par, sweet spot above par.
+ * If rates were manually selected for comparison, use those instead.
+ */
+function pickSnapshotRates(compareRates, allRates) {
+  // If user selected specific rates, use those
+  if (compareRates?.length > 0) {
+    return compareRates.slice(0, 3).map(r => ({
+      rate: r.rate,
+      apr: r.apr || null,
+      monthlyPI: r.monthlyPI || null,
+      price: r.finalPrice || null,
+      lenderName: r.lender || null,
+      program: r.program || null,
+      rebateDollars: r.rebateDollars || 0,
+      discountDollars: r.discountDollars || 0,
+      lenderFee: r.lenderFee || 0,
+    }));
+  }
+
+  // Auto-pick: sweet spot below par, par, sweet spot above par
+  if (!allRates?.length) return null;
+
+  const sorted = [...allRates].sort((a, b) =>
+    Math.abs(a.finalPrice - 100) - Math.abs(b.finalPrice - 100)
+  );
+  const par = sorted[0]; // closest to 100
+
+  // Sweet spot above par: slight rebate (finalPrice ~100.5–101), higher rate
+  const abovePar = allRates
+    .filter(r => r.finalPrice > 100.25 && r.rate > par.rate)
+    .sort((a, b) => Math.abs(a.finalPrice - 100.75) - Math.abs(b.finalPrice - 100.75))[0];
+
+  // Sweet spot below par: slight discount (finalPrice ~99–99.5), lower rate
+  const belowPar = allRates
+    .filter(r => r.finalPrice < 99.75 && r.rate < par.rate)
+    .sort((a, b) => Math.abs(a.finalPrice - 99.25) - Math.abs(b.finalPrice - 99.25))[0];
+
+  const picks = [belowPar, par, abovePar].filter(Boolean);
+  // Dedupe by rate
+  const seen = new Set();
+  const unique = picks.filter(r => {
+    const key = r.rate.toFixed(3);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  return unique.map(r => ({
+    rate: r.rate,
+    apr: r.apr || null,
+    monthlyPI: r.monthlyPI || null,
+    price: r.finalPrice || null,
+    lenderName: r.lender || null,
+    program: r.program || null,
+    rebateDollars: r.rebateDollars || 0,
+    discountDollars: r.discountDollars || 0,
+    lenderFee: r.lenderFee || 0,
+  }));
+}
+
+export default function SaveScenarioModal({ scenario, onClose, prefillName, prefillEmail, prefillPhone, brpToken, compareRates, allRates }) {
   // If brpToken is present, this is an update from the BRP — skip contact info
   const isUpdate = !!brpToken;
 
@@ -89,6 +150,10 @@ export default function SaveScenarioModal({ scenario, onClose, prefillName, pref
     e.preventDefault();
     setSubmitting(true);
     setError(null);
+
+    // Build the rate snapshot from user's selections or smart defaults
+    const selectedRates = pickSnapshotRates(compareRates, allRates);
+
     try {
       if (isUpdate) {
         // Update existing scenario via BRP token
@@ -98,6 +163,7 @@ export default function SaveScenarioModal({ scenario, onClose, prefillName, pref
           body: JSON.stringify({
             token: brpToken,
             scenarioData: scenario,
+            selectedRates,
           }),
         });
         const data = await res.json();
@@ -117,6 +183,7 @@ export default function SaveScenarioModal({ scenario, onClose, prefillName, pref
             scenarioData: scenario,
             alertFrequency: frequency,
             alertDays: days,
+            selectedRates,
           }),
         });
         const data = await res.json();

@@ -15,7 +15,7 @@ const FREQUENCY_DEFAULTS = {
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { name, email, phone, scenarioData, alertFrequency, alertDays } = body;
+    const { name, email, phone, scenarioData, alertFrequency, alertDays, selectedRates } = body;
 
     if (!name || !email) {
       return NextResponse.json({ error: 'Name and email are required' }, { status: 400 });
@@ -51,39 +51,42 @@ export async function POST(request) {
     const tokenRow = await prisma.$queryRaw`SELECT view_token::text FROM leads WHERE id::text = ${lead.id}`;
     const viewToken = tokenRow?.[0]?.view_token || null;
 
-    // Run initial pricing snapshot
+    // Use client-side selected rates if provided, otherwise run server-side pricing
     let initialPricing = null;
-    try {
-      const pricingInput = {
-        loanAmount: scenarioData.loanAmount,
-        propertyValue: scenarioData.propertyValue,
-        loanPurpose: scenarioData.purpose,
-        loanType: scenarioData.loanType,
-        creditScore: scenarioData.fico,
-        state: scenarioData.state,
-        county: scenarioData.county,
-        term: scenarioData.term,
-      };
-      const result = await priceScenario(pricingInput);
-      // Store top 3 results as initial snapshot
-      const loanAmt = scenarioData.loanAmount;
-      const term = scenarioData.term || 30;
-      initialPricing = (result.results || [])
-        .sort((a, b) => a.rate - b.rate)
-        .slice(0, 3)
-        .map(r => ({
-          rate: r.rate,
-          apr: r.apr || null,
-          monthlyPI: r.monthlyPI || calcMonthlyPI(r.rate, loanAmt, term),
-          price: r.finalPrice || r.price || null,
-          lenderName: r.lender || r.lenderName || null,
-          program: r.program || null,
-          rebateDollars: r.rebateDollars,
-          discountDollars: r.discountDollars,
-          lenderFee: r.lenderFee,
-        }));
-    } catch (err) {
-      console.error('Initial pricing snapshot failed:', err.message);
+    if (selectedRates?.length > 0) {
+      initialPricing = selectedRates;
+    } else {
+      try {
+        const pricingInput = {
+          loanAmount: scenarioData.loanAmount,
+          propertyValue: scenarioData.propertyValue,
+          loanPurpose: scenarioData.purpose,
+          loanType: scenarioData.loanType,
+          creditScore: scenarioData.fico,
+          state: scenarioData.state,
+          county: scenarioData.county,
+          term: scenarioData.term,
+        };
+        const result = await priceScenario(pricingInput);
+        const loanAmt = scenarioData.loanAmount;
+        const term = scenarioData.term || 30;
+        initialPricing = (result.results || [])
+          .sort((a, b) => a.rate - b.rate)
+          .slice(0, 3)
+          .map(r => ({
+            rate: r.rate,
+            apr: r.apr || null,
+            monthlyPI: r.monthlyPI || calcMonthlyPI(r.rate, loanAmt, term),
+            price: r.finalPrice || r.price || null,
+            lenderName: r.lender || r.lenderName || null,
+            program: r.program || null,
+            rebateDollars: r.rebateDollars,
+            discountDollars: r.discountDollars,
+            lenderFee: r.lenderFee,
+          }));
+      } catch (err) {
+        console.error('Initial pricing snapshot failed:', err.message);
+      }
     }
 
     // Create saved scenario
