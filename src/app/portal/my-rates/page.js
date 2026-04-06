@@ -386,11 +386,28 @@ function MyRatesContent() {
         <ScenarioView scenario={scenario} token={token} />
       )}
 
+      {/* Apply CTA */}
+      {scenario && (
+        <div className="mt-8 bg-gradient-to-br from-brand/5 to-cyan-50 rounded-xl border border-brand/20 p-6 text-center">
+          <h3 className="text-lg font-semibold text-gray-900 mb-1">Ready to move forward?</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            Start your application — your scenario details will be pre-filled.
+          </p>
+          <Link
+            href={`/portal/apply?from=brp&token=${token}`}
+            className="inline-block bg-brand text-white rounded-lg px-6 py-3 text-sm font-semibold hover:bg-brand-dark transition-colors"
+          >
+            Apply with This Scenario
+          </Link>
+          <p className="text-[10px] text-gray-400 mt-3">Takes about 10 minutes. No commitment until you submit.</p>
+        </div>
+      )}
+
       {/* Footer links */}
       <div className="mt-10 pt-6 border-t border-gray-200">
         <div className="flex flex-wrap gap-4 text-sm">
           <Link href="/rates" className="text-brand hover:text-brand-dark font-medium">Search New Rates</Link>
-          <Link href="/portal/apply" className="text-brand hover:text-brand-dark font-medium">Apply Now</Link>
+          <Link href={token ? `/portal/apply?from=brp&token=${token}` : '/portal/apply'} className="text-brand hover:text-brand-dark font-medium">Apply Now</Link>
           <Link href="/contact" className="text-brand hover:text-brand-dark font-medium">Contact Us</Link>
         </div>
       </div>
