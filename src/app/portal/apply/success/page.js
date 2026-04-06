@@ -70,6 +70,17 @@ export default function SuccessPage() {
         </p>
       </div>
 
+      {/* Rate Alert reminder */}
+      <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-4 mb-8 max-w-md mx-auto">
+        <p className="text-sm text-cyan-800">
+          Your rate alerts are still active. You can continue monitoring rates and reprice
+          your scenario anytime from{' '}
+          <a href="/portal/my-rates/access" className="text-brand font-medium hover:underline">
+            My Rates
+          </a>.
+        </p>
+      </div>
+
       <div className="flex items-center justify-center gap-4">
         <Link
           href={loginUrl}

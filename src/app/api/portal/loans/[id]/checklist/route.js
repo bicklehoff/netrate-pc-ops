@@ -18,22 +18,23 @@ export async function GET(request, { params }) {
 
     const { id } = await params;
 
-    // Verify borrower owns this loan
-    const loan = await prisma.loan.findFirst({
-      where: {
-        id,
-        borrowerId: session.borrowerId,
-      },
-      include: {
-        documents: {
-          orderBy: { createdAt: 'desc' },
-        },
-        conditions: {
-          where: { borrowerFacing: true },
-          orderBy: { createdAt: 'asc' },
-        },
-      },
+    // Verify borrower is associated with this loan (primary or co-borrower)
+    const loanBorrower = await prisma.loanBorrower.findFirst({
+      where: { loanId: id, borrowerId: session.borrowerId },
     });
+
+    const loan = loanBorrower
+      ? await prisma.loan.findUnique({
+          where: { id },
+          include: {
+            documents: { orderBy: { createdAt: 'desc' } },
+            conditions: {
+              where: { borrowerFacing: true },
+              orderBy: { createdAt: 'asc' },
+            },
+          },
+        })
+      : null;
 
     if (!loan) {
       return NextResponse.json({ error: 'Loan not found' }, { status: 404 });

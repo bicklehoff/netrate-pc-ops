@@ -21,9 +21,25 @@ const BALL_MESSAGES = {
   lender: 'Waiting on the lender',
 };
 
+const PROPERTY_TYPE_LABELS = {
+  sfr: 'Single Family',
+  condo: 'Condo',
+  townhome: 'Townhome',
+  multi_unit: 'Multi-Unit',
+  manufactured: 'Manufactured',
+};
+
 function formatCurrency(val) {
   if (!val) return '—';
   return `$${Number(val).toLocaleString('en-US', { minimumFractionDigits: 0 })}`;
+}
+
+function formatAddress(addr) {
+  if (!addr) return 'TBD';
+  const street = addr.street?.trim();
+  if (!street) return 'TBD';
+  const parts = [street, addr.city, addr.state].filter(Boolean);
+  return parts.join(', ') || 'TBD';
 }
 
 export default function LoanStatusCard({ loan }) {
@@ -70,6 +86,14 @@ export default function LoanStatusCard({ loan }) {
         </div>
       )}
 
+      {/* Property Address */}
+      <div className="text-sm mb-4">
+        <span className="text-gray-400 block">Property</span>
+        <span className="text-gray-800 font-medium">
+          {formatAddress(loan.propertyAddress)}
+        </span>
+      </div>
+
       {/* Loan Summary */}
       <div className="grid grid-cols-3 gap-4 text-sm">
         <div>
@@ -83,9 +107,9 @@ export default function LoanStatusCard({ loan }) {
           <span className="text-gray-800 font-medium">{formatCurrency(loanAmount)}</span>
         </div>
         <div>
-          <span className="text-gray-400 block">Property</span>
-          <span className="text-gray-800 font-medium capitalize">
-            {loan.propertyType?.replace('_', ' ') || '—'}
+          <span className="text-gray-400 block">Type</span>
+          <span className="text-gray-800 font-medium">
+            {PROPERTY_TYPE_LABELS[loan.propertyType] || loan.propertyType || '—'}
           </span>
         </div>
       </div>

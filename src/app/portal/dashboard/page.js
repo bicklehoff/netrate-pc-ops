@@ -21,8 +21,16 @@ export default async function BorrowerDashboardPage() {
     select: { firstName: true, lastName: true, email: true },
   });
 
-  const loans = await prisma.loan.findMany({
+  // Find loans where this borrower is either primary or co-borrower
+  const loanBorrowers = await prisma.loanBorrower.findMany({
     where: { borrowerId: session.borrowerId },
+    select: { loanId: true, borrowerType: true },
+    orderBy: { loan: { createdAt: 'desc' } },
+  });
+  const loanIds = loanBorrowers.map((lb) => lb.loanId);
+
+  const loans = await prisma.loan.findMany({
+    where: { id: { in: loanIds } },
     include: {
       documents: {
         orderBy: { createdAt: 'desc' },
@@ -34,6 +42,11 @@ export default async function BorrowerDashboardPage() {
       mlo: {
         select: { firstName: true, lastName: true, email: true },
       },
+      loanBorrowers: {
+        where: { borrowerType: 'primary' },
+        include: { borrower: { select: { firstName: true } } },
+        take: 1,
+      },
     },
     orderBy: { createdAt: 'desc' },
   });
@@ -41,11 +54,15 @@ export default async function BorrowerDashboardPage() {
   // Most recent loan (borrowers typically have one active)
   const loan = loans[0] || null;
 
+  // Use the primary borrower's name for the greeting, not the session borrower
+  // (handles shared-email cases where co-borrower's name overwrites the record)
+  const primaryName = loan?.loanBorrowers?.[0]?.borrower?.firstName || borrower?.firstName;
+
   return (
     <div className="max-w-3xl mx-auto">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">
-          Welcome back, {borrower?.firstName || 'there'}
+          Welcome back, {primaryName || 'there'}
         </h1>
         <p className="text-gray-500 text-sm mt-1">
           Track your application status, upload documents, and see what&apos;s next.
