@@ -23,7 +23,7 @@ function Input({ label, prefix, suffix, value, onChange, step, min }) {
           onChange={e => onChange(e.target.value)}
           step={step || 1}
           min={min || 0}
-          className={`w-full border border-gray-300 rounded-lg py-2.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 ${prefix ? 'pl-7' : 'pl-3'} ${suffix ? 'pr-10' : 'pr-3'}`}
+          className={`w-full border border-gray-200 rounded-lg py-2.5 text-sm focus:border-brand focus:ring-2 focus:ring-brand/10 outline-none transition-colors ${prefix ? 'pl-7' : 'pl-3'} ${suffix ? 'pr-10' : 'pr-3'}`}
         />
         {suffix && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">{suffix}</span>}
       </div>
@@ -122,9 +122,10 @@ function CostOfWaitingContent() {
   }, [loanAmount, currentRate, newRate, term]);
 
   return (
+    <div className="min-h-screen bg-[#F5F7FA]">
     <div className="max-w-3xl mx-auto px-6 py-10">
       <div className="mb-8">
-        <Link href="/" className="text-sm text-cyan-600 hover:underline">&larr; Back to tools</Link>
+        <Link href="/tools" className="text-sm text-brand hover:underline">&larr; Back to tools</Link>
         <h1 className="text-2xl font-bold text-gray-900 mt-3">Cost of Waiting Calculator</h1>
         <p className="text-sm text-gray-500 mt-1">
           Every month you wait to refinance at a lower rate, you&apos;re paying more than you need to.
@@ -204,13 +205,13 @@ function CostOfWaitingContent() {
             {/* Extra principal summary */}
             <div className="px-6 py-4 border-b border-gray-100">
               <div className="flex items-center gap-2 mb-2">
-                <span className="w-2 h-2 rounded-full bg-cyan-500" />
+                <span className="w-2 h-2 rounded-full bg-brand" />
                 <span className="text-sm font-semibold text-gray-800">Pay off your mortgage faster</span>
               </div>
               <p className="text-sm text-gray-600">
                 Put {dollar(results.monthlySavings)}/mo toward extra principal and pay off your loan{' '}
-                <strong className="text-cyan-700">{results.yearsSaved} years early</strong>,
-                saving <strong className="text-cyan-700">{dollar(results.interestSavedExtra)}</strong> in interest.
+                <strong className="text-brand">{results.yearsSaved} years early</strong>,
+                saving <strong className="text-brand">{dollar(results.interestSavedExtra)}</strong> in interest.
               </p>
             </div>
 
@@ -221,7 +222,7 @@ function CostOfWaitingContent() {
                   <th className="text-left px-4 py-3 text-gray-500 font-medium">Time</th>
                   <th className="text-right px-4 py-3 text-gray-500 font-medium">
                     <span className="inline-flex items-center gap-1">
-                      <span className="w-2 h-2 rounded-full bg-cyan-500" />Extra Equity
+                      <span className="w-2 h-2 rounded-full bg-brand" />Extra Equity
                     </span>
                   </th>
                   <th className="text-right px-4 py-3 text-gray-500 font-medium">
@@ -240,7 +241,7 @@ function CostOfWaitingContent() {
                 {results.opportunities.map(row => (
                   <tr key={row.years} className="border-b border-gray-50 last:border-0">
                     <td className="px-4 py-3 text-gray-700">{row.years} yr</td>
-                    <td className="px-4 py-3 text-right font-semibold text-cyan-700 tabular-nums">{dollar(row.extraPrincipal)}</td>
+                    <td className="px-4 py-3 text-right font-semibold text-brand tabular-nums">{dollar(row.extraPrincipal)}</td>
                     <td className="px-4 py-3 text-right font-semibold text-green-700 tabular-nums">{dollar(row.sp500)}</td>
                     <td className="px-4 py-3 text-right font-semibold text-blue-700 tabular-nums">{dollar(row.cds)}</td>
                   </tr>
@@ -256,16 +257,16 @@ function CostOfWaitingContent() {
           </div>
 
           {/* CTA */}
-          <div className="rounded-xl border border-cyan-100 bg-cyan-50 p-6">
+          <div className="rounded-xl border border-brand/10 bg-brand/5 p-6">
             <p className="text-sm text-gray-700">
               <strong>No-cost refinance option:</strong> If closing costs are holding you back, ask about a no-cost refinance.
               We can build the costs into the rate so you pay nothing out of pocket — and still save every month.
             </p>
             <div className="mt-4 flex gap-3">
-              <Link href="/rates" className="inline-block bg-brand text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-brand-dark transition-colors">
+              <Link href="/rates" className="inline-block bg-brand text-[#fff000] px-5 py-2.5 rounded-2xl text-sm font-medium hover:bg-brand-dark transition-colors">
                 See Today&apos;s Rates
               </Link>
-              <Link href="/tools/refi-analyzer" className="inline-block border border-brand text-brand px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-cyan-50 transition-colors">
+              <Link href="/tools/refi-analyzer" className="inline-block border-2 border-brand text-brand px-5 py-2.5 rounded-2xl text-sm font-medium hover:bg-brand/5 transition-colors">
                 Refi Analyzer
               </Link>
             </div>
@@ -283,6 +284,7 @@ function CostOfWaitingContent() {
           Enter a new rate lower than your current rate to see how much waiting costs you.
         </div>
       )}
+    </div>
     </div>
   );
 }

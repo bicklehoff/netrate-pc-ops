@@ -142,10 +142,17 @@ export default function RootLayout({ children }) {
         {/* Navigation — glassmorphism on scroll */}
         <GlassNav>
           <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-            <a href="/" className="flex items-center gap-0.5">
-              <span className="text-xl font-bold text-gray-900">Net</span>
-              <span className="text-xl font-bold text-brand">Rate</span>
-              <span className="text-base font-normal text-gray-500 ml-1.5">Mortgage</span>
+            <a href="/" className="flex items-center gap-3">
+              <svg width="32" height="32" viewBox="0 0 44 44" fill="none" aria-hidden="true">
+                <rect width="44" height="44" rx="14" fill="#024c4f"/>
+                <line x1="11" y1="33" x2="23" y2="14" stroke="#fff000" strokeWidth="4.5" strokeLinecap="round"/>
+                <line x1="23" y1="30" x2="35" y2="11" stroke="#fff000" strokeWidth="4.5" strokeLinecap="round"/>
+              </svg>
+              <div className="flex items-baseline gap-0.5">
+                <span className="text-xl font-bold text-gray-900 tracking-[0.3px]">Net</span>
+                <span className="text-xl font-bold text-brand tracking-[0.3px]">Rate</span>
+                <span className="text-lg font-bold text-gray-700 ml-1.5">Mortgage</span>
+              </div>
             </a>
             <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
               <a href="/rates" className="text-gray-600 hover:text-brand transition-colors">Rates</a>
@@ -177,7 +184,7 @@ export default function RootLayout({ children }) {
               <a href="/about" className="text-gray-600 hover:text-brand transition-colors">About</a>
               <a href="/contact" className="text-gray-600 hover:text-brand transition-colors">Contact</a>
               <a href="/portal/my-rates/access" className="text-gray-600 hover:text-brand transition-colors">My Rates</a>
-              <a href="/portal/apply" className="bg-brand text-white px-4 py-2 rounded-lg hover:bg-brand-dark glow-brand transition-all">
+              <a href="/portal/apply" className="bg-brand text-[#fff000] px-5 py-2 rounded-xl hover:bg-brand-dark glow-brand transition-all">
                 Apply Now
               </a>
             </nav>
@@ -190,26 +197,24 @@ export default function RootLayout({ children }) {
         </main>
 
         {/* Google Reviews Banner — site-wide */}
-        <div className="bg-surface border-t border-white/10">
+        <div className="bg-[#F5F7FA] border-t border-gray-200">
           <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-center gap-3">
-            {/* Google "G" logo */}
             <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
               <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
               <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
               <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
             </svg>
-            {/* Star */}
             <svg className="w-4 h-4 text-yellow-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
               <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
             </svg>
-            <span className="text-white text-sm font-semibold">4.9</span>
+            <span className="text-gray-900 text-sm font-semibold">4.9</span>
             {/* TODO: Update Google Maps link after GBP name change from Locus → NetRate */}
             <a
               href="https://www.google.com/maps/search/?api=1&query=Locus+Mortgage&query_place_id=ChIJa5-5jCXza4cRptwJxaP23eU"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-gray-300 text-sm hover:text-white transition-colors underline underline-offset-2"
+              className="text-brand text-sm font-medium hover:text-brand-dark transition-colors underline underline-offset-2"
             >
               35 reviews
             </a>
@@ -222,10 +227,17 @@ export default function RootLayout({ children }) {
             <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-8">
               {/* Company */}
               <div className="col-span-2 md:col-span-1">
-                <div className="flex items-center gap-0.5 mb-3">
-                  <span className="text-lg font-bold text-white">Net</span>
-                  <span className="text-lg font-bold text-brand">Rate</span>
-                  <span className="text-sm font-normal text-gray-500 ml-1">Mortgage</span>
+                <div className="flex items-center gap-2.5 mb-3">
+                  <svg width="28" height="28" viewBox="0 0 44 44" fill="none" aria-hidden="true">
+                    <rect width="44" height="44" rx="10" fill="rgba(255,255,255,0.12)"/>
+                    <line x1="11" y1="33" x2="25" y2="11" stroke="#fff000" strokeWidth="4.5" strokeLinecap="round"/>
+                    <line x1="21" y1="33" x2="35" y2="11" stroke="#fff000" strokeWidth="4.5" strokeLinecap="round"/>
+                  </svg>
+                  <div className="flex items-baseline gap-0.5">
+                    <span className="text-lg font-bold text-white tracking-[0.3px]">Net</span>
+                    <span className="text-lg font-bold text-brand-light tracking-[0.3px]">Rate</span>
+                    <span className="text-base font-bold text-gray-300 ml-1.5">Mortgage</span>
+                  </div>
                 </div>
                 <p className="text-sm leading-relaxed">
                   David Burson — Mortgage Broker<br />

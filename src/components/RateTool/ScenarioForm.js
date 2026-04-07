@@ -7,14 +7,29 @@ import { getCountiesByState, classifyLoan, getLoanLimits, BASELINE_1UNIT } from 
 
 const DEFAULT_COUNTIES = { CO: 'Denver', CA: 'Los Angeles', TX: 'Dallas', OR: 'Multnomah' };
 
+const inputCls = "w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white focus:border-brand focus:ring-2 focus:ring-brand/10 outline-none transition-colors";
+const selectCls = "w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white focus:border-brand focus:ring-2 focus:ring-brand/10 outline-none transition-colors";
+const labelCls = "block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1";
+
+function SectionCard({ title, children }) {
+  return (
+    <div className="mb-2">
+      <div className="flex items-center gap-2 mb-1.5">
+        <div className="w-1 h-3 bg-brand rounded-full" />
+        <span className="text-[10px] font-bold text-brand uppercase tracking-widest">{title}</span>
+      </div>
+      <div className="bg-white rounded-xl p-3 shadow-[0_2px_12px_rgba(2,76,79,0.05)] border border-gray-100">
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export default function ScenarioForm({ scenario, onChange, onSubmit, loading }) {
   const update = (field, value) => onChange({ ...scenario, [field]: value });
 
-  // Track which purchase field was last edited to avoid circular updates
-  // 'pct' = down payment %, 'dollars' = down payment $, 'loan' = loan amount
   const [lastEdited, setLastEdited] = useState('pct');
 
-  // Purchase: interlinked fields — any one drives the other two
   const purchaseCalc = useMemo(() => {
     const pv = scenario.propertyValue || 0;
     if (!pv) return { loanAmount: 0, downPct: 0, downDollars: 0, ltv: 0 };
@@ -23,7 +38,6 @@ export default function ScenarioForm({ scenario, onChange, onSubmit, loading }) 
 
     if (lastEdited === 'pct') {
       downPct = scenario.downPaymentPct || 0;
-      // Calculate loan from LTV directly (not pv - down) to match LoanSifter
       loanAmount = Math.floor(pv * (1 - downPct / 100));
       downDollars = pv - loanAmount;
     } else if (lastEdited === 'dollars') {
@@ -36,12 +50,10 @@ export default function ScenarioForm({ scenario, onChange, onSubmit, loading }) 
       downPct = pv > 0 ? Math.round((downDollars / pv) * 10000) / 100 : 0;
     }
 
-    // Always round loan down and LTV down — avoid pricing into higher tier on $1 rounding
     const ltv = pv > 0 ? Math.floor((loanAmount / pv) * 10000) / 100 : 0;
     return { loanAmount, downPct, downDollars, ltv };
   }, [scenario.propertyValue, scenario.downPaymentPct, scenario.downPaymentDollars, scenario.manualLoanAmount, lastEdited]);
 
-  // Refi: loan amount entered directly
   const refiCalc = useMemo(() => {
     const pv = scenario.propertyValue || 0;
     const loan = Math.floor(scenario.newLoanAmount || scenario.currentPayoff || 0);
@@ -51,13 +63,12 @@ export default function ScenarioForm({ scenario, onChange, onSubmit, loading }) 
 
   const isPurchase = scenario.purpose === 'purchase';
   const isFha = scenario.loanType === 'fha';
+  const isVa = scenario.loanType === 'va';
   const loanAmount = isPurchase ? purchaseCalc.loanAmount : refiCalc.loanAmount;
   const ltv = isPurchase ? purchaseCalc.ltv : refiCalc.ltv;
 
-  // County list for selected state
   const counties = useMemo(() => getCountiesByState(scenario.state || 'CO'), [scenario.state]);
 
-  // Loan classification based on county limits
   const loanLimitInfo = useMemo(() => {
     if (!scenario.county || !loanAmount) return null;
     const limits = getLoanLimits(scenario.state, scenario.county);
@@ -66,7 +77,6 @@ export default function ScenarioForm({ scenario, onChange, onSubmit, loading }) 
     return { ...limits, classification };
   }, [scenario.state, scenario.county, loanAmount]);
 
-  // Sync loanAmount and ltv to parent scenario
   useMemo(() => {
     if (scenario.loanAmount !== loanAmount || scenario.ltv !== ltv) {
       onChange({ ...scenario, loanAmount, ltv });
@@ -88,246 +98,340 @@ export default function ScenarioForm({ scenario, onChange, onSubmit, loading }) 
     onChange({ ...scenario, manualLoanAmount: val });
   }, [scenario, onChange]);
 
+  const fhaOverLimit = isFha && loanLimitInfo && loanAmount > loanLimitInfo.fhaLimit;
+
+  const loanClassConfig = (() => {
+    if (isVa) return { bg: 'bg-brand/10 border-brand/10', text: 'text-brand', label: 'VA' };
+    if (isFha) return { bg: 'bg-brand/10 border-brand/10', text: 'text-brand', label: 'FHA' };
+    if (!loanLimitInfo) return null;
+    return {
+      conforming:  { bg: 'bg-brand/10 border-brand/10', text: 'text-brand', label: 'Conventional'  },
+      highBalance: { bg: 'bg-brand/10 border-brand/10', text: 'text-brand', label: 'High Balance'  },
+      jumbo:       { bg: 'bg-brand/10 border-brand/10', text: 'text-brand', label: 'Jumbo'         },
+    }[loanLimitInfo.classification] || null;
+  })();
+
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4 my-3">
-      <h2 className="text-base font-semibold text-gray-800 mb-3">Your Scenario</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-2">
-        <div>
-          <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Loan Purpose</label>
-          <select value={scenario.purpose} onChange={e => update("purpose", e.target.value)}
-            className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm bg-white">
-            <option value="purchase">Purchase</option>
-            <option value="refi">Rate/Term Refinance</option>
-            <option value="cashout">Cash-Out Refinance</option>
-          </select>
+    <div className="my-3">
+
+      {/* ── Header ── */}
+      <div className="mb-3">
+        <h2 className="text-xl font-bold text-gray-900">Your Scenario</h2>
+        <p className="text-xs text-gray-500 mt-0.5">Configure your loan details to see real-time wholesale rates.</p>
+      </div>
+
+      {/* ── Live Stats Bar ── */}
+      {loanAmount > 0 && (
+        <div className="flex gap-1.5 mb-3 w-full">
+          <div className="flex-1 bg-brand/10 border border-brand/10 rounded-lg px-2.5 py-1.5">
+            <div className="text-[9px] font-bold text-brand uppercase tracking-wider">Loan Amt</div>
+            <div className="text-sm font-semibold text-gray-900 tabular-nums">
+              ${loanAmount.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+            </div>
+          </div>
+          {isFha && (
+            <div className="flex-1 bg-brand/10 border border-brand/10 rounded-lg px-2.5 py-1.5">
+              <div className="text-[9px] font-bold text-brand uppercase tracking-wider">w/ UFMIP</div>
+              <div className="text-sm font-semibold text-gray-900 tabular-nums">
+                ${Math.floor(loanAmount * 1.0175).toLocaleString('en-US')}
+              </div>
+            </div>
+          )}
+          <div className="flex-1 bg-brand/10 border border-brand/10 rounded-lg px-2.5 py-1.5">
+            <div className="text-[9px] font-bold text-brand uppercase tracking-wider">LTV</div>
+            <div className="text-sm font-semibold text-gray-900 tabular-nums">{ltv.toFixed(1)}%</div>
+          </div>
+          <div className="flex-1 bg-brand/10 border border-brand/10 rounded-lg px-2.5 py-1.5">
+            <div className="text-[9px] font-bold text-brand uppercase tracking-wider">FICO</div>
+            <div className="text-sm font-semibold text-gray-900 tabular-nums">{scenario.fico || 780}</div>
+          </div>
+          {loanClassConfig && (
+            <div className={`flex-1 rounded-lg px-2.5 py-1.5 border ${loanClassConfig.bg}`}>
+              <div className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Class</div>
+              <div className={`text-sm font-semibold ${loanClassConfig.text}`}>{loanClassConfig.label}</div>
+            </div>
+          )}
         </div>
-        <div>
-          <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Loan Type</label>
-          <select value={scenario.loanType || 'conventional'} onChange={e => {
+      )}
+
+      {/* ── FHA Over-Limit Warning ── */}
+      {fhaOverLimit && (
+        <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl p-3.5 mb-3">
+          <svg className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+          </svg>
+          <p className="text-sm text-red-800">
+            This loan amount exceeds the FHA limit of{' '}
+            <strong>${loanLimitInfo.fhaLimit.toLocaleString()}</strong> for {scenario.county} County.
+            FHA financing is not available above this limit.{' '}
+            <a href="/contact" className="font-semibold underline hover:text-red-900 transition-colors">
+              Contact us to discuss your options &rarr;
+            </a>
+          </p>
+        </div>
+      )}
+
+      {/* ── Section 1: Loan Details ── */}
+      <SectionCard title="Loan Details">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div>
+            <label className={labelCls}>Loan Purpose</label>
+            <select value={scenario.purpose} onChange={e => update('purpose', e.target.value)} className={selectCls}>
+              <option value="purchase">Purchase</option>
+              <option value="refi">Rate/Term Refinance</option>
+              <option value="cashout">Cash-Out Refinance</option>
+            </select>
+          </div>
+          <div>
+            <label className={labelCls}>Loan Type</label>
+            <select value={scenario.loanType || 'conventional'} onChange={e => {
               const lt = e.target.value;
               const newDown = lt === 'fha' ? 3.5 : lt === 'va' ? 0 : 25;
               const newFico = lt === 'fha' ? 680 : lt === 'va' ? 720 : 780;
               const newPV = lt === 'fha' ? 400000 : lt === 'va' ? 400000 : 533334;
               onChange({ ...scenario, loanType: lt, downPaymentPct: newDown, fico: newFico, propertyValue: newPV, vaFundingFeeExempt: false, vaSubsequentUse: false });
               setLastEdited('pct');
-            }}
-            className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm bg-white">
-            <option value="conventional">Conventional</option>
-            <option value="fha">FHA</option>
-            <option value="va">VA</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Term</label>
-          <select value={scenario.term || 30} onChange={e => update("term", parseInt(e.target.value, 10))}
-            className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm bg-white">
-            <option value={30}>30 Year</option>
-            <option value={15}>15 Year</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Amortization Type</label>
-          <select value={scenario.productType || 'fixed'} onChange={e => update("productType", e.target.value)}
-            className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm bg-white">
-            <option value="fixed">Fixed</option>
-            <option value="arm">ARM</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Property Type</label>
-          <select value={scenario.propertyType} onChange={e => update("propertyType", e.target.value)}
-            className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm bg-white">
-            <option value="sfr">Single Family</option>
-            <option value="condo">Condo</option>
-            <option value="townhome">Townhome</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">
-            {isPurchase ? "Purchase Price" : "Property Value"}
-          </label>
-          <input type="number" value={scenario.propertyValue || ""} placeholder="$"
-            onChange={e => update("propertyValue", Number(e.target.value))}
-            className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm" />
-        </div>
-
-        {/* Purchase: three interlinked fields */}
-        {isPurchase && (
-          <>
-            <div>
-              <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Down Payment %</label>
-              <input type="number" step="0.5" min="0" max="99"
-                value={lastEdited === 'pct' ? (scenario.downPaymentPct ?? "") : (purchaseCalc.downPct ?? "")}
-                placeholder="%"
-                onChange={e => handleDownPct(Number(e.target.value))}
-                className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Down Payment $</label>
-              <input type="number" step="1000"
-                value={lastEdited === 'dollars' ? (scenario.downPaymentDollars ?? "") : (purchaseCalc.downDollars ?? "")}
-                placeholder="$"
-                onChange={e => handleDownDollars(Number(e.target.value))}
-                className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Loan Amount</label>
-              <input type="number" step="1000"
-                value={lastEdited === 'loan' ? (scenario.manualLoanAmount || "") : (purchaseCalc.loanAmount || "")}
-                placeholder="$"
-                onChange={e => handleLoanAmount(Number(e.target.value))}
-                className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm" />
-            </div>
-          </>
-        )}
-
-        {/* Refi: New Loan Amount */}
-        {!isPurchase && (
+            }} className={selectCls}>
+              <option value="conventional">Conventional</option>
+              <option value="fha">FHA</option>
+              <option value="va">VA</option>
+            </select>
+          </div>
           <div>
-            <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">New Loan Amount</label>
-            <input type="number" value={scenario.newLoanAmount || scenario.currentPayoff || ""} placeholder="$"
-              onChange={e => update("newLoanAmount", Number(e.target.value))}
-              className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm" />
-            <p className="text-xs text-gray-400 mt-1">Your new mortgage balance</p>
+            <label className={labelCls}>Term</label>
+            <select value={scenario.term || 30} onChange={e => update('term', parseInt(e.target.value, 10))} className={selectCls}>
+              <option value={30}>30 Year</option>
+              <option value={15}>15 Year</option>
+            </select>
           </div>
-        )}
+          <div>
+            <label className={labelCls}>Amortization Type</label>
+            <select value={scenario.productType || 'fixed'} onChange={e => update('productType', e.target.value)} className={selectCls}>
+              <option value="fixed">Fixed</option>
+              <option value="arm">ARM</option>
+            </select>
+          </div>
 
-        <div>
-          <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">
-            Credit Score: <span className="text-gray-800 font-semibold">{scenario.fico || 780}</span>
-          </label>
-          <input type="range" min={580} max={850} step={5} value={scenario.fico || 780}
-            onChange={e => update("fico", parseInt(e.target.value, 10))}
-            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-brand" />
-          <div className="flex justify-between text-[10px] text-gray-400 mt-0.5">
-            <span>580</span><span>660</span><span>740</span><span>850</span>
-          </div>
-        </div>
-        {/* VA-specific fields */}
-        {scenario.loanType === 'va' && (
-          <>
-            <div className="flex items-center gap-3 py-1">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={scenario.vaFundingFeeExempt || false}
-                  onChange={e => update("vaFundingFeeExempt", e.target.checked)}
-                  className="rounded border-gray-300 text-brand focus:ring-brand/30" />
-                <span className="text-xs font-medium text-gray-600">Exempt from VA Funding Fee</span>
-              </label>
-              <div className="group relative">
-                <span className="text-gray-400 cursor-help text-xs">ⓘ</span>
-                <div className="hidden group-hover:block absolute bottom-full left-0 mb-1 w-56 bg-gray-800 text-white text-xs rounded-lg p-2 z-50">
-                  Veterans with a service-connected disability (10%+) are exempt from the VA funding fee.
-                </div>
-              </div>
-            </div>
-            {!scenario.vaFundingFeeExempt && (
-              <div className="flex items-center gap-3 py-1">
+          {/* VA-specific */}
+          {scenario.loanType === 'va' && (
+            <>
+              <div className="flex items-center gap-3 py-1 sm:col-span-2">
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" checked={scenario.vaSubsequentUse || false}
-                    onChange={e => update("vaSubsequentUse", e.target.checked)}
+                  <input type="checkbox" checked={scenario.vaFundingFeeExempt || false}
+                    onChange={e => update('vaFundingFeeExempt', e.target.checked)}
                     className="rounded border-gray-300 text-brand focus:ring-brand/30" />
-                  <span className="text-xs font-medium text-gray-600">Have you used a VA loan before?</span>
+                  <span className="text-sm text-gray-700">Exempt from VA Funding Fee</span>
                 </label>
                 <div className="group relative">
                   <span className="text-gray-400 cursor-help text-xs">ⓘ</span>
-                  <div className="hidden group-hover:block absolute bottom-full left-0 mb-1 w-64 bg-gray-800 text-white text-xs rounded-lg p-2 z-50">
-                    If you&apos;ve previously purchased a home with a VA loan and haven&apos;t fully restored your entitlement, the funding fee is higher. Entitlement is restored when you sell the home and pay off the VA loan.
+                  <div className="hidden group-hover:block absolute bottom-full left-0 mb-1 w-56 bg-gray-800 text-white text-xs rounded-lg p-2 z-50">
+                    Veterans with a service-connected disability (10%+) are exempt from the VA funding fee.
                   </div>
                 </div>
               </div>
-            )}
-          </>
-        )}
-        {/* First-Time Buyer — shows HomeReady/HomePossible products */}
-        {isPurchase && (
-          <div className="flex items-center gap-3 py-1">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={scenario.firstTimeBuyer || false}
-                onChange={e => update("firstTimeBuyer", e.target.checked)}
-                className="rounded border-gray-300 text-brand focus:ring-brand/30" />
-              <span className="text-xs font-medium text-gray-600">First-Time Home Buyer</span>
-            </label>
-            <div className="group relative">
-              <span className="text-gray-400 cursor-help text-xs">ⓘ</span>
-              <div className="hidden group-hover:block absolute bottom-full left-0 mb-1 w-64 bg-gray-800 text-white text-xs rounded-lg p-2 z-50">
-                Includes HomeReady and Home Possible products with reduced down payment and flexible income requirements for first-time buyers.
+              {!scenario.vaFundingFeeExempt && (
+                <div className="flex items-center gap-3 py-1 sm:col-span-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={scenario.vaSubsequentUse || false}
+                      onChange={e => update('vaSubsequentUse', e.target.checked)}
+                      className="rounded border-gray-300 text-brand focus:ring-brand/30" />
+                    <span className="text-sm text-gray-700">Have you used a VA loan before?</span>
+                  </label>
+                  <div className="group relative">
+                    <span className="text-gray-400 cursor-help text-xs">ⓘ</span>
+                    <div className="hidden group-hover:block absolute bottom-full left-0 mb-1 w-64 bg-gray-800 text-white text-xs rounded-lg p-2 z-50">
+                      If you&apos;ve previously purchased a home with a VA loan and haven&apos;t fully restored your entitlement, the funding fee is higher.
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* First-time buyer */}
+          {isPurchase && (
+            <div className="flex items-center gap-3 py-1 sm:col-span-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={scenario.firstTimeBuyer || false}
+                  onChange={e => update('firstTimeBuyer', e.target.checked)}
+                  className="rounded border-gray-300 text-brand focus:ring-brand/30" />
+                <span className="text-sm text-gray-700">First-Time Home Buyer</span>
+              </label>
+              <div className="group relative">
+                <span className="text-gray-400 cursor-help text-xs">ⓘ</span>
+                <div className="hidden group-hover:block absolute bottom-full left-0 mb-1 w-64 bg-gray-800 text-white text-xs rounded-lg p-2 z-50">
+                  Includes HomeReady and Home Possible products with reduced down payment and flexible income requirements.
+                </div>
               </div>
             </div>
-          </div>
-        )}
-        {!isPurchase && (
+          )}
+        </div>
+      </SectionCard>
+
+      {/* ── Section 2: Property & Financials ── */}
+      <SectionCard title="Property & Financials">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+
+          {/* Property type — button toggles */}
           <div>
-            <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Current Rate</label>
-            <input type="number" step="0.125" value={scenario.currentRate || ""} placeholder="%"
-              onChange={e => update("currentRate", Number(e.target.value))}
-              className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm" />
-            <p className="text-xs text-gray-400 mt-1">Your existing mortgage rate &mdash; used to calculate savings</p>
+            <label className={labelCls}>Property Type</label>
+            <div className="flex gap-2 flex-wrap">
+              {[['sfr', 'Single Family'], ['condo', 'Condo'], ['townhome', 'Townhome']].map(([val, label]) => (
+                <button key={val} type="button" onClick={() => update('propertyType', val)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
+                    scenario.propertyType === val
+                      ? 'bg-brand text-[#fff000] border-brand'
+                      : 'bg-white text-gray-600 border-gray-200 hover:border-brand/40 hover:text-brand'
+                  }`}>
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
-        )}
-        <div>
-          <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">State</label>
-          <select value={scenario.state || 'CO'} onChange={e => {
-            const st = e.target.value;
-            onChange({ ...scenario, state: st, county: DEFAULT_COUNTIES[st] || '', thirdPartyCosts: getThirdPartyCosts(st) });
-          }}
-            className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm bg-white">
-            {Object.entries(STATE_DEFAULTS).map(([code, { label }]) => (
-              <option key={code} value={code}>{label}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">County</label>
-          <select value={scenario.county || ''} onChange={e => update("county", e.target.value)}
-            className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm bg-white">
-            <option value="">All counties</option>
-            {counties.map(c => (
-              <option key={c.fips} value={c.name}>{c.name}{c.oneUnitLimit > BASELINE_1UNIT ? ` ($${(c.oneUnitLimit / 1000).toFixed(0)}K)` : ''}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-      {loanAmount > 0 && (
-        <div className="mt-3 pt-2 border-t border-gray-100 flex flex-wrap gap-x-6 gap-y-1 text-sm text-gray-600">
-          <span>Base Loan: <strong className="text-gray-800">${loanAmount.toLocaleString("en-US", { maximumFractionDigits: 0 })}</strong></span>
-          {isFha && (
-            <span>w/ UFMIP: <strong className="text-gray-800">${Math.floor(loanAmount * 1.0175).toLocaleString("en-US")}</strong></span>
-          )}
-          <span>LTV: <strong className="text-gray-800">{ltv.toFixed(1)}%</strong></span>
-          <span>FICO Band: <strong className="text-gray-800">{getFicoBand(scenario.fico)}</strong></span>
-          <span>State: <strong className="text-gray-800">{scenario.state || 'CO'}</strong></span>
-          {loanLimitInfo && (
+
+          {/* Number of units — button toggles */}
+          <div>
+            <label className={labelCls}>Number of Units</label>
+            <div className="flex gap-2 flex-wrap">
+              {[['1', '1 Unit'], ['2', '2 Units'], ['3-4', '3–4 Units'], ['5+', '5+ Units']].map(([val, label]) => (
+                <button key={val} type="button" onClick={() => update('units', val)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
+                    (scenario.units || '1') === val
+                      ? val === '5+' ? 'bg-gray-400 text-white border-gray-400 cursor-default'
+                        : 'bg-brand text-[#fff000] border-brand'
+                      : 'bg-white text-gray-600 border-gray-200 hover:border-brand/40 hover:text-brand'
+                  }`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            {(scenario.units === '5+') && (
+              <div className="mt-3 flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl p-3.5">
+                <svg className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                </svg>
+                <p className="text-sm text-amber-800">
+                  5+ unit properties are commercial loans and don&apos;t qualify for residential mortgage pricing.{' '}
+                  <a href="/contact" className="font-semibold underline hover:text-amber-900 transition-colors">
+                    Contact us to discuss commercial financing options &rarr;
+                  </a>
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className={labelCls}>{isPurchase ? 'Purchase Price' : 'Property Value'}</label>
+            <input type="number" value={scenario.propertyValue || ''} placeholder="$"
+              onChange={e => update('propertyValue', Number(e.target.value))}
+              className={inputCls} />
+          </div>
+
+          {/* Purchase: three interlinked fields */}
+          {isPurchase && (
             <>
-              <span>Limit: <strong className="text-gray-800">${loanLimitInfo.conforming1Unit.toLocaleString()}</strong></span>
-              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${
-                loanLimitInfo.classification === 'conforming' ? 'bg-green-100 text-green-700' :
-                loanLimitInfo.classification === 'highBalance' ? 'bg-amber-100 text-amber-700' :
-                'bg-red-100 text-red-700'
-              }`}>
-                {loanLimitInfo.classification === 'conforming' ? 'Conforming' :
-                 loanLimitInfo.classification === 'highBalance' ? 'High Balance' : 'Jumbo'}
-              </span>
+              <div>
+                <label className={labelCls}>Down Payment %</label>
+                <input type="number" step="0.5" min="0" max="99"
+                  value={lastEdited === 'pct' ? (scenario.downPaymentPct ?? '') : (purchaseCalc.downPct ?? '')}
+                  placeholder="%" onChange={e => handleDownPct(Number(e.target.value))}
+                  className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>Down Payment $</label>
+                <input type="number" step="1000"
+                  value={lastEdited === 'dollars' ? (scenario.downPaymentDollars ?? '') : (purchaseCalc.downDollars ?? '')}
+                  placeholder="$" onChange={e => handleDownDollars(Number(e.target.value))}
+                  className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>Loan Amount</label>
+                <input type="number" step="1000"
+                  value={lastEdited === 'loan' ? (scenario.manualLoanAmount || '') : (purchaseCalc.loanAmount || '')}
+                  placeholder="$" onChange={e => handleLoanAmount(Number(e.target.value))}
+                  className={inputCls} />
+              </div>
             </>
           )}
-        </div>
-      )}
-      {loanAmount > 0 && (
-        <button
-          onClick={onSubmit}
-          disabled={loading}
-          className="mt-3 w-full bg-brand text-white py-2.5 rounded-lg font-semibold hover:bg-brand-dark transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-        >
-          {loading ? (
+
+          {/* Refi fields */}
+          {!isPurchase && (
             <>
-              <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-              </svg>
-              Fetching Your Rates...
+              <div>
+                <label className={labelCls}>New Loan Amount</label>
+                <input type="number" value={scenario.newLoanAmount || scenario.currentPayoff || ''} placeholder="$"
+                  onChange={e => update('newLoanAmount', Number(e.target.value))}
+                  className={inputCls} />
+                <p className="text-xs text-gray-400 mt-1">Your new mortgage balance</p>
+              </div>
+              <div>
+                <label className={labelCls}>Current Rate</label>
+                <input type="number" step="0.125" value={scenario.currentRate || ''} placeholder="%"
+                  onChange={e => update('currentRate', Number(e.target.value))}
+                  className={inputCls} />
+                <p className="text-xs text-gray-400 mt-1">Used to calculate savings</p>
+              </div>
             </>
-          ) : 'Get My Rates'}
-        </button>
-      )}
+          )}
+
+          {/* State + County */}
+          <div>
+            <label className={labelCls}>State</label>
+            <select value={scenario.state || 'CO'} onChange={e => {
+              const st = e.target.value;
+              onChange({ ...scenario, state: st, county: DEFAULT_COUNTIES[st] || '', thirdPartyCosts: getThirdPartyCosts(st) });
+            }} className={selectCls}>
+              {Object.entries(STATE_DEFAULTS).map(([code, { label }]) => (
+                <option key={code} value={code}>{label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className={labelCls}>County</label>
+            <select value={scenario.county || ''} onChange={e => update('county', e.target.value)} className={selectCls}>
+              <option value="">All counties</option>
+              {counties.map(c => (
+                <option key={c.fips} value={c.name}>
+                  {c.name}{c.oneUnitLimit > BASELINE_1UNIT ? ` ($${(c.oneUnitLimit / 1000).toFixed(0)}K)` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Credit Score — full width, bottom of section */}
+          <div className="sm:col-span-2">
+            <label className={labelCls}>
+              Credit Score: <span className="text-gray-800 font-bold normal-case tracking-normal">{scenario.fico || 780}</span>
+              <span className="ml-1 text-gray-400 normal-case tracking-normal font-normal">({getFicoBand(scenario.fico)})</span>
+            </label>
+            <input type="range" min={580} max={850} step={5} value={scenario.fico || 780}
+              onChange={e => update('fico', parseInt(e.target.value, 10))}
+              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-brand mt-1" />
+            <div className="flex justify-between text-[10px] text-gray-400 mt-1">
+              <span>580</span><span>660</span><span>740</span><span>850</span>
+            </div>
+          </div>
+
+        </div>
+      </SectionCard>
+
+      {/* ── Get My Rates ── */}
+      <button
+        onClick={onSubmit}
+        disabled={loading || !loanAmount || scenario.units === '5+'}
+        className="w-full bg-brand text-[#fff000] py-3 rounded-2xl font-semibold text-base hover:bg-brand-dark transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-2"
+      >
+        {loading ? (
+          <>
+            <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+            Fetching Your Rates...
+          </>
+        ) : 'Get My Rates →'}
+      </button>
+
     </div>
   );
 }

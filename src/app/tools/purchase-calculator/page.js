@@ -23,7 +23,7 @@ function Input({ label, prefix, suffix, value, onChange, step, min }) {
           onChange={e => onChange(e.target.value)}
           step={step || 1}
           min={min || 0}
-          className={`w-full border border-gray-300 rounded-lg py-2.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 ${prefix ? 'pl-7' : 'pl-3'} ${suffix ? 'pr-10' : 'pr-3'}`}
+          className={`w-full border border-gray-200 rounded-lg py-2.5 text-sm focus:border-brand focus:ring-2 focus:ring-brand/10 outline-none transition-colors ${prefix ? 'pl-7' : 'pl-3'} ${suffix ? 'pr-10' : 'pr-3'}`}
         />
         {suffix && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">{suffix}</span>}
       </div>
@@ -97,9 +97,10 @@ function PurchaseCalculatorContent() {
   }, [homePrice, downPct, rate, term, taxRate, insurance, hoa, income]);
 
   return (
+    <div className="min-h-screen bg-[#F5F7FA]">
     <div className="max-w-3xl mx-auto px-6 py-10">
       <div className="mb-8">
-        <Link href="/" className="text-sm text-cyan-600 hover:underline">← Back to tools</Link>
+        <Link href="/tools" className="text-sm text-brand hover:underline">← Back to tools</Link>
         <h1 className="text-2xl font-bold text-gray-900 mt-3">Purchase Calculator</h1>
         <p className="text-sm text-gray-500 mt-1">
           Estimate your monthly payment, cash to close, and how much home you can afford.
@@ -182,9 +183,9 @@ function PurchaseCalculatorContent() {
           </div>
 
           {/* Max Affordable */}
-          <div className="bg-cyan-50 border border-cyan-200 rounded-xl p-4">
-            <div className="text-xs text-cyan-700 uppercase tracking-wide">Max Affordable Home (at 45% DTI)</div>
-            <div className="text-lg font-bold text-cyan-800 mt-1">{dollar(results.maxPrice)}</div>
+          <div className="bg-brand/5 border border-brand/10 rounded-xl p-4">
+            <div className="text-xs text-brand uppercase tracking-wide">Max Affordable Home (at 45% DTI)</div>
+            <div className="text-lg font-bold text-brand mt-1">{dollar(results.maxPrice)}</div>
           </div>
 
           <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-xs text-gray-500">
@@ -194,15 +195,16 @@ function PurchaseCalculatorContent() {
           </div>
 
           <div className="flex gap-3 pt-2">
-            <Link href="/portal/apply" className="inline-flex items-center px-5 py-2.5 bg-cyan-600 text-white text-sm font-medium rounded-lg hover:bg-cyan-700 transition-colors">
+            <Link href="/portal/apply" className="inline-flex items-center px-5 py-2.5 bg-brand text-[#fff000] text-sm font-medium rounded-2xl hover:bg-brand-dark transition-colors">
               Get pre-approved
             </Link>
-            <Link href="/contact" className="inline-flex items-center px-5 py-2.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+            <Link href="/contact" className="inline-flex items-center px-5 py-2.5 border-2 border-brand text-brand text-sm font-medium rounded-2xl hover:bg-brand/5 transition-colors">
               Talk to a loan officer
             </Link>
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 }

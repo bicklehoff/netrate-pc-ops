@@ -3,23 +3,20 @@
 @tailwind utilities;
 
 :root {
-  --brand-primary: #0891b2;
-  --brand-dark: #0e7490;
-  --text-primary: #0f172a;
-  --text-body: #334155;
-  --text-light: #64748b;
-  --text-muted: #94a3b8;
-  --bg-page: #f8fafc;
+  --brand-primary: #024c4f;
+  --brand-dark: #013638;
+  --brand-light: #afc8c7;
+  --accent-yellow: #fff000;
+  --text-primary: #111827;
+  --text-body: #374151;
+  --text-light: #6B7280;
+  --text-muted: #9CA3AF;
+  --bg-page: #F5F7FA;
   --bg-card: #ffffff;
-  --bg-subtle: #f1f5f9;
-  --border: #e2e8f0;
+  --bg-subtle: #F5F7FA;
+  --border: #e5e7eb;
   --success: #059669;
   --warning: #dc2626;
-  /* Pro-Dark palette */
-  --bg-deep: #0B1218;
-  --bg-surface: #161F27;
-  --accent-primary: #22D3EE;
-  --border-subtle: rgba(255, 255, 255, 0.1);
 }
 
 body {
@@ -45,10 +42,10 @@ th[class*="font-mono"] {
   transition: box-shadow 0.2s ease;
 }
 .glow-brand:hover {
-  box-shadow: 0 0 20px rgba(34, 211, 238, 0.2);
+  box-shadow: 0 0 20px rgba(2, 76, 79, 0.2);
 }
 .glow-brand:focus-visible {
-  box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);
+  box-shadow: 0 0 20px rgba(2, 76, 79, 0.3);
 }
 
 /* Market ticker scrolling animation */
