@@ -1,173 +1,606 @@
 'use client';
 
-import { useState, useMemo, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
-import Link from 'next/link';
+import { useState, useEffect } from 'react';
 
-function fmt(n) { return n.toLocaleString('en-US', { maximumFractionDigits: 2 }); }
-function dollar(n) { return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+// ── Rate data: Everstream DSCR Core 7/6 ARM, 30-day lock, April 6 2026 ──
+const RATES = [
+  { rate: 5.500, base: 94.2360 },
+  { rate: 5.625, base: 94.9860 },
+  { rate: 5.750, base: 95.7360 },
+  { rate: 5.875, base: 96.4860 },
+  { rate: 6.000, base: 97.2360 },
+  { rate: 6.125, base: 97.9230 },
+  { rate: 6.250, base: 98.6110 },
+  { rate: 6.375, base: 99.2990 },
+  { rate: 6.500, base: 99.9240 },
+  { rate: 6.625, base: 100.5490 },
+  { rate: 6.750, base: 101.1110 },
+  { rate: 6.875, base: 101.6740 },
+  { rate: 7.000, base: 102.1740 },
+  { rate: 7.125, base: 102.6740 },
+  { rate: 7.250, base: 103.1110 },
+  { rate: 7.375, base: 103.5490 },
+  { rate: 7.500, base: 103.9240 },
+  { rate: 7.625, base: 104.2990 },
+  { rate: 7.750, base: 104.6110 },
+  { rate: 7.875, base: 104.9240 },
+  { rate: 8.000, base: 105.2360 },
+];
 
-function Input({ label, prefix, suffix, value, onChange, step, min }) {
-  return (
-    <label className="block">
-      <span className="text-sm font-medium text-gray-700">{label}</span>
-      <div className="mt-1 relative">
-        {prefix && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">{prefix}</span>}
-        <input
-          type="number"
-          value={value}
-          onChange={e => onChange(e.target.value)}
-          step={step || 1}
-          min={min || 0}
-          className={`w-full border border-gray-300 rounded-lg py-2.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 ${prefix ? 'pl-7' : 'pl-3'} ${suffix ? 'pr-10' : 'pr-3'}`}
-        />
-        {suffix && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">{suffix}</span>}
-      </div>
-    </label>
-  );
+// DSCR 1 Global LLPAs — 2-unit by LTV band [≤50,50-55,55-60,60-65,65-70,70-75,75-80]
+const TWO_UNIT_LLPA = [-0.5, -0.5, -0.75, -1.0, -1.25, -1.5, -2.0];
+const LTV_BANDS = [50, 55, 60, 65, 70, 75, 80];
+const DSCR_RATIO_ADJ = [
+  { min: 1.00, max: 1.15, adj: [0, 0, -0.25, -0.25, -0.25, -0.5, -0.75] },
+  { min: 1.15, max: 1.30, adj: [0, 0, 0, 0, 0, 0, 0] },
+  { min: 1.30, max: 99,   adj: [0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25] },
+];
+const COMP_RATE = 0.02;
+const COMP_CAP_PURCHASE = 4595;
+const COMP_CAP_REFI = 3595;
+const SHEET_DATE = 'April 6, 2026';
+
+function getLtvBandIdx(ltv) {
+  for (let i = 0; i < LTV_BANDS.length; i++) if (ltv <= LTV_BANDS[i]) return i;
+  return LTV_BANDS.length - 1;
 }
+function calcPI(loan, annualRate) {
+  const r = annualRate / 100 / 12;
+  return loan * (r * Math.pow(1 + r, 360)) / (Math.pow(1 + r, 360) - 1);
+}
+function fmtD(n) { return '$' + Math.round(n).toLocaleString(); }
+function fmtPts(n) { return (n >= 0 ? '+' : '') + n.toFixed(3) + ' pts'; }
 
-function DSCRCalculatorContent() {
-  const sp = useSearchParams();
-  const [rentalIncome, setRentalIncome] = useState('3000');
-  const [expenses, setExpenses] = useState('800');
-  const [loanAmount, setLoanAmount] = useState(sp.get('loanAmount') || '300000');
-  const [rate, setRate] = useState(sp.get('rate') || '7.25');
-  const [term, setTerm] = useState(sp.get('term') || '30');
+// ── Design system classes ──
+const labelCls = 'block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1';
+const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:border-brand focus:ring-2 focus:ring-brand/10 outline-none transition-colors tabular-nums';
+const cardCls = 'bg-white rounded-2xl border border-gray-100 shadow-[0_4px_24px_rgba(2,76,79,0.06)] p-5';
+const tightCardCls = 'bg-white rounded-xl border border-gray-100 shadow-[0_2px_12px_rgba(2,76,79,0.05)] p-4';
 
-  const results = useMemo(() => {
-    const income = parseFloat(rentalIncome) || 0;
-    const exp = parseFloat(expenses) || 0;
-    const loan = parseFloat(loanAmount) || 0;
-    const r = (parseFloat(rate) || 0) / 100 / 12;
-    const n = (parseFloat(term) || 30) * 12;
-
-    if (!loan || !r) return null;
-
-    const payment = loan * (r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
-    const noi = income - exp;
-    const dscr = payment > 0 ? noi / payment : 0;
-
-    let status, color, bg, detail;
-    if (dscr >= 1.25) {
-      status = 'Strong — Qualifies';
-      color = 'text-green-700';
-      bg = 'bg-green-50 border-green-200';
-      detail = 'Most DSCR lenders approve at 1.25+. The property earns 25%+ more than the mortgage costs. Best rates available at this tier.';
-    } else if (dscr >= 1.15) {
-      status = 'Good — Qualifies with Most Lenders';
-      color = 'text-green-600';
-      bg = 'bg-green-50 border-green-200';
-      detail = 'Above 1.15 qualifies with most DSCR programs. Rates may be slightly higher than the 1.25+ tier.';
-    } else if (dscr >= 1.0) {
-      status = 'Minimum — Limited Options';
-      color = 'text-amber-700';
-      bg = 'bg-amber-50 border-amber-200';
-      detail = 'A 1.0 DSCR means the rent exactly covers the mortgage — no cushion. Some lenders allow this but expect higher rates and larger down payments (typically 25-30%).';
-    } else if (dscr >= 0.75) {
-      status = 'Below Break-Even — Specialty Programs Only';
-      color = 'text-orange-700';
-      bg = 'bg-orange-50 border-orange-200';
-      detail = 'The property doesn\'t fully cover the mortgage. A few lenders offer "no-ratio" or sub-1.0 DSCR programs, but rates are significantly higher and typically require 30%+ down.';
-    } else {
-      status = 'Does Not Qualify';
-      color = 'text-red-700';
-      bg = 'bg-red-50 border-red-200';
-      detail = 'The rental income is too low relative to the mortgage payment. Consider a larger down payment (reduces the mortgage) or verify your rent estimate against market comps.';
-    }
-
-    return { payment, noi, dscr, status, color, bg, detail };
-  }, [rentalIncome, expenses, loanAmount, rate, term]);
-
+function SectionLabel({ children }) {
   return (
-    <div className="max-w-3xl mx-auto px-6 py-10">
-      <div className="mb-8">
-        <Link href="/" className="text-sm text-cyan-600 hover:underline">← Back to tools</Link>
-        <h1 className="text-2xl font-bold text-gray-900 mt-3">DSCR Calculator</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          <strong>DSCR</strong> stands for Debt Service Coverage Ratio. It&apos;s a simple formula:
-          your property&apos;s rental income divided by the mortgage payment. If the ratio is above 1.0, the
-          property pays for itself. DSCR loans are for investment properties — they qualify based on
-          the property&apos;s income, not yours. No tax returns, no pay stubs, no personal income documentation.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-        <Input label="Monthly Gross Rental Income" prefix="$" value={rentalIncome} onChange={setRentalIncome} step="100" />
-        <Input label="Monthly Expenses (tax, ins, HOA, mgmt)" prefix="$" value={expenses} onChange={setExpenses} step="50" />
-        <Input label="Loan Amount" prefix="$" value={loanAmount} onChange={setLoanAmount} step="5000" />
-        <Input label="Interest Rate" suffix="%" value={rate} onChange={setRate} step="0.125" />
-        <Input label="Loan Term (years)" suffix="yr" value={term} onChange={setTerm} />
-      </div>
-
-      {results && (
-        <div className="space-y-4">
-          <div className={`rounded-xl border p-6 text-center ${results.bg}`}>
-            <div className="text-4xl font-bold tabular-nums">{fmt(results.dscr)}</div>
-            <div className={`text-sm font-semibold mt-1 ${results.color}`}>{results.status}</div>
-            <p className="text-xs text-gray-600 mt-2 max-w-lg mx-auto">{results.detail}</p>
-          </div>
-
-          {/* DSCR Tier Guide */}
-          <div className="bg-white border border-gray-200 rounded-xl p-4">
-            <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">DSCR Tiers — What Lenders Look For</h4>
-            <div className="space-y-1.5">
-              {[
-                { range: '1.25+', label: 'Strong', desc: 'Best rates, most lenders', color: 'bg-green-500', active: results.dscr >= 1.25 },
-                { range: '1.15–1.24', label: 'Good', desc: 'Qualifies with most programs', color: 'bg-green-400', active: results.dscr >= 1.15 && results.dscr < 1.25 },
-                { range: '1.00–1.14', label: 'Minimum', desc: 'Higher rates, more down payment', color: 'bg-amber-400', active: results.dscr >= 1.0 && results.dscr < 1.15 },
-                { range: '0.75–0.99', label: 'Below break-even', desc: 'Specialty programs only', color: 'bg-orange-400', active: results.dscr >= 0.75 && results.dscr < 1.0 },
-                { range: 'Below 0.75', label: 'Does not qualify', desc: 'Increase rent or down payment', color: 'bg-red-400', active: results.dscr < 0.75 },
-              ].map((tier) => (
-                <div key={tier.range} className={`flex items-center gap-3 text-xs px-3 py-1.5 rounded ${tier.active ? 'bg-gray-100 font-semibold' : ''}`}>
-                  <span className={`w-2.5 h-2.5 rounded-full ${tier.color} flex-shrink-0`} />
-                  <span className="w-20 font-mono text-gray-700">{tier.range}</span>
-                  <span className="text-gray-600">{tier.label} — {tier.desc}</span>
-                  {tier.active && <span className="ml-auto text-brand font-semibold">← You</span>}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-white border border-gray-200 rounded-xl p-4">
-              <div className="text-xs text-gray-500 uppercase tracking-wide">Net Operating Income</div>
-              <div className="text-lg font-semibold text-gray-900 mt-1">{dollar(results.noi)}<span className="text-xs text-gray-400">/mo</span></div>
-            </div>
-            <div className="bg-white border border-gray-200 rounded-xl p-4">
-              <div className="text-xs text-gray-500 uppercase tracking-wide">Monthly Debt Service</div>
-              <div className="text-lg font-semibold text-gray-900 mt-1">{dollar(results.payment)}<span className="text-xs text-gray-400">/mo</span></div>
-            </div>
-          </div>
-
-          <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-xs text-gray-500 space-y-2">
-            <p><strong>How the math works:</strong></p>
-            <p className="font-mono bg-white rounded px-2 py-1 inline-block">DSCR = Rental Income − Expenses ÷ Mortgage Payment</p>
-            <p>
-              Example: $3,000 rent − $800 expenses = $2,200 net income. If the mortgage is $1,760/mo,
-              your DSCR is 2,200 ÷ 1,760 = <strong>1.25</strong>. The property earns 25% more than the mortgage costs.
-            </p>
-            <p>
-              <strong>Note:</strong> This calculator uses principal &amp; interest only. Your lender may include
-              taxes and insurance in the debt service figure, which would lower the ratio. Enter your full
-              monthly expenses (tax, insurance, HOA, property management) in the expenses field for the most accurate result.
-            </p>
-          </div>
-
-          <div className="flex gap-3 pt-2">
-            <Link href="/contact" className="inline-flex items-center px-5 py-2.5 bg-cyan-600 text-white text-sm font-medium rounded-lg hover:bg-cyan-700 transition-colors">
-              Talk to a loan officer
-            </Link>
-            <Link href="/portal/apply" className="inline-flex items-center px-5 py-2.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
-              Start application
-            </Link>
-          </div>
-        </div>
-      )}
+    <div className="flex items-center gap-2 mb-2">
+      <div className="w-1 h-3 bg-brand rounded-full" />
+      <span className="text-[10px] font-bold text-brand uppercase tracking-widest">{children}</span>
     </div>
   );
 }
 
-export default function DSCRCalculatorPage() {
-  return <Suspense><DSCRCalculatorContent /></Suspense>;
+
+export default function DSCRCalculator() {
+  const [purchasePrice, setPurchasePrice] = useState(380000);
+  const [downPayment, setDownPayment] = useState(130000);
+  const [fico, setFico] = useState(760);
+  const [units, setUnits] = useState(2);
+  const [state, setState] = useState('CO');
+  const [purpose, setPurpose] = useState('purchase');
+  const [monthlyRent, setMonthlyRent] = useState(3000);
+  const [monthlyTaxes, setMonthlyTaxes] = useState(350);
+  const [monthlyInsurance, setMonthlyInsurance] = useState(150);
+  const [monthlyHoa, setMonthlyHoa] = useState(0);
+  const [targetPayment, setTargetPayment] = useState(2200);
+  const [selectedRate, setSelectedRate] = useState(null);
+
+  const loanAmount = purchasePrice - downPayment;
+  const ltv = purchasePrice > 0 ? (loanAmount / purchasePrice) * 100 : 0;
+  const ltvBandIdx = getLtvBandIdx(ltv);
+  const compCap = purpose === 'purchase' ? COMP_CAP_PURCHASE : COMP_CAP_REFI;
+  const compDollar = Math.min(loanAmount * COMP_RATE, compCap);
+  const compPts = loanAmount > 0 ? (compDollar / loanAmount) * 100 : 0;
+  const monthlyEscrow = monthlyTaxes + monthlyInsurance;
+
+  const twoUnitAdj = units > 1 ? TWO_UNIT_LLPA[ltvBandIdx] : 0;
+
+  const rows = RATES.map(({ rate, base }) => {
+    const pi = calcPI(loanAmount, rate);
+    const pitia = pi + monthlyEscrow + monthlyHoa;
+    const dscr = pitia > 0 ? monthlyRent / pitia : 0;
+    let dscrRatioAdj = 0;
+    for (const tier of DSCR_RATIO_ADJ) {
+      if (dscr >= tier.min && dscr < tier.max) { dscrRatioAdj = tier.adj[ltvBandIdx]; break; }
+    }
+    if (dscr >= 1.30) dscrRatioAdj = DSCR_RATIO_ADJ[2].adj[ltvBandIdx];
+    const adjPrice = base + twoUnitAdj + dscrRatioAdj;
+    const netPrice = adjPrice - compPts;
+    const netDollar = (netPrice - 100) / 100 * loanAmount;
+    return { rate, base, pi, pitia, dscr, twoUnitAdj, dscrRatioAdj, adjPrice, netPrice, netDollar };
+  });
+
+  // Find par
+  const parRow = rows.reduce((best, r) => Math.abs(r.netPrice - 100) < Math.abs(best.netPrice - 100) ? r : best, rows[0]);
+  const displayRows = rows.filter(r => Math.abs(r.netPrice - 100) < 3.0);
+
+  // Auto-select par on first load / when scenario changes
+  useEffect(() => {
+    setSelectedRate(parRow.rate);
+  }, [loanAmount, units, purpose, monthlyRent, monthlyTaxes, monthlyInsurance, monthlyHoa]);
+
+  const activeRow = rows.find(r => r.rate === selectedRate) || parRow;
+
+  // Slider bounds
+  const dpMin = Math.round(purchasePrice * 0.20 / 1000) * 1000;
+  const dpMax = Math.round(purchasePrice * 0.50 / 1000) * 1000;
+  const dpPct = dpMax > dpMin ? ((downPayment - dpMin) / (dpMax - dpMin) * 100).toFixed(1) : 0;
+
+  // Target status
+  const targetDiff = targetPayment - activeRow.pitia;
+  const targetMet = targetDiff >= 0;
+  const targetClose = Math.abs(targetDiff) < 150;
+
+  // Guidelines
+  const guidelines = [
+    { pass: ltv <= 75, warn: ltv <= 80, text: `LTV ${ltv.toFixed(1)}% — max 75% for 2–4 unit (standard) · max 80% with adjustment` },
+    { pass: activeRow.dscr >= 1.25, warn: activeRow.dscr >= 1.00, text: `DSCR ${activeRow.dscr.toFixed(2)} — min 1.00 required · 1.25+ preferred` },
+    { pass: fico >= 700, warn: fico >= 660, text: `FICO ${fico} — min 660 for most LTV bands` },
+    { pass: activeRow.dscr >= 1.30, warn: false, text: activeRow.dscr >= 1.30 ? `DSCR > 1.30 — earns +0.25 pt credit` : `DSCR below 1.30 — no ratio bonus (need > 1.30 for +0.25 credit)` },
+    { pass: units <= 4, warn: units > 1, text: `${units}-unit — LLPA applies on 2–4 unit properties` },
+    { pass: false, warn: true, text: 'Verify 12 months PITIA reserves required for 2–4 unit DSCR' },
+  ];
+
+  return (
+    <div className="min-h-screen bg-[#F5F7FA]">
+      {/* Header */}
+      <div className="bg-brand border-b border-white/10 px-6 py-4 flex items-center gap-3">
+        <svg width="28" height="28" viewBox="0 0 44 44" fill="none">
+          <rect width="44" height="44" rx="14" fill="#013638"/>
+          <line x1="11" y1="33" x2="23" y2="14" stroke="#fff000" strokeWidth="4.5" strokeLinecap="round"/>
+          <line x1="23" y1="30" x2="35" y2="11" stroke="#fff000" strokeWidth="4.5" strokeLinecap="round"/>
+        </svg>
+        <span className="text-white font-bold text-lg">DSCR Loan Calculator</span>
+        <span className="ml-2 bg-[#fff000] text-brand text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Investor</span>
+        <span className="ml-auto text-white/50 text-xs">Everstream · Core 7/6 ARM · {SHEET_DATE}</span>
+      </div>
+
+      <div className="max-w-6xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-5 items-start">
+
+        {/* ── LEFT: Inputs ── */}
+        <div className="flex flex-col gap-4">
+          <div className={cardCls}>
+            <SectionLabel>Loan Scenario</SectionLabel>
+
+            {/* Purchase Price */}
+            <div className="mb-3">
+              <label className={labelCls}>Purchase Price</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                <input type="number" value={purchasePrice} onChange={e => setPurchasePrice(+e.target.value || 0)}
+                  step={5000} className={inputCls + ' pl-6'} />
+              </div>
+            </div>
+
+            {/* Down Payment Slider */}
+            <div className="mb-4">
+              <div className="flex justify-between items-baseline mb-1">
+                <label className={labelCls}>Down Payment</label>
+                <span className="text-base font-bold text-brand tabular-nums">
+                  {fmtD(downPayment)} <span className="text-xs font-medium text-gray-400">({(downPayment / purchasePrice * 100).toFixed(1)}%)</span>
+                </span>
+              </div>
+              <input
+                type="range"
+                min={dpMin} max={dpMax} step={1000}
+                value={Math.min(Math.max(downPayment, dpMin), dpMax)}
+                onChange={e => setDownPayment(+e.target.value)}
+                className="w-full h-1.5 rounded-full outline-none cursor-pointer appearance-none
+                  [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5
+                  [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white
+                  [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-brand
+                  [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:cursor-pointer"
+                style={{
+                  background: `linear-gradient(to right, #024c4f 0%, #024c4f ${dpPct}%, #e5e7eb ${dpPct}%, #e5e7eb 100%)`
+                }}
+              />
+              <div className="flex justify-between text-[11px] text-gray-400 mt-1">
+                <span>20% — {fmtD(dpMin)}</span>
+                <span>50% — {fmtD(dpMax)}</span>
+              </div>
+            </div>
+
+            {/* Derived: Loan Amount + LTV */}
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <div>
+                <label className={labelCls}>Loan Amount <span className="text-gray-300 normal-case font-normal tracking-normal">auto</span></label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                  <input type="text" readOnly value={loanAmount.toLocaleString()}
+                    className={inputCls + ' pl-6 bg-gray-50 text-gray-500 cursor-default'} />
+                </div>
+              </div>
+              <div>
+                <label className={labelCls}>LTV <span className="text-gray-300 normal-case font-normal tracking-normal">auto</span></label>
+                <input type="text" readOnly value={ltv.toFixed(1) + '%'}
+                  className={inputCls + ' bg-gray-50 text-gray-500 cursor-default'} />
+              </div>
+            </div>
+
+            {/* FICO + Units */}
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <div>
+                <label className={labelCls}>FICO Score</label>
+                <input type="number" value={fico} onChange={e => setFico(+e.target.value)}
+                  min={620} max={850} className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>Units</label>
+                <select value={units} onChange={e => setUnits(+e.target.value)} className={inputCls}>
+                  <option value={1}>1 Unit (SFR)</option>
+                  <option value={2}>2 Units</option>
+                  <option value={3}>3 Units</option>
+                  <option value={4}>4 Units</option>
+                </select>
+              </div>
+            </div>
+
+            {/* State + Purpose */}
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className={labelCls}>State</label>
+                <select value={state} onChange={e => setState(e.target.value)} className={inputCls}>
+                  <option value="CO">Colorado</option>
+                  <option value="CA">California</option>
+                  <option value="TX">Texas</option>
+                  <option value="OR">Oregon</option>
+                </select>
+              </div>
+              <div>
+                <label className={labelCls}>Purpose</label>
+                <select value={purpose} onChange={e => setPurpose(e.target.value)} className={inputCls}>
+                  <option value="purchase">Purchase</option>
+                  <option value="refinance">Refinance</option>
+                  <option value="cashout">Cash-Out</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Income & Expenses */}
+          <div className={cardCls}>
+            <SectionLabel>Monthly Income &amp; Expenses</SectionLabel>
+
+            <div className="mb-3">
+              <label className={labelCls}>Gross Monthly Rent</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                <input type="number" value={monthlyRent} onChange={e => setMonthlyRent(+e.target.value)}
+                  step={50} className={inputCls + ' pl-6'} />
+              </div>
+              <p className="text-[11px] text-gray-400 mt-1">Market rent — use lease or appraisal</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <div>
+                <label className={labelCls}>Property Taxes (mo.)</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                  <input type="number" value={monthlyTaxes} onChange={e => setMonthlyTaxes(+e.target.value)}
+                    step={25} className={inputCls + ' pl-6'} />
+                </div>
+                <p className="text-[11px] text-gray-400 mt-1">Annual ÷ 12</p>
+              </div>
+              <div>
+                <label className={labelCls}>Insurance (mo.)</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                  <input type="number" value={monthlyInsurance} onChange={e => setMonthlyInsurance(+e.target.value)}
+                    step={10} className={inputCls + ' pl-6'} />
+                </div>
+                <p className="text-[11px] text-gray-400 mt-1">Hazard + landlord</p>
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <label className={labelCls}>HOA (monthly, if any)</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                <input type="number" value={monthlyHoa} onChange={e => setMonthlyHoa(+e.target.value)}
+                  step={25} className={inputCls + ' pl-6'} />
+              </div>
+            </div>
+
+            {/* DSCR Meter */}
+            <div className="bg-brand/5 border border-brand/10 rounded-xl p-4">
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <div className="text-[10px] font-bold text-brand uppercase tracking-widest">Debt Service Coverage Ratio</div>
+                  <div className="text-[10px] text-gray-400 mt-0.5">Rent ÷ PITIA (P&I + Taxes + Insurance + HOA)</div>
+                </div>
+                <span className={`text-2xl font-bold tabular-nums ${activeRow.dscr >= 1.30 ? 'text-green-600' : activeRow.dscr >= 1.00 ? 'text-amber-500' : 'text-red-500'}`}>
+                  {activeRow.dscr.toFixed(2)}
+                </span>
+              </div>
+              <div className="h-2 bg-gray-200 rounded-full overflow-hidden mb-1">
+                <div className="h-2 rounded-full transition-all duration-300"
+                  style={{
+                    width: Math.max(0, Math.min(100, (activeRow.dscr - 0.75) / 0.75 * 100)) + '%',
+                    background: activeRow.dscr >= 1.30 ? '#16a34a' : activeRow.dscr >= 1.00 ? '#d97706' : '#dc2626'
+                  }} />
+              </div>
+              <div className="flex justify-between text-[10px] text-gray-400">
+                <span>0.75</span><span>1.00</span><span>1.15</span><span>1.30</span><span>1.50+</span>
+              </div>
+              <div className="text-[11px] text-gray-500 mt-2 pt-2 border-t border-brand/10">
+                <span className="font-semibold text-brand">{fmtD(monthlyRent)}</span> rent ÷{' '}
+                <span className="font-semibold text-brand">{fmtD(activeRow.pitia)}</span> PITIA
+                ({fmtD(activeRow.pi)} P&I + {fmtD(monthlyTaxes)} tax + {fmtD(monthlyInsurance)} ins
+                {monthlyHoa > 0 ? ` + ${fmtD(monthlyHoa)} HOA` : ''})
+              </div>
+            </div>
+          </div>
+
+          {/* Target Payment */}
+          <div className={tightCardCls}>
+            <SectionLabel>Target Max Payment</SectionLabel>
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                <input type="number" value={targetPayment} onChange={e => setTargetPayment(+e.target.value)}
+                  step={50} className={inputCls + ' pl-6'} />
+              </div>
+              <span className="text-sm text-gray-500 whitespace-nowrap">max PITIA/mo</span>
+            </div>
+            {targetPayment > 0 && (
+              <div className={`mt-2 text-xs font-semibold px-3 py-1.5 rounded-lg inline-block ${
+                targetMet ? 'bg-green-50 text-green-700' : targetClose ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-600'
+              }`}>
+                {targetMet
+                  ? `✓ Under target by ${fmtD(targetDiff)}/mo at ${activeRow.rate.toFixed(3)}%`
+                  : `${fmtD(Math.abs(targetDiff))}/mo over target — increase down payment`}
+              </div>
+            )}
+          </div>
+
+          {/* Guidelines */}
+          <div className={cardCls}>
+            <SectionLabel>Eligibility Check</SectionLabel>
+            <ul className="space-y-2">
+              {guidelines.map((g, i) => (
+                <li key={i} className="flex items-start gap-2 text-xs">
+                  <span className={`mt-0.5 w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold ${
+                    g.pass ? 'bg-green-100 text-green-700' : g.warn ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-600'
+                  }`}>
+                    {g.pass ? '✓' : g.warn ? '!' : '✗'}
+                  </span>
+                  <span className="text-gray-600 leading-tight">{g.text}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="text-[11px] text-gray-400 mt-3">Everstream DSCR 1 · Core 7/6 ARM · 30-day lock · {SHEET_DATE}</p>
+          </div>
+        </div>
+
+        {/* ── RIGHT: Results ── */}
+        <div className="flex flex-col gap-4">
+
+          {/* Scenario pills */}
+          <div className="flex flex-wrap gap-2">
+            {[
+              ['LTV', ltv.toFixed(1) + '%'],
+              ['DSCR', activeRow.dscr.toFixed(2)],
+              ['FICO', fico],
+              ['Units', units + '-unit'],
+              ['State', state],
+              ['Purpose', purpose === 'purchase' ? 'Purchase' : purpose === 'refinance' ? 'Refi' : 'Cash-Out'],
+            ].map(([label, value]) => (
+              <div key={label} className="bg-white border border-gray-200 rounded-full px-3 py-1 text-xs">
+                <span className="text-gray-400">{label}: </span>
+                <span className="font-semibold text-gray-900">{value}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Payment breakdown */}
+          <div className={cardCls}>
+            <SectionLabel>Monthly Payment — {activeRow.rate.toFixed(3)}%</SectionLabel>
+
+            {/* Stacked bar */}
+            <div className="flex h-2.5 rounded-full overflow-hidden gap-0.5 mb-2">
+              {[
+                { val: activeRow.pi, color: '#024c4f' },
+                { val: monthlyTaxes, color: '#f59e0b' },
+                { val: monthlyInsurance, color: '#10b981' },
+                { val: monthlyHoa, color: '#8b5cf6' },
+              ].map(({ val, color }, i) => (
+                <div key={i} style={{ width: (val / activeRow.pitia * 100).toFixed(1) + '%', background: color }}
+                  className="h-full first:rounded-l-full last:rounded-r-full transition-all duration-300" />
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-3 mb-4">
+              {[
+                { color: '#024c4f', label: 'P&I' },
+                { color: '#f59e0b', label: 'Taxes' },
+                { color: '#10b981', label: 'Insurance' },
+                ...(monthlyHoa > 0 ? [{ color: '#8b5cf6', label: 'HOA' }] : []),
+              ].map(({ color, label }) => (
+                <div key={label} className="flex items-center gap-1.5 text-[11px] text-gray-500">
+                  <div className="w-2 h-2 rounded-full" style={{ background: color }} />
+                  {label}
+                </div>
+              ))}
+            </div>
+
+            <div className="space-y-2">
+              {[
+                { dot: '#024c4f', label: 'Principal & Interest', val: fmtD(activeRow.pi) + '/mo' },
+                { dot: '#f59e0b', label: 'Property Taxes', val: fmtD(monthlyTaxes) + '/mo' },
+                { dot: '#10b981', label: 'Insurance', val: fmtD(monthlyInsurance) + '/mo' },
+                ...(monthlyHoa > 0 ? [{ dot: '#8b5cf6', label: 'HOA', val: fmtD(monthlyHoa) + '/mo' }] : []),
+              ].map(({ dot, label, val }) => (
+                <div key={label} className="flex justify-between items-center py-2 border-b border-gray-50 text-sm">
+                  <div className="flex items-center gap-2 text-gray-600">
+                    <div className="w-2 h-2 rounded-full" style={{ background: dot }} />
+                    {label}
+                  </div>
+                  <span className="font-semibold text-gray-900 tabular-nums">{val}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-3 bg-brand/5 border border-brand/10 rounded-xl px-4 py-3 flex justify-between items-center">
+              <div>
+                <div className="text-xs font-bold text-brand uppercase tracking-wider">Total Monthly (PITIA)</div>
+                <div className="text-[11px] text-gray-500 mt-0.5">
+                  DSCR: <span className={`font-bold ${activeRow.dscr >= 1.30 ? 'text-green-600' : activeRow.dscr >= 1.00 ? 'text-amber-500' : 'text-red-500'}`}>
+                    {activeRow.dscr.toFixed(2)}
+                  </span>
+                  {' '}({fmtD(monthlyRent)} rent ÷ {fmtD(activeRow.pitia)} PITIA)
+                </div>
+              </div>
+              <span className="text-2xl font-bold text-brand tabular-nums">{fmtD(activeRow.pitia)}</span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 mt-3">
+              <div className="bg-gray-50 rounded-lg px-3 py-2">
+                <div className="text-[10px] text-gray-400 font-medium">Annual</div>
+                <div className="text-sm font-bold text-gray-900 tabular-nums">{fmtD(activeRow.pitia * 12)}/yr</div>
+              </div>
+              <div className="bg-gray-50 rounded-lg px-3 py-2">
+                <div className="text-[10px] text-gray-400 font-medium">Total interest (30 yr)</div>
+                <div className="text-sm font-bold text-gray-900 tabular-nums">{fmtD(activeRow.pi * 360 - loanAmount)}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Rate table */}
+          <div className={cardCls}>
+            <SectionLabel>Rate Options · DSCR Core 7/6 ARM · 30-Day Lock</SectionLabel>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b-2 border-gray-100">
+                    {['Rate', 'Monthly P&I', 'PITIA', 'DSCR', 'Points / Credit', 'Net Cost'].map(h => (
+                      <th key={h} className="text-left text-[11px] font-semibold text-gray-400 uppercase tracking-wider py-2 px-2 first:pl-0">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(() => {
+                    let shown125 = false, shown100 = false, shownTarget = false;
+                    return displayRows.map((row) => {
+                      const markers = [];
+
+                      if (targetPayment && !shownTarget && row.pitia > targetPayment) {
+                        shownTarget = true;
+                        markers.push(
+                          <tr key="target-marker">
+                            <td colSpan={6} className="bg-amber-50 text-amber-700 text-[11px] font-semibold px-2 py-1.5 border-y border-amber-200">
+                              ▲ Your target {fmtD(targetPayment)}/mo — rates above exceed your target PITIA
+                            </td>
+                          </tr>
+                        );
+                      }
+                      if (!shown125 && row.dscr < 1.25) {
+                        shown125 = true;
+                        markers.push(
+                          <tr key="dscr125-marker">
+                            <td colSpan={6} className="bg-amber-50 text-amber-700 text-[11px] font-semibold px-2 py-1.5 border-y border-amber-200">
+                              ▲ DSCR 1.25 — rates above qualify for most programs
+                            </td>
+                          </tr>
+                        );
+                      }
+                      if (!shown100 && row.dscr < 1.00) {
+                        shown100 = true;
+                        markers.push(
+                          <tr key="dscr100-marker">
+                            <td colSpan={6} className="bg-red-50 text-red-600 text-[11px] font-semibold px-2 py-1.5 border-y border-red-200">
+                              ▲ DSCR 1.00 minimum — rates above this line are ineligible
+                            </td>
+                          </tr>
+                        );
+                      }
+
+                      const isPar = row.rate === parRow.rate;
+                      const isSelected = row.rate === selectedRate;
+                      const ptsDiff = row.netPrice - 100;
+                      const isCredit = ptsDiff >= 0;
+
+                      return [
+                        ...markers,
+                        <tr key={row.rate}
+                          onClick={() => setSelectedRate(row.rate)}
+                          className={`cursor-pointer transition-colors border-b border-gray-50 ${
+                            isSelected ? 'bg-brand/5' : isPar ? 'bg-green-50/50' : 'hover:bg-gray-50'
+                          }`}>
+                          <td className="py-2.5 px-2 pl-0">
+                            <span className="font-bold text-gray-900 tabular-nums">{row.rate.toFixed(3)}%</span>
+                            {isPar && <span className="ml-1 text-green-600 text-[10px] font-bold">★ par</span>}
+                          </td>
+                          <td className="py-2.5 px-2 tabular-nums text-gray-700">{fmtD(row.pi)}/mo</td>
+                          <td className="py-2.5 px-2 tabular-nums text-gray-700">{fmtD(row.pitia)}/mo</td>
+                          <td className="py-2.5 px-2">
+                            <span className={`font-bold tabular-nums ${row.dscr >= 1.30 ? 'text-green-600' : row.dscr >= 1.00 ? 'text-amber-500' : 'text-red-500'}`}>
+                              {row.dscr.toFixed(2)}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-2">
+                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-md tabular-nums ${
+                              isCredit ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'
+                            }`}>
+                              {fmtPts(ptsDiff)}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-2">
+                            <span className={`font-semibold tabular-nums text-sm ${isCredit ? 'text-green-600' : 'text-red-600'}`}>
+                              {isCredit ? fmtD(row.netDollar) + ' rebate' : fmtD(Math.abs(row.netDollar)) + ' cost'}
+                            </span>
+                          </td>
+                        </tr>
+                      ];
+                    });
+                  })()}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[11px] text-gray-400 mt-3">★ = closest to par after comp and adjustments. Click any row to update payment breakdown. Rebate = credit toward closing costs.</p>
+          </div>
+
+          {/* Pricing math */}
+          <div className={cardCls}>
+            <SectionLabel>Pricing Math — {activeRow.rate.toFixed(3)}%</SectionLabel>
+            <div className="space-y-2 text-sm">
+              {[
+                { label: 'Base price (rate sheet)', val: activeRow.base.toFixed(4), color: 'text-gray-700' },
+                { label: `2-unit LLPA (${ltv.toFixed(0)}% LTV)`, val: fmtPts(activeRow.twoUnitAdj), color: 'text-red-500' },
+                { label: `DSCR ratio adj (${activeRow.dscr.toFixed(2)})`, val: fmtPts(activeRow.dscrRatioAdj), color: activeRow.dscrRatioAdj >= 0 ? 'text-green-600' : 'text-red-500' },
+                { label: 'Price after adjustments', val: activeRow.adjPrice.toFixed(4), color: 'text-gray-900 font-semibold' },
+                { label: `Broker comp (${fmtD(compDollar)} / ${fmtD(loanAmount)} loan)`, val: '−' + compPts.toFixed(3) + ' pts', color: 'text-red-500' },
+              ].map(({ label, val, color }) => (
+                <div key={label} className="flex justify-between items-center py-2 border-b border-gray-50">
+                  <span className="text-gray-500">{label}</span>
+                  <span className={`tabular-nums font-medium ${color}`}>{val}</span>
+                </div>
+              ))}
+              <div className="flex justify-between items-center pt-2">
+                <span className="font-bold text-gray-900">Net price → {activeRow.netDollar >= 0 ? 'Rebate to borrower' : 'Discount (borrower pays)'}</span>
+                <span className={`font-bold tabular-nums text-base ${activeRow.netDollar >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {activeRow.netPrice.toFixed(4)} → {activeRow.netDollar >= 0 ? fmtD(activeRow.netDollar) : fmtD(Math.abs(activeRow.netDollar))}
+                </span>
+              </div>
+            </div>
+            <p className="text-[11px] text-gray-400 mt-3">Comp: 2% capped at {fmtD(compCap)} ({purpose}). Net price = base + adj − comp.</p>
+          </div>
+
+          {/* Adjustments */}
+          <div className={tightCardCls}>
+            <SectionLabel>Price Adjustments Applied</SectionLabel>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { label: `2-Unit LLPA (${ltv.toFixed(0)}% LTV)`, val: fmtPts(activeRow.twoUnitAdj), neg: true },
+                { label: `DSCR Ratio (${activeRow.dscr.toFixed(2)} > 1.30)`, val: fmtPts(activeRow.dscrRatioAdj), neg: activeRow.dscrRatioAdj < 0 },
+                { label: `State Adj (${state})`, val: '+0.000 pts', neg: false },
+                { label: `Broker Comp (${purpose} cap)`, val: `−${compPts.toFixed(3)} pts (${fmtD(compDollar)})`, neg: true },
+              ].map(({ label, val, neg }) => (
+                <div key={label} className="bg-gray-50 rounded-lg p-3">
+                  <div className="text-[11px] text-gray-500 font-medium">{label}</div>
+                  <div className={`text-sm font-bold mt-0.5 tabular-nums ${neg ? 'text-red-500' : 'text-green-600'}`}>{val}</div>
+                </div>
+              ))}
+            </div>
+            <p className="text-[11px] text-gray-400 mt-3">Everstream DSCR 1 LLPA sheet · {SHEET_DATE}</p>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  );
 }

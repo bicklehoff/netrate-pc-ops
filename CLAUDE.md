@@ -1,6 +1,20 @@
 # NetRate Mortgage — PC Operations
 # Device: PC (Public Facing)
 
+## MANDATORY: Run Startup Lite Before ANYTHING Else
+
+**Do not announce your department, do not ask what we're working on, do not respond to the user's first message until all 4 steps below are complete.**
+
+1. `get_briefing(device="pc", department=<yours>)` — full context from MCP
+2. `GET https://tracker.netratemortgage.com/api/relay?device=pc&status=open` with header `x-tracker-api-key: ntk_6f069e97f3272b9e1543710929b4517a` — check for open relay messages (REST API call, not MCP tool)
+3. Announce department and summarize findings from steps 1 and 2
+4. Read your department CLAUDE.md:
+   - Dev → `Work/Dev/CLAUDE.md`
+   - Admin → `Work/Admin/CLAUDE.md`
+   - Setup → this file is your doc
+
+---
+
 ## MANDATORY: Read GOVERNANCE.md Before ANY Work
 
 Pull `netrate-governance` repo. Read `GOVERNANCE.md`. It contains ALL shared protocols:
@@ -39,26 +53,6 @@ Use these identifiers in MCP tool calls (`source` fields), RELAY entries, and co
 
 ---
 
-## Session Startup — Lightweight by Default
-
-**Default behavior:** Skip the full startup sequence. Announce your department and ask David what he needs.
-
-**Run the full startup only when David says "full setup" or "run startup":**
-
-1. `get_briefing(device="pc", department=<yours>)` — full context from MCP
-2. `GET https://tracker.netratemortgage.com/api/relay?device=pc&status=open` — check for cross-device messages
-3. Read `Work/SESSION-LOG.md` (last 3-5 entries) — recent work, handoffs, open items
-4. Read `REGISTRY.md` (if it exists) — know what's been built
-5. `git log --oneline -5` — see recent commits
-6. Check for uncommitted/untracked files — previous session may have crashed
-7. `get_recent_sessions(device="pc", since=today)` — what other sessions did today
-8. Announce your department to David, summarize anything important from the above
-
-Full protocol details in GOVERNANCE.md (Session Handoff Protocol). MCP fallback: pull `netrate-governance`, check `RELAY.md`, read `Work/SESSION-LOG.md`.
-
-**SESSION-LOG:** `Work/SESSION-LOG.md` — ONE log for ALL PC sessions.
-
----
 
 ## About David
 
@@ -92,7 +86,7 @@ All departments launch from the same place: **this repo root** (`netrate-pc-ops/
 |------------|-------------|------------------|
 | Dev | `Work/Dev/` (+ `Products/`, `Integrations/` subfolders) | All code — website, tools, calculators, integrations, APIs, CRM hooks |
 | Admin | `Work/Admin/` | PC-side admin (minimal — process docs only, NO trackers) |
-| Setup | Root files | CLAUDE.md, Work/SESSION-LOG.md, folder structure |
+| Setup | Root files | CLAUDE.md, folder structure |
 
 **Daily Auditor** runs as a scheduled task (8 AM daily), not a department. Checks: uncommitted files, stale relays, session log gaps, build health, CLAUDE.md accuracy, stale open items, context layer drift, code review (deep on Mondays). Read-only — reports findings via MCP.
 
@@ -102,7 +96,6 @@ All departments have full access to code and docs. Ownership rules apply to **do
 - All departments may freely edit code (`src/`, `prisma/`, `scripts/`, etc.)
 - Only modify files in YOUR department's **docs folder** (e.g. `Work/Dev/`, `Work/Admin/`)
 - You may READ other departments' docs but not edit them
-- All departments may write their own entries to `Work/SESSION-LOG.md`
 - If you need something from another department, note it as an "open item"
 
 **If David doesn't assign a department:**
@@ -113,8 +106,54 @@ Ask: "Which department should I work as? (Dev, Admin, or Setup)"
 - **All work happens on a branch.** Workflow: `git checkout -b fix/description` → commit → `git push -u origin fix/description` → create PR. David merges when ready.
 - **Branch naming:** `fix/` for bug fixes, `feature/` for new features, `docs/` for documentation.
 - **Commit often** with descriptive messages within your branch.
-- **No tracker writes.** All trackers live on Mac. Log your work in SESSION-LOG; David relays to Mac.
+- **No tracker writes.** All trackers live on Mac. Use relay to communicate completed work to Mac.
 - **Read DEV-PLAYBOOK.md** for hard-won patterns (Prisma, deployment, etc.)
+- **MANDATORY: Follow the Deploy Procedure below. Every step requires David's explicit go-ahead.**
+
+### Deploy Procedure (MANDATORY — no exceptions, no skipping steps)
+
+#### Rule Zero
+**Never run `npm run build`, `git push`, or `gh pr create` without David explicitly saying so.**
+
+#### Phase 1 — Before any code changes
+1. `git status` — confirm clean starting point, know what branch we're on
+2. `git checkout -b <type>/<description>` — always on a branch, never on main
+
+#### Phase 2 — After code changes are complete
+3. Present a summary of all changes — David reviews before anything runs
+4. David says **"build"** → run `npm run build`
+5. Review build output together:
+   - Zero ESLint **errors** (warnings OK — errors block Vercel)
+   - No TypeScript/module errors
+   - All pages compiled successfully
+6. If build fails → fix, repeat from step 4
+7. `git diff main --stat` — final sanity check on changed files
+
+#### Phase 3 — Push & PR
+8. David says **"push"** → `git push -u origin <branch>`
+9. David says **"PR"** → `gh pr create` with clear title + description
+10. Post the PR URL — David reviews on GitHub
+
+#### Phase 4 — Vercel preview
+11. Wait for Vercel preview build (visible on PR checks)
+12. If preview fails → pull logs, fix on branch, push again — no merge until green
+13. David confirms preview looks good
+
+#### Phase 5 — Merge & production
+14. David says **"merge"** → `gh pr merge`
+15. Monitor production: `npx vercel ls netrate-mortgage-site | head -5` — confirm "Ready"
+16. If "Error" → pull logs immediately, open hotfix branch
+
+#### Hard stops (never skip)
+- No direct push to `main` — ever
+- No `vercel link` without `--project netrate-mortgage-site`
+- No merge on a failing PR check
+- No new Vercel project creation
+
+**Common build killers (ESLint errors that block Vercel):**
+- Unused imports (`'X' is defined but never used`) — remove the import
+- Conditional hooks (`React Hook called conditionally`) — move hooks before any early return
+- Missing dependencies in useEffect — add to dependency array or suppress with eslint-disable comment
 
 ---
 
@@ -181,7 +220,7 @@ src/
 - **API auth guard:** Check NextAuth session + role in API routes
 - **Prisma client:** Singleton at `src/lib/prisma.js`
 - **Loan states:** State machine at `src/lib/loan-states.js`
-- **Password wall:** `SITE_PASSWORD` env var → middleware at `src/middleware.js`
+- **Password wall:** Removed — site is public as of ~2026-03-24. `SITE_PASSWORD` env var is unset. Middleware still supports it if re-enabled but currently bypassed.
 
 ## Webhook URLs (Twilio)
 
@@ -322,7 +361,6 @@ netrate-pc-ops/
 ├── scripts/                 ← Utility scripts
 ├── docs/                    ← Technical documentation
 ├── Work/
-│   ├── SESSION-LOG.md       ← ONE log for ALL PC sessions
 │   ├── Dev/                 ← Docs: architecture plans, specs
 │   │   ├── Products/        ← Calculator specs, borrower tools
 │   │   └── Integrations/    ← Twilio, Zoho, GCS reference

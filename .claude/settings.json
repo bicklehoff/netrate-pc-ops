@@ -1,15 +1,3 @@
 {
-  "hooks": {
-    "SessionStart": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash .claude/hooks/startup-protocol.sh"
-          }
-        ]
-      }
-    ]
-  }
+  "disableAllHooks": true
 }

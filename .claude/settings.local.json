@@ -8,7 +8,8 @@
       "Grep",
       "Bash(*)",
       "WebFetch(*)",
-      "WebSearch(*)"
+      "WebSearch(*)",
+      "mcp__netrate-context__get_briefing"
     ]
   }
 }

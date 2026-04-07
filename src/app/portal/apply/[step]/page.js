@@ -33,6 +33,12 @@ export default function StepPage() {
   const { data, setCurrentStep, stepCompletions } = useApplication();
   const step = parseInt(params.step, 10);
 
+  // Scroll to top of the apply overlay when step changes
+  useEffect(() => {
+    const container = document.getElementById('apply-scroll-container');
+    if (container) container.scrollTo({ top: 0 });
+  }, [step]);
+
   // Validate step number
   if (isNaN(step) || step < 2 || step > 6) {
     router.push('/portal/apply');
@@ -40,12 +46,6 @@ export default function StepPage() {
   }
 
   const { title, description } = STEP_TITLES[step] || {};
-
-  // Scroll to top of the apply overlay when step changes
-  useEffect(() => {
-    const container = document.getElementById('apply-scroll-container');
-    if (container) container.scrollTo({ top: 0 });
-  }, [step]);
 
   const handleBack = () => {
     const prevStep = step - 1;

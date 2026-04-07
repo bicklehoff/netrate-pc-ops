@@ -3,10 +3,10 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
-export default function BorrowerLoginPage() {
+function LoginContent() {
   const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
 
@@ -111,5 +111,13 @@ export default function BorrowerLoginPage() {
         <a href="/portal/apply" className="text-brand hover:underline">Apply now</a>
       </p>
     </div>
+  );
+}
+
+export default function BorrowerLoginPage() {
+  return (
+    <Suspense>
+      <LoginContent />
+    </Suspense>
   );
 }
