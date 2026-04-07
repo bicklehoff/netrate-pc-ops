@@ -69,12 +69,13 @@ export default async function RatesPage({ searchParams }) {
   return (
     <div>
       <TrustBar />
-      <div className="bg-brand/10 border-b border-brand/20">
-        <p className="text-center py-1.5 px-4 text-sm font-semibold text-brand">
+      <div className="bg-brand border-b border-brand-dark">
+        <p className="text-center py-2 px-4 text-sm font-semibold text-white">
           No credit pull. No Social Security number needed to check rates. Just rates.
         </p>
       </div>
-      <div className="max-w-3xl mx-auto px-4 py-4">
+      <div className="bg-[#F5F7FA] min-h-screen">
+      <div className="max-w-3xl mx-auto px-4 py-8">
       <RateTool initialRateData={rateData} defaultState={defaultState} prefill={Object.keys(prefill).length ? prefill : null} brpToken={brpToken} />
 
       {/* Strike Rate / Rate Alert signup */}
@@ -87,25 +88,26 @@ export default async function RatesPage({ searchParams }) {
       </div>
 
       {/* Apply CTA */}
-      <div className="mt-10 bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
-        <h2 className="text-lg font-semibold text-gray-900 mb-2">Like what you see?</h2>
-        <p className="text-sm text-gray-600 mb-4">
+      <div className="mt-10 bg-white rounded-2xl border border-gray-100 shadow-[0_4px_24px_rgba(2,76,79,0.06)] p-6 text-center">
+        <h2 className="text-lg font-bold text-gray-900 mb-2">Like what you see?</h2>
+        <p className="text-sm text-gray-500 mb-5">
           Ready to proceed? Start an application — it takes about 10 minutes.
         </p>
-        <div className="flex items-center justify-center gap-4 flex-wrap">
+        <div className="flex items-center justify-center gap-3 flex-wrap">
           <Link
             href="/portal/apply"
-            className="bg-brand text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-brand-dark transition-colors"
+            className="bg-brand text-[#fff000] px-6 py-2.5 rounded-2xl font-medium hover:bg-brand-dark transition-colors"
           >
             Apply Now
           </Link>
           <Link
             href="/contact"
-            className="text-brand font-medium hover:text-brand-dark transition-colors text-sm"
+            className="border-2 border-brand text-brand px-6 py-2.5 rounded-2xl font-medium hover:bg-brand hover:text-white transition-colors text-sm"
           >
-            Or get a quote first &rarr;
+            Get a Quote First
           </Link>
         </div>
+      </div>
       </div>
       </div>
     </div>

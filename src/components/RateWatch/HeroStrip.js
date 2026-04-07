@@ -2,40 +2,51 @@
 
 import { useState, useEffect } from 'react';
 
-// Rate trend gauge — maps rate change to a visual spectrum
-function RateTrendGauge({ rateChange }) {
+// Rate trend gauge — direction driven by Claw's sentiment, magnitude by rateChange
+function RateTrendGauge({ rateChange, sentiment }) {
   const magnitude = Math.abs(rateChange || 0);
+
+  // Sentiment is the authoritative direction signal (MBS 5.0 price direction via Claw)
+  // rateChange from MND national avg lags intraday — used only for magnitude display
+  const isBullish = sentiment === 'bullish';
+  const isBearish = sentiment === 'bearish';
+  const isNeutral = !sentiment || sentiment === 'neutral';
+
   let position;
-  if (rateChange > 0) {
-    position = 50 + Math.min(magnitude * 200, 45);
-  } else if (rateChange < 0) {
-    position = 50 - Math.min(magnitude * 200, 45);
+  if (isBullish) {
+    position = 50 - Math.min(Math.max(magnitude * 200, 10), 45);
+  } else if (isBearish) {
+    position = 50 + Math.min(Math.max(magnitude * 200, 10), 45);
   } else {
     position = 50;
   }
 
   let impact, impactClass;
-  if (magnitude === 0) {
+  if (isNeutral || magnitude === 0) {
     impact = 'MINIMAL';
     impactClass = 'text-amber-500';
   } else if (magnitude < 0.05) {
-    impact = rateChange < 0 ? 'SLIGHTLY POSITIVE' : 'SLIGHTLY NEGATIVE';
-    impactClass = rateChange < 0 ? 'text-emerald-600' : 'text-red-500';
+    impact = isBullish ? 'SLIGHTLY POSITIVE' : 'SLIGHTLY NEGATIVE';
+    impactClass = isBullish ? 'text-emerald-600' : 'text-red-500';
   } else if (magnitude < 0.125) {
-    impact = rateChange < 0 ? 'POSITIVE' : 'NEGATIVE';
-    impactClass = rateChange < 0 ? 'text-emerald-600' : 'text-red-500';
+    impact = isBullish ? 'POSITIVE' : 'NEGATIVE';
+    impactClass = isBullish ? 'text-emerald-600' : 'text-red-500';
   } else {
-    impact = rateChange < 0 ? 'VERY POSITIVE' : 'VERY NEGATIVE';
-    impactClass = rateChange < 0 ? 'text-emerald-700' : 'text-red-600';
+    impact = isBullish ? 'VERY POSITIVE' : 'VERY NEGATIVE';
+    impactClass = isBullish ? 'text-emerald-700' : 'text-red-600';
   }
 
   let explanation;
-  if (rateChange > 0) {
-    explanation = `Rates rose ${rateChange.toFixed(3)}% from yesterday. This is a ${impact.toLowerCase()} move for borrowers.`;
-  } else if (rateChange < 0) {
-    explanation = `Rates dropped ${Math.abs(rateChange).toFixed(3)}% from yesterday. This is a ${impact.toLowerCase()} move for borrowers.`;
+  if (isBullish) {
+    explanation = magnitude > 0
+      ? `Bonds improving — rates trending lower. This is a ${impact.toLowerCase()} move for borrowers.`
+      : 'Bond market improving — positive for rates today.';
+  } else if (isBearish) {
+    explanation = magnitude > 0
+      ? `Bonds selling off — rates trending higher. This is a ${impact.toLowerCase()} move for borrowers.`
+      : 'Bond market under pressure — negative for rates today.';
   } else {
-    explanation = 'Rates are unchanged from yesterday. Minimal impact on borrowers today.';
+    explanation = 'Bond market neutral — minimal rate movement expected today.';
   }
 
   return (
@@ -116,7 +127,7 @@ export default function HeroStrip({ todayRate, rateChange, apr }) {
 
         {/* Rate Trend Gauge */}
         <div className="mt-3 mb-2">
-          <RateTrendGauge rateChange={rateChange} />
+          <RateTrendGauge rateChange={rateChange} sentiment={commentary?.sentiment} />
         </div>
 
         {/* Sentiment badge */}

@@ -32,6 +32,9 @@ yarn-error.log*
 .env
 .env*.local
 
+# Files with credentials — NEVER commit
+Work/Dev/Integrations/TWILIO-STATUS.md
+
 # vercel
 .vercel
 
@@ -50,3 +53,5 @@ Work/Dev/Products/rate-sheets-historical/
 
 # Raw data files (parsed versions in JS are what's used)
 src/data/fhfa-loan-limits-raw.csv
+
+.vercel

@@ -6,11 +6,11 @@ import { getHomepageRatesFromDB } from '@/lib/rates/homepage-db';
 // Revalidate every 30 min — rates change once/day when new sheet is parsed
 export const revalidate = 1800;
 
-// Sentiment → consumer-friendly label + color
+// Sentiment → consumer-friendly label + color (light theme)
 const SENTIMENT_MAP = {
-  bearish: { label: 'Trending Higher', textClass: 'text-red-400', bgClass: 'bg-red-500/10 border-red-500/20' },
-  bullish: { label: 'Trending Lower', textClass: 'text-green-400', bgClass: 'bg-green-500/10 border-green-500/20' },
-  neutral: { label: 'Stable', textClass: 'text-brand-light', bgClass: 'bg-brand/10 border-brand/20' },
+  bearish: { label: 'Trending Higher', textClass: 'text-red-600', bgClass: 'bg-red-50 border-red-200' },
+  bullish: { label: 'Trending Lower', textClass: 'text-emerald-700', bgClass: 'bg-emerald-50 border-emerald-200' },
+  neutral: { label: 'Stable', textClass: 'text-brand', bgClass: 'bg-brand/10 border-brand/20' },
 };
 
 async function getMarketSentiment() {
@@ -55,109 +55,112 @@ export default async function HomePage() {
   const heroProducts = [
     { product: '30-Yr Fixed', label: 'Conforming', rate: conv30Rate, apr: conv30Apr },
     { product: '15-Yr Fixed', label: 'Conforming', rate: fmtRate(d?.conv15) || '5.250%', apr: fmtApr(d?.conv15) || '5.38%' },
-    { product: 'FHA 30-Yr', label: 'Government', rate: fmtRate(d?.fha30) || '5.500%', apr: fmtApr(d?.fha30) || '6.12%' },
-    { product: 'VA 30-Yr', label: 'Military', rate: fmtRate(d?.va30) || '5.375%', apr: fmtApr(d?.va30) || '5.52%' },
+    { product: 'FHA 30-Yr',   label: 'Government', rate: fmtRate(d?.fha30)  || '5.500%', apr: fmtApr(d?.fha30)  || '6.12%' },
+    { product: 'VA 30-Yr',    label: 'Military',   rate: fmtRate(d?.va30)   || '5.375%', apr: fmtApr(d?.va30)   || '5.52%' },
   ];
 
   return (
-    <div>
+    <div className="bg-white">
       <StickyRateBar rate={conv30Rate} apr={conv30Apr} />
-      {/* ===== RATE TICKER (animated) — live rate data only ===== */}
-      <div className="bg-gray-950 border-b border-gray-800 overflow-hidden">
-        <div className="ticker-track text-[12px] py-2 whitespace-nowrap">
-          {[0, 1].map((dup) => (
-            <div key={dup} className="flex items-center gap-8 px-8 shrink-0">
-              <span className="text-gray-500 font-medium uppercase tracking-wider text-[10px]">Today&apos;s Rate</span>
-              <div className="flex items-center gap-1.5">
-                <span className="text-gray-400">NetRate Mortgage 30-Yr Fixed</span>
-                <span className="text-brand-light font-bold">{conv30Rate}</span>
-                <span className="text-gray-400 text-[11px]">APR {conv30Apr}</span>
-              </div>
-              <div className="w-px h-3.5 bg-gray-800" />
-              <div className="flex items-center gap-1.5">
-                <span className="text-gray-400">Monthly P&amp;I</span>
-                <span className="text-white font-bold">{conv30Payment}</span>
-                <span className="text-gray-500 text-[11px]">$400K loan</span>
-              </div>
-              <div className="w-px h-3.5 bg-gray-800" />
-              <div className="flex items-center gap-1.5">
-                <span className="text-gray-400">Scenario</span>
-                <span className="text-gray-300">780+ FICO &middot; 75% LTV &middot; Purchase</span>
-              </div>
-              <div className="w-px h-3.5 bg-gray-800" />
-              <div className="flex items-center gap-1.5">
-                <a href="/rate-watch" className="text-brand hover:text-brand-light transition-colors">
-                  Rate Watch &rarr;
-                </a>
-              </div>
-              <div className="w-px h-3.5 bg-gray-800" />
-              <span className="text-gray-600 text-[11px]">{effectiveDateShort}</span>
+
+      {/* ===== RATE TICKER ===== */}
+      <div className="bg-brand border-b border-white/10 overflow-hidden">
+        <div className="flex">
+          {/* Fixed label */}
+          <div className="flex-shrink-0 flex items-center px-4 border-r border-white/10 bg-brand-dark">
+            <span className="text-[#fff000] text-[10px] font-bold uppercase tracking-widest">Live Rates</span>
+          </div>
+          {/* Scrolling track */}
+          <div className="overflow-hidden flex-1">
+            <div className="ticker-track text-[12px] py-2 whitespace-nowrap">
+              {[0, 1].map((dup) => (
+                <div key={dup} className="flex items-center gap-8 px-8 shrink-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-white/70">30-Yr Fixed</span>
+                    <span className="text-white font-bold">{conv30Rate}</span>
+                    <span className="text-white/50 text-[11px]">APR {conv30Apr}</span>
+                  </div>
+                  <div className="w-px h-3.5 bg-white/20" />
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-white/70">P&amp;I</span>
+                    <span className="text-white font-bold">{conv30Payment}</span>
+                    <span className="text-white/50 text-[11px]">/$400K</span>
+                  </div>
+                  <div className="w-px h-3.5 bg-white/20" />
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-white/50">780+ FICO &middot; 75% LTV &middot; Purchase</span>
+                  </div>
+                  <div className="w-px h-3.5 bg-white/20" />
+                  <a href="/rate-watch" className="text-[#fff000] hover:text-[#fff000]/80 transition-colors">
+                    Rate Watch &rarr;
+                  </a>
+                  <div className="w-px h-3.5 bg-white/20" />
+                  <span className="text-white/50 text-[11px]">{effectiveDateShort}</span>
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
         </div>
       </div>
 
-      {/* ===== HERO — 2-column, left text + right rate teaser ===== */}
-      <section className="relative overflow-hidden bg-deep">
-        {/* Decorative glow */}
-        <div className="absolute top-0 right-0 w-[600px] h-[600px] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(8,145,178,0.15) 0%, transparent 60%)' }} />
-        <div className="absolute -bottom-20 -left-20 w-[400px] h-[400px] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(8,145,178,0.08) 0%, transparent 60%)' }} />
+      {/* ===== HERO — light theme ===== */}
+      <section className="bg-white border-b border-gray-100">
+        <div className="max-w-6xl mx-auto px-6 py-16 lg:py-20 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
 
-        <div className="relative z-10 max-w-6xl mx-auto px-6 py-16 lg:py-20 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           {/* Left — Text */}
           <div>
-            {/* Trust strip — above headline per Stitch analysis */}
+            {/* Trust strip — above headline */}
             {/* TODO: Update Google Maps link after GBP name change from Locus → NetRate */}
-            <div className="flex items-center gap-2.5 mb-5 opacity-60 hover:opacity-100 transition-opacity">
+            <div className="flex items-center gap-2 mb-5 flex-wrap">
               <a
                 href="https://www.google.com/maps/search/?api=1&query=Locus+Mortgage&query_place_id=ChIJa5-5jCXza4cRptwJxaP23eU"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 bg-white/[0.05] rounded-full pl-1.5 pr-3 py-1 hover:bg-white/[0.10] transition-colors"
+                className="inline-flex items-center gap-1.5 bg-gray-100 border border-gray-200 rounded-full pl-1.5 pr-3 py-1 hover:bg-gray-200 transition-colors"
               >
-                <span className="w-5 h-5 rounded-full bg-white/20 text-white flex items-center justify-center text-[10px] font-extrabold flex-shrink-0">G</span>
-                <span className="text-white/60 text-xs tracking-wide">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
-                <span className="text-white/80 font-bold text-xs">4.9</span>
+                <span className="w-5 h-5 rounded-full bg-[#4285f4] text-white flex items-center justify-center text-[10px] font-extrabold flex-shrink-0">G</span>
+                <span className="text-yellow-500 text-xs">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
+                <span className="text-gray-700 font-bold text-xs">4.9</span>
               </a>
               <a
                 href="https://www.bbb.org/us/co/louisville/profile/mortgage-lenders/locus-mortgage-1296-90159653#sealclick"
                 target="_blank"
                 rel="nofollow noopener noreferrer"
-                className="inline-flex items-center gap-1.5 bg-white/[0.05] rounded-full px-3 py-1 hover:bg-white/[0.10] transition-colors"
+                className="inline-flex items-center gap-1.5 bg-gray-100 border border-gray-200 rounded-full px-3 py-1 hover:bg-gray-200 transition-colors"
               >
-                <span className="text-xs font-semibold text-white/50">BBB A+</span>
+                <span className="text-xs font-semibold text-gray-600">BBB A+</span>
               </a>
               <a
                 href="https://nmlsconsumeraccess.org/EntityDetails.aspx/COMPANY/1111861"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 bg-white/[0.05] rounded-full px-3 py-1 hover:bg-white/[0.10] transition-colors"
+                className="inline-flex items-center gap-1.5 bg-gray-100 border border-gray-200 rounded-full px-3 py-1 hover:bg-gray-200 transition-colors"
               >
-                <span className="text-xs font-semibold text-white/50">NMLS #1111861</span>
+                <span className="text-xs font-semibold text-gray-600">NMLS #1111861</span>
               </a>
-              <div className="inline-flex items-center gap-2 bg-brand/20 border border-brand/30 rounded-full px-3 py-1 text-[11px] font-semibold text-brand-light">
-                <span className="w-1.5 h-1.5 bg-brand-light rounded-full animate-pulse" />
+              <div className="inline-flex items-center gap-2 bg-brand/10 border border-brand/20 rounded-full px-3 py-1 text-[11px] font-semibold text-brand">
+                <span className="w-1.5 h-1.5 bg-brand rounded-full animate-pulse" />
                 Rates updated today
               </div>
             </div>
 
-            <h1 className="text-4xl lg:text-[44px] font-extrabold leading-[1.15] text-white">
+            <h1 className="text-4xl lg:text-[44px] font-extrabold leading-[1.15] text-gray-900">
               See real mortgage rates{' '}
-              <span className="text-brand-light">before you apply.</span>
+              <span className="text-brand">before you apply.</span>
             </h1>
-            <p className="text-lg text-gray-400 mt-4 max-w-lg">
+            <p className="text-lg text-gray-500 mt-4 max-w-lg">
               Most lenders make you fill out an application before they show you numbers. We show you rates first — with the math behind them.
             </p>
             <div className="flex items-center gap-3 mt-4 flex-wrap">
-              <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-400">
+              <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                 No application
               </span>
-              <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-400">
+              <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                 No credit pull
               </span>
-              <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-400">
+              <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                 Just rates
               </span>
@@ -165,36 +168,36 @@ export default async function HomePage() {
             <div className="flex gap-3 mt-7 flex-wrap">
               <Link
                 href="/rates"
-                className="bg-brand text-white px-8 py-3.5 rounded-xl text-base font-bold hover:bg-brand-dark hover:shadow-[0_0_20px_rgba(34,211,238,0.2)] transition-all"
+                className="bg-brand text-[#fff000] px-8 py-3.5 rounded-2xl text-base font-medium hover:bg-brand-dark transition-colors"
               >
                 Check Today&apos;s Rates
               </Link>
               <Link
                 href="/portal/apply"
-                className="bg-white/10 text-white px-8 py-3.5 rounded-xl text-base font-medium border border-white/20 hover:bg-white/20 transition-colors"
+                className="border-2 border-brand text-brand px-8 py-3.5 rounded-2xl text-base font-medium hover:bg-brand hover:text-white transition-colors"
               >
-                Apply Now
+                Start Secure Application
               </Link>
             </div>
           </div>
 
-          {/* Right — Rate snapshot table (Glassmorphism) */}
-          <div className="bg-surface/70 backdrop-blur-xl border border-white/10 rounded-2xl shadow-lg shadow-brand/[0.05] overflow-hidden">
+          {/* Right — Rate card (light) */}
+          <div className="bg-white border border-gray-200 rounded-2xl shadow-lg shadow-brand/10 overflow-hidden">
             <div className="flex items-center justify-between px-6 pt-6 pb-4">
               <div className="flex items-center gap-3">
-                <span className="text-xs font-bold text-white uppercase tracking-wide">Today&apos;s Rates</span>
+                <span className="text-xs font-bold text-gray-900 uppercase tracking-wide">Today&apos;s Rates</span>
                 <span className={`text-[10px] font-bold uppercase tracking-wider ${market.textClass} ${market.bgClass} border rounded-full px-2 py-0.5`}>
                   {market.label}
                 </span>
               </div>
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-brand-light bg-brand/15 border border-brand/30 rounded-full px-2.5 py-0.5">
-                <span className="w-1.5 h-1.5 bg-brand-light rounded-full animate-pulse" />
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-brand bg-brand/10 border border-brand/20 rounded-full px-2.5 py-0.5">
+                <span className="w-1.5 h-1.5 bg-brand rounded-full animate-pulse" />
                 LIVE
               </span>
             </div>
             <table className="w-full">
               <thead>
-                <tr className="border-y border-white/10 bg-white/[0.03]">
+                <tr className="border-y border-gray-100 bg-gray-50">
                   <th className="text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider py-2 px-6">Product</th>
                   <th className="text-right text-[10px] font-bold text-gray-400 uppercase tracking-wider py-2 px-3">Rate</th>
                   <th className="text-right text-[10px] font-bold text-gray-400 uppercase tracking-wider py-2 px-6">APR</th>
@@ -202,49 +205,49 @@ export default async function HomePage() {
               </thead>
               <tbody>
                 {heroProducts.map((row, i) => (
-                  <tr key={row.product} className={i < 3 ? 'border-b border-white/[0.06]' : ''}>
+                  <tr key={row.product} className={i < 3 ? 'border-b border-gray-100' : ''}>
                     <td className="py-2.5 px-6">
-                      <div className="text-sm font-semibold text-gray-300">{row.product}</div>
-                      <div className="text-[10px] text-gray-500 uppercase tracking-wider">{row.label}</div>
+                      <div className="text-sm font-semibold text-gray-800">{row.product}</div>
+                      <div className="text-[10px] text-gray-400 uppercase tracking-wider">{row.label}</div>
                     </td>
-                    <td className="py-2.5 px-3 text-right text-[17px] font-extrabold text-white tabular-nums">{row.rate}</td>
+                    <td className="py-2.5 px-3 text-right text-[17px] font-extrabold text-gray-900 tabular-nums">{row.rate}</td>
                     <td className="py-2.5 px-6 text-right text-sm text-gray-400 tabular-nums">{row.apr}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <div className="px-6 pt-4 pb-2 border-t border-white/10">
-              <p className="text-xs text-gray-500 text-center">
+            <div className="px-6 pt-4 pb-2 border-t border-gray-100">
+              <p className="text-xs text-gray-400 text-center">
                 + points, lender credits, and monthly payment for each
               </p>
             </div>
             <div className="px-6 pb-5 pt-1">
               <Link
                 href="/rates"
-                className="block text-center py-3 bg-brand text-white rounded-xl text-sm font-bold hover:bg-brand-dark hover:shadow-[0_0_20px_rgba(34,211,238,0.2)] transition-all"
+                className="block text-center py-3 bg-brand text-[#fff000] rounded-2xl text-sm font-medium hover:bg-brand-dark transition-colors"
               >
                 Compare Your Options &rarr;
               </Link>
             </div>
             <div className="px-6 pb-4">
-              <p className="text-[11px] text-gray-500 text-center">780+ FICO &middot; $400K &middot; Purchase &middot; {effectiveDateShort}</p>
+              <p className="text-[11px] text-gray-400 text-center">780+ FICO &middot; $400K &middot; Purchase &middot; {effectiveDateShort}</p>
             </div>
           </div>
         </div>
 
-        {/* ===== RATE HIGHLIGHT (inside hero) ===== */}
-        <div className="relative z-10 max-w-6xl mx-auto px-6 pb-14">
-          <div className="bg-white/[0.06] backdrop-blur-sm border border-white/10 rounded-2xl p-6 lg:p-8">
+        {/* Rate Watch promo strip */}
+        <div className="max-w-6xl mx-auto px-6 pb-14">
+          <div className="bg-surface border border-gray-200 rounded-2xl p-6 lg:p-8">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <h3 className="text-base font-bold text-white">Rates &amp; Market Data — Updated Daily</h3>
-                <p className="text-[13px] text-gray-400 mt-1">
+                <h3 className="text-base font-bold text-gray-900">Rates &amp; Market Data — Updated Daily</h3>
+                <p className="text-[13px] text-gray-500 mt-1">
                   Track mortgage rates, Treasury yields, and economic events that move the market. Real data from Freddie Mac and the Fed — not estimates.
                 </p>
               </div>
               <a
                 href="/rate-watch"
-                className="bg-brand text-white px-6 py-3 rounded-lg font-semibold text-sm hover:bg-brand-dark transition-colors whitespace-nowrap"
+                className="bg-brand text-[#fff000] px-6 py-3 rounded-xl font-medium text-sm hover:bg-brand-dark transition-colors whitespace-nowrap"
               >
                 View Rate Watch &rarr;
               </a>
@@ -279,94 +282,115 @@ export default async function HomePage() {
       </div>
 
       {/* ===== TOOLS & CALCULATORS ===== */}
-      <section id="tools" className="max-w-6xl mx-auto px-6 py-14">
-        <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2 mb-7">
-          <h2 className="text-2xl font-extrabold text-gray-900">Tools &amp; Calculators</h2>
-          <span className="text-sm text-gray-400">Real math, no guesswork.</span>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {[
-            {
-              icon: '☰', iconClass: 'bg-gradient-to-br from-cyan-50 to-cyan-100 text-brand',
-              title: 'Rate Tool', desc: 'Live mortgage rates across 11 lenders. See rate, points, payment, and lender credits side by side.',
-              href: '/rates', cta: 'Try it',
-            },
-            {
-              icon: 'Ψ', iconClass: 'bg-gradient-to-br from-emerald-50 to-emerald-100 text-green-600',
-              title: 'DSCR Calculator', desc: 'Investment property? Enter rental income and expenses to see if your deal qualifies for a DSCR loan.',
-              href: '/tools/dscr-calculator', cta: 'Calculate',
-            },
-            {
-              icon: '↩', iconClass: 'bg-gradient-to-br from-amber-50 to-amber-100 text-amber-600',
-              title: 'Reverse Mortgage', desc: 'See how much equity you could access with a reverse mortgage. Age, home value, and rate — that\'s all we need.',
-              href: '/tools/reverse-mortgage-calculator', cta: 'Estimate',
-            },
-            {
-              icon: '↻', iconClass: 'bg-gradient-to-br from-violet-50 to-violet-100 text-violet-600',
-              title: 'Refi Analyzer', desc: 'Is refinancing worth it? Enter your current loan and we\'ll show the break-even timeline and total savings.',
-              href: '/tools/refi-analyzer', cta: 'Analyze',
-            },
-            {
-              icon: '⌂', iconClass: 'bg-gradient-to-br from-pink-50 to-pink-100 text-pink-600',
-              title: 'Purchase Calculator', desc: 'Estimate your monthly payment, cash to close, and how much home you can afford.',
-              href: '/tools/purchase-calculator', cta: 'Calculate',
-            },
-            {
-              icon: '⏳', iconClass: 'bg-gradient-to-br from-red-50 to-red-100 text-red-600',
-              title: 'Cost of Waiting', desc: 'What does it cost you every month you don\'t refinance? See the real number with your loan details.',
-              href: '/tools/cost-of-waiting', cta: 'See the cost',
-            },
-            {
-              icon: '✔', iconClass: 'bg-gradient-to-br from-sky-50 to-sky-100 text-sky-600',
-              title: 'Start Secure Application', desc: 'Ready to go? AES-256 encrypted. Takes about 15 minutes.',
-              href: '/portal/apply', cta: 'Start',
-            },
-          ].map((tool) => {
-            const isComingSoon = !tool.href;
-            const CardTag = isComingSoon ? 'div' : Link;
-            const cardProps = isComingSoon ? {} : { href: tool.href };
-            return (
-              <CardTag
-                key={tool.title}
-                {...cardProps}
-                className={`bg-white border border-gray-200 rounded-2xl p-6 flex flex-col transition-all ${
-                  isComingSoon ? 'opacity-70' : 'hover:border-brand hover:shadow-md hover:shadow-brand/10 hover:-translate-y-0.5 cursor-pointer'
-                }`}
-              >
-                <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-xl mb-3.5 ${tool.iconClass}`}>
-                  {tool.icon}
-                </div>
-                <h3 className="text-[15px] font-bold text-gray-900 mb-1.5">{tool.title}</h3>
-                <p className="text-sm text-gray-500 leading-relaxed flex-1">{tool.desc}</p>
-                <span className={`text-sm font-semibold mt-3 ${isComingSoon ? 'text-gray-400' : 'text-brand'}`}>
-                  {tool.cta} {!isComingSoon && '→'}
-                </span>
-              </CardTag>
-            );
-          })}
+      <section id="tools" className="bg-white">
+        <div className="max-w-6xl mx-auto px-6 py-14">
+          <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2 mb-7">
+            <h2 className="text-2xl font-extrabold text-gray-900">Tools &amp; Calculators</h2>
+            <span className="text-sm text-gray-400">Real math, no guesswork.</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {[
+              {
+                title: 'Rate Tool',
+                desc: 'Live mortgage rates across 11 lenders. See rate, points, payment, and lender credits side by side.',
+                href: '/rates',
+                cta: 'Try it',
+                accent: '#024c4f',
+              },
+              {
+                title: 'DSCR Calculator',
+                desc: 'Investment property? Enter rental income and expenses to see if your deal qualifies for a DSCR loan.',
+                href: '/tools/dscr-calculator',
+                cta: 'Calculate',
+                accent: '#024c4f',
+              },
+              {
+                title: 'Reverse Mortgage',
+                desc: "See how much equity you could access with a reverse mortgage. Age, home value, and rate — that's all we need.",
+                href: '/tools/reverse-mortgage-calculator',
+                cta: 'Estimate',
+                accent: '#024c4f',
+              },
+              {
+                title: 'Refi Analyzer',
+                desc: "Is refinancing worth it? Enter your current loan and we'll show the break-even timeline and total savings.",
+                href: '/tools/refi-analyzer',
+                cta: 'Analyze',
+                accent: '#024c4f',
+              },
+              {
+                title: 'Purchase Calculator',
+                desc: 'Estimate your monthly payment, cash to close, and how much home you can afford.',
+                href: '/tools/purchase-calculator',
+                cta: 'Calculate',
+                accent: '#024c4f',
+              },
+              {
+                title: 'Cost of Waiting',
+                desc: "What does it cost you every month you don't refinance? See the real number with your loan details.",
+                href: '/tools/cost-of-waiting',
+                cta: 'See the cost',
+                accent: '#024c4f',
+              },
+              {
+                title: 'Start Secure Application',
+                desc: 'Ready to go? AES-256 encrypted. Takes about 15 minutes.',
+                href: '/portal/apply',
+                cta: 'Start',
+                accent: '#fff000',
+              },
+            ].map((tool) => {
+              const isFeatured = tool.title === 'Start Secure Application';
+              return (
+                <Link
+                  key={tool.title}
+                  href={tool.href}
+                  className={`relative rounded-2xl p-6 flex flex-col transition-all hover:shadow-md hover:-translate-y-0.5 overflow-hidden ${
+                    isFeatured
+                      ? 'bg-brand border border-brand'
+                      : 'bg-white border border-gray-200 hover:border-brand/30'
+                  }`}
+                >
+                  {/* Accent strip */}
+                  {!isFeatured && (
+                    <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-brand" />
+                  )}
+                  <h3 className={`text-[15px] font-bold mb-1.5 ${isFeatured ? 'text-white' : 'text-gray-900'}`}>
+                    {tool.title}
+                  </h3>
+                  <p className={`text-sm leading-relaxed flex-1 ${isFeatured ? 'text-white/70' : 'text-gray-500'}`}>
+                    {tool.desc}
+                  </p>
+                  <span className={`text-sm font-semibold mt-3 ${isFeatured ? 'text-[#fff000]' : 'text-brand'}`}>
+                    {tool.cta} &rarr;
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
         </div>
       </section>
 
-      {/* ===== CREDENTIALS — Dark band ===== */}
-      <section className="bg-deep py-14">
+      {/* ===== CREDENTIALS — light band ===== */}
+      <section className="bg-surface py-14">
         <div className="max-w-6xl mx-auto px-6">
-          <h2 className="text-3xl font-extrabold text-white text-center mb-9">Licensed. Independent. Direct.</h2>
+          <h2 className="text-3xl font-extrabold text-gray-900 text-center mb-9">Licensed. Independent. Direct.</h2>
           <div className="flex flex-wrap justify-center gap-10 lg:gap-12">
             <div className="text-center">
               <div className="text-xl font-bold text-brand">NMLS #1111861</div>
-              <div className="text-sm text-gray-400 mt-1">State-Licensed Mortgage Broker</div>
+              <div className="text-sm text-gray-500 mt-1">State-Licensed Mortgage Broker</div>
             </div>
             <div className="text-center">
               <div className="text-xl font-bold text-brand">CA, CO, TX, OR</div>
-              <div className="text-sm text-gray-400 mt-1">Licensed States</div>
+              <div className="text-sm text-gray-500 mt-1">Licensed States</div>
             </div>
             <div className="text-center">
               <div className="text-xl font-bold text-brand">Founded 2013</div>
-              <div className="text-sm text-gray-400 mt-1">Over a Decade of Origination</div>
+              <div className="text-sm text-gray-500 mt-1">Over a Decade of Origination</div>
             </div>
             <div className="text-center">
               <div className="text-xl font-bold text-brand">Direct-to-Consumer</div>
-              <div className="text-sm text-gray-400 mt-1">Not a Bank.</div>
+              <div className="text-sm text-gray-500 mt-1">Not a Bank.</div>
             </div>
           </div>
           <div className="flex flex-wrap justify-center gap-8 mt-8 items-center">
@@ -374,7 +398,7 @@ export default async function HomePage() {
               href="https://www.bbb.org/us/co/louisville/profile/mortgage-lenders/locus-mortgage-1296-90159653#sealclick"
               target="_blank"
               rel="nofollow noopener noreferrer"
-              className="flex items-center gap-3 text-sm text-gray-400 hover:text-gray-300 transition-colors"
+              className="flex items-center gap-3 text-sm text-gray-500 hover:text-gray-700 transition-colors"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -389,38 +413,38 @@ export default async function HomePage() {
               href="https://nmlsconsumeraccess.org/EntityDetails.aspx/COMPANY/1111861"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-300 transition-colors"
+              className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
             >
-              <span className="w-7 h-7 bg-gray-800 rounded-md flex items-center justify-center text-sm text-gray-500">&#9872;</span>
+              <span className="w-7 h-7 bg-gray-200 rounded-md flex items-center justify-center text-sm text-gray-500">&#9872;</span>
               NMLS Consumer Access
             </a>
-            <div className="flex items-center gap-2 text-sm text-gray-400">
-              <span className="w-7 h-7 bg-gray-800 rounded-md flex items-center justify-center text-sm text-gray-500">&#8962;</span>
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <span className="w-7 h-7 bg-gray-200 rounded-md flex items-center justify-center text-sm text-gray-500">&#8962;</span>
               Equal Housing Opportunity
             </div>
           </div>
         </div>
       </section>
 
-      {/* ===== BOTTOM CTA ===== */}
-      <section className="bg-brand py-16 text-center">
-        <div className="max-w-6xl mx-auto px-6">
+      {/* ===== BOTTOM CTA — dark teal band ===== */}
+      <section className="bg-deep pt-12 pb-16 text-center border-t-2 border-[#fff000]/80">
+        <div className="max-w-6xl mx-auto px-6 pt-6">
           <h2 className="text-3xl font-extrabold text-white">Not Sure Which Rate? Let Us Help.</h2>
-          <p className="text-base text-cyan-100 mt-3 max-w-xl mx-auto">
+          <p className="text-base text-white/70 mt-3 max-w-xl mx-auto">
             Tell us about your situation and we&apos;ll send you a personalized recommendation with full fee breakdown, cash to close, and savings analysis.
           </p>
           <div className="flex justify-center gap-3 mt-7 flex-wrap">
             <Link
               href="/contact"
-              className="bg-white text-brand px-8 py-3.5 rounded-xl text-base font-bold hover:bg-gray-100 transition-colors"
+              className="bg-brand text-[#fff000] px-8 py-3.5 rounded-2xl text-base font-medium hover:bg-brand-dark transition-colors"
             >
               Get a Free Quote
             </Link>
             <Link
               href="/portal/apply"
-              className="border-2 border-white/40 text-white px-8 py-3.5 rounded-xl text-base font-medium hover:bg-white/10 transition-colors"
+              className="border-2 border-white/40 text-[#fff000]/80 px-8 py-3.5 rounded-2xl text-base font-medium hover:bg-white/10 transition-colors"
             >
-              Apply Now
+              Start Secure Application
             </Link>
           </div>
         </div>

@@ -67,6 +67,60 @@ function SectionLabel({ children }) {
 }
 
 
+function DSCRGauge({ dscr }) {
+  const cx = 100, cy = 90, r = 72;
+  const arcLen = Math.PI * r;
+  const fillPct = Math.min(1, Math.max(0, (dscr - 0.75) / 1.0));
+  const fillLen = fillPct * arcLen;
+  const color = dscr >= 1.30 ? '#16a34a' : dscr >= 1.00 ? '#d97706' : '#dc2626';
+  const status = dscr >= 1.30 ? 'Strong' : dscr >= 1.25 ? 'Qualifying' : dscr >= 1.00 ? 'Minimum' : 'Below Min';
+
+  const arcPoint = (f, radius) => {
+    const theta = (1 - f) * Math.PI;
+    return { x: cx + radius * Math.cos(theta), y: cy - radius * Math.sin(theta) };
+  };
+
+  // Threshold ticks only — no labels on the arc
+  const ticks = [0.25, 0.50, 0.55];
+
+  return (
+    <svg viewBox="0 0 200 108" className="w-full max-w-[300px] mx-auto">
+      {/* Background track */}
+      <path
+        d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`}
+        fill="none" stroke="#e5e7eb" strokeWidth="16" strokeLinecap="round"
+      />
+      {/* Colored fill */}
+      <path
+        d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`}
+        fill="none" stroke={color} strokeWidth="16" strokeLinecap="round"
+        strokeDasharray={`${fillLen} ${arcLen}`}
+        style={{ transition: 'stroke-dasharray 0.4s ease, stroke 0.3s ease' }}
+      />
+      {/* Threshold ticks — subtle, no labels */}
+      {ticks.map(f => {
+        const inner = arcPoint(f, r - 9);
+        const outer = arcPoint(f, r + 1);
+        return (
+          <line key={f} x1={inner.x} y1={inner.y} x2={outer.x} y2={outer.y}
+            stroke="rgba(255,255,255,0.8)" strokeWidth="2" strokeLinecap="round" />
+        );
+      })}
+      {/* DSCR number — the only number */}
+      <text x={cx} y={cy - 20} textAnchor="middle" fontSize="40" fontWeight="700"
+        fill={color} fontFamily="Inter,sans-serif" style={{ transition: 'fill 0.3s ease' }}>
+        {dscr.toFixed(2)}
+      </text>
+      {/* Label */}
+      <text x={cx} y={cy + 2} textAnchor="middle" fontSize="10" fontWeight="600"
+        fill="#9ca3af" fontFamily="Inter,sans-serif" letterSpacing="2">DSCR</text>
+      {/* Status */}
+      <text x={cx} y={cy + 18} textAnchor="middle" fontSize="11" fontWeight="600"
+        fill={color} fontFamily="Inter,sans-serif" style={{ transition: 'fill 0.3s ease' }}>{status}</text>
+    </svg>
+  );
+}
+
 export default function DSCRCalculator() {
   const [purchasePrice, setPurchasePrice] = useState(380000);
   const [downPayment, setDownPayment] = useState(130000);
@@ -78,7 +132,6 @@ export default function DSCRCalculator() {
   const [monthlyTaxes, setMonthlyTaxes] = useState(350);
   const [monthlyInsurance, setMonthlyInsurance] = useState(150);
   const [monthlyHoa, setMonthlyHoa] = useState(0);
-  const [targetPayment, setTargetPayment] = useState(2200);
   const [selectedRate, setSelectedRate] = useState(null);
 
   const loanAmount = purchasePrice - downPayment;
@@ -122,11 +175,6 @@ export default function DSCRCalculator() {
   const dpMax = Math.round(purchasePrice * 0.50 / 1000) * 1000;
   const dpPct = dpMax > dpMin ? ((downPayment - dpMin) / (dpMax - dpMin) * 100).toFixed(1) : 0;
 
-  // Target status
-  const targetDiff = targetPayment - activeRow.pitia;
-  const targetMet = targetDiff >= 0;
-  const targetClose = Math.abs(targetDiff) < 150;
-
   // Guidelines
   const guidelines = [
     { pass: ltv <= 75, warn: ltv <= 80, text: `LTV ${ltv.toFixed(1)}% — max 75% for 2–4 unit (standard) · max 80% with adjustment` },
@@ -140,18 +188,15 @@ export default function DSCRCalculator() {
   return (
     <div className="min-h-screen bg-[#F5F7FA]">
       {/* Header */}
-      <div className="bg-brand border-b border-white/10 px-6 py-4 flex items-center gap-3">
-        <svg width="28" height="28" viewBox="0 0 44 44" fill="none">
-          <rect width="44" height="44" rx="14" fill="#013638"/>
-          <line x1="11" y1="33" x2="23" y2="14" stroke="#fff000" strokeWidth="4.5" strokeLinecap="round"/>
-          <line x1="23" y1="30" x2="35" y2="11" stroke="#fff000" strokeWidth="4.5" strokeLinecap="round"/>
-        </svg>
-        <span className="text-white font-bold text-lg">DSCR Loan Calculator</span>
-        <span className="ml-2 bg-[#fff000] text-brand text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Investor</span>
-        <span className="ml-auto text-white/50 text-xs">Everstream · Core 7/6 ARM · {SHEET_DATE}</span>
+      <div className="bg-brand border-b border-brand-dark">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
+          <span className="text-white font-bold text-base">DSCR Loan Calculator</span>
+          <span className="bg-[#fff000] text-brand text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Investor</span>
+          <span className="ml-auto text-white/60 text-xs hidden sm:block">Everstream · Core 7/6 ARM · {SHEET_DATE}</span>
+        </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-5 items-start">
+      <div className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-[320px_1fr_210px] gap-5 items-start">
 
         {/* ── LEFT: Inputs ── */}
         <div className="flex flex-col gap-4">
@@ -297,96 +342,12 @@ export default function DSCRCalculator() {
               </div>
             </div>
 
-            {/* DSCR Meter */}
-            <div className="bg-brand/5 border border-brand/10 rounded-xl p-4">
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <div className="text-[10px] font-bold text-brand uppercase tracking-widest">Debt Service Coverage Ratio</div>
-                  <div className="text-[10px] text-gray-400 mt-0.5">Rent ÷ PITIA (P&I + Taxes + Insurance + HOA)</div>
-                </div>
-                <span className={`text-2xl font-bold tabular-nums ${activeRow.dscr >= 1.30 ? 'text-green-600' : activeRow.dscr >= 1.00 ? 'text-amber-500' : 'text-red-500'}`}>
-                  {activeRow.dscr.toFixed(2)}
-                </span>
-              </div>
-              <div className="h-2 bg-gray-200 rounded-full overflow-hidden mb-1">
-                <div className="h-2 rounded-full transition-all duration-300"
-                  style={{
-                    width: Math.max(0, Math.min(100, (activeRow.dscr - 0.75) / 0.75 * 100)) + '%',
-                    background: activeRow.dscr >= 1.30 ? '#16a34a' : activeRow.dscr >= 1.00 ? '#d97706' : '#dc2626'
-                  }} />
-              </div>
-              <div className="flex justify-between text-[10px] text-gray-400">
-                <span>0.75</span><span>1.00</span><span>1.15</span><span>1.30</span><span>1.50+</span>
-              </div>
-              <div className="text-[11px] text-gray-500 mt-2 pt-2 border-t border-brand/10">
-                <span className="font-semibold text-brand">{fmtD(monthlyRent)}</span> rent ÷{' '}
-                <span className="font-semibold text-brand">{fmtD(activeRow.pitia)}</span> PITIA
-                ({fmtD(activeRow.pi)} P&I + {fmtD(monthlyTaxes)} tax + {fmtD(monthlyInsurance)} ins
-                {monthlyHoa > 0 ? ` + ${fmtD(monthlyHoa)} HOA` : ''})
-              </div>
-            </div>
           </div>
 
-          {/* Target Payment */}
-          <div className={tightCardCls}>
-            <SectionLabel>Target Max Payment</SectionLabel>
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
-                <input type="number" value={targetPayment} onChange={e => setTargetPayment(+e.target.value)}
-                  step={50} className={inputCls + ' pl-6'} />
-              </div>
-              <span className="text-sm text-gray-500 whitespace-nowrap">max PITIA/mo</span>
-            </div>
-            {targetPayment > 0 && (
-              <div className={`mt-2 text-xs font-semibold px-3 py-1.5 rounded-lg inline-block ${
-                targetMet ? 'bg-green-50 text-green-700' : targetClose ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-600'
-              }`}>
-                {targetMet
-                  ? `✓ Under target by ${fmtD(targetDiff)}/mo at ${activeRow.rate.toFixed(3)}%`
-                  : `${fmtD(Math.abs(targetDiff))}/mo over target — increase down payment`}
-              </div>
-            )}
-          </div>
-
-          {/* Guidelines */}
-          <div className={cardCls}>
-            <SectionLabel>Eligibility Check</SectionLabel>
-            <ul className="space-y-2">
-              {guidelines.map((g, i) => (
-                <li key={i} className="flex items-start gap-2 text-xs">
-                  <span className={`mt-0.5 w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold ${
-                    g.pass ? 'bg-green-100 text-green-700' : g.warn ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-600'
-                  }`}>
-                    {g.pass ? '✓' : g.warn ? '!' : '✗'}
-                  </span>
-                  <span className="text-gray-600 leading-tight">{g.text}</span>
-                </li>
-              ))}
-            </ul>
-            <p className="text-[11px] text-gray-400 mt-3">Everstream DSCR 1 · Core 7/6 ARM · 30-day lock · {SHEET_DATE}</p>
-          </div>
         </div>
 
-        {/* ── RIGHT: Results ── */}
+        {/* ── CENTER: Payment + Rates ── */}
         <div className="flex flex-col gap-4">
-
-          {/* Scenario pills */}
-          <div className="flex flex-wrap gap-2">
-            {[
-              ['LTV', ltv.toFixed(1) + '%'],
-              ['DSCR', activeRow.dscr.toFixed(2)],
-              ['FICO', fico],
-              ['Units', units + '-unit'],
-              ['State', state],
-              ['Purpose', purpose === 'purchase' ? 'Purchase' : purpose === 'refinance' ? 'Refi' : 'Cash-Out'],
-            ].map(([label, value]) => (
-              <div key={label} className="bg-white border border-gray-200 rounded-full px-3 py-1 text-xs">
-                <span className="text-gray-400">{label}: </span>
-                <span className="font-semibold text-gray-900">{value}</span>
-              </div>
-            ))}
-          </div>
 
           {/* Payment breakdown */}
           <div className={cardCls}>
@@ -463,6 +424,7 @@ export default function DSCRCalculator() {
           {/* Rate table */}
           <div className={cardCls}>
             <SectionLabel>Rate Options · DSCR Core 7/6 ARM · 30-Day Lock</SectionLabel>
+            <p className="text-[11px] text-gray-400 mb-3">Click any row to update the payment breakdown and DSCR gauge.</p>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -474,20 +436,10 @@ export default function DSCRCalculator() {
                 </thead>
                 <tbody>
                   {(() => {
-                    let shown125 = false, shown100 = false, shownTarget = false;
+                    let shown125 = false, shown100 = false;
                     return displayRows.map((row) => {
                       const markers = [];
 
-                      if (targetPayment && !shownTarget && row.pitia > targetPayment) {
-                        shownTarget = true;
-                        markers.push(
-                          <tr key="target-marker">
-                            <td colSpan={6} className="bg-amber-50 text-amber-700 text-[11px] font-semibold px-2 py-1.5 border-y border-amber-200">
-                              ▲ Your target {fmtD(targetPayment)}/mo — rates above exceed your target PITIA
-                            </td>
-                          </tr>
-                        );
-                      }
                       if (!shown125 && row.dscr < 1.25) {
                         shown125 = true;
                         markers.push(
@@ -597,6 +549,59 @@ export default function DSCRCalculator() {
               ))}
             </div>
             <p className="text-[11px] text-gray-400 mt-3">Everstream DSCR 1 LLPA sheet · {SHEET_DATE}</p>
+          </div>
+
+        </div>
+
+        {/* ── RIGHT: Gauge + Summary ── */}
+        <div className="flex flex-col gap-4">
+
+          {/* DSCR Gauge — compact */}
+          <div className={cardCls + ' text-center'}>
+            <DSCRGauge dscr={activeRow.dscr} />
+            <div className="text-[11px] text-gray-400 mt-1 border-t border-gray-100 pt-2">
+              <span className="font-semibold text-brand tabular-nums">{fmtD(monthlyRent)}</span>
+              <span className="text-gray-300 mx-1">÷</span>
+              <span className="font-semibold text-brand tabular-nums">{fmtD(activeRow.pitia)}</span>
+            </div>
+          </div>
+
+          {/* Scenario chips */}
+          <div className={cardCls}>
+            <SectionLabel>Scenario</SectionLabel>
+            <div className="grid grid-cols-2 gap-1.5">
+              {[
+                ['LTV', ltv.toFixed(1) + '%'],
+                ['DSCR', activeRow.dscr.toFixed(2)],
+                ['FICO', fico],
+                ['Units', units + '-unit'],
+                ['State', state],
+                ['Purpose', purpose === 'purchase' ? 'Purchase' : purpose === 'refinance' ? 'Refi' : 'Cash-Out'],
+              ].map(([label, value]) => (
+                <div key={label} className="bg-brand/10 border border-brand/10 rounded-lg px-2 py-1.5">
+                  <div className="text-[9px] font-bold text-brand uppercase tracking-wider">{label}</div>
+                  <div className="text-sm font-semibold text-gray-900 tabular-nums">{value}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Eligibility check */}
+          <div className={cardCls}>
+            <SectionLabel>Eligibility</SectionLabel>
+            <ul className="space-y-2">
+              {guidelines.map((g, i) => (
+                <li key={i} className="flex items-start gap-2 text-xs">
+                  <span className={`mt-0.5 w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold ${
+                    g.pass ? 'bg-green-100 text-green-700' : g.warn ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-600'
+                  }`}>
+                    {g.pass ? '✓' : g.warn ? '!' : '✗'}
+                  </span>
+                  <span className="text-gray-600 leading-tight">{g.text}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="text-[11px] text-gray-400 mt-3">{SHEET_DATE}</p>
           </div>
 
         </div>

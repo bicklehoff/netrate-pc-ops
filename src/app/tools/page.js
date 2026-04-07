@@ -8,7 +8,7 @@ export const metadata = {
 const tools = [
   {
     icon: '☰',
-    iconClass: 'bg-gradient-to-br from-cyan-50 to-cyan-100 text-brand',
+    iconClass: 'bg-brand/10 text-brand',
     title: 'Rate Tool',
     desc: 'Live mortgage rates across 11 lenders. See rate, points, payment, and lender credits side by side.',
     href: '/rates',
@@ -16,7 +16,7 @@ const tools = [
   },
   {
     icon: '🔔',
-    iconClass: 'bg-gradient-to-br from-teal-50 to-teal-100 text-teal-600',
+    iconClass: 'bg-brand/10 text-brand',
     title: 'Rate Alerts',
     desc: 'Save a rate scenario and get periodic updates when rates change — reviewed by your loan officer before every email.',
     href: '/rates',
@@ -25,7 +25,7 @@ const tools = [
   },
   {
     icon: '⌂',
-    iconClass: 'bg-gradient-to-br from-pink-50 to-pink-100 text-pink-600',
+    iconClass: 'bg-brand/10 text-brand',
     title: 'Purchase Calculator',
     desc: 'Estimate your monthly payment, cash to close, and how much home you can afford.',
     href: '/tools/purchase-calculator',
@@ -33,7 +33,7 @@ const tools = [
   },
   {
     icon: '↻',
-    iconClass: 'bg-gradient-to-br from-violet-50 to-violet-100 text-violet-600',
+    iconClass: 'bg-brand/10 text-brand',
     title: 'Refi Analyzer',
     desc: 'Is refinancing worth it? Enter your current loan and we\'ll show the break-even timeline and total savings.',
     href: '/tools/refi-analyzer',
@@ -41,7 +41,7 @@ const tools = [
   },
   {
     icon: '⏳',
-    iconClass: 'bg-gradient-to-br from-red-50 to-red-100 text-red-600',
+    iconClass: 'bg-brand/10 text-brand',
     title: 'Cost of Waiting',
     desc: 'What does it cost you every month you don\'t refinance? See the real number with your loan details.',
     href: '/tools/cost-of-waiting',
@@ -49,7 +49,7 @@ const tools = [
   },
   {
     icon: 'Ψ',
-    iconClass: 'bg-gradient-to-br from-emerald-50 to-emerald-100 text-green-600',
+    iconClass: 'bg-brand/10 text-brand',
     title: 'DSCR Calculator',
     desc: 'Investment property? Enter rental income and expenses to see if your deal qualifies for a DSCR loan.',
     href: '/tools/dscr-calculator',
@@ -57,7 +57,7 @@ const tools = [
   },
   {
     icon: '↩',
-    iconClass: 'bg-gradient-to-br from-amber-50 to-amber-100 text-amber-600',
+    iconClass: 'bg-brand/10 text-brand',
     title: 'Reverse Mortgage Calculator',
     desc: 'See how much equity you could access with a reverse mortgage. Age, home value, and rate — that\'s all we need.',
     href: '/tools/reverse-mortgage-calculator',
@@ -65,7 +65,7 @@ const tools = [
   },
   {
     icon: '⇄',
-    iconClass: 'bg-gradient-to-br from-slate-50 to-slate-100 text-slate-600',
+    iconClass: 'bg-brand/10 text-brand',
     title: 'Second Lien Comparison',
     desc: 'Compare HELOC vs. home equity loan side by side to find the best option for your situation.',
     href: '/tools/second-lien-comparison',
@@ -75,7 +75,7 @@ const tools = [
 
 export default function ToolsPage() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#F5F7FA]">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
         {/* Header */}
         <div className="text-center mb-12">
