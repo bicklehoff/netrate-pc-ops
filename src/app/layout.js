@@ -145,8 +145,8 @@ export default function RootLayout({ children }) {
             <a href="/" className="flex items-center gap-3">
               <svg width="32" height="32" viewBox="0 0 44 44" fill="none" aria-hidden="true">
                 <rect width="44" height="44" rx="14" fill="#024c4f"/>
-                <line x1="11" y1="33" x2="23" y2="14" stroke="#fff000" strokeWidth="4.5" strokeLinecap="round"/>
-                <line x1="23" y1="30" x2="35" y2="11" stroke="#fff000" strokeWidth="4.5" strokeLinecap="round"/>
+                <line x1="10" y1="33" x2="19" y2="11" stroke="#fff000" strokeWidth="4.5" strokeLinecap="round"/>
+                <line x1="25" y1="33" x2="34" y2="11" stroke="#fff000" strokeWidth="4.5" strokeLinecap="round"/>
               </svg>
               <div className="flex items-baseline gap-0.5">
                 <span className="text-xl font-bold text-gray-900 tracking-[0.3px]">Net</span>
