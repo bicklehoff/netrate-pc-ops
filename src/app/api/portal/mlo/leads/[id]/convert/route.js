@@ -8,6 +8,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { encrypt } from '@/lib/encryption';
+import { normalizePhone } from '@/lib/normalize-phone';
 
 export async function POST(req, { params }) {
   try {
@@ -50,7 +51,7 @@ export async function POST(req, { params }) {
           firstName,
           lastName,
           email: emailLower,
-          phone: lead.phone || null,
+          phone: normalizePhone(lead.phone) || lead.phone || null,
           source: 'lead',
           status: 'applicant',
           contactType: 'borrower',
@@ -86,7 +87,7 @@ export async function POST(req, { params }) {
           email: emailLower,
           firstName,
           lastName,
-          phone: lead.phone || null,
+          phone: normalizePhone(lead.phone) || lead.phone || null,
           ssnEncrypted: placeholderSsn,
           dobEncrypted: placeholderDob,
           ssnLastFour: '0000',

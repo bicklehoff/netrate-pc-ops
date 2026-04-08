@@ -5,6 +5,7 @@
 // Configure this URL as the "Messaging Webhook" on your Twilio phone number.
 
 import prisma from '@/lib/prisma';
+import { normalizePhone } from '@/lib/normalize-phone';
 
 export async function POST(req) {
   const formData = await req.formData();
@@ -13,11 +14,14 @@ export async function POST(req) {
   const body = formData.get('Body');
   const messageSid = formData.get('MessageSid');
 
+  // Normalize sender phone for consistent lookup
+  const normalizedFrom = normalizePhone(from);
+
   // Look up sender in contacts
   let contactId = null;
-  if (from) {
+  if (normalizedFrom) {
     try {
-      const contact = await prisma.contact.findFirst({ where: { phone: from } });
+      const contact = await prisma.contact.findFirst({ where: { phone: normalizedFrom } });
       if (contact) contactId = contact.id;
     } catch (e) {
       console.error('Contact lookup for incoming SMS failed:', e);
@@ -30,8 +34,8 @@ export async function POST(req) {
       data: {
         contactId,
         direction: 'inbound',
-        fromNumber: from || '',
-        toNumber: to || '',
+        fromNumber: normalizedFrom || from || '',
+        toNumber: normalizePhone(to) || to || '',
         body: body || '',
         status: 'received',
         twilioMessageSid: messageSid,

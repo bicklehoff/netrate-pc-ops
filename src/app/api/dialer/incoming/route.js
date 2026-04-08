@@ -6,6 +6,7 @@
 
 import { buildIncomingTwiml } from '@/lib/twilio-voice';
 import prisma from '@/lib/prisma';
+import { normalizePhone } from '@/lib/normalize-phone';
 
 export async function POST(req) {
   const formData = await req.formData();
@@ -13,12 +14,15 @@ export async function POST(req) {
   const to = formData.get('To');           // Your Twilio number
   const callSid = formData.get('CallSid');
 
+  // Normalize caller phone for consistent lookup
+  const normalizedFrom = normalizePhone(from);
+
   // Look up the caller in contacts
   let callerName = null;
   let contactId = null;
-  if (from) {
+  if (normalizedFrom) {
     try {
-      const contact = await prisma.contact.findFirst({ where: { phone: from } });
+      const contact = await prisma.contact.findFirst({ where: { phone: normalizedFrom } });
       if (contact) {
         callerName = `${contact.firstName} ${contact.lastName}`;
         contactId = contact.id;
@@ -43,8 +47,8 @@ export async function POST(req) {
           mloId: mlos[0].id,
           contactId,
           direction: 'inbound',
-          fromNumber: from || '',
-          toNumber: to || '',
+          fromNumber: normalizedFrom || from || '',
+          toNumber: normalizePhone(to) || to || '',
           status: 'ringing',
           twilioCallSid: callSid,
         },

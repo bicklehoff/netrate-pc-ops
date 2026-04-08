@@ -15,6 +15,7 @@ import { checkApplicationGate } from '@/lib/application-gate';
 import { sendEmail } from '@/lib/resend';
 import { statusChangeTemplate } from '@/lib/email-templates/borrower';
 import { getInitialDocList } from '@/lib/constants/initial-doc-list';
+import { normalizePhone } from '@/lib/normalize-phone';
 
 // ─── Rate Limiting (in-memory, per IP) ──────────────────────
 // 5 submissions per hour per IP. Map auto-cleans expired entries.
@@ -134,7 +135,7 @@ async function upsertBorrower({ firstName, lastName, email, phone, ssn, dob }) {
       data: {
         firstName: sanitize(firstName),
         lastName: sanitize(lastName),
-        phone: phone ? sanitize(phone) : null,
+        phone: normalizePhone(phone) || (phone ? sanitize(phone) : null),
         dobEncrypted,
         ssnEncrypted,
         ssnLastFour: lastFour,
@@ -146,7 +147,7 @@ async function upsertBorrower({ firstName, lastName, email, phone, ssn, dob }) {
         email: emailLower,
         firstName: sanitize(firstName),
         lastName: sanitize(lastName),
-        phone: phone ? sanitize(phone) : null,
+        phone: normalizePhone(phone) || (phone ? sanitize(phone) : null),
         dobEncrypted,
         ssnEncrypted,
         ssnLastFour: lastFour,
@@ -469,7 +470,7 @@ export async function POST(request) {
             firstName: sanitize(body.firstName),
             lastName: sanitize(body.lastName),
             email: body.email?.toLowerCase(),
-            phone: body.phone?.replace(/\D/g, ''),
+            phone: normalizePhone(body.phone) || body.phone || null,
             borrowerId: borrower.id,
             source: 'application',
             status: 'applicant',
@@ -492,7 +493,7 @@ export async function POST(request) {
           isPrimary: true,
           name: `${sanitize(body.firstName)} ${sanitize(body.lastName)}`,
           email: body.email?.toLowerCase(),
-          phone: body.phone,
+          phone: normalizePhone(body.phone) || body.phone || null,
         },
       });
 
