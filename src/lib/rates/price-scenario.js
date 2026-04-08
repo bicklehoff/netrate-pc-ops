@@ -142,8 +142,10 @@ export async function priceScenario(body) {
     };
 
     const lenderAdj = await getDbLenderAdj(lenderId, scenario.loanType);
-    // If no adjustments for the selected loan type, skip — unless FTHB cross-type can still use convAdj
-    if (!lenderAdj && !hasFthbCrossType) continue;
+    // Lenders with no adjustment rules (e.g., TLS — LLPAs baked into product codes)
+    // get an empty adj object so pricing can still proceed with zero adjustments.
+    const EMPTY_ADJ = { ficoLtvGrids: { core: { '>15yr': { purchase: {}, refinance: {}, cashout: {} } } }, srp: { core: { withImpounds: {}, withoutImpounds: {} } }, riskBased: {}, loanAmountAdj: {}, investorAdj: {}, productFeatures: [], productLoanAmount: [], eliteFhaFicoLoanAmt: [], eliteFhaPurposeLtv: [] };
+    const effectiveAdj = lenderAdj || EMPTY_ADJ;
 
     // Pre-load conventional adjustments if FTHB is checked and main type isn't conventional
     // (needed for HomeReady/HomePossible cross-type pricing)
@@ -194,8 +196,7 @@ export async function priceScenario(body) {
       const llpaGrids = lenderData.llpas || null;
 
       // Use conventional adjustments for FTHB cross-type programs
-      const useAdj = (isFthbVariant && program.loanType === 'conventional' && convAdj) ? convAdj : lenderAdj;
-      if (!useAdj) continue; // No adjustments available for this program type
+      const useAdj = (isFthbVariant && program.loanType === 'conventional' && convAdj) ? convAdj : effectiveAdj;
       const pricingScenario = (isFthbVariant && program.loanType === 'conventional' && scenario.loanType !== 'conventional')
         ? { ...scenario, loanType: 'conventional' }
         : scenario;

@@ -68,7 +68,7 @@ function decodeProductCode(code) {
   if (/^H\d+M.*HELOC$/i.test(code)) {
     return {
       raw, loanType: 'heloc', category: 'other', subcategory: 'heloc',
-      term: null, productType: 'variable', occupancy: 'primary',
+      term: 30, productType: 'variable', occupancy: 'primary',
       isHighBalance: false, isStreamline: false, isBuydown: false,
       armStructure: null, isInterestOnly: false, docType: null, tier: null,
     };
