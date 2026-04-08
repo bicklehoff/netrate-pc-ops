@@ -46,6 +46,136 @@ export default function LicensingPage() {
           </p>
         </div>
 
+        <h2 className="text-lg font-semibold text-gray-900 mt-8">State Disclosures</h2>
+
+        <div className="space-y-5">
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900 mb-1">Colorado</h3>
+            <p className="text-sm">
+              NetRate Mortgage LLC is regulated by the Colorado Division of Real Estate, Department of
+              Regulatory Agencies (DORA). To file a complaint or for more information, visit{' '}
+              <a href="https://dora.colorado.gov/mortgage" target="_blank" rel="noopener noreferrer" className="text-brand hover:text-brand-dark">dora.colorado.gov/mortgage</a>{' '}
+              or call 303-894-2166.
+            </p>
+          </div>
+
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900 mb-1">Oregon</h3>
+            <p className="text-sm">
+              NetRate Mortgage LLC is licensed as a Mortgage Lender in Oregon (License #ML-1111861) by the
+              Oregon Division of Financial Regulation. NetRate Mortgage LLC acts as a mortgage broker &mdash;
+              loans are funded by third-party wholesale lenders, not by NetRate Mortgage LLC directly.
+              For more information, visit{' '}
+              <a href="https://dfr.oregon.gov" target="_blank" rel="noopener noreferrer" className="text-brand hover:text-brand-dark">dfr.oregon.gov</a>{' '}
+              or call 888-877-4894.
+            </p>
+          </div>
+
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900 mb-1">Texas</h3>
+            <p className="text-sm">
+              NetRate Mortgage LLC is licensed by the Texas Department of Savings and Mortgage Lending
+              (SML). CONSUMERS WISHING TO FILE A COMPLAINT AGAINST A COMPANY OR A RESIDENTIAL MORTGAGE
+              LOAN ORIGINATOR SHOULD COMPLETE AND SEND A COMPLAINT FORM TO THE TEXAS DEPARTMENT OF SAVINGS
+              AND MORTGAGE LENDING, 2601 NORTH LAMAR, SUITE 201, AUSTIN, TEXAS 78705. COMPLAINT FORMS AND
+              INSTRUCTIONS MAY BE OBTAINED FROM THE DEPARTMENT&apos;S WEBSITE AT{' '}
+              <a href="https://www.sml.texas.gov" target="_blank" rel="noopener noreferrer" className="text-brand hover:text-brand-dark">WWW.SML.TEXAS.GOV</a>.
+              {'  '}A TOLL-FREE CONSUMER HOTLINE IS AVAILABLE AT 1-877-276-5550. THE DEPARTMENT MAINTAINS A
+              RECOVERY FUND TO MAKE PAYMENTS OF CERTAIN ACTUAL OUT OF POCKET DAMAGES SUSTAINED BY BORROWERS
+              CAUSED BY ACTS OF LICENSED RESIDENTIAL MORTGAGE LOAN ORIGINATORS. A WRITTEN APPLICATION FOR
+              REIMBURSEMENT FROM THE RECOVERY FUND MUST BE FILED WITH AND INVESTIGATED BY THE DEPARTMENT
+              PRIOR TO THE PAYMENT OF A CLAIM. FOR MORE INFORMATION ABOUT THE RECOVERY FUND, PLEASE CONSULT
+              THE DEPARTMENT&apos;S WEBSITE AT WWW.SML.TEXAS.GOV.
+            </p>
+          </div>
+        </div>
+
+        <h2 className="text-lg font-semibold text-gray-900 mt-8">State Disclosures</h2>
+
+        <div className="space-y-5">
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900 mb-1">Colorado</h3>
+            <p className="text-sm">
+              NetRate Mortgage LLC is regulated by the Colorado Division of Real Estate, Department of
+              Regulatory Agencies (DORA). To file a complaint or for more information, visit{' '}
+              <a href="https://dora.colorado.gov/mortgage" target="_blank" rel="noopener noreferrer" className="text-brand hover:text-brand-dark">dora.colorado.gov/mortgage</a>{' '}
+              or call 303-894-2166.
+            </p>
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900 mb-1">Oregon</h3>
+            <p className="text-sm">
+              NetRate Mortgage LLC is licensed as a Mortgage Lender in Oregon (License #ML-1111861) by the
+              Oregon Division of Financial Regulation. NetRate Mortgage LLC acts as a mortgage broker &mdash;
+              loans are funded by third-party wholesale lenders, not by NetRate Mortgage LLC directly.
+              For more information, visit{' '}
+              <a href="https://dfr.oregon.gov" target="_blank" rel="noopener noreferrer" className="text-brand hover:text-brand-dark">dfr.oregon.gov</a>{' '}
+              or call 888-877-4894.
+            </p>
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900 mb-1">Texas</h3>
+            <p className="text-sm">
+              NetRate Mortgage LLC is licensed by the Texas Department of Savings and Mortgage Lending
+              (SML). CONSUMERS WISHING TO FILE A COMPLAINT AGAINST A COMPANY OR A RESIDENTIAL MORTGAGE
+              LOAN ORIGINATOR SHOULD COMPLETE AND SEND A COMPLAINT FORM TO THE TEXAS DEPARTMENT OF SAVINGS
+              AND MORTGAGE LENDING, 2601 NORTH LAMAR, SUITE 201, AUSTIN, TEXAS 78705. COMPLAINT FORMS AND
+              INSTRUCTIONS MAY BE OBTAINED FROM THE DEPARTMENT&apos;S WEBSITE AT{' '}
+              <a href="https://www.sml.texas.gov" target="_blank" rel="noopener noreferrer" className="text-brand hover:text-brand-dark">WWW.SML.TEXAS.GOV</a>.
+              {' '}A TOLL-FREE CONSUMER HOTLINE IS AVAILABLE AT 1-877-276-5550. THE DEPARTMENT MAINTAINS A
+              RECOVERY FUND TO MAKE PAYMENTS OF CERTAIN ACTUAL OUT OF POCKET DAMAGES SUSTAINED BY BORROWERS
+              CAUSED BY ACTS OF LICENSED RESIDENTIAL MORTGAGE LOAN ORIGINATORS. A WRITTEN APPLICATION FOR
+              REIMBURSEMENT FROM THE RECOVERY FUND MUST BE FILED WITH AND INVESTIGATED BY THE DEPARTMENT
+              PRIOR TO THE PAYMENT OF A CLAIM. FOR MORE INFORMATION ABOUT THE RECOVERY FUND, PLEASE CONSULT
+              THE DEPARTMENT&apos;S WEBSITE AT WWW.SML.TEXAS.GOV.
+            </p>
+          </div>
+        </div>
+
+        <h2 className="text-lg font-semibold text-gray-900 mt-8">PLACEHOLDER_SECTION
+
+        <h2 className="text-lg font-semibold text-gray-900 mt-8">State Disclosures</h2>
+
+        <div className="space-y-5">
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900 mb-1">Colorado</h3>
+            <p className="text-sm">
+              NetRate Mortgage LLC is regulated by the Colorado Division of Real Estate, Department of
+              Regulatory Agencies (DORA). To file a complaint or for more information, visit{' '}
+              <a href="https://dora.colorado.gov/mortgage" target="_blank" rel="noopener noreferrer" className="text-brand hover:text-brand-dark">dora.colorado.gov/mortgage</a>{' '}
+              or call 303-894-2166.
+            </p>
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900 mb-1">Oregon</h3>
+            <p className="text-sm">
+              NetRate Mortgage LLC is licensed as a Mortgage Lender in Oregon (License #ML-1111861) by the
+              Oregon Division of Financial Regulation. NetRate Mortgage LLC acts as a mortgage broker &mdash;
+              loans are funded by third-party wholesale lenders, not by NetRate Mortgage LLC directly.
+              For more information, visit{' '}
+              <a href="https://dfr.oregon.gov" target="_blank" rel="noopener noreferrer" className="text-brand hover:text-brand-dark">dfr.oregon.gov</a>{' '}
+              or call 888-877-4894.
+            </p>
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900 mb-1">Texas</h3>
+            <p className="text-sm">
+              NetRate Mortgage LLC is licensed by the Texas Department of Savings and Mortgage Lending
+              (SML). CONSUMERS WISHING TO FILE A COMPLAINT AGAINST A COMPANY OR A RESIDENTIAL MORTGAGE
+              LOAN ORIGINATOR SHOULD COMPLETE AND SEND A COMPLAINT FORM TO THE TEXAS DEPARTMENT OF SAVINGS
+              AND MORTGAGE LENDING, 2601 NORTH LAMAR, SUITE 201, AUSTIN, TEXAS 78705. COMPLAINT FORMS AND
+              INSTRUCTIONS MAY BE OBTAINED FROM THE DEPARTMENT&apos;S WEBSITE AT{' '}
+              <a href="https://www.sml.texas.gov" target="_blank" rel="noopener noreferrer" className="text-brand hover:text-brand-dark">WWW.SML.TEXAS.GOV</a>.
+              {' '}A TOLL-FREE CONSUMER HOTLINE IS AVAILABLE AT 1-877-276-5550. THE DEPARTMENT MAINTAINS A
+              RECOVERY FUND TO MAKE PAYMENTS OF CERTAIN ACTUAL OUT OF POCKET DAMAGES SUSTAINED BY BORROWERS
+              CAUSED BY ACTS OF LICENSED RESIDENTIAL MORTGAGE LOAN ORIGINATORS. A WRITTEN APPLICATION FOR
+              REIMBURSEMENT FROM THE RECOVERY FUND MUST BE FILED WITH AND INVESTIGATED BY THE DEPARTMENT
+              PRIOR TO THE PAYMENT OF A CLAIM. FOR MORE INFORMATION ABOUT THE RECOVERY FUND, PLEASE CONSULT
+              THE DEPARTMENT&apos;S WEBSITE AT WWW.SML.TEXAS.GOV.
+            </p>
+          </div>
+        </div>
+
         <h2 className="text-lg font-semibold text-gray-900 mt-8">Equal Housing Opportunity</h2>
         <p>
           NetRate Mortgage LLC is an Equal Housing Opportunity company. In accordance
