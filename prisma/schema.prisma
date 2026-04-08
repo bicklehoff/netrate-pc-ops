@@ -301,7 +301,7 @@ model Contact {
   zoho_account_id     String?
   zoho_contact_id     String?
   callLogs            CallLog[]
-  contact_notes       contact_notes[]
+  contactNotes        ContactNote[]
   mlos                Mlo?            @relation(fields: [assigned_mlo_id], references: [id])
   borrower            Borrower?       @relation(fields: [borrowerId], references: [id])
   leads               Lead[]
@@ -542,8 +542,8 @@ model RateSheet {
   source_checksum String?
   source_file     String?
   source_url      String?
-  rate_prices     rate_prices[]
-  lender          rate_lenders  @relation(fields: [lenderId], references: [id])
+  ratePrices      RatePrice[]
+  lender          RateLender    @relation(fields: [lenderId], references: [id])
 
   @@unique([lenderId, effectiveDate, source_checksum])
   @@index([lenderId, effectiveDate])
@@ -669,15 +669,15 @@ model Lead {
   scenario_data        Json?
   updated_at           DateTime?         @default(now()) @db.Timestamptz(6)
   view_token           String?           @default(dbgenerated("gen_random_uuid()"))
-  lead_quotes          lead_quotes[]
+  leadQuotes           LeadQuote[]
   contacts             Contact?          @relation(fields: [contact_id], references: [id])
-  saved_scenarios      saved_scenarios[]
+  savedScenarios       SavedScenario[]
 
   @@index([view_token])
   @@map("leads")
 }
 
-model account_contacts {
+model AccountContact {
   id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   account_id      String    @db.Uuid
   first_name      String
@@ -691,14 +691,15 @@ model account_contacts {
   zoho_contact_id String?
   created_at      DateTime? @default(now()) @db.Timestamptz(6)
   updated_at      DateTime? @default(now()) @db.Timestamptz(6)
-  accounts        accounts  @relation(fields: [account_id], references: [id], onDelete: Cascade)
+  account         Account   @relation(fields: [account_id], references: [id], onDelete: Cascade)
 
   @@index([account_id], map: "idx_account_contacts_account")
   @@index([email], map: "idx_account_contacts_email")
+  @@map("account_contacts")
 }
 
-model accounts {
-  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+model Account {
+  id               String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name             String
   phone            String?
   website          String?
@@ -709,16 +710,17 @@ model accounts {
   zip_code         String?
   notes            String?
   zoho_account_id  String?
-  created_at       DateTime?          @default(now()) @db.Timestamptz(6)
-  updated_at       DateTime?          @default(now()) @db.Timestamptz(6)
-  account_contacts account_contacts[]
+  created_at       DateTime?        @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime?        @default(now()) @db.Timestamptz(6)
+  accountContacts  AccountContact[]
 
   @@index([industry], map: "idx_accounts_industry")
+  @@map("accounts")
 }
 
-model adjustment_rules {
-  id              String       @id @db.Uuid
-  lender_id       String       @db.Uuid
+model AdjustmentRule {
+  id              String     @id @db.Uuid
+  lender_id       String     @db.Uuid
   adjustment_type String
   purpose         String?
   agency          String?
@@ -730,85 +732,87 @@ model adjustment_rules {
   feature_name    String?
   fico_min        Int?
   fico_max        Int?
-  ltv_min         Decimal?     @db.Decimal(5, 2)
-  ltv_max         Decimal?     @db.Decimal(5, 2)
+  ltv_min         Decimal?   @db.Decimal(5, 2)
+  ltv_max         Decimal?   @db.Decimal(5, 2)
   loan_amount_min Int?
   loan_amount_max Int?
   term_min        Int?
   term_max        Int?
-  value           Decimal      @db.Decimal(8, 4)
-  effective_date  DateTime     @db.Date
-  expires_date    DateTime?    @db.Date
-  status          String       @default("active")
+  value           Decimal    @db.Decimal(8, 4)
+  effective_date  DateTime   @db.Date
+  expires_date    DateTime?  @db.Date
+  status          String     @default("active")
   source          String?
-  created_at      DateTime     @default(now()) @db.Timestamptz(6)
-  updated_at      DateTime     @db.Timestamptz(6)
+  created_at      DateTime   @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime   @db.Timestamptz(6)
   loan_type       String?
-  rate_lenders    rate_lenders @relation(fields: [lender_id], references: [id])
+  lender          RateLender @relation(fields: [lender_id], references: [id])
 
   @@index([lender_id, adjustment_type, loan_type, status])
   @@index([lender_id, adjustment_type, purpose, tier])
   @@index([lender_id, adjustment_type, status])
   @@index([status, effective_date])
+  @@map("adjustment_rules")
 }
 
-model borrower_quotes {
-  id                    String            @id @db.Uuid
-  contact_id            String?           @db.Uuid
-  lead_id               String?           @db.Uuid
-  loan_id               String?           @db.Uuid
-  mlo_id                String?           @db.Uuid
+model BorrowerQuote {
+  id                    String           @id @db.Uuid
+  contact_id            String?          @db.Uuid
+  lead_id               String?          @db.Uuid
+  loan_id               String?          @db.Uuid
+  mlo_id                String?          @db.Uuid
   borrower_name         String?
   borrower_email        String?
   borrower_phone        String?
   purpose               String
-  property_value        Decimal           @db.Decimal(12, 2)
-  loan_amount           Decimal           @db.Decimal(12, 2)
-  ltv                   Decimal           @db.Decimal(5, 2)
+  property_value        Decimal          @db.Decimal(12, 2)
+  loan_amount           Decimal          @db.Decimal(12, 2)
+  ltv                   Decimal          @db.Decimal(5, 2)
   fico                  Int
   state                 String
   county                String?
   property_type         String?
-  occupancy             String?           @default("primary")
-  loan_type             String?           @default("conventional")
-  term                  Int?              @default(30)
-  closing_date          DateTime?         @db.Date
-  current_rate          Decimal?          @db.Decimal(5, 3)
-  current_balance       Decimal?          @db.Decimal(12, 2)
-  current_payment       Decimal?          @db.Decimal(10, 2)
+  occupancy             String?          @default("primary")
+  loan_type             String?          @default("conventional")
+  term                  Int?             @default(30)
+  closing_date          DateTime?        @db.Date
+  current_rate          Decimal?         @db.Decimal(5, 3)
+  current_balance       Decimal?         @db.Decimal(12, 2)
+  current_payment       Decimal?         @db.Decimal(10, 2)
   current_lender        String?
   scenarios             Json
   fee_breakdown         Json?
-  annual_taxes          Decimal?          @db.Decimal(10, 2)
-  annual_insurance      Decimal?          @db.Decimal(10, 2)
-  pmi_rate              Decimal?          @db.Decimal(5, 4)
-  monthly_pmi           Decimal?          @db.Decimal(10, 2)
-  first_payment_date    DateTime?         @db.Date
-  cash_to_close         Decimal?          @db.Decimal(12, 2)
-  monthly_payment       Decimal?          @db.Decimal(10, 2)
+  annual_taxes          Decimal?         @db.Decimal(10, 2)
+  annual_insurance      Decimal?         @db.Decimal(10, 2)
+  pmi_rate              Decimal?         @db.Decimal(5, 4)
+  monthly_pmi           Decimal?         @db.Decimal(10, 2)
+  first_payment_date    DateTime?        @db.Date
+  cash_to_close         Decimal?         @db.Decimal(12, 2)
+  monthly_payment       Decimal?         @db.Decimal(10, 2)
   payback_months        Int?
-  monthly_savings       Decimal?          @db.Decimal(10, 2)
-  status                String            @default("draft")
-  sent_at               DateTime?         @db.Timestamptz(6)
-  viewed_at             DateTime?         @db.Timestamptz(6)
-  expires_at            DateTime?         @db.Timestamptz(6)
+  monthly_savings       Decimal?         @db.Decimal(10, 2)
+  status                String           @default("draft")
+  sent_at               DateTime?        @db.Timestamptz(6)
+  viewed_at             DateTime?        @db.Timestamptz(6)
+  expires_at            DateTime?        @db.Timestamptz(6)
   pdf_url               String?
-  pdf_generated_at      DateTime?         @db.Timestamptz(6)
-  version               Int               @default(1)
-  parent_quote_id       String?           @db.Uuid
-  created_at            DateTime          @default(now()) @db.Timestamptz(6)
-  updated_at            DateTime          @db.Timestamptz(6)
-  borrower_quotes       borrower_quotes?  @relation("borrower_quotesToborrower_quotes", fields: [parent_quote_id], references: [id])
-  other_borrower_quotes borrower_quotes[] @relation("borrower_quotesToborrower_quotes")
+  pdf_generated_at      DateTime?        @db.Timestamptz(6)
+  version               Int              @default(1)
+  parent_quote_id       String?          @db.Uuid
+  created_at            DateTime         @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime         @db.Timestamptz(6)
+  parentQuote           BorrowerQuote?   @relation("BorrowerQuoteSelfRef", fields: [parent_quote_id], references: [id])
+  childQuotes           BorrowerQuote[]  @relation("BorrowerQuoteSelfRef")
 
   @@index([contact_id])
   @@index([created_at])
   @@index([lead_id])
   @@index([loan_id])
   @@index([status])
+  @@map("borrower_quotes")
 }
 
-model broker_config {
+model BrokerConfig {
   id                        String   @id @default("default")
   comp_rate                 Decimal  @db.Decimal(5, 4)
   comp_cap_purchase         Decimal  @db.Decimal(10, 2)
@@ -826,9 +830,11 @@ model broker_config {
   third_party_cost_defaults Json?
   created_at                DateTime @default(now()) @db.Timestamptz(6)
   updated_at                DateTime @db.Timestamptz(6)
+
+  @@map("broker_config")
 }
 
-model contact_notes {
+model ContactNote {
   id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   contact_id   String    @db.Uuid
   content      String
@@ -838,9 +844,10 @@ model contact_notes {
   source       String?
   zoho_note_id String?
   created_at   DateTime? @default(now()) @db.Timestamptz(6)
-  contacts     Contact   @relation(fields: [contact_id], references: [id], onDelete: Cascade)
+  contact      Contact   @relation(fields: [contact_id], references: [id], onDelete: Cascade)
 
   @@index([contact_id], map: "idx_contact_notes_contact_id")
+  @@map("contact_notes")
 }
 
 model EconomicCalendarEvent {
@@ -863,7 +870,7 @@ model EconomicCalendarEvent {
   @@map("economic_calendar_events")
 }
 
-model fee_templates {
+model FeeTemplate {
   id                        String   @id @db.Uuid
   state                     String
   county                    String?
@@ -895,18 +902,21 @@ model fee_templates {
 
   @@unique([state, county, purpose])
   @@index([state, purpose])
+  @@map("fee_templates")
 }
 
-model fomc_statements {
+model FomcStatement {
   id             Int      @id @default(autoincrement())
   meeting_date   DateTime @unique @db.Date
   statement_url  String
   statement_text String
   paragraphs     Json
   scraped_at     DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("fomc_statements")
 }
 
-model fred_series_data {
+model FredSeriesData {
   id         Int      @id @default(autoincrement())
   series_id  String   @db.VarChar(20)
   date       DateTime @db.Date
@@ -915,9 +925,10 @@ model fred_series_data {
 
   @@unique([series_id, date])
   @@index([series_id, date(sort: Desc)])
+  @@map("fred_series_data")
 }
 
-model lead_quotes {
+model LeadQuote {
   id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   lead_id         String    @db.Uuid
   scenario        Json
@@ -931,9 +942,10 @@ model lead_quotes {
   sent_at         DateTime? @db.Timestamptz(6)
   viewed_at       DateTime? @db.Timestamptz(6)
   created_at      DateTime? @default(now()) @db.Timestamptz(6)
-  leads           Lead      @relation(fields: [lead_id], references: [id], onDelete: Cascade)
+  lead            Lead      @relation(fields: [lead_id], references: [id], onDelete: Cascade)
 
   @@index([lead_id], map: "idx_lead_quotes_lead_id")
+  @@map("lead_quotes")
 }
 
 model LoanAsset {
@@ -1184,7 +1196,7 @@ model MarketSummary {
   @@map("market_summaries")
 }
 
-model rate_alerts {
+model RateAlert {
   id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email            String
   type             String    @default("strike")
@@ -1208,88 +1220,94 @@ model rate_alerts {
   contact_id       String?
   source           String?
   ga_client_id     String?
+
+  @@map("rate_alerts")
 }
 
-model rate_lenders {
-  id                      String             @id @db.Uuid
-  code                    String             @unique
+model RateLender {
+  id                      String           @id @db.Uuid
+  code                    String           @unique
   name                    String
-  status                  String             @default("active")
-  uw_fee                  Decimal?           @db.Decimal(10, 2)
-  origination_fee         Decimal?           @default(0) @db.Decimal(10, 2)
+  status                  String           @default("active")
+  uw_fee                  Decimal?         @db.Decimal(10, 2)
+  origination_fee         Decimal?         @default(0) @db.Decimal(10, 2)
   other_fees              Json?
-  max_comp_cap_purchase   Decimal?           @db.Decimal(10, 2)
-  max_comp_cap_refi       Decimal?           @db.Decimal(10, 2)
-  max_comp_rate           Decimal?           @db.Decimal(5, 4)
-  price_format            String             @default("100-based")
-  llpa_mode               String             @default("separate")
+  max_comp_cap_purchase   Decimal?         @db.Decimal(10, 2)
+  max_comp_cap_refi       Decimal?         @db.Decimal(10, 2)
+  max_comp_rate           Decimal?         @db.Decimal(5, 4)
+  price_format            String           @default("100-based")
+  llpa_mode               String           @default("separate")
   lock_extension          String?
   notes                   String?
   contact_email           String?
   contact_phone           String?
   portal_url              String?
-  created_at              DateTime           @default(now()) @db.Timestamptz(6)
-  updated_at              DateTime           @db.Timestamptz(6)
-  comp_rate               Decimal?           @db.Decimal(5, 4)
+  created_at              DateTime         @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime         @db.Timestamptz(6)
+  comp_rate               Decimal?         @db.Decimal(5, 4)
   excluded_state_variants Json?
-  fha_ufmip               Decimal?           @db.Decimal(6, 4)
-  adjustment_rules        adjustment_rules[]
-  rate_products           rate_products[]
+  fha_ufmip               Decimal?         @db.Decimal(6, 4)
+  adjustmentRules         AdjustmentRule[]
+  rateProducts            RateProduct[]
   rateSheets              RateSheet[]
+
+  @@map("rate_lenders")
 }
 
-model rate_prices {
-  id            String        @id @db.Uuid
-  rate_sheet_id String        @db.Uuid
-  product_id    String        @db.Uuid
-  rate          Decimal       @db.Decimal(5, 3)
-  price         Decimal       @db.Decimal(8, 4)
+model RatePrice {
+  id            String      @id @db.Uuid
+  rate_sheet_id String      @db.Uuid
+  product_id    String      @db.Uuid
+  rate          Decimal     @db.Decimal(5, 3)
+  price         Decimal     @db.Decimal(8, 4)
   lock_days     Int
-  created_at    DateTime      @default(now()) @db.Timestamptz(6)
-  rate_products rate_products @relation(fields: [product_id], references: [id])
-  rate_sheets   RateSheet     @relation(fields: [rate_sheet_id], references: [id], onDelete: Cascade)
+  created_at    DateTime    @default(now()) @db.Timestamptz(6)
+  product       RateProduct @relation(fields: [product_id], references: [id])
+  rateSheet     RateSheet   @relation(fields: [rate_sheet_id], references: [id], onDelete: Cascade)
 
   @@index([product_id, rate])
   @@index([rate_sheet_id])
   @@index([rate_sheet_id, product_id, lock_days])
+  @@map("rate_prices")
 }
 
-model rate_products {
-  id               String        @id @db.Uuid
-  lender_id        String        @db.Uuid
+model RateProduct {
+  id               String      @id @db.Uuid
+  lender_id        String      @db.Uuid
   raw_name         String
   product_code     String?
   display_name     String
   loan_type        String
   agency           String?
   tier             String?
-  term             Int           @default(30)
-  product_type     String        @default("fixed")
-  occupancy        String        @default("primary")
+  term             Int         @default(30)
+  product_type     String      @default("fixed")
+  occupancy        String      @default("primary")
   loan_amount_min  Int?
   loan_amount_max  Int?
-  is_high_balance  Boolean       @default(false)
-  is_streamline    Boolean       @default(false)
-  is_buydown       Boolean       @default(false)
-  is_interest_only Boolean       @default(false)
-  is_fast_track    Boolean       @default(false)
+  is_high_balance  Boolean     @default(false)
+  is_streamline    Boolean     @default(false)
+  is_buydown       Boolean     @default(false)
+  is_interest_only Boolean     @default(false)
+  is_fast_track    Boolean     @default(false)
   arm_structure    String?
   doc_type         String?
   fico_min         Int?
   fico_max         Int?
-  max_ltv          Decimal?      @db.Decimal(5, 2)
-  status           String        @default("active")
-  created_at       DateTime      @default(now()) @db.Timestamptz(6)
-  updated_at       DateTime      @db.Timestamptz(6)
-  origination_fee  Decimal?      @db.Decimal(10, 2)
-  uw_fee           Decimal?      @db.Decimal(10, 2)
-  rate_prices      rate_prices[]
-  rate_lenders     rate_lenders  @relation(fields: [lender_id], references: [id])
+  max_ltv          Decimal?    @db.Decimal(5, 2)
+  status           String      @default("active")
+  created_at       DateTime    @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime    @db.Timestamptz(6)
+  origination_fee  Decimal?    @db.Decimal(10, 2)
+  uw_fee           Decimal?    @db.Decimal(10, 2)
+  ratePrices       RatePrice[]
+  lender           RateLender  @relation(fields: [lender_id], references: [id])
 
   @@unique([lender_id, raw_name])
   @@index([lender_id, loan_type, term])
   @@index([loan_type])
   @@index([status])
+  @@map("rate_products")
 }
 
 model RateWatchCommentary {
@@ -1311,45 +1329,47 @@ model RateWatchCommentary {
   @@map("rate_watch_commentaries")
 }
 
-model saved_scenarios {
-  id                   String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  lead_id              String                 @db.Uuid
-  scenario_data        Json
-  alert_frequency      String                 @default("2x_week")
-  alert_days           String[]               @default(["tue", "thu"])
-  alert_status         String                 @default("active")
-  last_pricing_data    Json?
-  last_priced_at       DateTime?              @db.Timestamptz(6)
-  last_sent_at         DateTime?              @db.Timestamptz(6)
-  send_count           Int                    @default(0)
-  unsub_token          String                 @default(dbgenerated("gen_random_uuid()"))
-  created_at           DateTime               @default(now()) @db.Timestamptz(6)
-  updated_at           DateTime               @db.Timestamptz(6)
-  leads                Lead                   @relation(fields: [lead_id], references: [id], onDelete: Cascade)
-  scenario_alert_queue scenario_alert_queue[]
+model SavedScenario {
+  id                String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lead_id           String               @db.Uuid
+  scenario_data     Json
+  alert_frequency   String               @default("2x_week")
+  alert_days        String[]             @default(["tue", "thu"])
+  alert_status      String               @default("active")
+  last_pricing_data Json?
+  last_priced_at    DateTime?            @db.Timestamptz(6)
+  last_sent_at      DateTime?            @db.Timestamptz(6)
+  send_count        Int                  @default(0)
+  unsub_token       String               @default(dbgenerated("gen_random_uuid()"))
+  created_at        DateTime             @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime             @db.Timestamptz(6)
+  lead              Lead                 @relation(fields: [lead_id], references: [id], onDelete: Cascade)
+  alertQueue        ScenarioAlertQueue[]
 
   @@index([alert_status])
   @@index([lead_id])
   @@index([unsub_token])
+  @@map("saved_scenarios")
 }
 
-model scenario_alert_queue {
-  id              String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  scenario_id     String          @db.Uuid
+model ScenarioAlertQueue {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  scenario_id     String        @db.Uuid
   pricing_data    Json
   previous_data   Json?
-  best_rate       Decimal?        @db.Decimal(5, 3)
-  best_rate_prev  Decimal?        @db.Decimal(5, 3)
-  rate_change     Decimal?        @db.Decimal(5, 3)
-  status          String          @default("pending")
-  reviewed_by     String?         @db.Uuid
-  reviewed_at     DateTime?       @db.Timestamptz(6)
-  sent_at         DateTime?       @db.Timestamptz(6)
+  best_rate       Decimal?      @db.Decimal(5, 3)
+  best_rate_prev  Decimal?      @db.Decimal(5, 3)
+  rate_change     Decimal?      @db.Decimal(5, 3)
+  status          String        @default("pending")
+  reviewed_by     String?       @db.Uuid
+  reviewed_at     DateTime?     @db.Timestamptz(6)
+  sent_at         DateTime?     @db.Timestamptz(6)
   error_message   String?
   mlo_notes       String?
-  created_at      DateTime        @default(now()) @db.Timestamptz(6)
-  saved_scenarios saved_scenarios @relation(fields: [scenario_id], references: [id], onDelete: Cascade)
+  created_at      DateTime      @default(now()) @db.Timestamptz(6)
+  savedScenario   SavedScenario @relation(fields: [scenario_id], references: [id], onDelete: Cascade)
 
   @@index([created_at])
   @@index([status])
+  @@map("scenario_alert_queue")
 }
