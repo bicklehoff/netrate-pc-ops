@@ -39,9 +39,8 @@ export default function CompensationSection({ loan }) {
   const HOUSE_FEE_RATE = 0.12948857;
 
   const grossComp = cd.brokerCompensation || payload.grossComp;
-  const appraisalReimb = cd.appraisalReimb || payload.appraisalReimb;
-  const creditReimb = cd.creditReimb || payload.creditReimb;
-  const miscReimb = cd.miscReimb || payload.miscReimb;
+  const reimbSelections = cd._reimbursementSelections || [];
+  const totalReimb = reimbSelections.reduce((sum, r) => sum + (r.editedAmount || 0), 0);
   const wireTotal = cd.totalDueToBroker || payload.wireTotal;
   // Calculate comp split locally — no TrackerPortal dependency
   const houseFee = grossComp ? Number(grossComp) * HOUSE_FEE_RATE : null;
@@ -89,24 +88,12 @@ export default function CompensationSection({ loan }) {
                   <span className="text-gray-600">Broker Compensation</span>
                   <span className="font-medium text-gray-900">{fmt$(grossComp)}</span>
                 </div>
-                {appraisalReimb > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Appraisal Reimb</span>
-                    <span className="text-gray-700">{fmt$(appraisalReimb)}</span>
+                {reimbSelections.map((r, i) => (
+                  <div key={i} className="flex justify-between text-sm">
+                    <span className="text-gray-500">{r.label}</span>
+                    <span className="text-gray-700">{fmt$(r.editedAmount)}</span>
                   </div>
-                )}
-                {creditReimb > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Credit Report Reimb</span>
-                    <span className="text-gray-700">{fmt$(creditReimb)}</span>
-                  </div>
-                )}
-                {miscReimb > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Other Reimb</span>
-                    <span className="text-gray-700">{fmt$(miscReimb)}</span>
-                  </div>
-                )}
+                ))}
                 {wireTotal && (
                   <>
                     <div className="border-t border-gray-200 my-1.5" />
@@ -121,7 +108,6 @@ export default function CompensationSection({ loan }) {
 
             {/* Payment Info */}
             {loComp && (() => {
-              const totalReimb = (appraisalReimb || 0) + (creditReimb || 0) + (miscReimb || 0);
               const anticipatedPayment = loComp + totalReimb;
               return (
                 <div className="bg-emerald-50 rounded-lg px-4 py-3">

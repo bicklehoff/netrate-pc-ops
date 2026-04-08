@@ -276,7 +276,7 @@ export async function PATCH(request, { params }) {
     }
 
     const body = await request.json();
-    const { action, notes, nicknameConfirmed, unmatchedPersons } = body;
+    const { action, notes, nicknameConfirmed, unmatchedPersons, reimbursementSelections } = body;
 
     if (action === 'approve') {
       if (!loan.cdExtractedData || loan.cdExtractedData.status !== 'success') {
@@ -316,6 +316,18 @@ export async function PATCH(request, { params }) {
       if (cd.lenderCredits != null) loanUpdate.lenderCredits = cd.lenderCredits;
       if (cd.closingDate) loanUpdate.closingDate = new Date(cd.closingDate);
       if (cd.disbursementDate) loanUpdate.fundingDate = new Date(cd.disbursementDate);
+
+      // Persist reimbursement selections into cdExtractedData
+      if (reimbursementSelections) {
+        const updatedExtraction = {
+          ...loan.cdExtractedData,
+          data: {
+            ...cd,
+            _reimbursementSelections: reimbursementSelections,
+          },
+        };
+        loanUpdate.cdExtractedData = updatedExtraction;
+      }
 
       await prisma.loan.update({ where: { id }, data: loanUpdate });
 
@@ -505,16 +517,15 @@ export async function POST(request, { params }) {
     const propState = freshLoan.propertyAddress?.state || null;
 
     // Build TrackerPortal payload
-    // Pull reimbursement data from CD extraction
+    // Pull reimbursement data from MLO-confirmed selections (Section B picker)
     const cdData = freshLoan.cdExtractedData?.data || {};
     const grossComp = freshLoan.brokerCompensation ? Number(freshLoan.brokerCompensation) : null;
-    const appraisalReimb = cdData.appraisalReimb || 0;
-    const creditReimb = cdData.creditReimb || 0;
-    const miscReimb = cdData.miscReimb || 0;
+    const reimbSelections = cdData._reimbursementSelections || [];
+    const totalReimb = reimbSelections.reduce((sum, r) => sum + (r.editedAmount || 0), 0);
     // Use totalDueToBroker from CD if available, otherwise sum components
     const wireTotal = cdData.totalDueToBroker
       ? Number(cdData.totalDueToBroker)
-      : (grossComp || 0) + appraisalReimb + creditReimb + miscReimb;
+      : (grossComp || 0) + totalReimb;
 
     const trackerPayload = {
       borrowerName: `${freshLoan.borrower.firstName} ${freshLoan.borrower.lastName}`,
@@ -530,9 +541,8 @@ export async function POST(request, { params }) {
       interestRate: freshLoan.interestRate ? Number(freshLoan.interestRate) : null,
       loanTerm: freshLoan.loanTerm ? Math.round(freshLoan.loanTerm / 12) : null,
       grossComp,
-      appraisalReimb: appraisalReimb || null,
-      creditReimb: creditReimb || null,
-      miscReimb: miscReimb || null,
+      reimbursements: reimbSelections.length > 0 ? reimbSelections : null,
+      totalReimb: totalReimb || null,
       wireTotal,
       closingDate: freshLoan.closingDate?.toISOString()?.split('T')[0] || null,
       fundingDate: freshLoan.fundingDate?.toISOString()?.split('T')[0] || null,
