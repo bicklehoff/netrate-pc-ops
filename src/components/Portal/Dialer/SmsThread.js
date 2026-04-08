@@ -29,6 +29,7 @@ export default function SmsThread({ contactId, contactPhone, messages: initialMe
   const [messages, setMessages] = useState(initialMessages || []);
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState(null);
   const scrollRef = useRef(null);
 
   // Auto-scroll to bottom on new messages
@@ -47,6 +48,7 @@ export default function SmsThread({ contactId, contactPhone, messages: initialMe
     if (!newMessage.trim() || !contactPhone) return;
 
     setSending(true);
+    setSendError(null);
     try {
       const res = await fetch('/api/dialer/sms/send', {
         method: 'POST',
@@ -58,7 +60,10 @@ export default function SmsThread({ contactId, contactPhone, messages: initialMe
         }),
       });
 
-      if (!res.ok) throw new Error('Send failed');
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `Send failed (${res.status})`);
+      }
       const data = await res.json();
 
       // Add to local messages immediately
@@ -73,6 +78,7 @@ export default function SmsThread({ contactId, contactPhone, messages: initialMe
       setNewMessage('');
     } catch (e) {
       console.error('SMS send failed:', e);
+      setSendError(e.message);
     } finally {
       setSending(false);
     }
@@ -131,6 +137,14 @@ export default function SmsThread({ contactId, contactPhone, messages: initialMe
           ))
         )}
       </div>
+
+      {/* Error banner */}
+      {sendError && (
+        <div className="px-3 py-2 bg-red-50 border-t border-red-100 flex items-center gap-2">
+          <p className="text-xs text-red-600 flex-1">{sendError}</p>
+          <button onClick={() => setSendError(null)} className="text-red-400 hover:text-red-600 text-xs">dismiss</button>
+        </div>
+      )}
 
       {/* Compose area */}
       <div className="border-t border-gray-200 px-3 py-2">
