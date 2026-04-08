@@ -229,9 +229,9 @@ export default function RootLayout({ children }) {
               <div className="col-span-2 md:col-span-1">
                 <div className="flex items-center gap-2.5 mb-3">
                   <svg width="28" height="28" viewBox="0 0 44 44" fill="none" aria-hidden="true">
-                    <rect width="44" height="44" rx="10" fill="rgba(255,255,255,0.12)"/>
-                    <line x1="11" y1="33" x2="25" y2="11" stroke="#fff000" strokeWidth="4.5" strokeLinecap="round"/>
-                    <line x1="21" y1="33" x2="35" y2="11" stroke="#fff000" strokeWidth="4.5" strokeLinecap="round"/>
+                    <rect width="44" height="44" rx="14" fill="rgba(255,255,255,0.12)"/>
+                    <line x1="10" y1="33" x2="19" y2="11" stroke="#fff000" strokeWidth="4.5" strokeLinecap="round"/>
+                    <line x1="25" y1="33" x2="34" y2="11" stroke="#fff000" strokeWidth="4.5" strokeLinecap="round"/>
                   </svg>
                   <div className="flex items-baseline gap-0.5">
                     <span className="text-lg font-bold text-white tracking-[0.3px]">Net</span>

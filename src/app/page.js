@@ -171,18 +171,12 @@ export default async function HomePage() {
                 Just rates
               </span>
             </div>
-            <div className="flex gap-3 mt-7 flex-wrap">
+            <div className="mt-7">
               <Link
                 href="/rates"
-                className="bg-brand text-[#fff000] px-8 py-3.5 rounded-2xl text-base font-medium hover:bg-brand-dark transition-colors"
+                className="text-brand font-semibold hover:text-brand-dark transition-colors"
               >
-                Check Today&apos;s Rates
-              </Link>
-              <Link
-                href="/portal/apply"
-                className="border-2 border-brand text-brand px-8 py-3.5 rounded-2xl text-base font-medium hover:bg-brand hover:text-white transition-colors"
-              >
-                Start Secure Application
+                Check today&apos;s rates &rarr;
               </Link>
             </div>
           </div>
@@ -253,7 +247,7 @@ export default async function HomePage() {
               </div>
               <a
                 href="/rate-watch"
-                className="bg-brand text-[#fff000] px-6 py-3 rounded-xl font-medium text-sm hover:bg-brand-dark transition-colors whitespace-nowrap"
+                className="text-brand font-semibold text-sm hover:text-brand-dark transition-colors whitespace-nowrap"
               >
                 View Rate Watch &rarr;
               </a>
@@ -265,28 +259,6 @@ export default async function HomePage() {
       {/* ===== TRUST BAR ===== */}
       <TrustBar />
 
-      {/* ===== SOCIAL PROOF STRIP ===== */}
-      <div className="bg-white border-b border-gray-100">
-        <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-center gap-3 flex-wrap text-sm">
-          <div className="flex items-center gap-1.5">
-            <span className="w-5 h-5 bg-[#4285f4] rounded-full flex items-center justify-center text-white font-bold text-[10px] flex-shrink-0">G</span>
-            <span className="font-bold text-gray-900">4.9</span>
-            <span className="text-yellow-400 text-xs">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
-          </div>
-          <span className="text-gray-300">|</span>
-          <span className="text-gray-500 italic">&ldquo;He worked hard to get me the best rate and was communicative throughout.&rdquo;</span>
-          <span className="text-gray-300">|</span>
-          <a
-            href="https://www.google.com/maps/search/?api=1&query=Locus+Mortgage&query_place_id=ChIJa5-5jCXza4cRptwJxaP23eU"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-brand font-semibold hover:text-brand-dark transition-colors whitespace-nowrap"
-          >
-            35 reviews &rarr;
-          </a>
-        </div>
-      </div>
-
       {/* ===== TOOLS & CALCULATORS ===== */}
       <section id="tools" className="bg-white">
         <div className="max-w-6xl mx-auto px-6 py-14">
@@ -294,85 +266,62 @@ export default async function HomePage() {
             <h2 className="text-2xl font-extrabold text-gray-900">Tools &amp; Calculators</h2>
             <span className="text-sm text-gray-400">Real math, no guesswork.</span>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {[
               {
                 title: 'Rate Tool',
                 desc: 'Live mortgage rates across 11 lenders. See rate, points, payment, and lender credits side by side.',
                 href: '/rates',
                 cta: 'Try it',
-                accent: '#024c4f',
               },
               {
                 title: 'DSCR Calculator',
                 desc: 'Investment property? Enter rental income and expenses to see if your deal qualifies for a DSCR loan.',
                 href: '/tools/dscr-calculator',
                 cta: 'Calculate',
-                accent: '#024c4f',
               },
               {
                 title: 'Reverse Mortgage',
                 desc: "See how much equity you could access with a reverse mortgage. Age, home value, and rate — that's all we need.",
                 href: '/tools/reverse-mortgage-calculator',
                 cta: 'Estimate',
-                accent: '#024c4f',
               },
               {
                 title: 'Refi Analyzer',
                 desc: "Is refinancing worth it? Enter your current loan and we'll show the break-even timeline and total savings.",
                 href: '/tools/refi-analyzer',
                 cta: 'Analyze',
-                accent: '#024c4f',
               },
               {
                 title: 'Purchase Calculator',
                 desc: 'Estimate your monthly payment, cash to close, and how much home you can afford.',
                 href: '/tools/purchase-calculator',
                 cta: 'Calculate',
-                accent: '#024c4f',
               },
               {
                 title: 'Cost of Waiting',
                 desc: "What does it cost you every month you don't refinance? See the real number with your loan details.",
                 href: '/tools/cost-of-waiting',
                 cta: 'See the cost',
-                accent: '#024c4f',
               },
-              {
-                title: 'Start Secure Application',
-                desc: 'Ready to go? AES-256 encrypted. Takes about 15 minutes.',
-                href: '/portal/apply',
-                cta: 'Start',
-                accent: '#fff000',
-              },
-            ].map((tool) => {
-              const isFeatured = tool.title === 'Start Secure Application';
-              return (
-                <Link
-                  key={tool.title}
-                  href={tool.href}
-                  className={`relative rounded-2xl p-6 flex flex-col transition-all hover:shadow-md hover:-translate-y-0.5 overflow-hidden ${
-                    isFeatured
-                      ? 'bg-brand border border-brand'
-                      : 'bg-white border border-gray-200 hover:border-brand/30'
-                  }`}
-                >
-                  {/* Accent strip */}
-                  {!isFeatured && (
-                    <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-brand" />
-                  )}
-                  <h3 className={`text-[15px] font-bold mb-1.5 ${isFeatured ? 'text-white' : 'text-gray-900'}`}>
-                    {tool.title}
-                  </h3>
-                  <p className={`text-sm leading-relaxed flex-1 ${isFeatured ? 'text-white/70' : 'text-gray-500'}`}>
-                    {tool.desc}
-                  </p>
-                  <span className={`text-sm font-semibold mt-3 ${isFeatured ? 'text-[#fff000]' : 'text-brand'}`}>
-                    {tool.cta} &rarr;
-                  </span>
-                </Link>
-              );
-            })}
+            ].map((tool) => (
+              <Link
+                key={tool.title}
+                href={tool.href}
+                className="relative rounded-2xl p-6 flex flex-col transition-all hover:shadow-md hover:-translate-y-0.5 overflow-hidden bg-white border border-gray-200 hover:border-brand/30"
+              >
+                <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-brand" />
+                <h3 className="text-[15px] font-bold mb-1.5 text-gray-900">
+                  {tool.title}
+                </h3>
+                <p className="text-sm leading-relaxed flex-1 text-gray-500">
+                  {tool.desc}
+                </p>
+                <span className="text-sm font-semibold mt-3 text-brand">
+                  {tool.cta} &rarr;
+                </span>
+              </Link>
+            ))}
           </div>
         </div>
       </section>
@@ -439,18 +388,12 @@ export default async function HomePage() {
           <p className="text-base text-white/70 mt-3 max-w-xl mx-auto">
             Tell us about your situation and we&apos;ll send you a personalized recommendation with full fee breakdown, cash to close, and savings analysis.
           </p>
-          <div className="flex justify-center gap-3 mt-7 flex-wrap">
+          <div className="mt-7">
             <Link
               href="/contact"
-              className="bg-brand text-[#fff000] px-8 py-3.5 rounded-2xl text-base font-medium hover:bg-brand-dark transition-colors"
+              className="text-[#fff000] font-semibold hover:text-white transition-colors"
             >
-              Get a Free Quote
-            </Link>
-            <Link
-              href="/portal/apply"
-              className="border-2 border-white/40 text-[#fff000]/80 px-8 py-3.5 rounded-2xl text-base font-medium hover:bg-white/10 transition-colors"
-            >
-              Start Secure Application
+              Get a free quote &rarr;
             </Link>
           </div>
         </div>
