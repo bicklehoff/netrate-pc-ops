@@ -136,7 +136,7 @@ export async function sendSms(to, body) {
       },
       body: new URLSearchParams({
         To: to,
-        From: TWILIO_PHONE_NUMBER,
+        MessagingServiceSid: process.env.TWILIO_MESSAGING_SERVICE_SID,
         Body: body,
         StatusCallback: 'https://www.netratemortgage.com/api/dialer/sms/status',
       }),
