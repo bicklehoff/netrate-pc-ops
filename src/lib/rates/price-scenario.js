@@ -191,6 +191,7 @@ export async function priceScenario(body) {
         investor: program.investor,
         tier: program.tier,
         uwFee: lenderData.lenderFee,
+        priceFormat: program.priceFormat || lenderData.priceFormat || '100-based',
       };
 
       const llpaGrids = lenderData.llpas || null;
