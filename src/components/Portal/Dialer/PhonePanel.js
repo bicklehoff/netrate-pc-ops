@@ -150,7 +150,7 @@ export default function PhonePanel() {
       <button
         data-phone-fab
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-40 w-14 h-14 bg-brand text-white rounded-2xl shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center group"
+        className="fixed bottom-6 right-6 z-[60] w-14 h-14 bg-brand text-white rounded-2xl shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center group"
         title="Phone (Ctrl+Shift+P)"
       >
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -164,7 +164,7 @@ export default function PhonePanel() {
 
   if (isPoppedOut) {
     return (
-      <div className="fixed bottom-6 right-6 z-40">
+      <div className="fixed bottom-6 right-6 z-[60]">
         <button
           onClick={handlePopOut}
           className="px-4 py-3 bg-violet-100 text-violet-700 border-2 border-dashed border-violet-300 rounded-2xl shadow-md hover:shadow-lg transition-all flex items-center gap-3 group"
@@ -188,7 +188,7 @@ export default function PhonePanel() {
   return (
     <div
       ref={panelRef}
-      className="fixed bottom-6 right-6 z-50 w-[420px] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-200"
+      className="fixed bottom-6 right-6 z-[60] w-[420px] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-200"
       style={{ maxHeight: 'calc(100vh - 120px)' }}
     >
       {/* Header */}
