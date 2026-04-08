@@ -3,6 +3,12 @@ import TrustBar from '@/components/TrustBar';
 import StickyRateBar from '@/components/StickyRateBar';
 import { getHomepageRatesFromDB } from '@/lib/rates/homepage-db';
 
+export const metadata = {
+  alternates: {
+    canonical: 'https://netratemortgage.com',
+  },
+};
+
 // Revalidate every 30 min — rates change once/day when new sheet is parsed
 export const revalidate = 1800;
 

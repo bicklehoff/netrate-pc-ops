@@ -4,6 +4,7 @@ import CountyLoanLimits from '@/components/CountyLoanLimits';
 export const metadata = {
   title: 'Colorado Mortgage Rates — Licensed Mortgage Broker | NetRate Mortgage',
   description: 'NetRate Mortgage is headquartered in Louisville, Colorado. See today\'s mortgage rates — refinance, purchase, and reverse mortgage — before you apply.',
+  alternates: { canonical: 'https://netratemortgage.com/colorado' },
 };
 
 export default function Colorado() {

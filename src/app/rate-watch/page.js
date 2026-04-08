@@ -202,6 +202,9 @@ export async function generateMetadata() {
     title,
     description,
     openGraph: { title, description },
+    alternates: {
+      canonical: 'https://netratemortgage.com/rate-watch',
+    },
   };
 }
 

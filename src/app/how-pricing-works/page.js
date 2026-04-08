@@ -3,6 +3,9 @@ import Link from 'next/link';
 export const metadata = {
   title: 'How Mortgage Pricing Works — Rates, Points, and Credits Explained | NetRate Mortgage',
   description: 'Most borrowers don\'t know how mortgage rates are built. Learn what drives your rate, how points and lender credits work, and how to tell if you\'re getting a good deal.',
+  alternates: {
+    canonical: 'https://netratemortgage.com/how-pricing-works',
+  },
 };
 
 export default function HowPricingWorks() {

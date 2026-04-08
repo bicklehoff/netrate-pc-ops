@@ -1,8 +1,3 @@
-// NetRate Mortgage — Prisma Schema
-// Database: Neon Postgres (via Vercel Marketplace)
-// Synced from: netrate-governance/prisma/schema.prisma
-// Run: npm run prisma:sync to update from governance master
-
 generator client {
   provider   = "prisma-client"
   output     = "../src/generated/prisma"
@@ -15,198 +10,205 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// ═══════════════════════════════════════════════════════════════
-// LOANS DOMAIN — PC (Borrower Portal + Dialer)
-// Authority: PC. Do NOT modify without PC approval via RELAY.
-// ═══════════════════════════════════════════════════════════════
-
 model Borrower {
-  id              String    @id @default(uuid()) @db.Uuid
-  email           String    @unique
-  firstName       String    @map("first_name")
-  lastName        String    @map("last_name")
-  phone           String?
-
-  // PII — encrypted at application level (AES-256-GCM)
-  dobEncrypted    String    @map("dob_encrypted")
-  ssnEncrypted    String    @map("ssn_encrypted")
-  ssnLastFour     String    @map("ssn_last_four") @db.VarChar(4)
-
-  // Auth — magic link (no password)
-  phoneVerified   Boolean   @default(false) @map("phone_verified")
-  passwordHash    String?   @map("password_hash")
-  magicToken      String?   @map("magic_token")
-  magicExpires    DateTime? @map("magic_expires")
-
-  // SMS verification (second factor)
-  smsCode         String?   @map("sms_code")
-  smsCodeExpires  DateTime? @map("sms_code_expires")
-  smsAttempts     Int       @default(0) @map("sms_attempts")
-  smsLockedUntil  DateTime? @map("sms_locked_until")
-
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
-
-  loans           Loan[]
-  loanBorrowers   LoanBorrower[]
-  contact         Contact?
+  id               String         @id @default(uuid()) @db.Uuid
+  email            String         @unique
+  firstName        String         @map("first_name")
+  lastName         String         @map("last_name")
+  phone            String?
+  dobEncrypted     String         @map("dob_encrypted")
+  ssnEncrypted     String         @map("ssn_encrypted")
+  ssnLastFour      String         @map("ssn_last_four") @db.VarChar(4)
+  phoneVerified    Boolean        @default(false) @map("phone_verified")
+  passwordHash     String?        @map("password_hash")
+  magicToken       String?        @map("magic_token")
+  magicExpires     DateTime?      @map("magic_expires")
+  smsCode          String?        @map("sms_code")
+  smsCodeExpires   DateTime?      @map("sms_code_expires")
+  smsAttempts      Int            @default(0) @map("sms_attempts")
+  smsLockedUntil   DateTime?      @map("sms_locked_until")
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+  legal_first_name String?
+  legal_last_name  String?
+  nickname         String?
+  contact          Contact?
+  loanBorrowers    LoanBorrower[]
+  loans            Loan[]
 
   @@map("borrowers")
 }
 
 model Mlo {
-  id              String    @id @default(uuid()) @db.Uuid
-  email           String    @unique
-  firstName       String    @map("first_name")
-  lastName        String    @map("last_name")
-  passwordHash    String    @map("password_hash")
-  role            String    @default("mlo") // 'mlo' | 'admin'
-  ldoxOfficerId   Int?      @unique @map("ldox_officer_id")  // LDox loan officer ID (e.g. 180707 = Jamie)
-  nmls            String?                                     // NMLS ID
-  createdAt       DateTime  @default(now()) @map("created_at")
-
-  loans           Loan[]
-  requestedDocs   Document[] @relation("RequestedBy")
-  callLogs        CallLog[]
-  callNotes       CallNote[]
-  smsMessages     SmsMessage[]
-  hecmScenarios   HecmScenario[]
+  id            String         @id @default(uuid()) @db.Uuid
+  email         String         @unique
+  firstName     String         @map("first_name")
+  lastName      String         @map("last_name")
+  passwordHash  String         @map("password_hash")
+  role          String         @default("mlo")
+  ldoxOfficerId Int?           @unique @map("ldox_officer_id")
+  nmls          String?
+  createdAt     DateTime       @default(now()) @map("created_at")
+  callLogs      CallLog[]
+  callNotes     CallNote[]
+  contacts      Contact[]
+  requestedDocs Document[]     @relation("RequestedBy")
+  hecmScenarios HecmScenario[]
+  loans         Loan[]
+  smsMessages   SmsMessage[]
 
   @@map("mlos")
 }
 
 model Loan {
-  id              String    @id @default(uuid()) @db.Uuid
-  borrowerId      String    @map("borrower_id") @db.Uuid
-  mloId           String?   @map("mlo_id") @db.Uuid
-  status          String    @default("draft") // Loan state machine
-  ballInCourt     String    @default("borrower") @map("ball_in_court") // 'borrower' | 'mlo' | 'lender'
-  purpose         String?   // 'purchase' | 'refinance'
-  occupancy       String?   // 'primary' | 'secondary' | 'investment'
+  id                    String             @id @default(uuid()) @db.Uuid
+  borrowerId            String             @map("borrower_id") @db.Uuid
+  mloId                 String?            @map("mlo_id") @db.Uuid
+  status                String             @default("draft")
+  ballInCourt           String             @default("borrower") @map("ball_in_court")
+  purpose               String?
+  occupancy             String?
+  loanType              String?            @map("loan_type")
+  lenderName            String?            @map("lender_name")
+  loanNumber            String?            @map("loan_number")
+  loanAmount            Decimal?           @map("loan_amount") @db.Decimal(12, 2)
+  interestRate          Decimal?           @map("interest_rate") @db.Decimal(5, 4)
+  loanTerm              Int?               @map("loan_term")
+  propertyAddress       Json?              @map("property_address")
+  propertyType          String?            @map("property_type")
+  numUnits              Int?               @map("num_units")
+  purchasePrice         Decimal?           @map("purchase_price") @db.Decimal(12, 2)
+  downPayment           Decimal?           @map("down_payment") @db.Decimal(12, 2)
+  estimatedValue        Decimal?           @map("estimated_value") @db.Decimal(12, 2)
+  currentBalance        Decimal?           @map("current_balance") @db.Decimal(12, 2)
+  refiPurpose           String?            @map("refi_purpose")
+  cashOutAmount         Decimal?           @map("cash_out_amount") @db.Decimal(12, 2)
+  currentAddress        Json?              @map("current_address")
+  addressYears          Int?               @map("address_years")
+  addressMonths         Int?               @map("address_months")
+  mailingAddress        Json?              @map("mailing_address")
+  maritalStatus         String?            @map("marital_status")
+  numDependents         Int?               @map("num_dependents")
+  dependentAges         String?            @map("dependent_ages")
+  employmentStatus      String?            @map("employment_status")
+  employerName          String?            @map("employer_name")
+  positionTitle         String?            @map("position_title")
+  yearsInPosition       Int?               @map("years_in_position")
+  monthlyBaseIncome     Decimal?           @map("monthly_base_income") @db.Decimal(12, 2)
+  otherMonthlyIncome    Decimal?           @map("other_monthly_income") @db.Decimal(12, 2)
+  otherIncomeSource     String?            @map("other_income_source")
+  presentHousingExpense Decimal?           @map("present_housing_expense") @db.Decimal(12, 2)
+  declarations          Json?
+  numBorrowers          Int                @default(1) @map("num_borrowers")
+  workDriveFolderId     String?            @map("work_drive_folder_id")
+  workDriveSubfolders   Json?              @map("work_drive_subfolders")
+  cdWorkDriveFileId     String?            @map("cd_work_drive_file_id")
+  cdFileName            String?            @map("cd_file_name")
+  payrollSentAt         DateTime?          @map("payroll_sent_at") @db.Timestamptz(6)
+  actionTaken           String?            @map("action_taken")
+  actionTakenDate       DateTime?          @map("action_taken_date") @db.Timestamptz(6)
+  applicationMethod     String?            @map("application_method")
+  lienStatus            String?            @map("lien_status")
+  referralSource        String?            @map("referral_source")
+  leadSource            String?            @map("lead_source")
+  applicationChannel    String?            @map("application_channel")
+  ldoxLoanId            String?            @unique @map("ldox_loan_id")
+  creditScore           Int?               @map("credit_score")
+  applicationStep       Int                @default(1) @map("application_step")
+  submittedAt           DateTime?          @map("submitted_at")
+  createdAt             DateTime           @default(now()) @map("created_at")
+  updatedAt             DateTime           @updatedAt @map("updated_at")
+  prequal_letter_data   Json?
+  cd_approved_at        DateTime?          @db.Timestamptz(6)
+  cd_approved_by        String?            @db.Uuid
+  cd_extracted_data     Json?
+  cd_processed_at       DateTime?          @db.Timestamptz(6)
+  account_exec          String?
+  appraised_value       Decimal?           @db.Decimal(12, 2)
+  broker_processor      String?
+  loan_program          String?
+  underwriter_name      String?
+  broker_compensation   Decimal?           @db.Decimal(12, 2)
+  cash_to_close         Decimal?           @db.Decimal(12, 2)
+  closing_date          DateTime?          @db.Date
+  funding_date          DateTime?          @db.Date
+  lender_credits        Decimal?           @db.Decimal(12, 2)
+  lender_loan_number    String?
+  monthly_payment       Decimal?           @db.Decimal(10, 2)
+  total_closing_costs   Decimal?           @db.Decimal(12, 2)
+  amortization_type     String?
+  arm_adjustment_period Int?
+  arm_index             String?
+  arm_initial_cap       Decimal?           @db.Decimal(5, 4)
+  arm_lifetime_cap      Decimal?           @db.Decimal(5, 4)
+  arm_margin            Decimal?           @db.Decimal(5, 4)
+  arm_periodic_cap      Decimal?           @db.Decimal(5, 4)
+  estate_held_in        String?
+  title_held_as         String?
+  application_date      DateTime?          @db.Timestamptz(6)
+  contact_id            String?            @db.Uuid
+  is_application        Boolean            @default(false)
+  conditions            Condition[]
+  documents             Document[]
+  assets                LoanAsset[]
+  loanBorrowers         LoanBorrower[]
+  loanContacts          LoanContact[]
+  conv                  LoanConv?
+  dates                 LoanDates?
+  dscr                  LoanDscr?
+  events                LoanEvent[]
+  fha                   LoanFha?
+  hecm                  LoanHecm?
+  liabilities           LoanLiability[]
+  loanNotes             LoanNote[]
+  reos                  LoanREO[]
+  tasks                 LoanTask[]
+  transaction           LoanTransaction?
+  va                    LoanVa?
+  borrower              Borrower           @relation(fields: [borrowerId], references: [id])
+  contacts              Contact?           @relation(fields: [contact_id], references: [id])
+  mlo                   Mlo?               @relation(fields: [mloId], references: [id])
 
-  // Loan classification (Phase 1 — CORE foundation)
-  loanType        String?   @map("loan_type")        // 'conventional' | 'fha' | 'va' | 'usda' | 'other'
-  lenderName      String?   @map("lender_name")       // Free text, e.g. "UWM", "Plaza"
-  loanNumber      String?   @map("loan_number")        // Lender's tracking number
-  loanAmount      Decimal?  @map("loan_amount") @db.Decimal(12, 2)
-  interestRate    Decimal?  @map("interest_rate") @db.Decimal(5, 4)
-  loanTerm        Int?      @map("loan_term")          // Months (360, 180, etc.)
-
-  // Property
-  propertyAddress Json?     @map("property_address") @db.JsonB
-  propertyType    String?   @map("property_type")
-  numUnits        Int?      @map("num_units")
-  purchasePrice   Decimal?  @map("purchase_price") @db.Decimal(12, 2)
-  downPayment     Decimal?  @map("down_payment") @db.Decimal(12, 2)
-  estimatedValue  Decimal?  @map("estimated_value") @db.Decimal(12, 2)
-  currentBalance  Decimal?  @map("current_balance") @db.Decimal(12, 2)
-  refiPurpose     String?   @map("refi_purpose")
-  cashOutAmount   Decimal?  @map("cash_out_amount") @db.Decimal(12, 2)
-
-  // Address History
-  currentAddress  Json?     @map("current_address") @db.JsonB
-  addressYears    Int?      @map("address_years")
-  addressMonths   Int?      @map("address_months")
-  mailingAddress  Json?     @map("mailing_address") @db.JsonB
-  maritalStatus   String?   @map("marital_status")
-  numDependents   Int?      @map("num_dependents")
-  dependentAges   String?   @map("dependent_ages")
-
-  // Employment & Income
-  employmentStatus     String?   @map("employment_status")
-  employerName         String?   @map("employer_name")
-  positionTitle        String?   @map("position_title")
-  yearsInPosition      Int?      @map("years_in_position")
-  monthlyBaseIncome    Decimal?  @map("monthly_base_income") @db.Decimal(12, 2)
-  otherMonthlyIncome   Decimal?  @map("other_monthly_income") @db.Decimal(12, 2)
-  otherIncomeSource    String?   @map("other_income_source")
-  presentHousingExpense Decimal? @map("present_housing_expense") @db.Decimal(12, 2)
-
-  // Declarations (flexible JSONB)
-  declarations    Json?     @db.JsonB
-
-  // Co-borrower count (quick filter, updated on submission)
-  numBorrowers    Int       @default(1) @map("num_borrowers")
-
-  // Document storage (Zoho WorkDrive)
-  workDriveFolderId   String?   @map("work_drive_folder_id")   // Root loan folder ID in WorkDrive
-  workDriveSubfolders Json?     @map("work_drive_subfolders") @db.JsonB  // { "1-Application": "id", ... }
-
-  // Payroll (Closing Disclosure → Mac)
-  cdWorkDriveFileId   String?   @map("cd_work_drive_file_id")  // WorkDrive file ID of the final Closing Disclosure
-  cdFileName          String?   @map("cd_file_name")           // Original file name of the CD PDF
-  payrollSentAt       DateTime? @map("payroll_sent_at")        // When "Send to Payroll" was clicked
-
-  // MCR / HMDA reporting fields
-  actionTaken         String?   @map("action_taken")           // 'originated' | 'denied' | 'withdrawn' | 'incomplete' | 'purchased'
-  actionTakenDate     DateTime? @map("action_taken_date")
-  applicationMethod   String?   @map("application_method")     // 'face_to_face' | 'phone' | 'internet'
-  lienStatus          String?   @map("lien_status")            // 'first' | 'subordinate' | 'unsecured'
-
-  // CRM / Production fields
-  referralSource      String?   @map("referral_source")        // Free text referral info
-  leadSource          String?   @map("lead_source")            // 'homepage_rate_table' | 'rate_tool' | 'referral' | 'direct' | etc.
-  applicationChannel  String?   @map("application_channel")    // 'online' | 'branch' | 'phone'
-
-  // LDox integration
-  ldoxLoanId      String?   @unique @map("ldox_loan_id") @db.Uuid  // LDox UUID — primary merge key
-  creditScore     Int?      @map("credit_score")
-
-  // Metadata
-  applicationStep Int       @default(1) @map("application_step")
-  submittedAt     DateTime? @map("submitted_at")
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
-
-  // Relations
-  borrower        Borrower  @relation(fields: [borrowerId], references: [id])
-  mlo             Mlo?      @relation(fields: [mloId], references: [id])
-  loanBorrowers   LoanBorrower[]
-  events          LoanEvent[]
-  documents       Document[]
-
-  // Phase 1 relations
-  dates           LoanDates?
-  conditions      Condition[]
-  loanNotes       LoanNote[]
-  tasks           LoanTask[]
-  loanContacts    LoanContact[]
-
+  @@index([contact_id], map: "idx_loans_contact_id")
   @@map("loans")
 }
 
 model LoanBorrower {
-  id              String    @id @default(uuid()) @db.Uuid
-  loanId          String    @map("loan_id") @db.Uuid
-  borrowerId      String    @map("borrower_id") @db.Uuid
-  borrowerType    String    @map("borrower_type")   // 'primary' | 'co_borrower'
-  ordinal         Int       @default(0)              // 0 = primary, 1-3 = co-borrowers
-  relationship    String?                             // 'spouse' | 'parent' | 'other' (to primary)
-  maritalStatus   String?   @map("marital_status")   // 'married' | 'unmarried' | 'separated'
-
-  // Address History (per-borrower)
-  currentAddress  Json?     @map("current_address") @db.JsonB
-  addressYears    Int?      @map("address_years")
-  addressMonths   Int?      @map("address_months")
-  mailingAddress  Json?     @map("mailing_address") @db.JsonB
-
-  // Employment & Income (per-borrower)
-  employmentStatus     String?   @map("employment_status")
-  employerName         String?   @map("employer_name")
-  positionTitle        String?   @map("position_title")
-  yearsInPosition      Int?      @map("years_in_position")
-  monthlyBaseIncome    Decimal?  @map("monthly_base_income") @db.Decimal(12, 2)
-  otherMonthlyIncome   Decimal?  @map("other_monthly_income") @db.Decimal(12, 2)
-  otherIncomeSource    String?   @map("other_income_source")
-
-  // Declarations (per-borrower, flexible JSONB)
-  declarations    Json?     @db.JsonB
-
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
-
-  loan            Loan      @relation(fields: [loanId], references: [id], onDelete: Cascade)
-  borrower        Borrower  @relation(fields: [borrowerId], references: [id])
+  id                      String             @id @default(uuid()) @db.Uuid
+  loanId                  String             @map("loan_id") @db.Uuid
+  borrowerId              String             @map("borrower_id") @db.Uuid
+  borrowerType            String             @map("borrower_type")
+  ordinal                 Int                @default(0)
+  relationship            String?
+  maritalStatus           String?            @map("marital_status")
+  currentAddress          Json?              @map("current_address")
+  addressYears            Int?               @map("address_years")
+  addressMonths           Int?               @map("address_months")
+  mailingAddress          Json?              @map("mailing_address")
+  employmentStatus        String?            @map("employment_status")
+  employerName            String?            @map("employer_name")
+  positionTitle           String?            @map("position_title")
+  yearsInPosition         Int?               @map("years_in_position")
+  monthlyBaseIncome       Decimal?           @map("monthly_base_income") @db.Decimal(12, 2)
+  otherMonthlyIncome      Decimal?           @map("other_monthly_income") @db.Decimal(12, 2)
+  otherIncomeSource       String?            @map("other_income_source")
+  declarations            Json?
+  createdAt               DateTime           @default(now()) @map("created_at")
+  updatedAt               DateTime           @updatedAt @map("updated_at")
+  cell_phone              String?
+  citizenship             String?
+  dob_encrypted           String?
+  housing_type            String?
+  monthly_rent            Decimal?           @db.Decimal(12, 2)
+  previous_address        Json?
+  previous_address_months Int?
+  previous_address_years  Int?
+  suffix                  String?
+  borrower                Borrower           @relation(fields: [borrowerId], references: [id])
+  loan                    Loan               @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  declaration             LoanDeclaration?
+  employments             LoanEmployment[]
+  income                  LoanIncome?
 
   @@unique([loanId, borrowerId])
   @@unique([loanId, ordinal])
@@ -214,87 +216,123 @@ model LoanBorrower {
 }
 
 model LoanEvent {
-  id              String    @id @default(uuid()) @db.Uuid
-  loanId          String    @map("loan_id") @db.Uuid
-  eventType       String    @map("event_type")  // 'status_change' | 'doc_requested' | 'doc_uploaded' | 'field_updated' | 'note_added' | 'ssn_revealed' | 'xml_export'
-  actorType       String    @map("actor_type")  // 'borrower' | 'mlo' | 'system'
-  actorId         String?   @map("actor_id") @db.Uuid
-  oldValue        String?   @map("old_value")
-  newValue        String?   @map("new_value")
-  details         Json?     @db.JsonB
-  createdAt       DateTime  @default(now()) @map("created_at")
-
-  loan            Loan      @relation(fields: [loanId], references: [id])
+  id        String   @id @default(uuid()) @db.Uuid
+  loanId    String   @map("loan_id") @db.Uuid
+  eventType String   @map("event_type")
+  actorType String   @map("actor_type")
+  actorId   String?  @map("actor_id") @db.Uuid
+  oldValue  String?  @map("old_value")
+  newValue  String?  @map("new_value")
+  details   Json?
+  createdAt DateTime @default(now()) @map("created_at")
+  loan      Loan     @relation(fields: [loanId], references: [id])
 
   @@map("loan_events")
 }
 
 model Document {
-  id              String    @id @default(uuid()) @db.Uuid
-  loanId          String    @map("loan_id") @db.Uuid
-  docType         String    @map("doc_type")    // 'pay_stub' | 'w2' | 'bank_statement' | 'tax_return' | 'id' | 'other'
-  label           String                         // Display name, e.g. "Most Recent Pay Stub"
-  status          String    @default("requested") // 'requested' | 'uploaded' | 'reviewed' | 'accepted' | 'rejected'
-  requestedById   String?   @map("requested_by") @db.Uuid
-  fileUrl         String?   @map("file_url")     // Vercel Blob URL
-  fileName        String?   @map("file_name")
-  fileSize        Int?      @map("file_size")
-  uploadedAt      DateTime? @map("uploaded_at")
-  reviewedAt      DateTime? @map("reviewed_at")
-  notes           String?                         // MLO notes on rejection, etc.
-  createdAt       DateTime  @default(now()) @map("created_at")
-
-  loan            Loan      @relation(fields: [loanId], references: [id])
-  requestedBy     Mlo?      @relation("RequestedBy", fields: [requestedById], references: [id])
-  conditions      Condition[]
+  id            String      @id @default(uuid()) @db.Uuid
+  loanId        String      @map("loan_id") @db.Uuid
+  docType       String      @map("doc_type")
+  label         String
+  status        String      @default("requested")
+  requestedById String?     @map("requested_by") @db.Uuid
+  fileUrl       String?     @map("file_url")
+  fileName      String?     @map("file_name")
+  fileSize      Int?        @map("file_size")
+  uploadedAt    DateTime?   @map("uploaded_at")
+  reviewedAt    DateTime?   @map("reviewed_at")
+  notes         String?
+  createdAt     DateTime    @default(now()) @map("created_at")
+  conditions    Condition[]
+  loan          Loan        @relation(fields: [loanId], references: [id])
+  requestedBy   Mlo?        @relation("RequestedBy", fields: [requestedById], references: [id])
 
   @@map("documents")
 }
 
 model Contact {
-  id              String    @id @default(uuid()) @db.Uuid
-  firstName       String    @map("first_name")
-  lastName        String    @map("last_name")
-  email           String?
-  phone           String?   // E.164 format
-  company         String?
-  source          String    @default("manual") // 'manual' | 'lead' | 'borrower' | 'zoho'
-  tags            String[]  @default([])       // Flexible tagging: 'borrower', 'realtor', 'lender', etc.
-  notes           String?                       // General notes about this contact
-
-  // Link to existing records (optional)
-  borrowerId      String?   @unique @map("borrower_id") @db.Uuid
-  zohoLeadId      String?   @map("zoho_lead_id")
-
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
-
-  borrower        Borrower? @relation(fields: [borrowerId], references: [id])
-  callLogs        CallLog[]
-  smsMessages     SmsMessage[]
+  id                  String          @id @default(uuid()) @db.Uuid
+  firstName           String          @map("first_name")
+  lastName            String          @map("last_name")
+  email               String?
+  phone               String?
+  company             String?
+  source              String          @default("manual")
+  tags                String[]        @default([])
+  notes               String?
+  borrowerId          String?         @unique @map("borrower_id") @db.Uuid
+  zohoLeadId          String?         @map("zoho_lead_id")
+  createdAt           DateTime        @default(now()) @map("created_at")
+  updatedAt           DateTime        @updatedAt @map("updated_at")
+  anniversary_date    DateTime?       @db.Timestamptz(6)
+  assigned_mlo_id     String?         @db.Uuid
+  city                String?
+  co_borrower_email   String?
+  co_borrower_name    String?
+  co_borrower_phone   String?
+  contact_type        String?
+  current_loan_amount Decimal?        @db.Decimal(12, 2)
+  current_loan_date   DateTime?       @db.Timestamptz(6)
+  current_loan_term   Int?
+  current_rate        Decimal?        @db.Decimal(5, 3)
+  date_of_birth       DateTime?       @db.Timestamptz(6)
+  email_opt_out       Boolean?        @default(false)
+  funded_date         DateTime?       @db.Timestamptz(6)
+  home_value          Decimal?        @db.Decimal(12, 2)
+  homeiq_imported     Boolean?        @default(false)
+  last_campaign       String?
+  last_campaign_date  DateTime?       @db.Timestamptz(6)
+  last_contacted_at   DateTime?       @db.Timestamptz(6)
+  lead_score          Int?
+  linked_contact_id   String?         @db.Uuid
+  mailing_address     String?
+  newsletter_opt_in   Boolean?        @default(false)
+  next_follow_up      DateTime?       @db.Timestamptz(6)
+  original_source     String?
+  property_address    String?
+  review_requested    Boolean?        @default(false)
+  sms_opt_out         Boolean?        @default(false)
+  state               String?
+  status              String?         @default("subscriber")
+  strike_rate_opt_in  Boolean?        @default(false)
+  survey_sent_at      DateTime?       @db.Timestamptz(6)
+  zip_code            String?
+  zoho_account_id     String?
+  zoho_contact_id     String?
+  callLogs            CallLog[]
+  contact_notes       contact_notes[]
+  mlos                Mlo?            @relation(fields: [assigned_mlo_id], references: [id])
+  borrower            Borrower?       @relation(fields: [borrowerId], references: [id])
+  leads               Lead[]
+  loan_contacts       LoanContact[]
+  loans               Loan[]
+  smsMessages         SmsMessage[]
 
   @@index([phone])
   @@index([email])
+  @@index([assigned_mlo_id], map: "idx_contacts_assigned_mlo")
+  @@index([contact_type], map: "idx_contacts_contact_type")
+  @@index([status], map: "idx_contacts_status")
   @@map("contacts")
 }
 
 model CallLog {
-  id              String    @id @default(uuid()) @db.Uuid
-  contactId       String?   @map("contact_id") @db.Uuid
-  mloId           String    @map("mlo_id") @db.Uuid
-  direction       String    // 'inbound' | 'outbound'
-  fromNumber      String    @map("from_number")
-  toNumber        String    @map("to_number")
-  status          String    @default("initiated") // 'initiated' | 'ringing' | 'in-progress' | 'completed' | 'missed' | 'busy' | 'no-answer' | 'failed'
-  duration        Int?      // Seconds
-  recordingUrl    String?   @map("recording_url")
-  twilioCallSid   String?   @unique @map("twilio_call_sid")
-  startedAt       DateTime  @default(now()) @map("started_at")
-  endedAt         DateTime? @map("ended_at")
-
-  contact         Contact?  @relation(fields: [contactId], references: [id])
-  mlo             Mlo       @relation(fields: [mloId], references: [id])
-  notes           CallNote[]
+  id            String     @id @default(uuid()) @db.Uuid
+  contactId     String?    @map("contact_id") @db.Uuid
+  mloId         String     @map("mlo_id") @db.Uuid
+  direction     String
+  fromNumber    String     @map("from_number")
+  toNumber      String     @map("to_number")
+  status        String     @default("initiated")
+  duration      Int?
+  recordingUrl  String?    @map("recording_url")
+  twilioCallSid String?    @unique @map("twilio_call_sid")
+  startedAt     DateTime   @default(now()) @map("started_at")
+  endedAt       DateTime?  @map("ended_at")
+  contact       Contact?   @relation(fields: [contactId], references: [id])
+  mlo           Mlo        @relation(fields: [mloId], references: [id])
+  notes         CallNote[]
 
   @@index([contactId])
   @@index([mloId])
@@ -303,33 +341,31 @@ model CallLog {
 }
 
 model CallNote {
-  id              String    @id @default(uuid()) @db.Uuid
-  callLogId       String    @map("call_log_id") @db.Uuid
-  mloId           String    @map("mlo_id") @db.Uuid
-  content         String
-  disposition     String?   // 'interested' | 'callback' | 'not_interested' | 'wrong_number' | 'voicemail' | 'no_answer'
-  createdAt       DateTime  @default(now()) @map("created_at")
-
-  callLog         CallLog   @relation(fields: [callLogId], references: [id])
-  mlo             Mlo       @relation(fields: [mloId], references: [id])
+  id          String   @id @default(uuid()) @db.Uuid
+  callLogId   String   @map("call_log_id") @db.Uuid
+  mloId       String   @map("mlo_id") @db.Uuid
+  content     String
+  disposition String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  callLog     CallLog  @relation(fields: [callLogId], references: [id])
+  mlo         Mlo      @relation(fields: [mloId], references: [id])
 
   @@map("call_notes")
 }
 
 model SmsMessage {
-  id              String    @id @default(uuid()) @db.Uuid
-  contactId       String?   @map("contact_id") @db.Uuid
-  mloId           String?   @map("mlo_id") @db.Uuid
-  direction       String    // 'inbound' | 'outbound'
-  fromNumber      String    @map("from_number")
-  toNumber        String    @map("to_number")
-  body            String
-  status          String    @default("queued") // 'queued' | 'sent' | 'delivered' | 'failed' | 'received'
+  id               String   @id @default(uuid()) @db.Uuid
+  contactId        String?  @map("contact_id") @db.Uuid
+  mloId            String?  @map("mlo_id") @db.Uuid
+  direction        String
+  fromNumber       String   @map("from_number")
+  toNumber         String   @map("to_number")
+  body             String
+  status           String   @default("queued")
   twilioMessageSid String?  @unique @map("twilio_message_sid")
-  sentAt          DateTime  @default(now()) @map("sent_at")
-
-  contact         Contact?  @relation(fields: [contactId], references: [id])
-  mlo             Mlo?      @relation(fields: [mloId], references: [id])
+  sentAt           DateTime @default(now()) @map("sent_at")
+  contact          Contact? @relation(fields: [contactId], references: [id])
+  mlo              Mlo?     @relation(fields: [mloId], references: [id])
 
   @@index([contactId])
   @@index([twilioMessageSid])
@@ -337,157 +373,115 @@ model SmsMessage {
 }
 
 model LoanDates {
-  id                  String    @id @default(uuid()) @db.Uuid
-  loanId              String    @unique @map("loan_id") @db.Uuid
-
-  // Application & Lock
-  applicationDate     DateTime? @map("application_date")
-  lockedDate          DateTime? @map("locked_date")
-  lockExpiration      DateTime? @map("lock_expiration")
-  lockTerm            Int?      @map("lock_term")           // Days
-
-  // Credit
-  creditPulledDate    DateTime? @map("credit_pulled_date")
-  creditExpiration    DateTime? @map("credit_expiration")
-
-  // Appraisal
-  appraisalOrdered    DateTime? @map("appraisal_ordered")
-  appraisalScheduled  DateTime? @map("appraisal_scheduled")
-  appraisalReceived   DateTime? @map("appraisal_received")
-  appraisalDue        DateTime? @map("appraisal_due")
-  appraisalDeadline   DateTime? @map("appraisal_deadline")
-  appraisalExpiry     DateTime? @map("appraisal_expiry")
-  appraisalWaiver     Boolean   @default(false) @map("appraisal_waiver")
-
-  // Title
-  titleOrdered        DateTime? @map("title_ordered")
-  titleReceived       DateTime? @map("title_received")
-  titleExpiry         DateTime? @map("title_expiry")
-
-  // Insurance
-  hoiOrdered          DateTime? @map("hoi_ordered")
-  hoiReceived         DateTime? @map("hoi_received")
-  hoiBound            DateTime? @map("hoi_bound")
-  floodCertOrdered    DateTime? @map("flood_cert_ordered")
-  floodCertReceived   DateTime? @map("flood_cert_received")
-
-  // Closing & Funding
-  estimatedClosing    DateTime? @map("estimated_closing")
-  closingDate         DateTime? @map("closing_date")
-  estimatedFunding    DateTime? @map("estimated_funding")
-  fundingDate         DateTime? @map("funding_date")
-  firstPaymentDate    DateTime? @map("first_payment_date")
-
-  // Submission milestones
-  submittedToUwDate   DateTime? @map("submitted_to_uw_date")
-  condApprovedDate    DateTime? @map("cond_approved_date")
-  ctcDate             DateTime? @map("ctc_date")
-  docsOutDate         DateTime? @map("docs_out_date")
-
-  createdAt           DateTime  @default(now()) @map("created_at")
-  updatedAt           DateTime  @updatedAt @map("updated_at")
-
-  loan                Loan      @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  id                 String    @id @default(uuid()) @db.Uuid
+  loanId             String    @unique @map("loan_id") @db.Uuid
+  applicationDate    DateTime? @map("application_date")
+  lockedDate         DateTime? @map("locked_date")
+  lockExpiration     DateTime? @map("lock_expiration")
+  lockTerm           Int?      @map("lock_term")
+  creditPulledDate   DateTime? @map("credit_pulled_date")
+  creditExpiration   DateTime? @map("credit_expiration")
+  appraisalOrdered   DateTime? @map("appraisal_ordered")
+  appraisalScheduled DateTime? @map("appraisal_scheduled")
+  appraisalReceived  DateTime? @map("appraisal_received")
+  appraisalDue       DateTime? @map("appraisal_due")
+  appraisalDeadline  DateTime? @map("appraisal_deadline")
+  appraisalExpiry    DateTime? @map("appraisal_expiry")
+  appraisalWaiver    Boolean   @default(false) @map("appraisal_waiver")
+  titleOrdered       DateTime? @map("title_ordered")
+  titleReceived      DateTime? @map("title_received")
+  titleExpiry        DateTime? @map("title_expiry")
+  hoiOrdered         DateTime? @map("hoi_ordered")
+  hoiReceived        DateTime? @map("hoi_received")
+  hoiBound           DateTime? @map("hoi_bound")
+  floodCertOrdered   DateTime? @map("flood_cert_ordered")
+  floodCertReceived  DateTime? @map("flood_cert_received")
+  estimatedClosing   DateTime? @map("estimated_closing")
+  closingDate        DateTime? @map("closing_date")
+  estimatedFunding   DateTime? @map("estimated_funding")
+  fundingDate        DateTime? @map("funding_date")
+  firstPaymentDate   DateTime? @map("first_payment_date")
+  submittedToUwDate  DateTime? @map("submitted_to_uw_date")
+  condApprovedDate   DateTime? @map("cond_approved_date")
+  ctcDate            DateTime? @map("ctc_date")
+  docsOutDate        DateTime? @map("docs_out_date")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+  loan               Loan      @relation(fields: [loanId], references: [id], onDelete: Cascade)
 
   @@map("loan_dates")
 }
 
 model Condition {
-  id                  String    @id @default(uuid()) @db.Uuid
-  loanId              String    @map("loan_id") @db.Uuid
-
-  // Classification
-  title               String
-  description         String?
-  conditionType       String    @map("condition_type")
-  // 'appraisal' | 'lender' | 'client' | 'realtor' | 'title' | 'credit' |
-  // 'doc' | 'hoi' | 'income' | 'investment' | 'land' | 'loe' | 'purchase'
-
-  stage               String    @default("prior_to_docs")
-  // 'prior_to_docs' | 'prior_to_funding' | 'at_closing'
-
-  // Lifecycle
-  status              String    @default("needed")
-  // 'needed' | 'requested' | 're_requested' | 'received' | 'submitted' | 'cleared' | 'waived'
-
-  // Ownership & Assignment
-  ownerRole           String?   @map("owner_role")       // 'processor' | 'mlo'
-  assignedToId        String?   @map("assigned_to_id") @db.Uuid
-  requestedDate       DateTime? @map("requested_date")
-  dueDate             DateTime? @map("due_date")
-
-  // Visibility & Blocking
-  borrowerFacing      Boolean   @default(false) @map("borrower_facing")
-  blockingProgress    Boolean   @default(false) @map("blocking_progress")
-
-  // Content
-  internalNotes       Json?     @map("internal_notes") @db.JsonB  // Array of {note, author, timestamp}
-  fileUrl             String?   @map("file_url")
-  fileName            String?   @map("file_name")
-
-  // Link to existing Document (optional — some conditions ARE document requests)
-  documentId          String?   @map("document_id") @db.Uuid
-
-  // Processing Engine — Freshness & Chase Tracking
-  freshnessDays       Int?      @map("freshness_days")           // How many days before this goes stale (null = never stale)
-  lastCheckedAt       DateTime? @map("last_checked_at")          // When the engine last reviewed this condition
-  chaseCount          Int       @default(0) @map("chase_count")  // How many times we've followed up
-  lastChasedAt        DateTime? @map("last_chased_at")           // When last follow-up was sent
-  nextChaseAt         DateTime? @map("next_chase_at")            // When to follow up next (engine reads this)
-
-  // Processing Engine — Dependencies
-  dependsOnId         String?   @map("depends_on_id") @db.Uuid   // Self-ref: this condition can't clear until dependsOn clears
-  // Example: "Title clear" depends on "Appraisal received"
-
-  // Borrower Communication
-  borrowerMessage     String?   @map("borrower_message")         // Consumer-friendly description for borrower portal
-  // Example: internal="Provide 2 months bank statements" → borrower="Please upload your 2 most recent bank statements"
-
-  createdAt           DateTime  @default(now()) @map("created_at")
-  updatedAt           DateTime  @updatedAt @map("updated_at")
-
-  loan                Loan      @relation(fields: [loanId], references: [id], onDelete: Cascade)
-  document            Document? @relation(fields: [documentId], references: [id])
-  dependsOn           Condition? @relation("ConditionDependency", fields: [dependsOnId], references: [id])
-  dependedOnBy        Condition[] @relation("ConditionDependency")
+  id               String      @id @default(uuid()) @db.Uuid
+  loanId           String      @map("loan_id") @db.Uuid
+  title            String
+  description      String?
+  conditionType    String      @map("condition_type")
+  stage            String      @default("prior_to_docs")
+  status           String      @default("needed")
+  ownerRole        String?     @map("owner_role")
+  assignedToId     String?     @map("assigned_to_id") @db.Uuid
+  requestedDate    DateTime?   @map("requested_date")
+  dueDate          DateTime?   @map("due_date")
+  borrowerFacing   Boolean     @default(false) @map("borrower_facing")
+  blockingProgress Boolean     @default(false) @map("blocking_progress")
+  internalNotes    Json?       @map("internal_notes")
+  fileUrl          String?     @map("file_url")
+  fileName         String?     @map("file_name")
+  documentId       String?     @map("document_id") @db.Uuid
+  createdAt        DateTime    @default(now()) @map("created_at")
+  updatedAt        DateTime    @updatedAt @map("updated_at")
+  freshnessDays    Int?        @map("freshness_days")
+  lastCheckedAt    DateTime?   @map("last_checked_at") @db.Timestamptz(6)
+  chaseCount       Int?        @map("chase_count")
+  lastChasedAt     DateTime?   @map("last_chased_at") @db.Timestamptz(6)
+  nextChaseAt      DateTime?   @map("next_chase_at") @db.Timestamptz(6)
+  borrowerMessage  String?     @map("borrower_message")
+  dependsOnId      String?     @map("depends_on_id") @db.Uuid
+  cleared_at       DateTime?   @db.Timestamptz(6)
+  condition_number Int?
+  received_at      DateTime?   @db.Timestamptz(6)
+  source           String      @default("manual")
+  dependsOn        Condition?  @relation("ConditionDependency", fields: [dependsOnId], references: [id])
+  dependedOnBy     Condition[] @relation("ConditionDependency")
+  document         Document?   @relation(fields: [documentId], references: [id])
+  loan             Loan        @relation(fields: [loanId], references: [id], onDelete: Cascade)
 
   @@index([loanId])
   @@index([loanId, status])
-  @@index([nextChaseAt])
   @@map("conditions")
 }
 
 model LoanNote {
-  id              String    @id @default(uuid()) @db.Uuid
-  loanId          String    @map("loan_id") @db.Uuid
-  content         String
-  authorId        String    @map("author_id") @db.Uuid
-  authorType      String    @map("author_type")   // 'mlo' | 'borrower' | 'system'
-  source          String?                          // 'portal' | 'dialer' | 'import' | 'system'
-  isPinned        Boolean   @default(false) @map("is_pinned")
-  createdAt       DateTime  @default(now()) @map("created_at")
-
-  loan            Loan      @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  id         String   @id @default(uuid()) @db.Uuid
+  loanId     String   @map("loan_id") @db.Uuid
+  content    String
+  authorId   String   @map("author_id") @db.Uuid
+  authorType String   @map("author_type")
+  source     String?
+  isPinned   Boolean  @default(false) @map("is_pinned")
+  createdAt  DateTime @default(now()) @map("created_at")
+  loan       Loan     @relation(fields: [loanId], references: [id], onDelete: Cascade)
 
   @@index([loanId])
   @@map("loan_notes")
 }
 
 model LoanTask {
-  id              String    @id @default(uuid()) @db.Uuid
-  loanId          String    @map("loan_id") @db.Uuid
-  title           String
-  description     String?
-  priority        String    @default("later")       // 'today' | 'tomorrow' | 'later'
-  status          String    @default("pending")      // 'pending' | 'in_progress' | 'completed'
-  dueDate         DateTime? @map("due_date")
-  assignedToId    String?   @map("assigned_to_id") @db.Uuid
-  createdById     String    @map("created_by_id") @db.Uuid
-  completedAt     DateTime? @map("completed_at")
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
-
-  loan            Loan      @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  id           String    @id @default(uuid()) @db.Uuid
+  loanId       String    @map("loan_id") @db.Uuid
+  title        String
+  description  String?
+  priority     String    @default("later")
+  status       String    @default("pending")
+  dueDate      DateTime? @map("due_date")
+  assignedToId String?   @map("assigned_to_id") @db.Uuid
+  createdById  String    @map("created_by_id") @db.Uuid
+  completedAt  DateTime? @map("completed_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  loan         Loan      @relation(fields: [loanId], references: [id], onDelete: Cascade)
 
   @@index([loanId])
   @@index([assignedToId, status])
@@ -495,900 +489,867 @@ model LoanTask {
 }
 
 model LoanContact {
-  id              String    @id @default(uuid()) @db.Uuid
-  loanId          String    @map("loan_id") @db.Uuid
-  role            String    // 'title_company' | 'appraiser' | 'insurance_agent' | 'realtor' | 'buyer_agent' | 'seller_agent' | 'attorney' | 'lender_contact' | 'other'
-  name            String
-  company         String?
-  email           String?
-  phone           String?
-  notes           String?
-  isPrimary       Boolean   @default(true) @map("is_primary")  // Primary contact for this role on this loan
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  loanId     String    @map("loan_id") @db.Uuid
+  role       String    @default("borrower")
+  name       String?
+  company    String?
+  email      String?
+  phone      String?
+  notes      String?
+  isPrimary  Boolean?  @default(false) @map("is_primary")
+  createdAt  DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime? @updatedAt @map("updated_at") @db.Timestamptz(6)
+  contact_id String    @db.Uuid
+  contacts   Contact   @relation(fields: [contact_id], references: [id])
+  loan       Loan      @relation(fields: [loanId], references: [id], onDelete: Cascade)
 
-  loan            Loan      @relation(fields: [loanId], references: [id], onDelete: Cascade)
-
-  @@index([loanId])
-  @@index([loanId, role])
+  @@unique([loanId, contact_id])
   @@map("loan_contacts")
 }
-
-// ═══════════════════════════════════════════════════════════════
-// RATES DOMAIN — PC (Rate Pipeline + Market Watch)
-// Authority: PC. Rate sheets, rate history, lender configs.
-// ═══════════════════════════════════════════════════════════════
 
 model RateHistory {
   id              Int       @id @default(autoincrement())
   date            DateTime  @db.Date
-  loanType        String    @map("loan_type") @db.VarChar(20)
-  // '30yr_fixed', '15yr_fixed', 'arm_5_1', etc.
-  term            Int       // 360, 180, etc.
-  creditScoreTier String    @map("credit_score_tier") @db.VarChar(10)
-  // '760+', '740-759', '720-739', '700-719', '680-699'
-  rate            Decimal   @db.Decimal(5, 3) // e.g. 5.625
-  apr             Decimal?  @db.Decimal(5, 3) // e.g. 5.712
-  points          Decimal?  @db.Decimal(4, 3) // -0.125 (credit) or 0.500 (points)
-  loanAmount      Int?      @map("loan_amount") // 400000
-  ltv             Int?      // 75
-  lender          String?   @db.VarChar(100) // wholesale lender name
-  loanPurpose     String?   @map("loan_purpose") @db.VarChar(20)
-  // 'purchase', 'refi_rate_term', 'refi_cash_out'
-  propertyType    String?   @map("property_type") @db.VarChar(20)
-  // 'single_family', 'condo', etc.
-  createdAt       DateTime  @default(now()) @map("created_at")
+  loanType        String    @default("30yr_fixed") @map("loan_type") @db.VarChar(30)
+  term            Int?
+  creditScoreTier String    @map("credit_score_tier") @db.VarChar(20)
+  rate            Decimal   @db.Decimal(5, 3)
+  apr             Decimal?  @db.Decimal(5, 3)
+  points          Decimal?  @db.Decimal(12, 4)
+  loanAmount      Int?      @map("loan_amount")
+  ltv             Int?
+  lender          String?   @default("amwest") @db.VarChar(50)
+  loanPurpose     String?   @map("loan_purpose")
+  propertyType    String?   @map("property_type")
+  createdAt       DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  source          String?   @default("rate_sheet") @db.VarChar(50)
 
-  @@index([date, loanType, creditScoreTier], map: "idx_rate_history_lookup")
+  @@unique([date, creditScoreTier, loanType, lender])
   @@map("rate_history")
 }
 
-model Lender {
-  id              String    @id @default(uuid()) @db.Uuid
-  name            String    // Display name: "AmWest Wholesale"
-  code            String    @unique // Slug for lookups: "amwest", "sunwest"
-  lenderFees      Int       @default(0) @map("lender_fees") // Flat fee in dollars
-  lockExtension   String?   @map("lock_extension") // e.g. "2 bps/day (max 30 days)"
-  isActive        Boolean   @default(true) @map("is_active")
-  createdAt       DateTime  @default(now()) @map("created_at")
-
-  rateSheets      RateSheet[]
-
-  @@map("lenders")
-}
-
 model RateSheet {
-  id              String    @id @default(uuid()) @db.Uuid
-  lenderId        String    @map("lender_id") @db.Uuid
-  loanType        String    @map("loan_type") // 'conventional' | 'fha' | 'va' | 'usda' | 'nonqm'
-  term            Int       @default(360) // Months: 360=30yr, 180=15yr, 240=20yr
-  effectiveDate   DateTime  @map("effective_date") @db.Date
-  status          String    @default("active") // 'active' | 'superseded'
+  id              String        @id @default(uuid()) @db.Uuid
+  lenderId        String        @map("lender_id") @db.Uuid
+  effectiveDate   DateTime      @map("effective_date") @db.Date
+  status          String        @default("active")
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  parse_errors    Json?
+  parsed_at       DateTime      @default(now()) @db.Timestamptz(6)
+  product_count   Int           @default(0)
+  row_count       Int           @default(0)
+  source_checksum String?
+  source_file     String?
+  source_url      String?
+  rate_prices     rate_prices[]
+  lender          rate_lenders  @relation(fields: [lenderId], references: [id])
 
-  // LLPA matrices + adjustments — full pricing context as JSONB
-  // Shape: { ltvBands, purchaseLlpa, refiLlpa, cashoutLlpa, additionalLlpa, loanAmtAdj }
-  llpaData        Json      @map("llpa_data") @db.JsonB
-
-  createdAt       DateTime  @default(now()) @map("created_at")
-
-  lender          Lender    @relation(fields: [lenderId], references: [id])
-  rows            RateRow[]
-
-  @@index([loanType, status])
-  @@index([lenderId, loanType, status])
+  @@unique([lenderId, effectiveDate, source_checksum])
+  @@index([lenderId, effectiveDate])
+  @@index([status])
   @@map("rate_sheets")
 }
 
-model RateRow {
-  id              String    @id @default(uuid()) @db.Uuid
-  rateSheetId     String    @map("rate_sheet_id") @db.Uuid
-  rate            Decimal   @db.Decimal(5, 3) // e.g. 6.875
-  price30         Decimal   @map("price_30") @db.Decimal(7, 4) // 30-day lock price
-  price45         Decimal   @map("price_45") @db.Decimal(7, 4) // 45-day lock price
+model MarketNewsHeadline {
+  id          Int      @id @default(autoincrement())
+  title       String   @db.VarChar(500)
+  source      String   @db.VarChar(100)
+  url         String
+  publishedAt DateTime @map("published_at")
+  postedBy    String   @default("claw") @map("posted_by") @db.VarChar(50)
+  createdAt   DateTime @default(now()) @map("created_at")
 
-  rateSheet       RateSheet @relation(fields: [rateSheetId], references: [id], onDelete: Cascade)
-
-  @@index([rateSheetId])
-  @@map("rate_rows")
+  @@unique([title, publishedAt])
+  @@index([publishedAt])
+  @@map("market_news_headlines")
 }
 
-// ═══════════════════════════════════════════════════════════════
-// WEBSITE DOMAIN — PC (Leads, Tickets, HECM, Dev Backlog)
-// Authority: PC. Public website features and internal tools.
-// ═══════════════════════════════════════════════════════════════
-
 model HecmScenario {
-  id              String    @id @default(uuid()) @db.Uuid
-  mloId           String    @map("mlo_id") @db.Uuid
-  borrowerName    String    @map("borrower_name")
-  referenceNumber String?   @map("reference_number")
-  homeValue       Decimal?  @map("home_value") @db.Decimal(12, 2)
-  inputState      Json      @map("input_state") @db.JsonB
-  results         Json?     @db.JsonB
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  mloId            String?   @map("mlo_id") @db.Uuid
+  borrowerName     String?   @map("borrower_name")
+  referenceNumber  String?   @map("reference_number")
+  homeValue        Decimal?  @map("home_value") @db.Decimal(12, 4)
+  inputState       Json?     @map("input_state")
+  results          Json?
+  createdAt        DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  address          String?
+  borrower_dob     DateTime? @db.Date
+  city             String?
+  co_borrower_dob  DateTime? @db.Date
+  co_borrower_name String?
+  existing_liens   Decimal?  @default(0) @db.Decimal(12, 2)
+  is_refinance     Boolean?  @default(false)
+  property_value   Decimal?  @db.Decimal(12, 2)
+  scenario_data    Json?
+  state            String?
+  zip              String?
+  mlo              Mlo?      @relation(fields: [mloId], references: [id])
 
-  mlo             Mlo       @relation(fields: [mloId], references: [id])
-
-  @@index([mloId])
   @@map("hecm_scenarios")
 }
 
 model Ticket {
-  id              String    @id @default(uuid()) @db.Uuid
-  title           String
-  description     String?
-  product         String    // 'website' | 'portal' | 'corebot'
-  ticketType      String    @map("ticket_type")   // 'bug' | 'feature' | 'improvement'
-  priority        String    @default("medium")     // 'critical' | 'high' | 'medium' | 'low'
-  status          String    @default("open")       // 'open' | 'in_progress' | 'resolved' | 'closed'
-  createdBy       String    @map("created_by")     // Actor: 'david' | mloId
-  assignedTo      String?   @map("assigned_to")    // Actor: 'pc-dev' | 'pc-marketing' | 'pc-integrations' | specific mloId
-  resolvedAt      DateTime? @map("resolved_at")
-  closedAt        DateTime? @map("closed_at")
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title       String
+  description String?
+  product     String?
+  ticketType  String?       @map("ticket_type")
+  priority    String?       @default("normal")
+  status      String?       @default("open")
+  createdBy   String?       @map("created_by")
+  assignedTo  String?       @map("assigned_to")
+  resolvedAt  DateTime?     @map("resolved_at") @db.Timestamptz(6)
+  closedAt    DateTime?     @map("closed_at") @db.Timestamptz(6)
+  createdAt   DateTime?     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime?     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  loan_id     String?       @db.Uuid
+  mlo_id      String?       @db.Uuid
+  entries     TicketEntry[]
 
-  entries         TicketEntry[]
-
-  @@index([product, status])
-  @@index([status])
-  @@index([priority, status])
   @@map("tickets")
 }
 
 model TicketEntry {
-  id              String    @id @default(uuid()) @db.Uuid
-  ticketId        String    @map("ticket_id") @db.Uuid
-  content         String
-  imageUrl        String?   @map("image_url")       // Vercel Blob URL for attached screenshot
-  authorId        String    @map("author_id")      // Actor: 'david' | 'pc-dev' | 'system' | mloId
-  authorLabel     String?   @map("author_label")    // Display name: "David", "PC Dev", etc.
-  entryType       String    @default("comment") @map("entry_type")  // 'comment' | 'status_change' | 'assignment'
-  createdAt       DateTime  @default(now()) @map("created_at")
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ticketId    String    @map("ticket_id") @db.Uuid
+  content     String
+  imageUrl    String?   @map("image_url")
+  authorId    String?   @map("author_id")
+  authorLabel String?   @map("author_label")
+  entryType   String?   @map("entry_type")
+  createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  author      String?
+  ticket      Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
-  ticket          Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-
-  @@index([ticketId])
   @@map("ticket_entries")
 }
 
 model Lead {
-  id              String    @id @default(uuid()) @db.Uuid
-  name            String
-  email           String
-  phone           String?
-  message         String?                         // Rate details, scenario info, free-text
-  source          String    @default("website")   // 'homepage_rate_table' | 'rate_tool' | 'contact_form' | 'website'
-  sourceDetail    String?   @map("source_detail") // Product clicked, scenario summary, etc.
-  status          String    @default("new")       // 'new' | 'contacted' | 'converted' | 'closed'
+  id                   String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                 String?
+  email                String?
+  phone                String?
+  message              String?
+  source               String?
+  sourceDetail         String?           @map("source_detail")
+  status               String?           @default("new")
+  utmSource            String?           @map("utm_source")
+  utmMedium            String?           @map("utm_medium")
+  utmCampaign          String?           @map("utm_campaign")
+  zohoLeadId           String?           @map("zoho_lead_id")
+  createdAt            DateTime?         @default(now()) @map("created_at") @db.Timestamptz(6)
+  annual_income        Decimal?          @db.Decimal(12, 2)
+  contact_id           String?           @db.Uuid
+  credit_score         Int?
+  credit_score_range   String?
+  current_balance      Decimal?          @db.Decimal(12, 2)
+  current_lender       String?
+  current_rate         Decimal?          @db.Decimal(5, 3)
+  down_payment         Decimal?          @db.Decimal(12, 2)
+  employment_type      String?
+  first_name           String?
+  first_time_buyer     Boolean?
+  last_name            String?
+  loan_amount          Decimal?          @db.Decimal(12, 2)
+  loan_purpose         String?
+  mlo_id               String?           @db.Uuid
+  monthly_debts        Decimal?          @db.Decimal(10, 2)
+  notes                String?
+  occupancy            String?
+  pre_approval_amount  Decimal?          @db.Decimal(12, 2)
+  pre_approval_expires DateTime?         @db.Timestamptz(6)
+  property_county      String?
+  property_state       String?
+  property_type        String?
+  property_value       Decimal?          @db.Decimal(12, 2)
+  purchase_price       Decimal?          @db.Decimal(12, 2)
+  scenario_data        Json?
+  updated_at           DateTime?         @default(now()) @db.Timestamptz(6)
+  view_token           String?           @default(dbgenerated("gen_random_uuid()"))
+  lead_quotes          lead_quotes[]
+  contacts             Contact?          @relation(fields: [contact_id], references: [id])
+  saved_scenarios      saved_scenarios[]
 
-  // UTM tracking
-  utmSource       String?   @map("utm_source")
-  utmMedium       String?   @map("utm_medium")
-  utmCampaign     String?   @map("utm_campaign")
-
-  // CRM sync
-  zohoLeadId      String?   @map("zoho_lead_id")
-
-  createdAt       DateTime  @default(now()) @map("created_at")
-
-  @@index([email])
-  @@index([status])
-  @@index([createdAt])
+  @@index([view_token])
   @@map("leads")
 }
 
-// ═══════════════════════════════════════════════════════════════
-// KNOWLEDGE DOMAIN — Context Layer (Open Brain)
-// Isolated from all other domains. No foreign keys to LOANS.
-// Accessed only via the netrate-context MCP server.
-// ═══════════════════════════════════════════════════════════════
+model account_contacts {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  account_id      String    @db.Uuid
+  first_name      String
+  last_name       String
+  email           String?
+  phone           String?
+  role            String?
+  title           String?
+  is_primary      Boolean?  @default(false)
+  notes           String?
+  zoho_contact_id String?
+  created_at      DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime? @default(now()) @db.Timestamptz(6)
+  accounts        accounts  @relation(fields: [account_id], references: [id], onDelete: Cascade)
 
-model Thought {
-  id          String   @id @default(cuid())
-  content     String   // The knowledge as a standalone statement
-  embedding   Unsupported("vector(1536)")? // pgvector for semantic search (Phase 4)
-
-  // Metadata
-  source      String   // Who captured this: "david", "mac-dev", "mac-admin", "mac-setup", "pc-dev", "pc-setup", "dave", "claw"
-  category    String   // "fact", "preference", "relationship", "insight", "rule", "pattern"
-  domain      String   @default("work") // "work" | "personal"
-
-  // Discoverability
-  people      String[] // Names mentioned: ["david", "jamie", "pc"]
-  topics      String[] // Tags: ["prisma", "neon", "portal", "finance"]
-
-  // Lifecycle
-  confidence  String   @default("confirmed") // "confirmed" | "provisional" | "superseded"
-  supersededBy String? @map("superseded_by")  // ID of the thought that replaced this one
-
-  // Full-text search (auto-populated by trigger from content + topics + people)
-  searchVector Unsupported("tsvector")? @map("search_vector")
-
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  @@index([source])
-  @@index([category])
-  @@index([domain])
-  @@index([searchVector], type: Gin)
-  @@map("thoughts")
+  @@index([account_id], map: "idx_account_contacts_account")
+  @@index([email], map: "idx_account_contacts_email")
 }
 
-model Session {
-  id           String   @id @default(cuid())
+model accounts {
+  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name             String
+  phone            String?
+  website          String?
+  industry         String?
+  address          String?
+  city             String?
+  state            String?
+  zip_code         String?
+  notes            String?
+  zoho_account_id  String?
+  created_at       DateTime?          @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime?          @default(now()) @db.Timestamptz(6)
+  account_contacts account_contacts[]
 
-  // Identity
-  device       String   // "mac" | "pc" | "ubuntu"
-  department   String   // "dev", "admin", "marketing", "setup", "auditor"
-
-  // Content
-  summary      String   // 2-3 sentence summary of what was accomplished
-  keyDecisions String[] @map("key_decisions")  // Bullet points of decisions made
-  filesModified String[] @map("files_modified") // Paths of files created/modified
-  openItems    String[] @map("open_items")     // What's still pending
-
-  // Cross-references
-  projects     String[] // Project IDs touched: ["CA-CFL-2026", "TX-LLC"]
-  relayEntries String[] @map("relay_entries")  // RELAY entries posted/acknowledged
-
-  // Timing
-  startedAt    DateTime @default(now()) @map("started_at")
-  endedAt      DateTime? @map("ended_at")
-
-  @@index([device])
-  @@index([department])
-  @@index([startedAt])
-  @@map("sessions")
+  @@index([industry], map: "idx_accounts_industry")
 }
 
-model Decision {
-  id           String   @id @default(cuid())
+model adjustment_rules {
+  id              String       @id @db.Uuid
+  lender_id       String       @db.Uuid
+  adjustment_type String
+  purpose         String?
+  agency          String?
+  tier            String?
+  state           String?
+  escrow_type     String?
+  product_group   String?
+  term_group      String?
+  feature_name    String?
+  fico_min        Int?
+  fico_max        Int?
+  ltv_min         Decimal?     @db.Decimal(5, 2)
+  ltv_max         Decimal?     @db.Decimal(5, 2)
+  loan_amount_min Int?
+  loan_amount_max Int?
+  term_min        Int?
+  term_max        Int?
+  value           Decimal      @db.Decimal(8, 4)
+  effective_date  DateTime     @db.Date
+  expires_date    DateTime?    @db.Date
+  status          String       @default("active")
+  source          String?
+  created_at      DateTime     @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime     @db.Timestamptz(6)
+  loan_type       String?
+  rate_lenders    rate_lenders @relation(fields: [lender_id], references: [id])
 
-  // The decision
-  title        String   // Short: "SQLite for tracker backend"
-  question     String   // What was being decided: "Where should tracker data live?"
-  answer       String   // The decision: "SQLite via TrackerPortal API, not JSON files"
-  rationale    String   // Why: "Single source of truth, queryable, enforced schema..."
-  alternatives String[] // What was considered: ["JSON files", "Postgres directly", "Zoho Creator"]
+  @@index([lender_id, adjustment_type, loan_type, status])
+  @@index([lender_id, adjustment_type, purpose, tier])
+  @@index([lender_id, adjustment_type, status])
+  @@index([status, effective_date])
+}
 
-  // Context
-  category     String   // "architecture", "business", "governance", "process", "tool"
-  scope        String   // "mac", "pc", "both", "all"
-  decidedBy    String   @map("decided_by") // "david", "david+mac", "david+pc", "governance"
+model borrower_quotes {
+  id                    String            @id @db.Uuid
+  contact_id            String?           @db.Uuid
+  lead_id               String?           @db.Uuid
+  loan_id               String?           @db.Uuid
+  mlo_id                String?           @db.Uuid
+  borrower_name         String?
+  borrower_email        String?
+  borrower_phone        String?
+  purpose               String
+  property_value        Decimal           @db.Decimal(12, 2)
+  loan_amount           Decimal           @db.Decimal(12, 2)
+  ltv                   Decimal           @db.Decimal(5, 2)
+  fico                  Int
+  state                 String
+  county                String?
+  property_type         String?
+  occupancy             String?           @default("primary")
+  loan_type             String?           @default("conventional")
+  term                  Int?              @default(30)
+  closing_date          DateTime?         @db.Date
+  current_rate          Decimal?          @db.Decimal(5, 3)
+  current_balance       Decimal?          @db.Decimal(12, 2)
+  current_payment       Decimal?          @db.Decimal(10, 2)
+  current_lender        String?
+  scenarios             Json
+  fee_breakdown         Json?
+  annual_taxes          Decimal?          @db.Decimal(10, 2)
+  annual_insurance      Decimal?          @db.Decimal(10, 2)
+  pmi_rate              Decimal?          @db.Decimal(5, 4)
+  monthly_pmi           Decimal?          @db.Decimal(10, 2)
+  first_payment_date    DateTime?         @db.Date
+  cash_to_close         Decimal?          @db.Decimal(12, 2)
+  monthly_payment       Decimal?          @db.Decimal(10, 2)
+  payback_months        Int?
+  monthly_savings       Decimal?          @db.Decimal(10, 2)
+  status                String            @default("draft")
+  sent_at               DateTime?         @db.Timestamptz(6)
+  viewed_at             DateTime?         @db.Timestamptz(6)
+  expires_at            DateTime?         @db.Timestamptz(6)
+  pdf_url               String?
+  pdf_generated_at      DateTime?         @db.Timestamptz(6)
+  version               Int               @default(1)
+  parent_quote_id       String?           @db.Uuid
+  created_at            DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime          @db.Timestamptz(6)
+  borrower_quotes       borrower_quotes?  @relation("borrower_quotesToborrower_quotes", fields: [parent_quote_id], references: [id])
+  other_borrower_quotes borrower_quotes[] @relation("borrower_quotesToborrower_quotes")
 
-  // Status
-  status       String   @default("active") // "active" | "superseded" | "under_review"
-  supersededBy String?  @map("superseded_by") // ID of the decision that replaced this
-
-  // Discoverability
-  topics       String[] // ["sqlite", "tracker", "data-storage"]
-
-  // Full-text search (auto-populated by trigger from title + question + answer + rationale + topics)
-  searchVector Unsupported("tsvector")? @map("search_vector")
-
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
-
-  @@index([category])
-  @@index([scope])
+  @@index([contact_id])
+  @@index([created_at])
+  @@index([lead_id])
+  @@index([loan_id])
   @@index([status])
-  @@index([searchVector], type: Gin)
-  @@map("decisions")
 }
 
-model Relay {
-  id            String   @id @default(cuid())
+model broker_config {
+  id                        String   @id @default("default")
+  comp_rate                 Decimal  @db.Decimal(5, 4)
+  comp_cap_purchase         Decimal  @db.Decimal(10, 2)
+  comp_cap_refi             Decimal  @db.Decimal(10, 2)
+  business_name             String
+  business_address          String?
+  phone                     String?
+  email                     String?
+  website                   String?
+  nmls                      String?
+  company_nmls              String?
+  licensed_states           String[]
+  default_state             String?  @default("CO")
+  default_county            String?
+  third_party_cost_defaults Json?
+  created_at                DateTime @default(now()) @db.Timestamptz(6)
+  updated_at                DateTime @db.Timestamptz(6)
+}
 
-  // Routing
-  fromDevice    String   @map("from_device")  // "mac", "pc", "dave"
-  toDevice      String   @map("to_device")    // "mac", "pc", "dave", "all"
-  type          String   @default("info")     // "info" | "action" | "request"
-  scope         String   @default("cross")    // "internal" | "cross" | "all"
+model contact_notes {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  contact_id   String    @db.Uuid
+  content      String
+  title        String?
+  author_type  String
+  author_id    String?   @db.Uuid
+  source       String?
+  zoho_note_id String?
+  created_at   DateTime? @default(now()) @db.Timestamptz(6)
+  contacts     Contact   @relation(fields: [contact_id], references: [id], onDelete: Cascade)
 
-  // Content
-  content       String   // The message / command / task description
-  context       String?  // Optional extra context, specs, links
+  @@index([contact_id], map: "idx_contact_notes_contact_id")
+}
 
-  // Lifecycle
-  status        String   @default("open")     // "open" | "acknowledged" | "resolved"
-  acknowledgedAt DateTime? @map("acknowledged_at")
-  resolvedAt    DateTime? @map("resolved_at")
-  response      String?  // What the receiver reported back
+model EconomicCalendarEvent {
+  id        Int      @id @default(autoincrement())
+  date      DateTime @db.Date
+  time      String?  @db.VarChar(20)
+  name      String   @db.VarChar(200)
+  forecast  String?  @db.VarChar(100)
+  actual    String?  @db.VarChar(100)
+  prior     String?  @db.VarChar(100)
+  impact    String?
+  result    String?  @db.VarChar(20)
+  big       Boolean  @default(false)
+  source    String   @default("claw") @db.VarChar(50)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @map("updated_at")
 
+  @@unique([date, name], map: "date_name")
+  @@index([date])
+  @@map("economic_calendar_events")
+}
+
+model fee_templates {
+  id                        String   @id @db.Uuid
+  state                     String
+  county                    String?
+  purpose                   String
+  label                     String?
+  lender_fee_uw             Decimal? @default(0) @db.Decimal(10, 2)
+  lender_fee_origination    Decimal? @default(0) @db.Decimal(10, 2)
+  appraisal                 Decimal? @db.Decimal(10, 2)
+  credit_report             Decimal? @db.Decimal(10, 2)
+  mers_fee                  Decimal? @db.Decimal(10, 2)
+  flood_cert                Decimal? @db.Decimal(10, 2)
+  tax_service               Decimal? @db.Decimal(10, 2)
+  title_endorsement         Decimal? @db.Decimal(10, 2)
+  title_lenders_policy      Decimal? @db.Decimal(10, 2)
+  recording_service_fee     Decimal? @db.Decimal(10, 2)
+  closing_protection_letter Decimal? @db.Decimal(10, 2)
+  settlement_agent_fee      Decimal? @db.Decimal(10, 2)
+  recording_fees            Decimal? @db.Decimal(10, 2)
+  county_recording_fee      Decimal? @db.Decimal(10, 2)
+  home_insurance_at_close   Decimal? @db.Decimal(10, 2)
+  flood_insurance           Decimal? @db.Decimal(10, 2)
+  property_tax_monthly      Decimal? @db.Decimal(10, 2)
+  escrow_insurance_months   Int?
+  escrow_tax_months         Int?
+  notes                     String?
+  status                    String   @default("active")
+  created_at                DateTime @default(now()) @db.Timestamptz(6)
+  updated_at                DateTime @db.Timestamptz(6)
+
+  @@unique([state, county, purpose])
+  @@index([state, purpose])
+}
+
+model fomc_statements {
+  id             Int      @id @default(autoincrement())
+  meeting_date   DateTime @unique @db.Date
+  statement_url  String
+  statement_text String
+  paragraphs     Json
+  scraped_at     DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model fred_series_data {
+  id         Int      @id @default(autoincrement())
+  series_id  String   @db.VarChar(20)
+  date       DateTime @db.Date
+  value      Decimal  @db.Decimal(10, 4)
+  fetched_at DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([series_id, date])
+  @@index([series_id, date(sort: Desc)])
+}
+
+model lead_quotes {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lead_id         String    @db.Uuid
+  scenario        Json
+  results         Json
+  best_rate       Decimal?  @db.Decimal(5, 3)
+  best_lender     String?
+  best_price      Decimal?  @db.Decimal(8, 4)
+  monthly_payment Decimal?  @db.Decimal(10, 2)
+  comp_amount     Decimal?  @db.Decimal(10, 2)
+  lender_fee      Decimal?  @db.Decimal(10, 2)
+  sent_at         DateTime? @db.Timestamptz(6)
+  viewed_at       DateTime? @db.Timestamptz(6)
+  created_at      DateTime? @default(now()) @db.Timestamptz(6)
+  leads           Lead      @relation(fields: [lead_id], references: [id], onDelete: Cascade)
+
+  @@index([lead_id], map: "idx_lead_quotes_lead_id")
+}
+
+model LoanAsset {
+  id            String   @id @default(uuid()) @db.Uuid
+  loanId        String   @map("loan_id") @db.Uuid
+  borrowerType  String?  @map("borrower_type")
+  institution   String?
+  accountType   String?  @map("account_type")
+  accountNumber String?  @map("account_number")
+  balance       Decimal? @db.Decimal(12, 2)
+  isJoint       Boolean  @default(false) @map("is_joint")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
+  loan          Loan     @relation(fields: [loanId], references: [id], onDelete: Cascade)
 
-  @@index([toDevice, status, scope])
-  @@index([fromDevice])
-  @@index([status])
-  @@index([createdAt])
-  @@map("relay")
+  @@index([loanId])
+  @@map("loan_assets")
 }
 
-// ═══════════════════════════════════════════════════════════════
-// OPS DOMAIN — Mac (TrackerPortal)
-// Authority: Mac. Do NOT modify without Mac approval via RELAY.
-// ═══════════════════════════════════════════════════════════════
+model LoanConv {
+  id            String   @id @default(uuid()) @db.Uuid
+  loanId        String   @unique @map("loan_id") @db.Uuid
+  pmiRequired   Boolean  @default(false) @map("pmi_required")
+  pmiMonthly    Decimal? @map("pmi_monthly") @db.Decimal(12, 2)
+  pmiRemovalLtv Decimal? @map("pmi_removal_ltv") @db.Decimal(5, 4)
+  pmiCompany    String?  @map("pmi_company")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  loan          Loan     @relation(fields: [loanId], references: [id], onDelete: Cascade)
 
-model OpsProject {
-  id               Int       @id @default(autoincrement())
-  projectId        String    @unique @map("project_id")
-  projectName      String    @map("project_name")
-  client           String?   @default("NetRate Mortgage")
-  type             String?
-  category         String?
-  state            String?
-  priority         String?   @default("normal")
-  started          String?
-  targetCompletion String?   @map("target_completion")
-  actualCompletion String?   @map("actual_completion")
-  totalCost        Float?    @default(0) @map("total_cost")
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
-
-  // Relations
-  goal             OpsGoal?
-  milestones       OpsMilestone[]
-  instructions     OpsInstruction[]
-  ball             OpsBall?
-  ballHistory      OpsBallHistory[]
-  anticipations    OpsAnticipation[]
-  blockers         OpsBlocker[]
-  decisions        OpsDecision[]
-  documents        OpsDocument[]
-  timeline         OpsTimeline[]
-  draftEmails      OpsDraftEmail[]
-  projectContacts  OpsProjectContact[]
-  dependsOn        OpsProjectDependency[] @relation("DependsOn")
-  dependedOnBy     OpsProjectDependency[] @relation("DependedOnBy")
-
-  @@map("ops_projects")
+  @@map("loan_conv")
 }
 
-model OpsGoal {
-  id           Int       @id @default(autoincrement())
-  projectId    Int       @unique @map("project_id")
-  description  String
-  verification String?
-  status       String?   @default("not_started")
-  achievedDate String?   @map("achieved_date")
-  evidence     String?
+model LoanDeclaration {
+  id                              String       @id @default(uuid()) @db.Uuid
+  loanBorrowerId                  String       @unique @map("loan_borrower_id") @db.Uuid
+  outstandingJudgments            Boolean?     @map("outstanding_judgments")
+  bankruptcy                      Boolean?
+  bankruptcyType                  String?      @map("bankruptcy_type")
+  bankruptcyDate                  DateTime?    @map("bankruptcy_date") @db.Date
+  foreclosure                     Boolean?
+  foreclosureDate                 DateTime?    @map("foreclosure_date") @db.Date
+  partyToLawsuit                  Boolean?     @map("party_to_lawsuit")
+  loanDefault                     Boolean?     @map("loan_default")
+  alimonyObligation               Boolean?     @map("alimony_obligation")
+  delinquentFederalDebt           Boolean?     @map("delinquent_federal_debt")
+  coSignerOnOtherLoan             Boolean?     @map("co_signer_on_other_loan")
+  intentToOccupy                  Boolean?     @map("intent_to_occupy")
+  ownershipInterestLastThreeYears Boolean?     @map("ownership_interest_last_three_years")
+  propertyTypeOfOwnership         String?      @map("property_type_of_ownership")
+  createdAt                       DateTime     @default(now()) @map("created_at")
+  updatedAt                       DateTime     @updatedAt @map("updated_at")
+  loanBorrower                    LoanBorrower @relation(fields: [loanBorrowerId], references: [id], onDelete: Cascade)
 
-  project      OpsProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  @@map("ops_goals")
+  @@map("loan_declarations")
 }
 
-model OpsMilestone {
-  id           Int       @id @default(autoincrement())
-  projectId    Int       @map("project_id")
-  milestoneId  Int       @map("milestone_id")
-  name         String
-  description  String?
-  status       String?   @default("pending")
-  reachedDate  String?   @map("reached_date")
-  evidence     String?
-  creates      String?
-  sortOrder    Int?      @map("sort_order")
+model LoanDscr {
+  id                String   @id @default(uuid()) @db.Uuid
+  loanId            String   @unique @map("loan_id") @db.Uuid
+  dscrRatio         Decimal? @map("dscr_ratio") @db.Decimal(5, 3)
+  pppTerm           Int?     @map("ppp_term")
+  interestOnly      Boolean  @default(false) @map("interest_only")
+  interestOnlyTerm  Int?     @map("interest_only_term")
+  prepayPenaltyType String?  @map("prepay_penalty_type")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  loan              Loan     @relation(fields: [loanId], references: [id], onDelete: Cascade)
 
-  project            OpsProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  afterInstructions  OpsInstruction[] @relation("AfterMilestone")
-  untilInstructions  OpsInstruction[] @relation("UntilMilestone")
-  blockerMilestones  OpsBlockerMilestone[]
-
-  @@unique([projectId, milestoneId])
-  @@map("ops_milestones")
+  @@map("loan_dscr")
 }
 
-model OpsInstruction {
-  id               Int       @id @default(autoincrement())
-  projectId        Int       @map("project_id")
-  instructionId    String    @map("instruction_id")
-  phase            String?
-  afterMilestoneId Int?      @map("after_milestone_id")
-  untilMilestoneId Int?      @map("until_milestone_id")
-  instruction      String
-  owner            String?   @default("david")
-  url              String?
-  notes            String?
-  cost             Float?
-  dueDate          String?   @map("due_date")
-  status           String?   @default("active")
-  completedDate    String?   @map("completed_date")
-  repeatable       Boolean   @default(false)
-  sortOrder        String?   @map("sort_order")
-  surface          String?
-  doneCriteria     Json?     @map("done_criteria") @db.JsonB
+model LoanEmployment {
+  id              String       @id @default(uuid()) @db.Uuid
+  loanBorrowerId  String       @map("loan_borrower_id") @db.Uuid
+  isPrimary       Boolean      @default(true) @map("is_primary")
+  employerName    String?      @map("employer_name")
+  employerAddress Json?        @map("employer_address")
+  employerPhone   String?      @map("employer_phone")
+  position        String?
+  startDate       DateTime?    @map("start_date") @db.Date
+  endDate         DateTime?    @map("end_date") @db.Date
+  yearsOnJob      Int?         @map("years_on_job")
+  monthsOnJob     Int?         @map("months_on_job")
+  selfEmployed    Boolean      @default(false) @map("self_employed")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+  loanBorrower    LoanBorrower @relation(fields: [loanBorrowerId], references: [id], onDelete: Cascade)
 
-  project          OpsProject    @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  afterMilestone   OpsMilestone? @relation("AfterMilestone", fields: [afterMilestoneId], references: [id])
-  untilMilestone   OpsMilestone? @relation("UntilMilestone", fields: [untilMilestoneId], references: [id])
-  iterations       OpsIteration[]
-  steps            OpsInstructionStep[]
-  instructionContacts  OpsInstructionContact[]
-  instructionDocuments OpsInstructionDocument[]
-  draftEmails      OpsDraftEmail[]
-
-  @@unique([projectId, instructionId])
-  @@map("ops_instructions")
+  @@index([loanBorrowerId])
+  @@map("loan_employments")
 }
 
-model OpsIteration {
-  id             Int       @id @default(autoincrement())
-  instructionId  Int       @map("instruction_id")
-  date           String
-  outcome        String
-  nextAction     String?   @map("next_action")
-  byWhom         String?   @default("david") @map("by_whom")
-  createdAt      DateTime  @default(now()) @map("created_at")
+model LoanFha {
+  id                       String    @id @default(uuid()) @db.Uuid
+  loanId                   String    @unique @map("loan_id") @db.Uuid
+  caseNumber               String?   @map("case_number")
+  caseAssignedDate         DateTime? @map("case_assigned_date")
+  ufmip                    Decimal?  @map("ufmip") @db.Decimal(12, 2)
+  monthlyMip               Decimal?  @map("monthly_mip") @db.Decimal(12, 2)
+  mipPercent               Decimal?  @map("mip_percent") @db.Decimal(5, 4)
+  financialAssessmentResult String?  @map("financial_assessment_result")
+  lesaResult               String?   @map("lesa_result")
+  createdAt                DateTime  @default(now()) @map("created_at")
+  updatedAt                DateTime  @updatedAt @map("updated_at")
+  loan                     Loan      @relation(fields: [loanId], references: [id], onDelete: Cascade)
 
-  instruction    OpsInstruction @relation(fields: [instructionId], references: [id], onDelete: Cascade)
-
-  @@map("ops_iterations")
+  @@map("loan_fha")
 }
 
-model OpsInstructionStep {
-  id             Int       @id @default(autoincrement())
-  instructionId  Int       @map("instruction_id")
-  stepText       String    @map("step_text")
-  sortOrder      Int       @default(0) @map("sort_order")
-  done           Boolean   @default(false)
-  doneDate       String?   @map("done_date")
-  doneBy         String?   @map("done_by")
-  createdAt      DateTime  @default(now()) @map("created_at")
+model LoanHecm {
+  id                        String    @id @default(uuid()) @db.Uuid
+  loanId                    String    @unique @map("loan_id") @db.Uuid
+  margin                    Decimal?  @map("margin") @db.Decimal(5, 4)
+  maxClaimAmount            Decimal?  @map("max_claim_amount") @db.Decimal(12, 2)
+  principalLimit            Decimal?  @map("principal_limit") @db.Decimal(12, 2)
+  initialInterestRateIndex  Decimal?  @map("initial_interest_rate_index") @db.Decimal(5, 4)
+  initialInterestRate       Decimal?  @map("initial_interest_rate") @db.Decimal(5, 4)
+  expectedInterestRate      Decimal?  @map("expected_interest_rate") @db.Decimal(5, 4)
+  lifetimeCap               Decimal?  @map("lifetime_cap") @db.Decimal(5, 4)
+  pllExpiration             DateTime? @map("pll_expiration")
+  counselingExpiration      DateTime? @map("counseling_expiration")
+  counselingDate            DateTime? @map("counseling_date")
+  paymentPlan               String?   @map("payment_plan")
+  locLimit                  Decimal?  @map("loc_limit") @db.Decimal(12, 2)
+  locGrowthRate             Decimal?  @map("loc_growth_rate") @db.Decimal(5, 4)
+  mandatoryObligations      Decimal?  @map("mandatory_obligations") @db.Decimal(12, 2)
+  cashAvailableAtClosing    Decimal?  @map("cash_available_at_closing") @db.Decimal(12, 2)
+  pluPercent                Decimal?  @map("plu_percent") @db.Decimal(5, 4)
+  createdAt                 DateTime  @default(now()) @map("created_at")
+  updatedAt                 DateTime  @updatedAt @map("updated_at")
+  loan                      Loan      @relation(fields: [loanId], references: [id], onDelete: Cascade)
 
-  instruction    OpsInstruction @relation(fields: [instructionId], references: [id], onDelete: Cascade)
-
-  @@map("ops_instruction_steps")
+  @@map("loan_hecm")
 }
 
-model OpsBall {
-  id           Int       @id @default(autoincrement())
-  projectId    Int       @unique @map("project_id")
-  court        String?   @default("ours")
-  holder       String?
-  since        String?
-  waitingOn    String?   @map("waiting_on")
-  nextDate     String?   @map("next_date")
-  cadenceDays  Int?      @map("cadence_days")
-  method       String?
-  lastFollowUp String?   @map("last_follow_up")
+model LoanIncome {
+  id                  String       @id @default(uuid()) @db.Uuid
+  loanBorrowerId      String       @unique @map("loan_borrower_id") @db.Uuid
+  baseMonthly         Decimal?     @map("base_monthly") @db.Decimal(12, 2)
+  overtimeMonthly     Decimal?     @map("overtime_monthly") @db.Decimal(12, 2)
+  bonusMonthly        Decimal?     @map("bonus_monthly") @db.Decimal(12, 2)
+  commissionMonthly   Decimal?     @map("commission_monthly") @db.Decimal(12, 2)
+  dividendsMonthly    Decimal?     @map("dividends_monthly") @db.Decimal(12, 2)
+  interestMonthly     Decimal?     @map("interest_monthly") @db.Decimal(12, 2)
+  rentalIncomeMonthly Decimal?     @map("rental_income_monthly") @db.Decimal(12, 2)
+  otherMonthly        Decimal?     @map("other_monthly") @db.Decimal(12, 2)
+  otherIncomeSource   String?      @map("other_income_source")
+  createdAt           DateTime     @default(now()) @map("created_at")
+  updatedAt           DateTime     @updatedAt @map("updated_at")
+  loanBorrower        LoanBorrower @relation(fields: [loanBorrowerId], references: [id], onDelete: Cascade)
 
-  project      OpsProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  @@map("ops_ball")
+  @@map("loan_incomes")
 }
 
-model OpsBallHistory {
-  id         Int       @id @default(autoincrement())
-  projectId  Int       @map("project_id")
-  court      String
-  holder     String?
-  waitingOn  String?   @map("waiting_on")
-  changedAt  DateTime  @default(now()) @map("changed_at")
-  changedBy  String?   @default("system") @map("changed_by")
-  reason     String?
+model LoanLiability {
+  id              String   @id @default(uuid()) @db.Uuid
+  loanId          String   @map("loan_id") @db.Uuid
+  creditor        String?
+  accountNumber   String?  @map("account_number")
+  liabilityType   String?  @map("liability_type")
+  monthlyPayment  Decimal? @map("monthly_payment") @db.Decimal(12, 2)
+  unpaidBalance   Decimal? @map("unpaid_balance") @db.Decimal(12, 2)
+  monthsRemaining Int?     @map("months_remaining")
+  paidOffAtClosing Boolean @default(false) @map("paid_off_at_closing")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  loan            Loan     @relation(fields: [loanId], references: [id], onDelete: Cascade)
 
-  project    OpsProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  @@map("ops_ball_history")
+  @@index([loanId])
+  @@map("loan_liabilities")
 }
 
-model OpsAnticipation {
-  id          Int       @id @default(autoincrement())
-  projectId   Int       @map("project_id")
-  description String
-  preWork     String?   @map("pre_work")
-  status      String?   @default("identified")
+model LoanREO {
+  id                        String   @id @default(uuid()) @db.Uuid
+  loanId                    String   @map("loan_id") @db.Uuid
+  address                   Json?
+  propertyType              String?  @map("property_type")
+  presentMarketValue        Decimal? @map("present_market_value") @db.Decimal(12, 2)
+  mortgageBalance           Decimal? @map("mortgage_balance") @db.Decimal(12, 2)
+  mortgagePayment           Decimal? @map("mortgage_payment") @db.Decimal(12, 2)
+  grossRentalIncome         Decimal? @map("gross_rental_income") @db.Decimal(12, 2)
+  netRentalIncome           Decimal? @map("net_rental_income") @db.Decimal(12, 2)
+  insuranceTaxesMaintenance Decimal? @map("insurance_taxes_maintenance") @db.Decimal(12, 2)
+  status                    String?  @default("retained")
+  createdAt                 DateTime @default(now()) @map("created_at")
+  updatedAt                 DateTime @updatedAt @map("updated_at")
+  loan                      Loan     @relation(fields: [loanId], references: [id], onDelete: Cascade)
 
-  project     OpsProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  @@map("ops_anticipations")
+  @@index([loanId])
+  @@map("loan_reos")
 }
 
-model OpsBlocker {
-  id           Int       @id @default(autoincrement())
-  projectId    Int       @map("project_id")
-  blockerId    Int       @map("blocker_id")
-  description  String
-  blocking     String?
-  waitingOn    String?   @map("waiting_on")
-  raisedDate   String    @map("raised_date")
-  resolvedDate String?   @map("resolved_date")
-  resolution   String?
+model LoanTransaction {
+  id                    String   @id @default(uuid()) @db.Uuid
+  loanId                String   @unique @map("loan_id") @db.Uuid
+  purchasePrice         Decimal? @map("purchase_price") @db.Decimal(12, 2)
+  alterationsAmount     Decimal? @map("alterations_amount") @db.Decimal(12, 2)
+  landValue             Decimal? @map("land_value") @db.Decimal(12, 2)
+  refinanceOriginalCost Decimal? @map("refinance_original_cost") @db.Decimal(12, 2)
+  yearAcquired          Int?     @map("year_acquired")
+  existingLiens         Decimal? @map("existing_liens") @db.Decimal(12, 2)
+  closingCostsEstimate  Decimal? @map("closing_costs_estimate") @db.Decimal(12, 2)
+  discountPoints        Decimal? @map("discount_points") @db.Decimal(12, 2)
+  pmiMip                Decimal? @map("pmi_mip") @db.Decimal(12, 2)
+  sellerConcessions     Decimal? @map("seller_concessions") @db.Decimal(12, 2)
+  subordinateFinancing  Decimal? @map("subordinate_financing") @db.Decimal(12, 2)
+  cashFromBorrower      Decimal? @map("cash_from_borrower") @db.Decimal(12, 2)
+  sourceOfDownPayment   String?  @map("source_of_down_payment")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+  loan                  Loan     @relation(fields: [loanId], references: [id], onDelete: Cascade)
 
-  project      OpsProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  blockerMilestones OpsBlockerMilestone[]
-
-  @@unique([projectId, blockerId])
-  @@map("ops_blockers")
+  @@map("loan_transactions")
 }
 
-model OpsDecision {
-  id                   Int       @id @default(autoincrement())
-  projectId            Int       @map("project_id")
-  decisionId           Int       @map("decision_id")
-  date                 String
-  decision             String
-  decidedBy            String?   @map("decided_by")
-  context              String?
-  alternativesRejected String?   @map("alternatives_rejected")
-  affects              String?
+model LoanVa {
+  id                      String   @id @default(uuid()) @db.Uuid
+  loanId                  String   @unique @map("loan_id") @db.Uuid
+  entitlementAmount       Decimal? @map("entitlement_amount") @db.Decimal(12, 2)
+  fundingFee              Decimal? @map("funding_fee") @db.Decimal(12, 2)
+  fundingFeeExempt        Boolean  @default(false) @map("funding_fee_exempt")
+  certificateOfEligibility String? @map("certificate_of_eligibility")
+  serviceType             String?  @map("service_type")
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @updatedAt @map("updated_at")
+  loan                    Loan     @relation(fields: [loanId], references: [id], onDelete: Cascade)
 
-  project              OpsProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  @@unique([projectId, decisionId])
-  @@map("ops_decisions")
+  @@map("loan_va")
 }
 
-model OpsDocument {
-  id            Int       @id @default(autoincrement())
-  projectId     Int?      @map("project_id")
-  docId         Int?      @map("doc_id")
-  name          String
-  type          String?
-  filePath      String?   @map("file_path")
-  url           String?
-  dateAdded     String?   @map("date_added")
-  notes         String?
-  scanStatus    String?   @map("scan_status")
-  extractedData String?   @map("extracted_data")
-
-  project       OpsProject? @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  instructionDocuments OpsInstructionDocument[]
-
-  @@map("ops_documents")
-}
-
-model OpsContact {
-  id           Int       @id @default(autoincrement())
-  name         String
-  role         String?
-  email        String?
-  phone        String?
-  organization String?
-  notes        String?
-  createdAt    DateTime  @default(now()) @map("created_at")
-
-  projectContacts     OpsProjectContact[]
-  instructionContacts OpsInstructionContact[]
-
-  @@map("ops_contacts")
-}
-
-model OpsTimeline {
-  id         Int       @id @default(autoincrement())
-  projectId  Int       @map("project_id")
-  date       String
-  event      String
-  source     String?   @default("system")
-  createdAt  DateTime  @default(now()) @map("created_at")
-
-  project    OpsProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  @@map("ops_timeline")
-}
-
-model OpsDraftEmail {
-  id             Int       @id @default(autoincrement())
-  projectId      Int?      @map("project_id")
-  instructionId  Int?      @map("instruction_id")
-  toAddr         String?   @map("to_addr")
-  ccAddr         String?   @map("cc_addr")
-  subject        String?
-  body           String?
-  attachments    Json?
-  status         String?   @default("draft")
-  sentDate       String?   @map("sent_date")
-  createdAt      DateTime  @default(now()) @map("created_at")
-
-  project        OpsProject?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  instruction    OpsInstruction? @relation(fields: [instructionId], references: [id], onDelete: SetNull)
-
-  @@map("ops_draft_emails")
-}
-
-model OpsTicket {
-  id             Int       @id @default(autoincrement())
-  ticketId       String    @unique @map("ticket_id")
-  created        String
-  status         String    @default("open")
-  page           String?
-  projectId      String?   @map("project_id")
-  instructionId  String?   @map("instruction_id")
-  itemText       String?   @map("item_text")
-  contextType    String?   @map("context_type")
-  contextJson    String?   @map("context_json")
-
-  entries        OpsTicketEntry[]
-
-  @@map("ops_tickets")
-}
-
-model OpsTicketEntry {
-  id         Int       @id @default(autoincrement())
-  ticketId   Int       @map("ticket_id")
-  sender     String
-  text       String
-  timestamp  String
-
-  ticket     OpsTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-
-  @@map("ops_ticket_entries")
-}
-
-model OpsDevBacklogItem {
-  id          Int       @id @default(autoincrement())
-  title       String
-  description String?
-  type        String    @default("feature")   // bug, feature, improvement
-  priority    String    @default("medium")    // low, medium, high, critical
-  status      String    @default("open")      // open, in_progress, done, closed
-  createdBy   String    @default("david") @map("created_by")
-  assignedTo  String?   @map("assigned_to")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
-
-  comments    OpsDevBacklogComment[]
-
-  @@index([status])
-  @@index([type])
-  @@index([priority])
-  @@map("ops_dev_backlog_items")
-}
-
-model OpsDevBacklogComment {
-  id        Int       @id @default(autoincrement())
-  itemId    Int       @map("item_id")
-  author    String    @default("david")
-  text      String
-  createdAt DateTime  @default(now()) @map("created_at")
-
-  item      OpsDevBacklogItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
-
-  @@map("ops_dev_backlog_comments")
-}
-
-model OpsProjectContact {
-  id            Int       @id @default(autoincrement())
-  projectId     Int       @map("project_id")
-  contactId     Int       @map("contact_id")
-  roleInProject String?   @map("role_in_project")
-
-  project       OpsProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  contact       OpsContact @relation(fields: [contactId], references: [id], onDelete: Cascade)
-
-  @@unique([projectId, contactId])
-  @@map("ops_project_contacts")
-}
-
-model OpsInstructionContact {
-  id             Int       @id @default(autoincrement())
-  instructionId  Int       @map("instruction_id")
-  contactId      Int       @map("contact_id")
-  relationship   String?
-
-  instruction    OpsInstruction @relation(fields: [instructionId], references: [id], onDelete: Cascade)
-  contact        OpsContact     @relation(fields: [contactId], references: [id], onDelete: Cascade)
-
-  @@unique([instructionId, contactId])
-  @@map("ops_instruction_contacts")
-}
-
-model OpsInstructionDocument {
-  id             Int       @id @default(autoincrement())
-  instructionId  Int       @map("instruction_id")
-  documentId     Int       @map("document_id")
-  relationship   String?   @default("produced")
-
-  instruction    OpsInstruction @relation(fields: [instructionId], references: [id], onDelete: Cascade)
-  document       OpsDocument    @relation(fields: [documentId], references: [id], onDelete: Cascade)
-
-  @@unique([instructionId, documentId])
-  @@map("ops_instruction_documents")
-}
-
-model OpsBlockerMilestone {
-  id           Int       @id @default(autoincrement())
-  blockerId    Int       @map("blocker_id")
-  milestoneId  Int       @map("milestone_id")
-
-  blocker      OpsBlocker   @relation(fields: [blockerId], references: [id], onDelete: Cascade)
-  milestone    OpsMilestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
-
-  @@unique([blockerId, milestoneId])
-  @@map("ops_blocker_milestones")
-}
-
-model OpsProjectDependency {
-  id           Int       @id @default(autoincrement())
-  projectId    Int       @map("project_id")
-  dependsOnId  Int       @map("depends_on_id")
-  description  String?
-  status       String?   @default("active")
-
-  project      OpsProject @relation("DependsOn", fields: [projectId], references: [id], onDelete: Cascade)
-  dependsOn    OpsProject @relation("DependedOnBy", fields: [dependsOnId], references: [id], onDelete: Cascade)
-
-  @@unique([projectId, dependsOnId])
-  @@map("ops_project_dependencies")
-}
-
-// ═══════════════════════════════════════════════════════════════
-// PAYROLL DOMAIN — Mac (Funded Loans + Wire Tracking)
-// Authority: Mac. Do NOT modify without Mac approval via RELAY.
-// ═══════════════════════════════════════════════════════════════
-
-model PayLoanOfficer {
-  id            Int       @id @default(autoincrement())
-  name          String
-  nmls          String?
-  email         String?
-  splitPct      Decimal   @map("split_pct") @db.Decimal(5, 4)
-  status        String    @default("active")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
-
-  fundedLoans   PayFundedLoan[]
-
-  @@map("pay_loan_officers")
-}
-
-model PayFundedLoan {
-  id                Int       @id @default(autoincrement())
-  status            String    @default("draft")
-
-  // Loan identifiers
-  borrowerName      String    @map("borrower_name")
-  borrowerLast      String    @map("borrower_last")
-  loanNumber        String?   @map("loan_number")
-  propertyAddress   String?   @map("property_address")
-  propertyState     String?   @map("property_state")
-  lender            String?
-  lienType          String?   @map("lien_type")
-  loanPurpose       String?   @map("loan_purpose")
-  loanType          String?   @map("loan_type")
-
-  // Core financial
-  loanAmount        Decimal   @map("loan_amount") @db.Decimal(12, 2)
-  interestRate      Decimal?  @map("interest_rate") @db.Decimal(5, 4)
-  loanTerm          Int?      @map("loan_term")
-
-  // Compensation breakdown
-  grossComp         Decimal   @map("gross_comp") @db.Decimal(10, 2)
-  brokerFee         Decimal   @map("broker_fee") @db.Decimal(10, 2)
-  houseFee          Decimal   @default(0) @map("house_fee") @db.Decimal(10, 2)
-  feesOffset        Decimal   @default(0) @map("fees_offset") @db.Decimal(10, 2)
-  processingFee     Decimal   @default(0) @map("processing_fee") @db.Decimal(10, 2)
-  costToCure        Decimal   @default(0) @map("cost_to_cure") @db.Decimal(10, 2)
-
-  // Pass-throughs (reimbursements on the wire)
-  appraisalReimb    Decimal   @default(0) @map("appraisal_reimb") @db.Decimal(10, 2)
-  creditReimb       Decimal   @default(0) @map("credit_reimb") @db.Decimal(10, 2)
-  miscReimb         Decimal   @default(0) @map("misc_reimb") @db.Decimal(10, 2)
-
-  // Lender credits
-  lenderCredits     Decimal   @default(0) @map("lender_credits") @db.Decimal(10, 2)
-
-  // Wire total (expected = comp + reimbursements + lender credits)
-  wireTotal         Decimal   @map("wire_total") @db.Decimal(10, 2)
-  // Actual wire received (from bank statement) — compare against wireTotal
-  actualWireTotal   Decimal?  @map("actual_wire_total") @db.Decimal(10, 2)
-
-  // LO compensation (snapshotted at confirm time)
-  loId              Int?      @map("lo_id")
-  loName            String?   @map("lo_name")
-  loNmls            String?   @map("lo_nmls")
-  loSplitPct        Decimal?  @map("lo_split_pct") @db.Decimal(5, 4)
-  loCompAmount      Decimal?  @map("lo_comp_amount") @db.Decimal(10, 2)
-  loNetPayable      Decimal?  @map("lo_net_payable") @db.Decimal(10, 2)
-
-  // Company P&L for this loan
-  netToCompany      Decimal?  @map("net_to_company") @db.Decimal(10, 2)
-
-  // Dates
-  closingDate       DateTime? @map("closing_date")
-  fundingDate       DateTime? @map("funding_date")
-  confirmedAt       DateTime? @map("confirmed_at")
-  paidAt            DateTime? @map("paid_at")
-
-  // CD document reference
-  cdNumber          String?   @map("cd_number")  // Sequential: "2026-001", "2026-002"
-  cdFilePath        String?   @map("cd_file_path")
-  cdExtractedRaw    Json?     @map("cd_extracted_raw") @db.JsonB
-
-  // Cross-references
-  quarter           String?
-  mcrMatchId        String?   @map("mcr_match_id")
-  zohoInvoiceId     String?   @map("zoho_invoice_id")
-
-  createdAt         DateTime  @default(now()) @map("created_at")
-  updatedAt         DateTime  @updatedAt @map("updated_at")
-
-  // Relations
-  loanOfficer       PayLoanOfficer? @relation(fields: [loId], references: [id])
-  wireEmail         PayWireEmail?
-
-  @@index([status])
-  @@index([loId])
-  @@index([fundingDate])
-  @@index([quarter])
-  @@index([borrowerLast])
-  @@map("pay_funded_loans")
-}
-
-model PayWireEmail {
+model MarketSummary {
   id              Int       @id @default(autoincrement())
+  date            DateTime  @unique @db.Date
+  treasury10yr    Decimal?  @db.Decimal(5, 3) @map("treasury_10yr")
+  treasury10yrChg Decimal?  @db.Decimal(5, 3) @map("treasury_10yr_chg")
+  mbs6Coupon      String?   @map("mbs_6_coupon")
+  mbs6Change      Decimal?  @db.Decimal(5, 3) @map("mbs_6_change")
+  headline        String?
+  commentary      String?
+  sentiment       String?
+  upcomingEvents  Json?     @map("upcoming_events")
+  createdBy       String?   @map("created_by")
+  createdAt       DateTime? @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt       DateTime? @db.Timestamptz(6) @map("updated_at")
+  source          String?
 
-  // Zoho email metadata
-  emailMessageId  String    @unique @map("email_message_id")
-  senderEmail     String?   @map("sender_email")
-  subject         String?
-  receivedAt      DateTime? @map("received_at")
-  emailBodyText   String?   @map("email_body_text")
-
-  // Parsed wire data
-  wireAmount      Decimal?  @map("wire_amount") @db.Decimal(12, 2)
-  wireDate        String?   @map("wire_date")
-  wireReference   String?   @map("wire_reference")
-
-  // Parsed identifying info (from wire notification body)
-  parsedBorrower  String?   @map("parsed_borrower")
-  parsedProperty  String?   @map("parsed_property")
-  parsedOriginator String?  @map("parsed_originator")
-
-  // CD attachment (downloaded from email)
-  cdFilePath      String?   @map("cd_file_path")
-  cdExtractedRaw  String?   @map("cd_extracted_raw")
-
-  // Link to funded loan
-  fundedLoanId    Int?      @unique @map("funded_loan_id")
-  status          String    @default("pending")
-  // pending → selected → confirmed
-
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
-
-  // Relations
-  fundedLoan      PayFundedLoan? @relation(fields: [fundedLoanId], references: [id])
-
-  @@index([status])
-  @@index([wireAmount])
-  @@map("pay_wire_emails")
+  @@map("market_summaries")
 }
 
-// ═══════════════════════════════════════════════════════════════
-// COMPLIANCE DOMAIN — Claw (Regulatory Rules)
-// Authority: Claw. Do NOT modify without Claw approval via RELAY.
-// ═══════════════════════════════════════════════════════════════
+model rate_alerts {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email            String
+  type             String    @default("strike")
+  loan_type        String?   @default("30yr_fixed")
+  target_rate      Decimal?  @db.Decimal(5, 3)
+  status           String?   @default("active")
+  last_notified_at DateTime? @db.Timestamptz(6)
+  created_at       DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime? @default(now()) @db.Timestamptz(6)
+  loan_amount      Decimal?  @db.Decimal(12, 4)
+  state            String?
+  term             Int?
+  rate_alerts      Boolean?  @default(false)
+  newsletter       Boolean?  @default(false)
+  confirmed_at     DateTime? @db.Timestamptz(6)
+  confirm_token    String?
+  last_checked_at  DateTime? @db.Timestamptz(6)
+  notify_count     Int?
+  triggered_at     DateTime? @db.Timestamptz(6)
+  triggered_rate   Decimal?  @db.Decimal(12, 4)
+  contact_id       String?
+  source           String?
+  ga_client_id     String?
+}
 
-model OpsComplianceRule {
-  id              String    @id                          // e.g. "respa-001", "advertising-042"
-  section         String?                                // Section heading from source doc
-  ruleText        String    @map("rule_text")            // The actual rule
-  category        String                                 // respa, tila, advertising, bsa_aml, etc.
-  subcategory     String?                                // Finer grain within category
-  citation        String?                                // Legal reference (e.g. "12 CFR 1026.24(b)")
-  scope           String                                 // federal, state_CO, state_TX, company_policy
-  severity        String                                 // law, regulation, best_practice
-  brokerRelevant  Boolean   @default(true) @map("broker_relevant")
-  thresholds      Json      @default("{}") @db.JsonB     // Numeric triggers, limits, amounts
-  formsReferenced String[]  @map("forms_referenced")     // Related forms
-  sourceDocument  String?   @map("source_document")      // Which doc this came from
-  netrateNotes    String?   @map("netrate_notes")        // NetRate-specific annotations
-  netrateStatus   String    @default("active") @map("netrate_status")  // active, right_size, not_applicable
-  triageNote      String?   @map("triage_note")          // Why it was triaged this way
-  status          String    @default("active")           // active, superseded, retired
-  createdBy       String    @default("claw") @map("created_by")
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
+model rate_lenders {
+  id                      String             @id @db.Uuid
+  code                    String             @unique
+  name                    String
+  status                  String             @default("active")
+  uw_fee                  Decimal?           @db.Decimal(10, 2)
+  origination_fee         Decimal?           @default(0) @db.Decimal(10, 2)
+  other_fees              Json?
+  max_comp_cap_purchase   Decimal?           @db.Decimal(10, 2)
+  max_comp_cap_refi       Decimal?           @db.Decimal(10, 2)
+  max_comp_rate           Decimal?           @db.Decimal(5, 4)
+  price_format            String             @default("100-based")
+  llpa_mode               String             @default("separate")
+  lock_extension          String?
+  notes                   String?
+  contact_email           String?
+  contact_phone           String?
+  portal_url              String?
+  created_at              DateTime           @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime           @db.Timestamptz(6)
+  comp_rate               Decimal?           @db.Decimal(5, 4)
+  excluded_state_variants Json?
+  fha_ufmip               Decimal?           @db.Decimal(6, 4)
+  adjustment_rules        adjustment_rules[]
+  rate_products           rate_products[]
+  rateSheets              RateSheet[]
+}
 
-  @@index([category])
-  @@index([scope])
+model rate_prices {
+  id            String        @id @db.Uuid
+  rate_sheet_id String        @db.Uuid
+  product_id    String        @db.Uuid
+  rate          Decimal       @db.Decimal(5, 3)
+  price         Decimal       @db.Decimal(8, 4)
+  lock_days     Int
+  created_at    DateTime      @default(now()) @db.Timestamptz(6)
+  rate_products rate_products @relation(fields: [product_id], references: [id])
+  rate_sheets   RateSheet     @relation(fields: [rate_sheet_id], references: [id], onDelete: Cascade)
+
+  @@index([product_id, rate])
+  @@index([rate_sheet_id])
+  @@index([rate_sheet_id, product_id, lock_days])
+}
+
+model rate_products {
+  id               String        @id @db.Uuid
+  lender_id        String        @db.Uuid
+  raw_name         String
+  product_code     String?
+  display_name     String
+  loan_type        String
+  agency           String?
+  tier             String?
+  term             Int           @default(30)
+  product_type     String        @default("fixed")
+  occupancy        String        @default("primary")
+  loan_amount_min  Int?
+  loan_amount_max  Int?
+  is_high_balance  Boolean       @default(false)
+  is_streamline    Boolean       @default(false)
+  is_buydown       Boolean       @default(false)
+  is_interest_only Boolean       @default(false)
+  is_fast_track    Boolean       @default(false)
+  arm_structure    String?
+  doc_type         String?
+  fico_min         Int?
+  fico_max         Int?
+  max_ltv          Decimal?      @db.Decimal(5, 2)
+  status           String        @default("active")
+  created_at       DateTime      @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime      @db.Timestamptz(6)
+  origination_fee  Decimal?      @db.Decimal(10, 2)
+  uw_fee           Decimal?      @db.Decimal(10, 2)
+  rate_prices      rate_prices[]
+  rate_lenders     rate_lenders  @relation(fields: [lender_id], references: [id])
+
+  @@unique([lender_id, raw_name])
+  @@index([lender_id, loan_type, term])
+  @@index([loan_type])
   @@index([status])
-  @@index([severity])
-  @@index([netrateStatus])
-  @@map("ops_compliance_rules")
+}
+
+model RateWatchCommentary {
+  id              Int      @id @default(autoincrement())
+  date            DateTime @unique @db.Date
+  headline        String   @db.VarChar(300)
+  commentary      String
+  sentiment       String   @default("neutral") @db.VarChar(20)
+  treasury10yr    Float?   @map("treasury_10yr")
+  treasury10yrChg Float?   @map("treasury_10yr_chg")
+  mbs6Coupon      String?  @db.VarChar(20) @map("mbs_6_coupon")
+  mbs6Change      Float?   @map("mbs_6_change")
+  author          String   @default("David Burson") @db.VarChar(100)
+  source          String   @db.VarChar(50)
+  publishedAt     DateTime @db.Timestamp(6) @map("published_at")
+  createdAt       DateTime @default(now()) @db.Timestamp(6) @map("created_at")
+
+  @@index([date], map: "idx_rate_watch_commentaries_date")
+  @@map("rate_watch_commentaries")
+}
+
+model saved_scenarios {
+  id                   String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lead_id              String                 @db.Uuid
+  scenario_data        Json
+  alert_frequency      String                 @default("2x_week")
+  alert_days           String[]               @default(["tue", "thu"])
+  alert_status         String                 @default("active")
+  last_pricing_data    Json?
+  last_priced_at       DateTime?              @db.Timestamptz(6)
+  last_sent_at         DateTime?              @db.Timestamptz(6)
+  send_count           Int                    @default(0)
+  unsub_token          String                 @default(dbgenerated("gen_random_uuid()"))
+  created_at           DateTime               @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime               @db.Timestamptz(6)
+  leads                Lead                   @relation(fields: [lead_id], references: [id], onDelete: Cascade)
+  scenario_alert_queue scenario_alert_queue[]
+
+  @@index([alert_status])
+  @@index([lead_id])
+  @@index([unsub_token])
+}
+
+model scenario_alert_queue {
+  id              String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  scenario_id     String          @db.Uuid
+  pricing_data    Json
+  previous_data   Json?
+  best_rate       Decimal?        @db.Decimal(5, 3)
+  best_rate_prev  Decimal?        @db.Decimal(5, 3)
+  rate_change     Decimal?        @db.Decimal(5, 3)
+  status          String          @default("pending")
+  reviewed_by     String?         @db.Uuid
+  reviewed_at     DateTime?       @db.Timestamptz(6)
+  sent_at         DateTime?       @db.Timestamptz(6)
+  error_message   String?
+  mlo_notes       String?
+  created_at      DateTime        @default(now()) @db.Timestamptz(6)
+  saved_scenarios saved_scenarios @relation(fields: [scenario_id], references: [id], onDelete: Cascade)
+
+  @@index([created_at])
+  @@index([status])
 }

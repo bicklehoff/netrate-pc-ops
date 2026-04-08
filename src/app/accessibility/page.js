@@ -1,6 +1,7 @@
 export const metadata = {
   title: 'Accessibility Statement | NetRate Mortgage',
   description: 'Accessibility commitment and statement for the NetRate Mortgage website.',
+  alternates: { canonical: 'https://netratemortgage.com/accessibility' },
 };
 
 export default function AccessibilityPage() {

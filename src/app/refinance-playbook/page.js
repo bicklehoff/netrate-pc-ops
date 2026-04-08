@@ -3,6 +3,9 @@ import Link from 'next/link';
 export const metadata = {
   title: 'How to Structure a Refinance — Four Strategies and How the Cash Flow Works | NetRate Mortgage',
   description: 'There\'s more than one way to refinance. Here are four strategies — from no-cost to buying the rate down — and how the cash flow actually works.',
+  alternates: {
+    canonical: 'https://netratemortgage.com/refinance-playbook',
+  },
 };
 
 export default function RefinancePlaybook() {

@@ -6,6 +6,9 @@ export const revalidate = 3600;
 export const metadata = {
   title: 'Rate Watch Archive — Daily Mortgage Rate Updates | NetRate Mortgage',
   description: 'Archive of daily mortgage rate commentary and market analysis from NetRate Mortgage. Track how rates have moved over time.',
+  alternates: {
+    canonical: 'https://netratemortgage.com/rate-watch/archive',
+  },
 };
 
 async function getAllCommentaries() {

@@ -7,6 +7,9 @@ import { fetchGCSFile, isGCSConfigured } from '@/lib/gcs';
 export const metadata = {
   title: "Today's Mortgage Rates | NetRate Mortgage",
   description: "See today's real wholesale mortgage rates with transparent pricing. Enter your scenario and get instant rate quotes with full cost breakdown.",
+  alternates: {
+    canonical: 'https://netratemortgage.com/rates',
+  },
 };
 
 // Revalidate every 30 min — rates change once/day when new sheet is parsed
