@@ -156,7 +156,7 @@ export default function RootLayout({ children }) {
             </a>
             <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
               <a href="/rates" className="text-gray-600 hover:text-brand transition-colors">Rates</a>
-              <a href="/#tools" className="text-gray-600 hover:text-brand transition-colors">Tools</a>
+              <a href="/tools" className="text-gray-600 hover:text-brand transition-colors">Tools</a>
               <a href="/rate-watch" className="text-gray-600 hover:text-brand transition-colors">Market</a>
               <div className="relative group">
                 <button className="text-gray-600 hover:text-brand transition-colors flex items-center gap-1">

@@ -272,25 +272,13 @@ export default async function HomePage() {
                 title: 'Rate Tool',
                 desc: 'Live mortgage rates across 11 lenders. See rate, points, payment, and lender credits side by side.',
                 href: '/rates',
-                cta: 'Try it',
+                cta: 'Search Rates',
               },
               {
-                title: 'DSCR Calculator',
-                desc: 'Investment property? Enter rental income and expenses to see if your deal qualifies for a DSCR loan.',
-                href: '/tools/dscr-calculator',
+                title: 'Refinance Calculator',
+                desc: "Four ways to structure a refinance — powered by today's wholesale rates. See real cash flow, not just monthly savings.",
+                href: '/refinance-calculator',
                 cta: 'Calculate',
-              },
-              {
-                title: 'Reverse Mortgage',
-                desc: "See how much equity you could access with a reverse mortgage. Age, home value, and rate — that's all we need.",
-                href: '/tools/reverse-mortgage-calculator',
-                cta: 'Estimate',
-              },
-              {
-                title: 'Refi Analyzer',
-                desc: "Is refinancing worth it? Enter your current loan and we'll show the break-even timeline and total savings.",
-                href: '/tools/refi-analyzer',
-                cta: 'Analyze',
               },
               {
                 title: 'Purchase Calculator',
@@ -299,10 +287,40 @@ export default async function HomePage() {
                 cta: 'Calculate',
               },
               {
+                title: 'Refi Recoup Analyzer',
+                desc: "Is refinancing worth it? Enter your current loan and we'll show the break-even timeline and total savings.",
+                href: '/tools/refi-analyzer',
+                cta: 'Analyze',
+              },
+              {
                 title: 'Cost of Waiting',
                 desc: "What does it cost you every month you don't refinance? See the real number with your loan details.",
                 href: '/tools/cost-of-waiting',
-                cta: 'See the cost',
+                cta: 'See the Cost',
+              },
+              {
+                title: 'DSCR Calculator',
+                desc: 'Investment property? Enter rental income and expenses to see if your deal qualifies for a DSCR loan.',
+                href: '/tools/dscr-calculator',
+                cta: 'Calculate',
+              },
+              {
+                title: 'Reverse Mortgage Calculator',
+                desc: "See how much equity you could access with a reverse mortgage. Age, home value, and rate — that's all we need.",
+                href: '/tools/reverse-mortgage-calculator',
+                cta: 'Estimate',
+              },
+              {
+                title: 'Second Lien Comparison',
+                desc: 'Compare HELOC vs. home equity loan side by side to find the best option for your situation.',
+                href: '/tools/second-lien-comparison',
+                cta: 'Compare',
+              },
+              {
+                title: 'Rate Alerts',
+                desc: "Save a rate scenario and get periodic updates when rates change — reviewed by your loan officer before every email.",
+                href: '/rates',
+                cta: 'Set Up Alerts',
               },
             ].map((tool) => (
               <Link
