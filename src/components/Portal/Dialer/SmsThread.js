@@ -30,7 +30,31 @@ export default function SmsThread({ contactId, contactPhone, messages: initialMe
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState(null);
+  const [loading, setLoading] = useState(false);
   const scrollRef = useRef(null);
+
+  // Fetch messages from API on mount and poll every 10s
+  useEffect(() => {
+    if (!contactId) return;
+    let active = true;
+
+    async function fetchMessages() {
+      try {
+        const res = await fetch(`/api/dialer/contacts/${contactId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (active && data.contact?.smsMessages) {
+          setMessages(data.contact.smsMessages.reverse());
+        }
+      } catch {} // eslint-disable-line no-empty
+    }
+
+    setLoading(true);
+    fetchMessages().finally(() => { if (active) setLoading(false); });
+    const interval = setInterval(fetchMessages, 10000);
+
+    return () => { active = false; clearInterval(interval); };
+  }, [contactId]);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -38,11 +62,6 @@ export default function SmsThread({ contactId, contactPhone, messages: initialMe
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
-
-  // Update messages when prop changes
-  useEffect(() => {
-    if (initialMessages) setMessages(initialMessages);
-  }, [initialMessages]);
 
   const handleSend = async () => {
     if (!newMessage.trim() || !contactPhone) return;
@@ -96,7 +115,12 @@ export default function SmsThread({ contactId, contactPhone, messages: initialMe
     <div className="flex flex-col h-full">
       {/* Messages area */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-2 space-y-3">
-        {messages.length === 0 ? (
+        {loading ? (
+          <div className="text-center py-8">
+            <div className="w-6 h-6 mx-auto border-2 border-gray-300 border-t-brand rounded-full animate-spin mb-2" />
+            <p className="text-xs text-gray-400">Loading messages...</p>
+          </div>
+        ) : messages.length === 0 ? (
           <div className="text-center py-8">
             <svg className="w-8 h-8 mx-auto text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
