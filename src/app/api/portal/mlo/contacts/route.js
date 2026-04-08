@@ -6,6 +6,7 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import { normalizePhone } from '@/lib/normalize-phone';
 
 export async function GET(req) {
   try {
@@ -126,7 +127,7 @@ export async function POST(req) {
         firstName,
         lastName,
         email: email ? email.toLowerCase().trim() : null,
-        phone: phone || null,
+        phone: normalizePhone(phone) || phone || null,
         company: company || null,
         source: source || 'manual',
         tags: tags || [],

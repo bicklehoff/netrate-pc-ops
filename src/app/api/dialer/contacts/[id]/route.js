@@ -4,6 +4,7 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import { normalizePhone } from '@/lib/normalize-phone';
 
 export async function GET(req, { params }) {
   const session = await getServerSession(authOptions);
@@ -73,7 +74,7 @@ export async function PUT(req, { params }) {
         ...(firstName !== undefined && { firstName }),
         ...(lastName !== undefined && { lastName }),
         ...(email !== undefined && { email }),
-        ...(phone !== undefined && { phone }),
+        ...(phone !== undefined && { phone: normalizePhone(phone) || phone }),
         ...(company !== undefined && { company }),
         ...(tags !== undefined && { tags }),
         ...(notes !== undefined && { notes }),

@@ -6,6 +6,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { sendSms } from '@/lib/twilio-voice';
 import prisma from '@/lib/prisma';
+import { normalizePhone } from '@/lib/normalize-phone';
 
 export async function POST(req) {
   const session = await getServerSession(authOptions);
@@ -19,9 +20,11 @@ export async function POST(req) {
     return Response.json({ error: 'Missing "to" or "body"' }, { status: 400 });
   }
 
+  const normalizedTo = normalizePhone(to) || to;
+
   try {
     // Send via Twilio
-    const twilioResponse = await sendSms(to, body);
+    const twilioResponse = await sendSms(normalizedTo, body);
 
     // Store in DB
     const message = await prisma.smsMessage.create({
@@ -30,7 +33,7 @@ export async function POST(req) {
         mloId: session.user.id,
         direction: 'outbound',
         fromNumber: process.env.TWILIO_PHONE_NUMBER,
-        toNumber: to,
+        toNumber: normalizedTo,
         body,
         status: twilioResponse.status || 'queued',
         twilioMessageSid: twilioResponse.sid,

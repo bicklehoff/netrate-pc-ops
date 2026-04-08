@@ -6,6 +6,7 @@
 
 import { buildOutboundTwiml } from '@/lib/twilio-voice';
 import prisma from '@/lib/prisma';
+import { normalizePhone } from '@/lib/normalize-phone';
 
 export async function POST(req) {
   const formData = await req.formData();
@@ -23,11 +24,14 @@ export async function POST(req) {
   // Extract MLO ID from the client identity (format: "client:mlo-<uuid>")
   const mloId = from?.replace('client:mlo-', '') || null;
 
+  // Normalize destination phone for consistent lookup
+  const normalizedTo = normalizePhone(to);
+
   // Look up contact by phone number
   let contactId = null;
-  if (to) {
+  if (normalizedTo) {
     try {
-      const contact = await prisma.contact.findFirst({ where: { phone: to } });
+      const contact = await prisma.contact.findFirst({ where: { phone: normalizedTo } });
       if (contact) contactId = contact.id;
     } catch (e) {
       console.error('Contact lookup failed:', e);
@@ -43,7 +47,7 @@ export async function POST(req) {
           contactId,
           direction: 'outbound',
           fromNumber: process.env.TWILIO_PHONE_NUMBER || '',
-          toNumber: to,
+          toNumber: normalizedTo || to,
           status: 'initiated',
           twilioCallSid: callSid,
         },
