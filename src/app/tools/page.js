@@ -2,7 +2,7 @@ import Link from 'next/link';
 
 export const metadata = {
   title: 'Mortgage Tools & Calculators | NetRate Mortgage',
-  description: 'Free mortgage calculators and tools — rate alerts, purchase calculator, refinance analyzer, DSCR calculator, cost of waiting, and more.',
+  description: 'Free mortgage calculators and tools — refinance calculator, rate alerts, purchase calculator, refi recoup analyzer, DSCR calculator, cost of waiting, and more.',
   alternates: { canonical: 'https://netratemortgage.com/tools' },
 };
 
@@ -35,7 +35,16 @@ const tools = [
   {
     icon: '↻',
     iconClass: 'bg-brand/10 text-brand',
-    title: 'Refi Analyzer',
+    title: 'Refinance Calculator',
+    desc: 'Four ways to structure a refinance — powered by today\'s wholesale rates. See real cash flow, not just monthly savings.',
+    href: '/refinance-calculator',
+    cta: 'Calculate',
+    badge: 'New',
+  },
+  {
+    icon: '⟳',
+    iconClass: 'bg-brand/10 text-brand',
+    title: 'Refi Recoup Analyzer',
     desc: 'Is refinancing worth it? Enter your current loan and we\'ll show the break-even timeline and total savings.',
     href: '/tools/refi-analyzer',
     cta: 'Analyze',
