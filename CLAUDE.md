@@ -147,7 +147,7 @@ Ask: "Which department should I work as? (Dev, Admin, or Setup)"
 13. David confirms preview looks good
 
 #### Phase 5 — Merge & production
-14. David says **"merge"** → `gh pr merge`
+14. David says **"merge"** → `gh pr merge --squash`
 15. Monitor production: `npx vercel ls netrate-mortgage-site | head -5` — confirm "Ready"
 16. If "Error" → pull logs immediately, open hotfix branch
 
@@ -156,6 +156,7 @@ Ask: "Which department should I work as? (Dev, Admin, or Setup)"
 - No `vercel link` without `--project netrate-mortgage-site`
 - No merge on a failing PR check
 - No new Vercel project creation
+- **Never declare work "deployed" from git state alone.** Finding commits already upstream ≠ successful Vercel build. Always verify with `npx vercel ls netrate-mortgage-site | head -5` and confirm "Ready".
 
 **Common build killers (ESLint errors that block Vercel):**
 - Unused imports (`'X' is defined but never used`) — remove the import
