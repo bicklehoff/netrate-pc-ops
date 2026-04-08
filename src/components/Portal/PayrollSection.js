@@ -75,6 +75,7 @@ export default function PayrollSection({ loan }) {
   const [unmatchedPersons, setUnmatchedPersons] = useState([]); // { firstName, lastName, role, email, phone, saveAsContact }
   const [payrollDetails, setPayrollDetails] = useState(null);
   const [showStartOver, setShowStartOver] = useState(false);
+  const [reimbursements, setReimbursements] = useState([]); // { label, payee, amount, editedAmount, selected }
 
   const isSentCheck = !!loan?.payrollSentAt;
 
@@ -176,6 +177,13 @@ export default function PayrollSection({ loan }) {
     setError('');
     setApproving(true);
     try {
+      const selectedReimb = reimbursements.filter(r => r.selected).map(r => ({
+        label: r.label,
+        payee: r.payee,
+        amount: r.amount,
+        editedAmount: r.editedAmount,
+        selected: true,
+      }));
       const res = await fetch(`/api/portal/mlo/loans/${loan.id}/payroll`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -183,6 +191,7 @@ export default function PayrollSection({ loan }) {
           action: 'approve',
           nicknameConfirmed,
           unmatchedPersons: unmatchedPersons.filter(p => p.role),
+          reimbursementSelections: selectedReimb,
         }),
       });
       const data = await res.json();
@@ -326,6 +335,24 @@ export default function PayrollSection({ loan }) {
         })));
       }, 0);
     }
+  }
+
+  // Initialize reimbursement picker from Section B items
+  const sectionBItems = isExtracted ? (extraction.data.sectionBItems || []) : [];
+  if (isExtracted && !isApproved && sectionBItems.length > 0 && reimbursements.length === 0) {
+    const savedSelections = extraction.data._reimbursementSelections;
+    setTimeout(() => {
+      setReimbursements(sectionBItems.map(item => {
+        const saved = savedSelections?.find(s => s.label === item.label);
+        return {
+          label: item.label,
+          payee: item.payee || '',
+          amount: item.amount || 0,
+          editedAmount: saved ? saved.editedAmount : (item.amount || 0),
+          selected: saved ? saved.selected : !!(item.isFbo || item.isPoc),
+        };
+      }));
+    }, 0);
   }
 
   return (
@@ -520,6 +547,8 @@ export default function PayrollSection({ loan }) {
               const gross = Number(extraction.data.brokerCompensation);
               const house = gross * HOUSE_FEE_RATE;
               const lo = gross - house;
+              const pickedReimb = reimbursements.filter(r => r.selected).reduce((sum, r) => sum + (r.editedAmount || 0), 0);
+              const anticipatedPayment = lo + pickedReimb;
               return (
                 <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3">
                   <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-2">Compensation Breakdown</p>
@@ -532,36 +561,17 @@ export default function PayrollSection({ loan }) {
                       <span className="text-gray-500 pl-2">NetRate House Fee (12.95%)</span>
                       <span className="text-gray-700">-{formatCurrency(house)}</span>
                     </div>
+                    {pickedReimb > 0 && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-emerald-600 pl-2">Reimbursements</span>
+                        <span className="text-emerald-700">+{formatCurrency(pickedReimb)}</span>
+                      </div>
+                    )}
                     <div className="border-t border-emerald-300 my-1.5" />
                     <div className="flex justify-between text-sm font-bold">
-                      <span className="text-emerald-800">Your Commission</span>
-                      <span className="text-emerald-700">{formatCurrency(lo)}</span>
+                      <span className="text-emerald-800">Anticipated Payment</span>
+                      <span className="text-emerald-700">{formatCurrency(anticipatedPayment)}</span>
                     </div>
-
-                    {(extraction.data.appraisalReimb > 0 || extraction.data.creditReimb > 0 || extraction.data.miscReimb > 0) && (
-                      <>
-                        <div className="border-t border-emerald-200 my-1.5" />
-                        <p className="text-xs text-gray-500 font-medium">Reimbursements (pass-through)</p>
-                        {extraction.data.appraisalReimb > 0 && (
-                          <div className="flex justify-between text-xs">
-                            <span className="text-gray-500 pl-2">Appraisal</span>
-                            <span className="text-gray-700">{formatCurrency(extraction.data.appraisalReimb)}</span>
-                          </div>
-                        )}
-                        {extraction.data.creditReimb > 0 && (
-                          <div className="flex justify-between text-xs">
-                            <span className="text-gray-500 pl-2">Credit Report</span>
-                            <span className="text-gray-700">{formatCurrency(extraction.data.creditReimb)}</span>
-                          </div>
-                        )}
-                        {extraction.data.miscReimb > 0 && (
-                          <div className="flex justify-between text-xs">
-                            <span className="text-gray-500 pl-2">Other</span>
-                            <span className="text-gray-700">{formatCurrency(extraction.data.miscReimb)}</span>
-                          </div>
-                        )}
-                      </>
-                    )}
 
                     {extraction.data.totalDueToBroker != null && (
                       <>
@@ -576,6 +586,67 @@ export default function PayrollSection({ loan }) {
                 </div>
               );
             })()}
+
+            {/* Section B Reimbursement Picker */}
+            {sectionBItems.length > 0 && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 space-y-3">
+                <div>
+                  <p className="text-xs font-semibold text-amber-800 uppercase tracking-wider">
+                    Section B — Services Borrower Did Not Shop For
+                  </p>
+                  <p className="text-xs text-amber-600 mt-1">
+                    Check items reimbursed through the broker wire. Edit amounts if the CD is wrong.
+                  </p>
+                </div>
+                <div className="space-y-1.5">
+                  {reimbursements.map((item, idx) => (
+                    <div key={idx} className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-colors ${
+                      item.selected ? 'bg-white border border-amber-300' : 'bg-amber-50/50'
+                    }`}>
+                      <input
+                        type="checkbox"
+                        checked={item.selected}
+                        onChange={(e) => {
+                          const updated = [...reimbursements];
+                          updated[idx] = { ...item, selected: e.target.checked };
+                          setReimbursements(updated);
+                        }}
+                        className="rounded border-amber-400 text-amber-600 focus:ring-amber-500 flex-shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-gray-800 truncate">{item.label}</p>
+                        {item.payee && (
+                          <p className="text-xs text-gray-400 truncate">{item.payee}</p>
+                        )}
+                      </div>
+                      {item.selected ? (
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={item.editedAmount}
+                          onChange={(e) => {
+                            const updated = [...reimbursements];
+                            updated[idx] = { ...item, editedAmount: parseFloat(e.target.value) || 0 };
+                            setReimbursements(updated);
+                          }}
+                          className="w-24 text-right text-xs font-mono border border-amber-300 rounded-lg px-2 py-1 focus:ring-amber-500 focus:border-amber-500"
+                        />
+                      ) : (
+                        <span className="text-xs font-mono text-gray-400">{formatCurrency(item.amount)}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {reimbursements.some(r => r.selected) && (
+                  <div className="flex justify-between items-center pt-2 border-t border-amber-200">
+                    <span className="text-xs font-semibold text-amber-800">Total Reimbursements</span>
+                    <span className="text-sm font-bold text-amber-900">
+                      {formatCurrency(reimbursements.filter(r => r.selected).reduce((sum, r) => sum + (r.editedAmount || 0), 0))}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Borrower name mismatch — nickname prompt */}
             {(() => {
