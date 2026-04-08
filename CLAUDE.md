@@ -103,7 +103,8 @@ Ask: "Which department should I work as? (Dev, Admin, or Setup)"
 
 **Critical Dev Rules:**
 - **NEVER push directly to main.** Branch protection is enabled — direct pushes are rejected.
-- **All work happens on a branch.** Workflow: `git checkout -b fix/description` → commit → `git push -u origin fix/description` → create PR. David merges when ready.
+- **All work happens on a branch.** Workflow: `git checkout main && git pull && git checkout -b fix/description` → commit → `git push -u origin fix/description` → create PR. David merges when ready.
+- **Always branch from main — never from another unmerged branch.** Branching from an unmerged branch silently inherits its commits and causes cross-session confusion. Exception: intentionally building on top of another branch's work.
 - **Branch naming:** `fix/` for bug fixes, `feature/` for new features, `docs/` for documentation.
 - **Commit often** with descriptive messages within your branch.
 - **No tracker writes.** All trackers live on Mac. Use relay to communicate completed work to Mac.
@@ -117,7 +118,7 @@ Ask: "Which department should I work as? (Dev, Admin, or Setup)"
 
 #### Phase 1 — Before any code changes
 1. `git status` — confirm clean starting point, know what branch we're on
-2. `git checkout -b <type>/<description>` — always on a branch, never on main
+2. `git checkout main && git pull && git checkout -b <type>/<description>` — always branch from main, never from an unmerged branch
 
 #### Phase 2 — After code changes are complete
 3. Present a summary of all changes — David reviews before anything runs
