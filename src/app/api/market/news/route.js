@@ -39,7 +39,8 @@ export async function GET(request) {
     return response;
   } catch (error) {
     console.error('Market news GET error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    // Graceful degradation: return empty instead of 500 so page renders
+    return NextResponse.json({ headlines: [], count: 0, source: 'error' });
   }
 }
 
