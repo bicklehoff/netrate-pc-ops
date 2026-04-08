@@ -133,6 +133,12 @@ Ask: "Which department should I work as? (Dev, Admin, or Setup)"
 #### Phase 3 — Push & PR
 8. David says **"push"** → `git push -u origin <branch>`
 9. David says **"PR"** → `gh pr create` with clear title + description
+   - After PR is created, parse the PR number from the URL and prepend it to the title:
+     ```bash
+     PR_NUM=$(gh pr view --json number -q .number)
+     gh pr edit --title "#${PR_NUM} [pc] your-title-here"
+     ```
+   - This makes the PR number visible in Vercel's deployment list (squash merge uses PR title as commit message)
 10. Post the PR URL — David reviews on GitHub
 
 #### Phase 4 — Vercel preview
