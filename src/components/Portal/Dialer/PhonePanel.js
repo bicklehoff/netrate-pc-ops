@@ -21,6 +21,31 @@ const TABS = [
   { id: 'history', label: 'History' },
 ];
 
+// Drag threshold (px) — movement below this is treated as a click
+const DRAG_THRESHOLD = 5;
+
+function loadPos(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return fallback;
+}
+
+function savePos(key, pos) {
+  try { localStorage.setItem(key, JSON.stringify(pos)); } catch {}
+}
+
+// Clamp position so the element stays on screen
+function clamp(pos, elW, elH) {
+  const maxX = window.innerWidth - elW;
+  const maxY = window.innerHeight - elH;
+  return {
+    x: Math.max(0, Math.min(pos.x, maxX)),
+    y: Math.max(0, Math.min(pos.y, maxY)),
+  };
+}
+
 export default function PhonePanel() {
   const { dial, callState, IDLE, INCOMING, deviceReady, error } = useDialer();
   const [isOpen, setIsOpen] = useState(false);
@@ -30,6 +55,78 @@ export default function PhonePanel() {
   const [isPoppedOut, setIsPoppedOut] = useState(false);
   const popupRef = useRef(null);
   const panelRef = useRef(null);
+
+  // ─── Drag state ───
+  const [fabPos, setFabPos] = useState(() => loadPos('phone-fab-pos', null));
+  const [panelPos, setPanelPos] = useState(() => loadPos('phone-panel-pos', null));
+  const dragRef = useRef({ active: false, startX: 0, startY: 0, startPosX: 0, startPosY: 0, didDrag: false, target: null });
+
+  // Set sensible defaults once we know window size
+  useEffect(() => {
+    if (!fabPos) {
+      setFabPos({ x: window.innerWidth - 80, y: window.innerHeight - 80 });
+    }
+    if (!panelPos) {
+      setPanelPos({ x: window.innerWidth - 444, y: window.innerHeight - 620 });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Re-clamp on window resize
+  useEffect(() => {
+    function handleResize() {
+      setFabPos(p => p ? clamp(p, 56, 56) : p);
+      setPanelPos(p => p ? clamp(p, 420, 580) : p);
+    }
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const handleDragStart = useCallback((e, target) => {
+    if (e.button !== 0) return;
+    const pos = target === 'fab' ? fabPos : panelPos;
+    if (!pos) return;
+    dragRef.current = {
+      active: true,
+      startX: e.clientX,
+      startY: e.clientY,
+      startPosX: pos.x,
+      startPosY: pos.y,
+      didDrag: false,
+      target,
+    };
+    e.preventDefault();
+  }, [fabPos, panelPos]);
+
+  useEffect(() => {
+    function handleMouseMove(e) {
+      const d = dragRef.current;
+      if (!d.active) return;
+      const dx = e.clientX - d.startX;
+      const dy = e.clientY - d.startY;
+      if (!d.didDrag && Math.abs(dx) < DRAG_THRESHOLD && Math.abs(dy) < DRAG_THRESHOLD) return;
+      d.didDrag = true;
+      const elW = d.target === 'fab' ? 56 : 420;
+      const elH = d.target === 'fab' ? 56 : 580;
+      const newPos = clamp({ x: d.startPosX + dx, y: d.startPosY + dy }, elW, elH);
+      if (d.target === 'fab') setFabPos(newPos);
+      else setPanelPos(newPos);
+    }
+    function handleMouseUp() {
+      const d = dragRef.current;
+      if (!d.active) return;
+      d.active = false;
+      if (d.didDrag) {
+        const pos = d.target === 'fab' ? fabPos : panelPos;
+        if (pos) savePos(d.target === 'fab' ? 'phone-fab-pos' : 'phone-panel-pos', pos);
+      }
+    }
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [fabPos, panelPos]);
 
   // Auto-open when a call starts (not incoming — that uses the toast)
   useEffect(() => {
@@ -149,22 +246,24 @@ export default function PhonePanel() {
     return (
       <button
         data-phone-fab
-        onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-[60] w-14 h-14 bg-brand text-white rounded-2xl shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center group"
-        title="Phone (Ctrl+Shift+P)"
+        onMouseDown={(e) => handleDragStart(e, 'fab')}
+        onClick={() => { if (!dragRef.current.didDrag) setIsOpen(true); }}
+        className="fixed z-[60] w-14 h-14 bg-brand text-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow flex items-center justify-center group cursor-grab active:cursor-grabbing"
+        style={fabPos ? { left: fabPos.x, top: fabPos.y } : { right: 24, bottom: 24 }}
+        title="Phone (Ctrl+Shift+P) — drag to move"
       >
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-6 h-6 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
         </svg>
         {/* Online indicator */}
-        <span className={`absolute top-1 right-1 w-3 h-3 rounded-full border-2 border-white ${deviceReady ? 'bg-green-500' : 'bg-gray-300'}`} />
+        <span className={`absolute top-1 right-1 w-3 h-3 rounded-full border-2 border-white ${deviceReady ? 'bg-green-500' : 'bg-gray-300'} pointer-events-none`} />
       </button>
     );
   }
 
   if (isPoppedOut) {
     return (
-      <div className="fixed bottom-6 right-6 z-[60]">
+      <div className="fixed z-[60]" style={fabPos ? { left: fabPos.x, top: fabPos.y } : { right: 24, bottom: 24 }}>
         <button
           onClick={handlePopOut}
           className="px-4 py-3 bg-violet-100 text-violet-700 border-2 border-dashed border-violet-300 rounded-2xl shadow-md hover:shadow-lg transition-all flex items-center gap-3 group"
@@ -188,15 +287,21 @@ export default function PhonePanel() {
   return (
     <div
       ref={panelRef}
-      className="fixed bottom-6 right-6 z-[60] w-[420px] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-200"
-      style={{ maxHeight: 'calc(100vh - 120px)' }}
+      className="fixed z-[60] w-[420px] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-200"
+      style={{
+        maxHeight: 'calc(100vh - 40px)',
+        ...(panelPos ? { left: panelPos.x, top: panelPos.y } : { right: 24, bottom: 24 }),
+      }}
     >
-      {/* Header */}
-      <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/80 flex items-center gap-3">
-        <svg className="w-[18px] h-[18px] text-brand flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      {/* Header — drag handle */}
+      <div
+        onMouseDown={(e) => { if (!e.target.closest('button')) handleDragStart(e, 'panel'); }}
+        className="px-4 py-3 border-b border-gray-100 bg-gray-50/80 flex items-center gap-3 cursor-grab active:cursor-grabbing select-none"
+      >
+        <svg className="w-[18px] h-[18px] text-brand flex-shrink-0 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
         </svg>
-        <h3 className="text-sm font-bold flex-1">Phone</h3>
+        <h3 className="text-sm font-bold flex-1 pointer-events-none">Phone</h3>
         <div className="flex items-center gap-1.5 mr-2">
           <span className={`w-2 h-2 rounded-full ${deviceReady ? 'bg-green-500' : 'bg-gray-300'}`} />
           <span className="text-[10px] text-gray-400">{deviceReady ? 'Online' : 'Connecting...'}</span>
