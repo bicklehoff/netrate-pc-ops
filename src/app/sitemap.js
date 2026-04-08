@@ -153,6 +153,12 @@ export default function sitemap() {
       changeFrequency: 'monthly',
       priority: 0.7,
     },
+    {
+      url: `${BASE_URL}/refinance-calculator`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.7,
+    },
     // Rate sub-pages
     {
       url: `${BASE_URL}/rates/non-qm`,

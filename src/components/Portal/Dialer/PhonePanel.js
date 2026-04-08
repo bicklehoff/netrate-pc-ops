@@ -46,6 +46,123 @@ function clamp(pos, elW, elH) {
   };
 }
 
+// Inline panel shown on the SMS tab when no contact is selected.
+// Lets the user search contacts or type a phone number to start a thread.
+function SmsStartPanel({ onSelectContact }) {
+  const [smsTo, setSmsTo] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const debounceRef = useRef(null);
+
+  useEffect(() => {
+    if (smsTo.length < 2) { setSearchResults([]); return; }
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const res = await fetch(`/api/dialer/contacts/search?q=${encodeURIComponent(smsTo)}`);
+        const data = await res.json();
+        setSearchResults(data.contacts || []);
+      } catch {} finally { setSearching(false); }
+    }, 300);
+    return () => clearTimeout(debounceRef.current);
+  }, [smsTo]);
+
+  // Check if input looks like a phone number (digits, spaces, dashes, parens, +)
+  const isPhone = /^[\d\s\-\(\)\+]{7,}$/.test(smsTo.replace(/\s/g, ''));
+
+  const handleStartWithNumber = () => {
+    // Normalize to E.164-ish
+    const digits = smsTo.replace(/\D/g, '');
+    const phone = digits.length === 10 ? `+1${digits}` : `+${digits}`;
+    onSelectContact({ phone, firstName: phone, lastName: '', id: null, smsMessages: [] });
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="p-4 space-y-3">
+        <div className="relative">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            type="text"
+            value={smsTo}
+            onChange={(e) => setSmsTo(e.target.value)}
+            placeholder="Search contact or type a number..."
+            className="w-full pl-9 pr-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand bg-gray-50"
+            autoFocus
+          />
+          {searching && (
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+              <div className="w-4 h-4 border-2 border-gray-300 border-t-brand rounded-full animate-spin" />
+            </div>
+          )}
+        </div>
+
+        {/* Direct number option */}
+        {isPhone && (
+          <button
+            onClick={handleStartWithNumber}
+            className="w-full flex items-center gap-3 px-3 py-2.5 bg-brand/5 rounded-xl hover:bg-brand/10 transition-colors text-left"
+          >
+            <div className="w-8 h-8 bg-brand/10 rounded-full flex items-center justify-center">
+              <svg className="w-4 h-4 text-brand" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-900">Text {smsTo}</p>
+              <p className="text-[10px] text-gray-500">Send to this number directly</p>
+            </div>
+          </button>
+        )}
+
+        {/* Contact results */}
+        {searchResults.length > 0 && (
+          <div className="border border-gray-200 rounded-xl overflow-hidden">
+            {searchResults.slice(0, 5).map((contact) => (
+              <button
+                key={contact.id}
+                onClick={() => onSelectContact(contact)}
+                className="w-full px-3 py-2.5 text-left hover:bg-gray-50 flex items-center gap-3 border-b border-gray-100 last:border-0"
+              >
+                <div className="w-8 h-8 bg-brand/10 rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="text-xs font-semibold text-brand">
+                    {contact.firstName?.[0]}{contact.lastName?.[0]}
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">
+                    {contact.firstName} {contact.lastName}
+                  </p>
+                  <p className="text-xs text-gray-500 truncate">{contact.phone || ''}</p>
+                </div>
+                <svg className="w-4 h-4 text-brand flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
+                </svg>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {smsTo.length >= 2 && searchResults.length === 0 && !searching && !isPhone && (
+          <p className="text-xs text-gray-400 text-center py-4">No contacts found</p>
+        )}
+      </div>
+
+      {!smsTo && (
+        <div className="flex-1 flex flex-col items-center justify-center text-center px-4">
+          <svg className="w-10 h-10 text-gray-200 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          </svg>
+          <p className="text-xs text-gray-400">Search a contact or type a number</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function PhonePanel() {
   const { dial, callState, IDLE, INCOMING, deviceReady, error } = useDialer();
   const [isOpen, setIsOpen] = useState(false);
@@ -451,12 +568,12 @@ export default function PhonePanel() {
                 messages={selectedContact.smsMessages || []}
               />
             ) : (
-              <div className="flex flex-col items-center justify-center h-full text-center px-4">
-                <svg className="w-10 h-10 text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                </svg>
-                <p className="text-xs text-gray-400">Select a contact to view SMS</p>
-              </div>
+              <SmsStartPanel
+                onSelectContact={(contact) => {
+                  setSelectedContact(contact);
+                  // Stay on SMS tab — don't jump to dial
+                }}
+              />
             )}
           </div>
         )}

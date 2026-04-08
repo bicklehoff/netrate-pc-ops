@@ -144,8 +144,8 @@ export default function RefinancePlaybook() {
             This is a judgment call — and it&apos;s exactly the kind of scenario where having a broker who knows the rate sheet matters. A small rate bump at the right spot on the pricing grid can generate enough credit to close the gap without meaningfully changing your payment.
           </p>
           <p className="mt-4">
-            We&apos;re building a calculator to model all four options side by side so you can see the trade-offs before you decide.{' '}
-            <Link href="/tools/refi-analyzer" className="text-brand hover:text-brand-dark font-medium">Refinance Calculator &rarr;</Link>
+            Compare all four options side by side so you can see the trade-offs before you decide.{' '}
+            <Link href="/refinance-calculator" className="text-brand hover:text-brand-dark font-medium">Refinance Calculator &rarr;</Link>
           </p>
         </section>
 

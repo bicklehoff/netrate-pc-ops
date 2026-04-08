@@ -28,7 +28,6 @@ export default function PrivacyPage() {
         <ul className="list-disc pl-5 space-y-1">
           <li><strong>Google Analytics 4 (GA4):</strong> for site analytics, traffic sources, and behavioral insights. We use Google Analytics to understand how visitors interact with our website. No personal data is sold or shared. You may opt out through your browser settings.</li>
           <li><strong>Microsoft Clarity:</strong> for session replay and heatmap analytics. Clarity records anonymized user interactions (clicks, scrolls, mouse movements) to help us improve site usability. Clarity does not collect passwords, payment information, or other sensitive form fields. You may opt out via your browser&apos;s Do Not Track setting. Learn more at <a href="https://clarity.microsoft.com" className="text-brand underline" target="_blank" rel="noopener noreferrer">clarity.microsoft.com</a>.</li>
-          <li><strong>Microsoft Ads (UET Tag):</strong> for advertising attribution and remarketing</li>
           <li><strong>Zoho CRM:</strong> for secure management of lead submissions and communications</li>
         </ul>
         <p>
