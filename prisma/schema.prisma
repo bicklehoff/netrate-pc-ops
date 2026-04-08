@@ -722,38 +722,38 @@ model Account {
 
 model AdjustmentRule {
   id              String       @id @db.Uuid
-  lender_id       String       @db.Uuid
-  adjustment_type String
+  lenderId  String  @map("lender_id") @db.Uuid
+  adjustmentType  String  @map("adjustment_type")
   purpose         String?
   agency          String?
   tier            String?
   state           String?
-  escrow_type     String?
-  product_group   String?
-  term_group      String?
-  feature_name    String?
-  fico_min        Int?
-  fico_max        Int?
-  ltv_min         Decimal?     @db.Decimal(5, 2)
-  ltv_max         Decimal?     @db.Decimal(5, 2)
-  loan_amount_min Int?
-  loan_amount_max Int?
-  term_min        Int?
-  term_max        Int?
+  escrowType  String?  @map("escrow_type")
+  productGroup  String?  @map("product_group")
+  termGroup  String?  @map("term_group")
+  featureName  String?  @map("feature_name")
+  ficoMin  Int?  @map("fico_min")
+  ficoMax  Int?  @map("fico_max")
+  ltvMin  Decimal?  @map("ltv_min") @db.Decimal(5, 2)
+  ltvMax  Decimal?  @map("ltv_max") @db.Decimal(5, 2)
+  loanAmountMin  Int?  @map("loan_amount_min")
+  loanAmountMax  Int?  @map("loan_amount_max")
+  termMin  Int?  @map("term_min")
+  termMax  Int?  @map("term_max")
   value           Decimal      @db.Decimal(8, 4)
-  effective_date  DateTime     @db.Date
-  expires_date    DateTime?    @db.Date
+  effectiveDate  DateTime  @map("effective_date") @db.Date
+  expiresDate  DateTime?  @map("expires_date") @db.Date
   status          String       @default("active")
   source          String?
-  created_at      DateTime     @default(now()) @db.Timestamptz(6)
-  updated_at      DateTime     @db.Timestamptz(6)
-  loan_type       String?
-  lender          RateLender @relation(fields: [lender_id], references: [id])
+  createdAt  DateTime  @map("created_at") @default(now()) @db.Timestamptz(6)
+  updatedAt  DateTime  @map("updated_at") @db.Timestamptz(6)
+  loanType  String?  @map("loan_type")
+  lender          RateLender @relation(fields: [lenderId], references: [id])
 
-  @@index([lender_id, adjustment_type, loan_type, status])
-  @@index([lender_id, adjustment_type, purpose, tier])
-  @@index([lender_id, adjustment_type, status])
-  @@index([status, effective_date])
+  @@index([lenderId, adjustmentType, loanType, status])
+  @@index([lenderId, adjustmentType, purpose, tier])
+  @@index([lenderId, adjustmentType, status])
+  @@index([status, effectiveDate])
 
   @@map("adjustment_rules")
 }
@@ -881,29 +881,29 @@ model FeeTemplate {
   county                    String?
   purpose                   String
   label                     String?
-  lender_fee_uw             Decimal? @default(0) @db.Decimal(10, 2)
-  lender_fee_origination    Decimal? @default(0) @db.Decimal(10, 2)
+  lenderFeeUw  Decimal?  @map("lender_fee_uw") @default(0) @db.Decimal(10, 2)
+  lenderFeeOrigination  Decimal?  @map("lender_fee_origination") @default(0) @db.Decimal(10, 2)
   appraisal                 Decimal? @db.Decimal(10, 2)
-  credit_report             Decimal? @db.Decimal(10, 2)
-  mers_fee                  Decimal? @db.Decimal(10, 2)
-  flood_cert                Decimal? @db.Decimal(10, 2)
-  tax_service               Decimal? @db.Decimal(10, 2)
-  title_endorsement         Decimal? @db.Decimal(10, 2)
-  title_lenders_policy      Decimal? @db.Decimal(10, 2)
-  recording_service_fee     Decimal? @db.Decimal(10, 2)
-  closing_protection_letter Decimal? @db.Decimal(10, 2)
-  settlement_agent_fee      Decimal? @db.Decimal(10, 2)
-  recording_fees            Decimal? @db.Decimal(10, 2)
-  county_recording_fee      Decimal? @db.Decimal(10, 2)
-  home_insurance_at_close   Decimal? @db.Decimal(10, 2)
-  flood_insurance           Decimal? @db.Decimal(10, 2)
-  property_tax_monthly      Decimal? @db.Decimal(10, 2)
-  escrow_insurance_months   Int?
-  escrow_tax_months         Int?
+  creditReport  Decimal?  @map("credit_report") @db.Decimal(10, 2)
+  mersFee  Decimal?  @map("mers_fee") @db.Decimal(10, 2)
+  floodCert  Decimal?  @map("flood_cert") @db.Decimal(10, 2)
+  taxService  Decimal?  @map("tax_service") @db.Decimal(10, 2)
+  titleEndorsement  Decimal?  @map("title_endorsement") @db.Decimal(10, 2)
+  titleLendersPolicy  Decimal?  @map("title_lenders_policy") @db.Decimal(10, 2)
+  recordingServiceFee  Decimal?  @map("recording_service_fee") @db.Decimal(10, 2)
+  closingProtectionLetter  Decimal?  @map("closing_protection_letter") @db.Decimal(10, 2)
+  settlementAgentFee  Decimal?  @map("settlement_agent_fee") @db.Decimal(10, 2)
+  recordingFees  Decimal?  @map("recording_fees") @db.Decimal(10, 2)
+  countyRecordingFee  Decimal?  @map("county_recording_fee") @db.Decimal(10, 2)
+  homeInsuranceAtClose  Decimal?  @map("home_insurance_at_close") @db.Decimal(10, 2)
+  floodInsurance  Decimal?  @map("flood_insurance") @db.Decimal(10, 2)
+  propertyTaxMonthly  Decimal?  @map("property_tax_monthly") @db.Decimal(10, 2)
+  escrowInsuranceMonths  Int?  @map("escrow_insurance_months")
+  escrowTaxMonths  Int?  @map("escrow_tax_months")
   notes                     String?
   status                    String   @default("active")
-  created_at                DateTime @default(now()) @db.Timestamptz(6)
-  updated_at                DateTime @db.Timestamptz(6)
+  createdAt  DateTime  @map("created_at") @default(now()) @db.Timestamptz(6)
+  updatedAt  DateTime  @map("updated_at") @db.Timestamptz(6)
 
   @@unique([state, county, purpose])
   @@index([state, purpose])
@@ -1208,26 +1208,26 @@ model RateAlert {
   id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email            String
   type             String    @default("strike")
-  loan_type        String?   @default("30yr_fixed")
-  target_rate      Decimal?  @db.Decimal(5, 3)
+  loanType  String?  @map("loan_type") @default("30yr_fixed")
+  targetRate  Decimal?  @map("target_rate") @db.Decimal(5, 3)
   status           String?   @default("active")
-  last_notified_at DateTime? @db.Timestamptz(6)
-  created_at       DateTime? @default(now()) @db.Timestamptz(6)
-  updated_at       DateTime? @default(now()) @db.Timestamptz(6)
-  loan_amount      Decimal?  @db.Decimal(12, 4)
+  lastNotifiedAt  DateTime?  @map("last_notified_at") @db.Timestamptz(6)
+  createdAt  DateTime?  @map("created_at") @default(now()) @db.Timestamptz(6)
+  updatedAt  DateTime?  @map("updated_at") @default(now()) @db.Timestamptz(6)
+  loanAmount  Decimal?  @map("loan_amount") @db.Decimal(12, 4)
   state            String?
   term             Int?
-  rate_alerts      Boolean?  @default(false)
+  rateAlerts  Boolean?  @map("rate_alerts") @default(false)
   newsletter       Boolean?  @default(false)
-  confirmed_at     DateTime? @db.Timestamptz(6)
-  confirm_token    String?
-  last_checked_at  DateTime? @db.Timestamptz(6)
-  notify_count     Int?
-  triggered_at     DateTime? @db.Timestamptz(6)
-  triggered_rate   Decimal?  @db.Decimal(12, 4)
-  contact_id       String?
+  confirmedAt  DateTime?  @map("confirmed_at") @db.Timestamptz(6)
+  confirmToken  String?  @map("confirm_token")
+  lastCheckedAt  DateTime?  @map("last_checked_at") @db.Timestamptz(6)
+  notifyCount  Int?  @map("notify_count")
+  triggeredAt  DateTime?  @map("triggered_at") @db.Timestamptz(6)
+  triggeredRate  Decimal?  @map("triggered_rate") @db.Decimal(12, 4)
+  contactId  String?  @map("contact_id")
   source           String?
-  ga_client_id     String?
+  gaClientId  String?  @map("ga_client_id")
 
   @@map("rate_alerts")
 }
@@ -1237,24 +1237,24 @@ model RateLender {
   code                    String             @unique
   name                    String
   status                  String             @default("active")
-  uw_fee                  Decimal?           @db.Decimal(10, 2)
-  origination_fee         Decimal?           @default(0) @db.Decimal(10, 2)
-  other_fees              Json?
-  max_comp_cap_purchase   Decimal?           @db.Decimal(10, 2)
-  max_comp_cap_refi       Decimal?           @db.Decimal(10, 2)
-  max_comp_rate           Decimal?           @db.Decimal(5, 4)
-  price_format            String             @default("100-based")
-  llpa_mode               String             @default("separate")
-  lock_extension          String?
+  uwFee  Decimal?  @map("uw_fee") @db.Decimal(10, 2)
+  originationFee  Decimal?  @map("origination_fee") @default(0) @db.Decimal(10, 2)
+  otherFees  Json?  @map("other_fees")
+  maxCompCapPurchase  Decimal?  @map("max_comp_cap_purchase") @db.Decimal(10, 2)
+  maxCompCapRefi  Decimal?  @map("max_comp_cap_refi") @db.Decimal(10, 2)
+  maxCompRate  Decimal?  @map("max_comp_rate") @db.Decimal(5, 4)
+  priceFormat  String  @map("price_format") @default("100-based")
+  llpaMode  String  @map("llpa_mode") @default("separate")
+  lockExtension  String?  @map("lock_extension")
   notes                   String?
-  contact_email           String?
-  contact_phone           String?
-  portal_url              String?
-  created_at              DateTime           @default(now()) @db.Timestamptz(6)
-  updated_at              DateTime           @db.Timestamptz(6)
-  comp_rate               Decimal?           @db.Decimal(5, 4)
-  excluded_state_variants Json?
-  fha_ufmip               Decimal?           @db.Decimal(6, 4)
+  contactEmail  String?  @map("contact_email")
+  contactPhone  String?  @map("contact_phone")
+  portalUrl  String?  @map("portal_url")
+  createdAt  DateTime  @map("created_at") @default(now()) @db.Timestamptz(6)
+  updatedAt  DateTime  @map("updated_at") @db.Timestamptz(6)
+  compRate  Decimal?  @map("comp_rate") @db.Decimal(5, 4)
+  excludedStateVariants  Json?  @map("excluded_state_variants")
+  fhaUfmip  Decimal?  @map("fha_ufmip") @db.Decimal(6, 4)
   adjustmentRules         AdjustmentRule[]
   rateProducts            RateProduct[]
   rateSheets              RateSheet[]
@@ -1264,57 +1264,57 @@ model RateLender {
 
 model RatePrice {
   id            String        @id @db.Uuid
-  rate_sheet_id String        @db.Uuid
-  product_id    String        @db.Uuid
+  rateSheetId  String  @map("rate_sheet_id") @db.Uuid
+  productId  String  @map("product_id") @db.Uuid
   rate          Decimal       @db.Decimal(5, 3)
   price         Decimal       @db.Decimal(8, 4)
-  lock_days     Int
-  created_at    DateTime      @default(now()) @db.Timestamptz(6)
-  product       RateProduct @relation(fields: [product_id], references: [id])
-  rateSheet     RateSheet     @relation(fields: [rate_sheet_id], references: [id], onDelete: Cascade)
+  lockDays  Int  @map("lock_days")
+  createdAt  DateTime  @map("created_at") @default(now()) @db.Timestamptz(6)
+  product       RateProduct @relation(fields: [productId], references: [id])
+  rateSheet     RateSheet     @relation(fields: [rateSheetId], references: [id], onDelete: Cascade)
 
-  @@index([product_id, rate])
-  @@index([rate_sheet_id])
-  @@index([rate_sheet_id, product_id, lock_days])
+  @@index([productId, rate])
+  @@index([rateSheetId])
+  @@index([rateSheetId, productId, lockDays])
 
   @@map("rate_prices")
 }
 
 model RateProduct {
   id               String        @id @db.Uuid
-  lender_id        String        @db.Uuid
-  raw_name         String
-  product_code     String?
-  display_name     String
-  loan_type        String
+  lenderId  String  @map("lender_id") @db.Uuid
+  rawName  String  @map("raw_name")
+  productCode  String?  @map("product_code")
+  displayName  String  @map("display_name")
+  loanType  String  @map("loan_type")
   agency           String?
   tier             String?
   term             Int           @default(30)
-  product_type     String        @default("fixed")
+  productType  String  @map("product_type") @default("fixed")
   occupancy        String        @default("primary")
-  loan_amount_min  Int?
-  loan_amount_max  Int?
-  is_high_balance  Boolean       @default(false)
-  is_streamline    Boolean       @default(false)
-  is_buydown       Boolean       @default(false)
-  is_interest_only Boolean       @default(false)
-  is_fast_track    Boolean       @default(false)
-  arm_structure    String?
-  doc_type         String?
-  fico_min         Int?
-  fico_max         Int?
-  max_ltv          Decimal?      @db.Decimal(5, 2)
+  loanAmountMin  Int?  @map("loan_amount_min")
+  loanAmountMax  Int?  @map("loan_amount_max")
+  isHighBalance  Boolean  @map("is_high_balance") @default(false)
+  isStreamline  Boolean  @map("is_streamline") @default(false)
+  isBuydown  Boolean  @map("is_buydown") @default(false)
+  isInterestOnly  Boolean  @map("is_interest_only") @default(false)
+  isFastTrack  Boolean  @map("is_fast_track") @default(false)
+  armStructure  String?  @map("arm_structure")
+  docType  String?  @map("doc_type")
+  ficoMin  Int?  @map("fico_min")
+  ficoMax  Int?  @map("fico_max")
+  maxLtv  Decimal?  @map("max_ltv") @db.Decimal(5, 2)
   status           String        @default("active")
-  created_at       DateTime      @default(now()) @db.Timestamptz(6)
-  updated_at       DateTime      @db.Timestamptz(6)
-  origination_fee  Decimal?      @db.Decimal(10, 2)
-  uw_fee           Decimal?      @db.Decimal(10, 2)
+  createdAt  DateTime  @map("created_at") @default(now()) @db.Timestamptz(6)
+  updatedAt  DateTime  @map("updated_at") @db.Timestamptz(6)
+  originationFee  Decimal?  @map("origination_fee") @db.Decimal(10, 2)
+  uwFee  Decimal?  @map("uw_fee") @db.Decimal(10, 2)
   ratePrices       RatePrice[]
-  lender           RateLender  @relation(fields: [lender_id], references: [id])
+  lender           RateLender  @relation(fields: [lenderId], references: [id])
 
-  @@unique([lender_id, raw_name])
-  @@index([lender_id, loan_type, term])
-  @@index([loan_type])
+  @@unique([lenderId, rawName])
+  @@index([lenderId, loanType, term])
+  @@index([loanType])
   @@index([status])
 
   @@map("rate_products")
