@@ -165,6 +165,17 @@ function RefiAnalyzerContent() {
             </div>
           </div>
 
+          <div className="bg-brand/5 border border-brand/20 rounded-xl p-4 text-sm">
+            <strong className="text-gray-900">Ready to see how your refinance would actually be structured?</strong>
+            <p className="text-gray-600 mt-1">
+              Compare four strategies side by side — balance-to-balance, roll everything in, split the difference, or buy the rate down.
+              See the real cash flow, not just the monthly savings.
+            </p>
+            <Link href="/refinance-calculator" className="inline-flex items-center mt-2 text-brand font-medium hover:underline">
+              Open the Refinance Calculator &rarr;
+            </Link>
+          </div>
+
           <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-xs text-gray-500">
             <strong>When does a refi make sense?</strong> Generally, if you can lower your rate by 0.5%+ and plan to stay
             in the home past the break-even point, refinancing saves money. This calculator compares principal &amp; interest only —
@@ -172,7 +183,7 @@ function RefiAnalyzerContent() {
           </div>
 
           <div className="flex gap-3 pt-2">
-            <Link href="/contact" className="inline-flex items-center px-5 py-2.5 bg-brand text-[#fff000] text-sm font-medium rounded-2xl hover:bg-brand-dark transition-colors">
+            <Link href="/contact" className="inline-flex items-center px-5 py-2.5 bg-brand text-white text-sm font-medium rounded-2xl hover:bg-brand-dark transition-colors">
               Talk to a loan officer
             </Link>
             <Link href="/rates" className="inline-flex items-center px-5 py-2.5 border-2 border-brand text-brand text-sm font-medium rounded-2xl hover:bg-brand/5 transition-colors">
