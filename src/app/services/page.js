@@ -3,6 +3,9 @@ import Link from 'next/link';
 export const metadata = {
   title: 'Services | NetRate Mortgage',
   description: 'Refinance, home purchase, and cash-out loans. Conventional, FHA, VA, and jumbo. Licensed in California, Colorado, Oregon, and Texas.',
+  alternates: {
+    canonical: 'https://netratemortgage.com/services',
+  },
 };
 
 export default function ServicesPage() {

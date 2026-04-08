@@ -1,6 +1,7 @@
 export const metadata = {
   title: 'Licensing | NetRate Mortgage',
   description: 'State licensing information for NetRate Mortgage LLC. NMLS #1111861.',
+  alternates: { canonical: 'https://netratemortgage.com/licensing' },
 };
 
 export default function LicensingPage() {

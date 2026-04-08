@@ -1,6 +1,7 @@
 export const metadata = {
   title: 'Terms & Conditions | NetRate Mortgage',
   description: 'Terms and conditions governing use of the NetRate Mortgage website.',
+  alternates: { canonical: 'https://netratemortgage.com/terms' },
 };
 
 export default function TermsPage() {

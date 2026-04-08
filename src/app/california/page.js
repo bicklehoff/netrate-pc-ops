@@ -4,6 +4,7 @@ import CountyLoanLimits from '@/components/CountyLoanLimits';
 export const metadata = {
   title: 'California Mortgage Rates — Licensed Mortgage Broker | NetRate Mortgage',
   description: 'NetRate Mortgage is licensed in California. See today\'s mortgage rates — refinance, purchase, and reverse mortgage — before you apply.',
+  alternates: { canonical: 'https://netratemortgage.com/california' },
 };
 
 export default function California() {

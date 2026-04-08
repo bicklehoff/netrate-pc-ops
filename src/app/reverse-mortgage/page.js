@@ -3,6 +3,9 @@ import Link from 'next/link';
 export const metadata = {
   title: 'Reverse Mortgages Explained — Use Cases, Qualifying, and What the TV Ads Don\'t Tell You | NetRate Mortgage',
   description: 'A reverse mortgage isn\'t what you think. It\'s not a last resort — it\'s a financial tool with use cases most people never hear about. Here\'s how it actually works.',
+  alternates: {
+    canonical: 'https://netratemortgage.com/reverse-mortgage',
+  },
 };
 
 export default function ReverseMortgage() {
