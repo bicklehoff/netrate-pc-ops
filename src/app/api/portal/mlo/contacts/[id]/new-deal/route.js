@@ -7,24 +7,24 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 
 // Fields to copy from the source loan (deal-specific financial data)
 const COPY_FIELDS = [
-  'monthlyBaseIncome', 'otherMonthlyIncome', 'otherIncomeSource',
-  'employmentStatus', 'employerName', 'positionTitle', 'yearsInPosition',
-  'presentHousingExpense', 'maritalStatus', 'numDependents', 'dependentAges',
-  'declarations', 'creditScore',
-  'currentAddress', 'addressYears', 'addressMonths', 'mailingAddress',
-  'occupancy', 'lienStatus',
+  'monthly_base_income', 'other_monthly_income', 'other_income_source',
+  'employment_status', 'employer_name', 'position_title', 'years_in_position',
+  'present_housing_expense', 'marital_status', 'num_dependents', 'dependent_ages',
+  'declarations', 'credit_score',
+  'current_address', 'address_years', 'address_months', 'mailing_address',
+  'occupancy', 'lien_status',
 ];
 
 // Fields to copy from source LoanBorrower (primary)
 const COPY_BORROWER_FIELDS = [
-  'maritalStatus', 'currentAddress', 'addressYears', 'addressMonths',
-  'mailingAddress', 'employmentStatus', 'employerName', 'positionTitle',
-  'yearsInPosition', 'monthlyBaseIncome', 'otherMonthlyIncome', 'otherIncomeSource',
-  'dobEncrypted', 'housingType', 'monthlyRent', 'cellPhone',
+  'marital_status', 'current_address', 'address_years', 'address_months',
+  'mailing_address', 'employment_status', 'employer_name', 'position_title',
+  'years_in_position', 'monthly_base_income', 'other_monthly_income', 'other_income_source',
+  'dob_encrypted', 'housing_type', 'monthly_rent', 'cell_phone',
   'declarations',
 ];
 
@@ -40,16 +40,17 @@ export async function POST(request, { params }) {
     const { sourceLoanId } = body;
 
     // Load contact
-    const contact = await prisma.contact.findUnique({
-      where: { id: contactId },
-      select: { id: true, borrowerId: true, firstName: true, lastName: true, email: true, phone: true },
-    });
+    const contactRows = await sql`
+      SELECT id, borrower_id, first_name, last_name, email, phone
+      FROM contacts WHERE id = ${contactId} LIMIT 1
+    `;
+    const contact = contactRows[0];
 
     if (!contact) {
       return NextResponse.json({ error: 'Contact not found' }, { status: 404 });
     }
 
-    if (!contact.borrowerId) {
+    if (!contact.borrower_id) {
       return NextResponse.json({ error: 'Contact has no linked borrower account' }, { status: 400 });
     }
 
@@ -58,15 +59,8 @@ export async function POST(request, { params }) {
     let sourceBorrowerData = {};
 
     if (sourceLoanId) {
-      const sourceLoan = await prisma.loan.findUnique({
-        where: { id: sourceLoanId },
-        include: {
-          loanBorrowers: {
-            where: { borrowerType: 'primary' },
-            take: 1,
-          },
-        },
-      });
+      const sourceLoanRows = await sql`SELECT * FROM loans WHERE id = ${sourceLoanId} LIMIT 1`;
+      const sourceLoan = sourceLoanRows[0];
 
       if (!sourceLoan) {
         return NextResponse.json({ error: 'Source loan not found' }, { status: 404 });
@@ -79,79 +73,96 @@ export async function POST(request, { params }) {
         }
       }
 
-      // Copy fields from source LoanBorrower
-      if (sourceLoan.loanBorrowers[0]) {
+      // Get primary LoanBorrower
+      const lbRows = await sql`
+        SELECT * FROM loan_borrowers
+        WHERE loan_id = ${sourceLoanId} AND borrower_type = 'primary'
+        LIMIT 1
+      `;
+      if (lbRows[0]) {
         for (const field of COPY_BORROWER_FIELDS) {
-          if (sourceLoan.loanBorrowers[0][field] != null) {
-            sourceBorrowerData[field] = sourceLoan.loanBorrowers[0][field];
+          if (lbRows[0][field] != null) {
+            sourceBorrowerData[field] = lbRows[0][field];
           }
         }
       }
     }
 
-    // Create new loan
-    const newLoan = await prisma.loan.create({
-      data: {
-        borrowerId: contact.borrowerId,
-        contactId: contact.id,
-        mloId: session.user.id,
-        status: 'draft',
-        ballInCourt: 'mlo',
-        applicationStep: 1,
-        numBorrowers: 1,
-        ...sourceData,
-        // These are always blank for a new deal
-        propertyAddress: undefined,
-        loanAmount: undefined,
-        loanType: undefined,
-        loanTerm: undefined,
-        interestRate: undefined,
-        purpose: undefined,
-        lenderName: undefined,
-        loanNumber: undefined,
-        lenderLoanNumber: undefined,
-      },
-    });
+    const skipForNew = ['property_address', 'loan_amount', 'loan_type', 'loan_term', 'interest_rate', 'purpose', 'lender_name', 'loan_number', 'lender_loan_number'];
+
+    // Insert base loan, then UPDATE with source data
+    let newLoan;
+    const baseInsert = await sql`
+      INSERT INTO loans (borrower_id, contact_id, mlo_id, status, ball_in_court, application_step, num_borrowers, created_at, updated_at)
+      VALUES (${contact.borrower_id}, ${contact.id}, ${session.user.id}, 'draft', 'mlo', 1, 1, NOW(), NOW())
+      RETURNING *
+    `;
+    newLoan = baseInsert[0];
+
+    // Apply source data via parameterized UPDATE if we have any
+    if (Object.keys(sourceData).length > 0) {
+      const setClauses = [];
+      const vals = [];
+      for (const [col, val] of Object.entries(sourceData)) {
+        if (!skipForNew.includes(col)) {
+          vals.push(typeof val === 'object' && val !== null ? JSON.stringify(val) : val);
+          const isJson = typeof val === 'object' && val !== null;
+          setClauses.push(`${col} = $${vals.length}${isJson ? '::jsonb' : ''}`);
+        }
+      }
+      if (setClauses.length > 0) {
+        vals.push(newLoan.id);
+        const q = `UPDATE loans SET ${setClauses.join(', ')} WHERE id = $${vals.length} RETURNING *`;
+        const updated = await sql(q, vals);
+        newLoan = updated[0];
+      }
+    }
 
     // Create primary LoanBorrower
-    await prisma.loanBorrower.create({
-      data: {
-        loanId: newLoan.id,
-        borrowerId: contact.borrowerId,
-        borrowerType: 'primary',
-        ordinal: 0,
-        ...sourceBorrowerData,
-      },
-    });
+    await sql`
+      INSERT INTO loan_borrowers (loan_id, borrower_id, borrower_type, ordinal, created_at, updated_at)
+      VALUES (${newLoan.id}, ${contact.borrower_id}, 'primary', 0, NOW(), NOW())
+    `;
+
+    // Apply source borrower data via parameterized UPDATE if we have any
+    if (Object.keys(sourceBorrowerData).length > 0) {
+      const setClauses = [];
+      const vals = [];
+      for (const [col, val] of Object.entries(sourceBorrowerData)) {
+        vals.push(typeof val === 'object' && val !== null ? JSON.stringify(val) : val);
+        const isJson = typeof val === 'object' && val !== null;
+        setClauses.push(`${col} = $${vals.length}${isJson ? '::jsonb' : ''}`);
+      }
+      if (setClauses.length > 0) {
+        setClauses.push('updated_at = NOW()');
+        vals.push(newLoan.id);
+        const q = `UPDATE loan_borrowers SET ${setClauses.join(', ')} WHERE loan_id = $${vals.length} AND borrower_type = 'primary'`;
+        await sql(q, vals);
+      }
+    }
 
     // Create LoanContact bridge record
-    await prisma.loanContact.create({
-      data: {
-        loanId: newLoan.id,
-        contactId: contact.id,
-        role: 'borrower',
-        isPrimary: true,
-        name: `${contact.firstName} ${contact.lastName}`,
-        email: contact.email,
-        phone: contact.phone,
-      },
-    });
+    await sql`
+      INSERT INTO loan_contacts (loan_id, contact_id, role, is_primary, name, email, phone, created_at, updated_at)
+      VALUES (${newLoan.id}, ${contact.id}, 'borrower', true,
+        ${`${contact.first_name} ${contact.last_name}`}, ${contact.email}, ${contact.phone},
+        NOW(), NOW())
+    `;
 
     // Audit trail
-    await prisma.loanEvent.create({
-      data: {
-        loanId: newLoan.id,
-        eventType: 'loan_cloned_from_contact',
-        actorType: 'mlo',
-        actorId: session.user.id,
-        newValue: 'New deal created from contact',
-        details: {
+    await sql`
+      INSERT INTO loan_events (loan_id, event_type, actor_type, actor_id, new_value, details, created_at)
+      VALUES (
+        ${newLoan.id}, 'loan_cloned_from_contact', 'mlo', ${session.user.id},
+        'New deal created from contact',
+        ${JSON.stringify({
           contactId: contact.id,
           sourceLoanId: sourceLoanId || null,
           copiedFields: Object.keys(sourceData),
-        },
-      },
-    });
+        })}::jsonb,
+        NOW()
+      )
+    `;
 
     return NextResponse.json({
       success: true,

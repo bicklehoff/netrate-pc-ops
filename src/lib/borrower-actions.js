@@ -1,7 +1,7 @@
 // Borrower Actions — lead/loan agnostic actions
 // These work on a contact regardless of whether they have a lead, loan, or borrower record.
 
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 import { sendEmail } from '@/lib/resend';
 import { welcomeTemplate, docRequestTemplate } from '@/lib/email-templates/borrower';
 import { encrypt } from '@/lib/encryption';
@@ -11,8 +11,9 @@ import { encrypt } from '@/lib/encryption';
  * Creates a minimal borrower if needed (placeholder SSN/DOB).
  */
 async function ensureBorrower(contact) {
-  if (contact.borrowerId) {
-    return await prisma.borrower.findUnique({ where: { id: contact.borrowerId } });
+  if (contact.borrower_id) {
+    const rows = await sql`SELECT * FROM borrowers WHERE id = ${contact.borrower_id} LIMIT 1`;
+    return rows[0] || null;
   }
 
   if (!contact.email) {
@@ -22,27 +23,20 @@ async function ensureBorrower(contact) {
   const emailLower = contact.email.toLowerCase().trim();
 
   // Check if borrower exists by email
-  let borrower = await prisma.borrower.findUnique({ where: { email: emailLower } });
+  let borrowerRows = await sql`SELECT * FROM borrowers WHERE email = ${emailLower} LIMIT 1`;
 
-  if (!borrower) {
-    borrower = await prisma.borrower.create({
-      data: {
-        email: emailLower,
-        firstName: contact.firstName || 'Unknown',
-        lastName: contact.lastName || 'Unknown',
-        phone: contact.phone || null,
-        ssnEncrypted: encrypt('000000000'),
-        dobEncrypted: encrypt('1900-01-01'),
-        ssnLastFour: '0000',
-      },
-    });
+  if (!borrowerRows.length) {
+    borrowerRows = await sql`
+      INSERT INTO borrowers (email, first_name, last_name, phone, ssn_encrypted, dob_encrypted, ssn_last_four, updated_at)
+      VALUES (${emailLower}, ${contact.first_name || 'Unknown'}, ${contact.last_name || 'Unknown'}, ${contact.phone || null}, ${encrypt('000000000')}, ${encrypt('1900-01-01')}, '0000', NOW())
+      RETURNING *
+    `;
   }
 
+  const borrower = borrowerRows[0];
+
   // Link contact to borrower
-  await prisma.contact.update({
-    where: { id: contact.id },
-    data: { borrowerId: borrower.id },
-  });
+  await sql`UPDATE contacts SET borrower_id = ${borrower.id}, updated_at = NOW() WHERE id = ${contact.id}`;
 
   return borrower;
 }
@@ -52,7 +46,8 @@ async function ensureBorrower(contact) {
  * Creates a borrower if needed, generates a magic link, sends welcome email.
  */
 export async function sendPortalInvite(contactId, actorId) {
-  const contact = await prisma.contact.findUnique({ where: { id: contactId } });
+  const contactRows = await sql`SELECT * FROM contacts WHERE id = ${contactId} LIMIT 1`;
+  const contact = contactRows[0];
   if (!contact) throw new Error('Contact not found');
   if (!contact.email) throw new Error('Contact must have an email');
 
@@ -63,38 +58,29 @@ export async function sendPortalInvite(contactId, actorId) {
   const magicToken = crypto.randomBytes(32).toString('hex');
   const magicExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours for invite
 
-  await prisma.borrower.update({
-    where: { id: borrower.id },
-    data: { magicToken, magicExpires },
-  });
+  await sql`
+    UPDATE borrowers SET magic_token = ${magicToken}, magic_expires = ${magicExpires}
+    WHERE id = ${borrower.id}
+  `;
 
   const portalUrl = process.env.NEXTAUTH_URL || 'https://www.netratemortgage.com';
   const magicLink = `${portalUrl}/portal/auth/verify?token=${magicToken}`;
 
   const template = welcomeTemplate({
-    firstName: contact.firstName,
+    firstName: contact.first_name,
     portalUrl: magicLink,
   });
 
   await sendEmail({ to: contact.email, ...template });
 
   // Log as contact note
-  await prisma.contactNote.create({
-    data: {
-      contactId,
-      content: `Portal invite sent to ${contact.email}`,
-      authorType: 'mlo',
-      authorId: actorId || null,
-      source: 'email',
-      title: 'Portal Invite',
-    },
-  });
+  await sql`
+    INSERT INTO contact_notes (contact_id, content, author_type, author_id, source, title)
+    VALUES (${contactId}, ${'Portal invite sent to ' + contact.email}, 'mlo', ${actorId || null}, 'email', 'Portal Invite')
+  `;
 
   // Update last contacted
-  await prisma.contact.update({
-    where: { id: contactId },
-    data: { lastContactedAt: new Date() },
-  });
+  await sql`UPDATE contacts SET last_contacted_at = NOW(), updated_at = NOW() WHERE id = ${contactId}`;
 
   return { success: true, borrowerId: borrower.id };
 }
@@ -104,7 +90,8 @@ export async function sendPortalInvite(contactId, actorId) {
  * Works with or without a loan — just sends the email.
  */
 export async function sendNeedsList(contactId, documents, actorId) {
-  const contact = await prisma.contact.findUnique({ where: { id: contactId } });
+  const contactRows = await sql`SELECT * FROM contacts WHERE id = ${contactId} LIMIT 1`;
+  const contact = contactRows[0];
   if (!contact) throw new Error('Contact not found');
   if (!contact.email) throw new Error('Contact must have an email');
 
@@ -113,28 +100,19 @@ export async function sendNeedsList(contactId, documents, actorId) {
   }
 
   const template = docRequestTemplate({
-    firstName: contact.firstName,
+    firstName: contact.first_name,
     documents,
   });
 
   await sendEmail({ to: contact.email, ...template });
 
   // Log as contact note
-  await prisma.contactNote.create({
-    data: {
-      contactId,
-      content: `Needs list sent: ${documents.join(', ')}`,
-      authorType: 'mlo',
-      authorId: actorId || null,
-      source: 'email',
-      title: 'Needs List',
-    },
-  });
+  await sql`
+    INSERT INTO contact_notes (contact_id, content, author_type, author_id, source, title)
+    VALUES (${contactId}, ${'Needs list sent: ' + documents.join(', ')}, 'mlo', ${actorId || null}, 'email', 'Needs List')
+  `;
 
-  await prisma.contact.update({
-    where: { id: contactId },
-    data: { lastContactedAt: new Date() },
-  });
+  await sql`UPDATE contacts SET last_contacted_at = NOW(), updated_at = NOW() WHERE id = ${contactId}`;
 
   return { success: true };
 }
@@ -143,13 +121,14 @@ export async function sendNeedsList(contactId, documents, actorId) {
  * Send a custom email to a contact and log it in the timeline.
  */
 export async function sendContactEmail(contactId, { subject, body }, actorId) {
-  const contact = await prisma.contact.findUnique({ where: { id: contactId } });
+  const contactRows = await sql`SELECT * FROM contacts WHERE id = ${contactId} LIMIT 1`;
+  const contact = contactRows[0];
   if (!contact) throw new Error('Contact not found');
   if (!contact.email) throw new Error('Contact must have an email');
 
   // Simple HTML wrapper
   const html = `<div style="font-family:sans-serif;font-size:14px;line-height:1.6;color:#333;">
-    <p>Hi ${contact.firstName},</p>
+    <p>Hi ${contact.first_name},</p>
     ${body.split('\n').map(p => `<p>${p}</p>`).join('')}
     <p>Best,<br>David Burson<br>NetRate Mortgage<br>303-444-5251</p>
   </div>`;
@@ -158,25 +137,17 @@ export async function sendContactEmail(contactId, { subject, body }, actorId) {
     to: contact.email,
     subject,
     html,
-    text: `Hi ${contact.firstName},\n\n${body}\n\nBest,\nDavid Burson\nNetRate Mortgage\n303-444-5251`,
+    text: `Hi ${contact.first_name},\n\n${body}\n\nBest,\nDavid Burson\nNetRate Mortgage\n303-444-5251`,
   });
 
   // Log as contact note
-  await prisma.contactNote.create({
-    data: {
-      contactId,
-      content: body.length > 200 ? body.substring(0, 200) + '...' : body,
-      authorType: 'mlo',
-      authorId: actorId || null,
-      source: 'email',
-      title: subject,
-    },
-  });
+  const noteContent = body.length > 200 ? body.substring(0, 200) + '...' : body;
+  await sql`
+    INSERT INTO contact_notes (contact_id, content, author_type, author_id, source, title)
+    VALUES (${contactId}, ${noteContent}, 'mlo', ${actorId || null}, 'email', ${subject})
+  `;
 
-  await prisma.contact.update({
-    where: { id: contactId },
-    data: { lastContactedAt: new Date() },
-  });
+  await sql`UPDATE contacts SET last_contacted_at = NOW(), updated_at = NOW() WHERE id = ${contactId}`;
 
   return { success: true };
 }

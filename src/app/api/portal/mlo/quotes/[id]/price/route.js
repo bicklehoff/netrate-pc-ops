@@ -4,13 +4,13 @@
  * POST /api/portal/mlo/quotes/:id/price
  *
  * Reads the quote's current scenario, re-runs pricing + eligibility + fees,
- * and updates the quote record with fresh results.
+ * and returns fresh results (does not save to DB — caller can PATCH if desired).
  */
 
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 import { priceScenario } from '@/lib/rates/price-scenario';
 import { checkEligibility } from '@/lib/quotes/eligibility';
 import { buildFeeBreakdown } from '@/lib/quotes/fee-builder';
@@ -24,11 +24,12 @@ export async function POST(request, { params }) {
 
     const { id } = await params;
 
-    const quote = await prisma.borrowerQuote.findUnique({ where: { id } });
+    const rows = await sql`SELECT * FROM borrower_quotes WHERE id = ${id} LIMIT 1`;
+    const quote = rows[0];
     if (!quote) {
       return NextResponse.json({ error: 'Quote not found' }, { status: 404 });
     }
-    if (quote.mloId !== session.user.id) {
+    if (quote.mlo_id !== session.user.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
@@ -38,13 +39,13 @@ export async function POST(request, { params }) {
 
     // Build scenario from current quote fields
     const pricingInput = {
-      loanAmount: Number(quote.loanAmount),
+      loanAmount: Number(quote.loan_amount),
       loanPurpose: quote.purpose,
-      loanType: quote.loanType || 'conventional',
+      loanType: quote.loan_type || 'conventional',
       state: quote.state,
       county: quote.county,
       creditScore: quote.fico,
-      propertyValue: Number(quote.propertyValue),
+      propertyValue: Number(quote.property_value),
       term: quote.term || 30,
       lockDays,
     };

@@ -6,7 +6,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 
 async function getAuthedMloId() {
   const session = await getServerSession(authOptions);
@@ -20,15 +20,15 @@ export async function GET(request, { params }) {
     if (!mloId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { id } = await params;
-    const scenario = await prisma.hecmScenario.findFirst({
-      where: { id, mloId },
-    });
+    const rows = await sql`
+      SELECT * FROM hecm_scenarios WHERE id = ${id} AND mlo_id = ${mloId} LIMIT 1
+    `;
 
-    if (!scenario) {
+    if (!rows[0]) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ scenario });
+    return NextResponse.json({ scenario: rows[0] });
   } catch (err) {
     console.error('HECM scenario GET error:', err);
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
@@ -45,25 +45,26 @@ export async function PUT(request, { params }) {
     const { inputState, results } = body;
 
     // Verify ownership
-    const existing = await prisma.hecmScenario.findFirst({
-      where: { id, mloId },
-    });
-    if (!existing) {
+    const existing = await sql`
+      SELECT * FROM hecm_scenarios WHERE id = ${id} AND mlo_id = ${mloId} LIMIT 1
+    `;
+    if (!existing[0]) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
 
-    const scenario = await prisma.hecmScenario.update({
-      where: { id },
-      data: {
-        borrowerName: inputState?.borrowerName || existing.borrowerName,
-        referenceNumber: inputState?.referenceNumber ?? existing.referenceNumber,
-        homeValue: inputState?.homeValue ?? existing.homeValue,
-        inputState: inputState || existing.inputState,
-        results: results ?? existing.results,
-      },
-    });
+    const rows = await sql`
+      UPDATE hecm_scenarios SET
+        borrower_name = ${inputState?.borrowerName || existing[0].borrower_name},
+        reference_number = ${inputState?.referenceNumber ?? existing[0].reference_number},
+        home_value = ${inputState?.homeValue ?? existing[0].home_value},
+        input_state = ${inputState ? JSON.stringify(inputState) : JSON.stringify(existing[0].input_state)}::jsonb,
+        results = ${results !== undefined ? (results ? JSON.stringify(results) : null) : (existing[0].results ? JSON.stringify(existing[0].results) : null)}::jsonb,
+        updated_at = NOW()
+      WHERE id = ${id}
+      RETURNING *
+    `;
 
-    return NextResponse.json({ scenario });
+    return NextResponse.json({ scenario: rows[0] });
   } catch (err) {
     console.error('HECM scenario PUT error:', err);
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
@@ -78,14 +79,14 @@ export async function DELETE(request, { params }) {
     const { id } = await params;
 
     // Verify ownership
-    const existing = await prisma.hecmScenario.findFirst({
-      where: { id, mloId },
-    });
-    if (!existing) {
+    const existing = await sql`
+      SELECT id FROM hecm_scenarios WHERE id = ${id} AND mlo_id = ${mloId} LIMIT 1
+    `;
+    if (!existing[0]) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
 
-    await prisma.hecmScenario.delete({ where: { id } });
+    await sql`DELETE FROM hecm_scenarios WHERE id = ${id}`;
 
     return NextResponse.json({ success: true });
   } catch (err) {

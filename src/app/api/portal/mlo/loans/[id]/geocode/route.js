@@ -4,7 +4,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 import { enrichPropertyAddress } from '@/lib/geocode';
 
 export async function POST(request, { params }) {
@@ -17,15 +17,14 @@ export async function POST(request, { params }) {
     const { id } = await params;
     const body = await request.json().catch(() => ({}));
 
-    const loan = await prisma.loan.findUnique({
-      where: { id },
-    });
+    const loanRows = await sql`SELECT * FROM loans WHERE id = ${id} LIMIT 1`;
+    const loan = loanRows[0];
 
     if (!loan) {
       return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
     }
 
-    const currentAddr = loan.propertyAddress || {};
+    const currentAddr = loan.property_address || {};
 
     // Accept Google address
     if (body.accept && body.address) {
@@ -43,20 +42,12 @@ export async function POST(request, { params }) {
         validatedAt: new Date().toISOString(),
       };
 
-      await prisma.loan.update({
-        where: { id },
-        data: {
-          propertyAddress: newAddr,
-        },
-      });
+      await sql`UPDATE loans SET property_address = ${JSON.stringify(newAddr)}, updated_at = NOW() WHERE id = ${id}`;
 
-      await prisma.loanEvent.create({
-        data: {
-          loanId: id,
-          eventType: 'field_updated',
-          details: { source: 'geocode', formatted: newAddr.formatted },
-        },
-      }).catch(() => {});
+      await sql`
+        INSERT INTO loan_events (id, loan_id, event_type, details, created_at)
+        VALUES (gen_random_uuid(), ${id}, 'field_updated', ${JSON.stringify({ source: 'geocode', formatted: newAddr.formatted })}, NOW())
+      `.catch(() => {});
 
       return NextResponse.json({ saved: true, address: newAddr });
     }

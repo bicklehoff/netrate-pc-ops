@@ -9,47 +9,64 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { enrichPropertyAddress } from '@/lib/geocode';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 import { getBallInCourt, EMAIL_TRIGGERS } from '@/lib/loan-states';
 import { sendEmail } from '@/lib/resend';
 import { statusChangeTemplate } from '@/lib/email-templates/borrower';
 import { checkApplicationGate } from '@/lib/application-gate';
 import { updateContactFromLoanStatus } from '@/lib/contact-status';
 
-// Status → LoanDates field mapping for MCR-aware auto-date capture
+// Status → loan_dates column mapping for MCR-aware auto-date capture
 const STATUS_DATE_MAP = {
-  applied: 'applicationDate',
-  submitted_uw: 'submittedToUwDate',
-  cond_approved: 'condApprovedDate',
-  ctc: 'ctcDate',
-  docs_out: 'docsOutDate',
-  funded: 'fundingDate',
+  applied: 'application_date',
+  submitted_uw: 'submitted_to_uw_date',
+  cond_approved: 'cond_approved_date',
+  ctc: 'ctc_date',
+  docs_out: 'docs_out_date',
+  funded: 'funding_date',
+};
+
+// camelCase field → snake_case column mapping for loans table
+const FIELD_TO_COLUMN = {
+  loanType: 'loan_type', loanAmount: 'loan_amount', interestRate: 'interest_rate',
+  loanTerm: 'loan_term', lienStatus: 'lien_status', numBorrowers: 'num_borrowers',
+  propertyAddress: 'property_address', propertyType: 'property_type', numUnits: 'num_units',
+  purchasePrice: 'purchase_price', downPayment: 'down_payment', estimatedValue: 'estimated_value',
+  currentBalance: 'current_balance', refiPurpose: 'refi_purpose', cashOutAmount: 'cash_out_amount',
+  lenderName: 'lender_name', loanNumber: 'loan_number',
+  employmentStatus: 'employment_status', employerName: 'employer_name',
+  positionTitle: 'position_title', yearsInPosition: 'years_in_position',
+  monthlyBaseIncome: 'monthly_base_income', otherMonthlyIncome: 'other_monthly_income',
+  otherIncomeSource: 'other_income_source', presentHousingExpense: 'present_housing_expense',
+  maritalStatus: 'marital_status', numDependents: 'num_dependents', dependentAges: 'dependent_ages',
+  creditScore: 'credit_score', actionTaken: 'action_taken', actionTakenDate: 'action_taken_date',
+  applicationMethod: 'application_method', referralSource: 'referral_source',
+  leadSource: 'lead_source', applicationChannel: 'application_channel',
+  prequalLetterData: 'prequal_letter_data', appraisedValue: 'appraised_value',
+  loanProgram: 'loan_program', underwriterName: 'underwriter_name',
+  accountExec: 'account_exec', brokerProcessor: 'broker_processor',
+  amortizationType: 'amortization_type', titleHeldAs: 'title_held_as',
+  estateHeldIn: 'estate_held_in', armIndex: 'arm_index', armMargin: 'arm_margin',
+  armInitialCap: 'arm_initial_cap', armPeriodicCap: 'arm_periodic_cap',
+  armLifetimeCap: 'arm_lifetime_cap', armAdjustmentPeriod: 'arm_adjustment_period',
+  // pass-through (already snake_case in DB)
+  purpose: 'purpose', occupancy: 'occupancy',
 };
 
 // All loan fields that can be updated via inline edit
 const EDITABLE_FIELDS = [
-  // Loan terms
   'loanType', 'loanAmount', 'interestRate', 'loanTerm', 'lienStatus', 'numBorrowers',
-  // Property
   'propertyAddress', 'propertyType', 'numUnits', 'purchasePrice', 'downPayment', 'estimatedValue', 'currentBalance',
-  // Purpose
   'purpose', 'occupancy', 'refiPurpose', 'cashOutAmount',
-  // Lender
   'lenderName', 'loanNumber',
-  // Employment/Income
   'employmentStatus', 'employerName', 'positionTitle', 'yearsInPosition',
   'monthlyBaseIncome', 'otherMonthlyIncome', 'otherIncomeSource',
   'presentHousingExpense', 'maritalStatus', 'numDependents', 'dependentAges',
   'creditScore',
-  // MCR
   'actionTaken', 'actionTakenDate', 'applicationMethod',
-  // CRM
   'referralSource', 'leadSource', 'applicationChannel',
-  // Pre-qual letter
   'prequalLetterData',
-  // Universal approval fields
   'appraisedValue', 'loanProgram', 'underwriterName', 'accountExec', 'brokerProcessor',
-  // 1003 loan details
   'amortizationType', 'titleHeldAs', 'estateHeldIn',
   'armIndex', 'armMargin', 'armInitialCap', 'armPeriodicCap', 'armLifetimeCap', 'armAdjustmentPeriod',
 ];
@@ -66,6 +83,7 @@ const DECIMAL_FIELDS = [
 // Fields that need Integer conversion
 const INT_FIELDS = ['loanTerm', 'numUnits', 'yearsInPosition', 'numBorrowers', 'creditScore', 'numDependents', 'armAdjustmentPeriod'];
 
+
 export async function GET(request, { params }) {
   try {
     const session = await getServerSession(authOptions);
@@ -75,119 +93,141 @@ export async function GET(request, { params }) {
 
     const { id } = await params;
 
-    const loan = await prisma.loan.findUnique({
-      where: { id },
-      include: {
-        borrower: {
-          select: {
-            id: true, firstName: true, lastName: true, email: true, phone: true,
-            ssnLastFour: true, phoneVerified: true, createdAt: true,
-          },
-        },
-        mlo: {
-          select: { id: true, firstName: true, lastName: true, email: true },
-        },
-        documents: {
-          orderBy: { createdAt: 'desc' },
-          include: {
-            requestedBy: {
-              select: { firstName: true, lastName: true },
-            },
-          },
-        },
-        events: {
-          orderBy: { createdAt: 'desc' },
-          take: 50,
-        },
-        // ─── New includes for Core UI ───
-        dates: true,
-        fha: true,
-        hecm: true,
-        va: true,
-        dscr: true,
-        conv: true,
-        conditions: {
-          orderBy: [{ stage: 'asc' }, { createdAt: 'asc' }],
-        },
-        loanBorrowers: {
-          orderBy: { ordinal: 'asc' },
-          include: {
-            borrower: {
-              select: { id: true, firstName: true, lastName: true, email: true, phone: true },
-            },
-            employments: { orderBy: { isPrimary: 'desc' } },
-            income: true,
-            declaration: true,
-          },
-        },
-        assets: { orderBy: { createdAt: 'asc' } },
-        liabilities: { orderBy: { createdAt: 'asc' } },
-        reos: { orderBy: { createdAt: 'asc' } },
-        transaction: true,
-        tasks: {
-          orderBy: [{ priority: 'asc' }, { createdAt: 'desc' }],
-        },
-      },
-    });
-
+    // ─── Main loan ───
+    const loans = await sql`SELECT * FROM loans WHERE id = ${id} LIMIT 1`;
+    const loan = loans[0];
     if (!loan) {
       return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
     }
 
-    // All MLOs can view all loans (LO filter handles scoping in pipeline)
+    // ─── Borrower ───
+    const borrowers = loan.borrower_id
+      ? await sql`SELECT id, first_name, last_name, email, phone, ssn_last_four, phone_verified, created_at
+                   FROM borrowers WHERE id = ${loan.borrower_id} LIMIT 1`
+      : [];
 
-    // Helper: convert all Decimal fields in an object to Number
-    const serializeDecimals = (obj) => {
-      if (!obj) return null;
-      const result = { ...obj };
-      for (const [key, val] of Object.entries(result)) {
-        if (val && typeof val === 'object' && typeof val.toNumber === 'function') {
-          result[key] = Number(val);
-        }
-      }
-      return result;
-    };
+    // ─── MLO ───
+    const mlos = loan.mlo_id
+      ? await sql`SELECT id, first_name, last_name, email FROM mlos WHERE id = ${loan.mlo_id} LIMIT 1`
+      : [];
 
-    // Convert Decimal fields to numbers
-    const serialized = {
-      ...loan,
-      loanAmount: loan.loanAmount ? Number(loan.loanAmount) : null,
-      interestRate: loan.interestRate ? Number(loan.interestRate) : null,
-      purchasePrice: loan.purchasePrice ? Number(loan.purchasePrice) : null,
-      downPayment: loan.downPayment ? Number(loan.downPayment) : null,
-      estimatedValue: loan.estimatedValue ? Number(loan.estimatedValue) : null,
-      currentBalance: loan.currentBalance ? Number(loan.currentBalance) : null,
-      cashOutAmount: loan.cashOutAmount ? Number(loan.cashOutAmount) : null,
-      monthlyBaseIncome: loan.monthlyBaseIncome ? Number(loan.monthlyBaseIncome) : null,
-      otherMonthlyIncome: loan.otherMonthlyIncome ? Number(loan.otherMonthlyIncome) : null,
-      presentHousingExpense: loan.presentHousingExpense ? Number(loan.presentHousingExpense) : null,
-      appraisedValue: loan.appraisedValue ? Number(loan.appraisedValue) : null,
-      // New 1003 loan-level fields
-      armMargin: loan.armMargin ? Number(loan.armMargin) : null,
-      armInitialCap: loan.armInitialCap ? Number(loan.armInitialCap) : null,
-      armPeriodicCap: loan.armPeriodicCap ? Number(loan.armPeriodicCap) : null,
-      armLifetimeCap: loan.armLifetimeCap ? Number(loan.armLifetimeCap) : null,
-      // LoanBorrower decimal fields
-      loanBorrowers: (loan.loanBorrowers || []).map((lb) => ({
+    // ─── Documents (with requestedBy) ───
+    const documents = await sql`
+      SELECT d.*, m.first_name AS requested_by_first_name, m.last_name AS requested_by_last_name
+      FROM documents d
+      LEFT JOIN mlos m ON m.id = d.requested_by
+      WHERE d.loan_id = ${id}
+      ORDER BY d.created_at DESC
+    `;
+
+    // ─── Events (last 50) ───
+    const events = await sql`
+      SELECT * FROM loan_events WHERE loan_id = ${id} ORDER BY created_at DESC LIMIT 50
+    `;
+
+    // ─── Dates ───
+    const datesRows = await sql`SELECT * FROM loan_dates WHERE loan_id = ${id} LIMIT 1`;
+
+    // ─── Satellite tables ───
+    const fhaRows = await sql`SELECT * FROM loan_fha WHERE loan_id = ${id} LIMIT 1`;
+    const hecmRows = await sql`SELECT * FROM loan_hecm WHERE loan_id = ${id} LIMIT 1`;
+    const vaRows = await sql`SELECT * FROM loan_va WHERE loan_id = ${id} LIMIT 1`;
+    const dscrRows = await sql`SELECT * FROM loan_dscr WHERE loan_id = ${id} LIMIT 1`;
+    const convRows = await sql`SELECT * FROM loan_conv WHERE loan_id = ${id} LIMIT 1`;
+
+    // ─── Conditions ───
+    const conditions = await sql`
+      SELECT * FROM conditions WHERE loan_id = ${id} ORDER BY stage ASC, created_at ASC
+    `;
+
+    // ─── LoanBorrowers with sub-models ───
+    const loanBorrowers = await sql`
+      SELECT lb.*, b.id AS b_id, b.first_name AS b_first_name, b.last_name AS b_last_name, b.email AS b_email, b.phone AS b_phone
+      FROM loan_borrowers lb
+      LEFT JOIN borrowers b ON b.id = lb.borrower_id
+      WHERE lb.loan_id = ${id}
+      ORDER BY lb.ordinal ASC
+    `;
+
+    // Fetch sub-models per borrower
+    const lbIds = loanBorrowers.map(lb => lb.id);
+    let employments = [];
+    let incomes = [];
+    let declarations = [];
+    if (lbIds.length > 0) {
+      employments = await sql`SELECT * FROM loan_employments WHERE loan_borrower_id = ANY(${lbIds}) ORDER BY is_primary DESC`;
+      incomes = await sql`SELECT * FROM loan_incomes WHERE loan_borrower_id = ANY(${lbIds})`;
+      declarations = await sql`SELECT * FROM loan_declarations WHERE loan_borrower_id = ANY(${lbIds})`;
+    }
+
+    // ─── Assets, Liabilities, REOs, Transaction ───
+    const assets = await sql`SELECT * FROM loan_assets WHERE loan_id = ${id} ORDER BY created_at ASC`;
+    const liabilities = await sql`SELECT * FROM loan_liabilities WHERE loan_id = ${id} ORDER BY created_at ASC`;
+    const reos = await sql`SELECT * FROM loan_reos WHERE loan_id = ${id} ORDER BY created_at ASC`;
+    const transactionRows = await sql`SELECT * FROM loan_transactions WHERE loan_id = ${id} LIMIT 1`;
+
+    // ─── Tasks ───
+    const tasks = await sql`
+      SELECT * FROM loan_tasks WHERE loan_id = ${id} ORDER BY priority ASC, created_at DESC
+    `;
+
+    // ─── Assemble response ───
+    const LOAN_DECIMAL_FIELDS = [
+      'loan_amount', 'interest_rate', 'purchase_price', 'down_payment',
+      'estimated_value', 'current_balance', 'cash_out_amount',
+      'monthly_base_income', 'other_monthly_income', 'present_housing_expense',
+      'appraised_value', 'arm_margin', 'arm_initial_cap', 'arm_periodic_cap', 'arm_lifetime_cap',
+      'broker_compensation', 'cash_to_close', 'lender_credits', 'monthly_payment', 'total_closing_costs',
+    ];
+
+    const serialized = { ...loan };
+    for (const f of LOAN_DECIMAL_FIELDS) {
+      if (serialized[f] != null) serialized[f] = Number(serialized[f]);
+    }
+
+    // Attach related data
+    serialized.borrower = borrowers[0] || null;
+    serialized.mlo = mlos[0] || null;
+    serialized.documents = documents.map(d => ({
+      ...d,
+      requested_by: d.requested_by_first_name
+        ? { first_name: d.requested_by_first_name, last_name: d.requested_by_last_name }
+        : null,
+    }));
+    serialized.events = events;
+    serialized.dates = datesRows[0] || null;
+    serialized.fha = fhaRows[0] || null;
+    serialized.hecm = hecmRows[0] || null;
+    serialized.va = vaRows[0] || null;
+    serialized.dscr = dscrRows[0] || null;
+    serialized.conv = convRows[0] || null;
+    serialized.conditions = conditions;
+
+    // Assemble loanBorrowers with nested sub-models
+    serialized.loan_borrowers = loanBorrowers.map(lb => {
+      const lbEmployments = employments.filter(e => e.loan_borrower_id === lb.id);
+      const lbIncome = incomes.find(i => i.loan_borrower_id === lb.id) || null;
+      const lbDeclaration = declarations.find(d => d.loan_borrower_id === lb.id) || null;
+      return {
         ...lb,
-        monthlyBaseIncome: lb.monthlyBaseIncome ? Number(lb.monthlyBaseIncome) : null,
-        otherMonthlyIncome: lb.otherMonthlyIncome ? Number(lb.otherMonthlyIncome) : null,
-        monthlyRent: lb.monthlyRent ? Number(lb.monthlyRent) : null,
-        income: serializeDecimals(lb.income),
-        employments: (lb.employments || []).map(serializeDecimals),
-      })),
-      // 1003 repeating models
-      assets: (loan.assets || []).map(serializeDecimals),
-      liabilities: (loan.liabilities || []).map(serializeDecimals),
-      reos: (loan.reos || []).map(serializeDecimals),
-      transaction: serializeDecimals(loan.transaction),
-      // Satellite table decimal fields
-      fha: serializeDecimals(loan.fha),
-      hecm: serializeDecimals(loan.hecm),
-      va: serializeDecimals(loan.va),
-      dscr: serializeDecimals(loan.dscr),
-      conv: serializeDecimals(loan.conv),
-    };
+        monthly_base_income: lb.monthly_base_income ? Number(lb.monthly_base_income) : null,
+        other_monthly_income: lb.other_monthly_income ? Number(lb.other_monthly_income) : null,
+        monthly_rent: lb.monthly_rent ? Number(lb.monthly_rent) : null,
+        borrower: {
+          id: lb.b_id, first_name: lb.b_first_name, last_name: lb.b_last_name,
+          email: lb.b_email, phone: lb.b_phone,
+        },
+        employments: lbEmployments,
+        income: lbIncome,
+        declaration: lbDeclaration,
+      };
+    });
+
+    serialized.assets = assets;
+    serialized.liabilities = liabilities;
+    serialized.reos = reos;
+    serialized.transaction = transactionRows[0] || null;
+    serialized.tasks = tasks;
 
     return NextResponse.json({ loan: serialized });
   } catch (error) {
@@ -207,70 +247,64 @@ export async function PATCH(request, { params }) {
     const body = await request.json();
     const isAdmin = session.user.role === 'admin';
 
-    const loan = await prisma.loan.findUnique({ where: { id } });
+    const loans = await sql`SELECT * FROM loans WHERE id = ${id} LIMIT 1`;
+    const loan = loans[0];
     if (!loan) {
       return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
     }
-    if (!isAdmin && loan.mloId !== session.user.id) {
+    if (!isAdmin && loan.mlo_id !== session.user.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
     // ─── Handle status change (with MCR-aware date auto-capture) ───
     if (body.status && body.status !== loan.status) {
-      const pendingDocs = await prisma.document.count({
-        where: { loanId: id, status: 'requested' },
-      });
+      const pendingRows = await sql`
+        SELECT COUNT(*)::int AS total FROM documents WHERE loan_id = ${id} AND status = 'requested'
+      `;
+      const pendingDocs = pendingRows[0].total;
 
-      const updated = await prisma.loan.update({
-        where: { id },
-        data: {
-          status: body.status,
-          ballInCourt: getBallInCourt(body.status, pendingDocs > 0) || 'none',
-        },
-      });
+      const updatedRows = await sql`
+        UPDATE loans SET status = ${body.status}, ball_in_court = ${getBallInCourt(body.status, pendingDocs > 0) || 'none'}, updated_at = NOW()
+        WHERE id = ${id} RETURNING *
+      `;
+      const updated = updatedRows[0];
 
       // Create audit event
-      await prisma.loanEvent.create({
-        data: {
-          loanId: id,
-          eventType: 'status_change',
-          actorType: 'mlo',
-          actorId: session.user.id,
-          oldValue: loan.status,
-          newValue: body.status,
-        },
-      });
+      await sql`
+        INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, old_value, new_value, created_at)
+        VALUES (gen_random_uuid(), ${id}, 'status_change', 'mlo', ${session.user.id}, ${loan.status}, ${body.status}, NOW())
+      `;
 
-      // MCR-aware: auto-capture date on LoanDates when status changes
-      const dateField = STATUS_DATE_MAP[body.status];
-      if (dateField) {
-        await prisma.loanDates.upsert({
-          where: { loanId: id },
-          create: {
-            loanId: id,
-            [dateField]: new Date(),
-          },
-          update: {
-            // Only set if not already set (don't overwrite manual entries)
-            ...(await (async () => {
-              const existing = await prisma.loanDates.findUnique({ where: { loanId: id } });
-              if (existing && existing[dateField]) return {};
-              return { [dateField]: new Date() };
-            })()),
-          },
-        });
+      // MCR-aware: auto-capture date on loan_dates when status changes
+      const dateCol = STATUS_DATE_MAP[body.status];
+      if (dateCol) {
+        // Check if date already exists
+        const existingDates = await sql`SELECT * FROM loan_dates WHERE loan_id = ${id} LIMIT 1`;
+        if (existingDates.length === 0) {
+          // Create with the date
+          await sql`
+            INSERT INTO loan_dates (id, loan_id, ${sql.identifier([dateCol])}, created_at, updated_at)
+            VALUES (gen_random_uuid(), ${id}, NOW(), NOW(), NOW())
+          `;
+        } else if (!existingDates[0][dateCol]) {
+          // Only set if not already set
+          await sql`
+            UPDATE loan_dates SET ${sql.identifier([dateCol])} = NOW(), updated_at = NOW() WHERE loan_id = ${id}
+          `;
+        }
       }
 
       // Send borrower notification email (non-blocking)
       const trigger = EMAIL_TRIGGERS[body.status];
-      if (trigger?.sendToBorrower) {
-        const borrower = await prisma.borrower.findUnique({ where: { id: loan.borrowerId } });
+      if (trigger?.sendToBorrower && loan.borrower_id) {
+        const borrowerRows = await sql`SELECT * FROM borrowers WHERE id = ${loan.borrower_id} LIMIT 1`;
+        const borrower = borrowerRows[0];
         if (borrower?.email) {
           const template = statusChangeTemplate({
-            firstName: borrower.firstName,
+            firstName: borrower.first_name,
             status: body.status,
             loanId: id,
-            propertyAddress: loan.propertyStreet,
+            propertyAddress: loan.property_address?.street,
           });
           if (template) {
             sendEmail({ to: borrower.email, ...template }).catch((err) => {
@@ -288,43 +322,31 @@ export async function PATCH(request, { params }) {
 
     // ─── Handle note addition ───
     if (body.note) {
-      await prisma.loanEvent.create({
-        data: {
-          loanId: id,
-          eventType: 'note_added',
-          actorType: 'mlo',
-          actorId: session.user.id,
-          newValue: body.note,
-        },
-      });
+      await sql`
+        INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, new_value, created_at)
+        VALUES (gen_random_uuid(), ${id}, 'note_added', 'mlo', ${session.user.id}, ${body.note}, NOW())
+      `;
 
       return NextResponse.json({ success: true });
     }
 
     // ─── Handle MLO assignment ───
     if (body.mloId !== undefined) {
-      const updated = await prisma.loan.update({
-        where: { id },
-        data: { mloId: body.mloId },
-      });
+      const updatedRows = await sql`
+        UPDATE loans SET mlo_id = ${body.mloId}, updated_at = NOW() WHERE id = ${id} RETURNING *
+      `;
 
-      await prisma.loanEvent.create({
-        data: {
-          loanId: id,
-          eventType: 'field_updated',
-          actorType: 'mlo',
-          actorId: session.user.id,
-          oldValue: loan.mloId,
-          newValue: body.mloId,
-          details: { field: 'mloId' },
-        },
-      });
+      await sql`
+        INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, old_value, new_value, details, created_at)
+        VALUES (gen_random_uuid(), ${id}, 'field_updated', 'mlo', ${session.user.id}, ${loan.mlo_id}, ${body.mloId}, ${JSON.stringify({ field: 'mloId' })}, NOW())
+      `;
 
-      return NextResponse.json({ loan: updated });
+      return NextResponse.json({ loan: updatedRows[0] });
     }
 
     // ─── Handle inline field updates (expanded for Core UI) ───
-    const fieldUpdates = {};
+    const setClauses = [];
+    const setValues = [];
     const fieldDetails = {};
 
     for (const field of EDITABLE_FIELDS) {
@@ -343,69 +365,65 @@ export async function PATCH(request, { params }) {
         } else if (field === 'actionTakenDate') {
           value = value ? new Date(value) : null;
         } else if (field === 'propertyAddress') {
-          // Accept JSON object or comma-separated string
           if (typeof value === 'string') {
             const parts = value.split(',').map((s) => s.trim());
-            value = {
-              street: parts[0] || '',
-              city: parts[1] || '',
-              state: parts[2] || '',
-              zip: parts[3] || '',
-            };
+            value = { street: parts[0] || '', city: parts[1] || '', state: parts[2] || '', zip: parts[3] || '' };
           }
         }
 
-        fieldUpdates[field] = value;
-        fieldDetails[field] = { old: loan[field], new: value };
+        const col = FIELD_TO_COLUMN[field] || field;
+        setClauses.push(col);
+        setValues.push(value);
+        fieldDetails[field] = { old: loan[col], new: value };
       }
     }
 
-    if (Object.keys(fieldUpdates).length > 0) {
-      const updated = await prisma.loan.update({
-        where: { id },
-        data: fieldUpdates,
-      });
+    if (setClauses.length > 0) {
+      // Build dynamic UPDATE — use parameterized approach
+      // Neon tagged template doesn't support fully dynamic column lists easily,
+      // so we build a raw SQL string with proper escaping
+      const setFragments = setClauses.map((col, i) => `"${col}" = $${i + 1}`);
+      const paramIndex = setClauses.length + 1;
+      const query = `UPDATE loans SET ${setFragments.join(', ')}, updated_at = NOW() WHERE id = $${paramIndex} RETURNING *`;
+      const allParams = [...setValues.map(v => v === undefined ? null : (typeof v === 'object' && v !== null && !(v instanceof Date) ? JSON.stringify(v) : v)), id];
 
-      await prisma.loanEvent.create({
-        data: {
-          loanId: id,
-          eventType: 'field_updated',
-          actorType: 'mlo',
-          actorId: session.user.id,
-          newValue: JSON.stringify(fieldUpdates),
-          details: { fields: fieldDetails, source: 'core_inline_edit' },
-        },
-      });
+      // Use sql.query for raw parameterized query
+      const updatedRows = await sql(query, allParams);
+      const updated = updatedRows[0];
+
+      // Build fieldUpdates JSON for audit
+      const fieldUpdates = {};
+      setClauses.forEach((col, i) => { fieldUpdates[col] = setValues[i]; });
+
+      await sql`
+        INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, new_value, details, created_at)
+        VALUES (gen_random_uuid(), ${id}, 'field_updated', 'mlo', ${session.user.id},
+                ${JSON.stringify(fieldUpdates)},
+                ${JSON.stringify({ fields: fieldDetails, source: 'core_inline_edit' })},
+                NOW())
+      `;
 
       // Auto-geocode if propertyAddress changed (non-blocking)
-      if (fieldUpdates.propertyAddress && fieldUpdates.propertyAddress.street) {
-        enrichPropertyAddress(fieldUpdates.propertyAddress).then(async (result) => {
+      const propAddrIdx = setClauses.indexOf('property_address');
+      if (propAddrIdx !== -1 && setValues[propAddrIdx]?.street) {
+        enrichPropertyAddress(setValues[propAddrIdx]).then(async (result) => {
           if (result.enriched) {
-            await prisma.loan.update({
-              where: { id },
-              data: { propertyAddress: result.address },
-            }).catch(() => {});
+            await sql`UPDATE loans SET property_address = ${JSON.stringify(result.address)}, updated_at = NOW() WHERE id = ${id}`.catch(() => {});
           }
         }).catch(() => {});
       }
 
       // Application gate — check if loan just became a real MCR application (non-blocking)
-      if (!updated.isApplication) {
-        const gatePassed = checkApplicationGate(updated, loan.borrower);
+      if (!updated.is_application) {
+        const borrowerRows = loan.borrower_id
+          ? await sql`SELECT * FROM borrowers WHERE id = ${loan.borrower_id} LIMIT 1`
+          : [];
+        const gatePassed = checkApplicationGate(updated, borrowerRows[0]);
         if (gatePassed) {
-          prisma.loan.update({
-            where: { id },
-            data: { isApplication: true, applicationDate: new Date() },
-          }).then(() =>
-            prisma.loanEvent.create({
-              data: {
-                loanId: id,
-                eventType: 'application_gate_passed',
-                actorType: 'system',
-                actorId: 'application-gate',
-                newValue: 'Loan meets all 5 Reg B fields — now an MCR application',
-              },
-            })
+          sql`UPDATE loans SET is_application = true, application_date = NOW(), updated_at = NOW() WHERE id = ${id}`.then(() =>
+            sql`INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, new_value, created_at)
+                VALUES (gen_random_uuid(), ${id}, 'application_gate_passed', 'system', 'application-gate',
+                        'Loan meets all 5 Reg B fields — now an MCR application', NOW())`
           ).catch(() => {});
         }
       }

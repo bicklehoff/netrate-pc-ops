@@ -8,7 +8,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 
 export async function GET(request, { params }) {
   try {
@@ -21,66 +21,64 @@ export async function GET(request, { params }) {
     }
 
     // Validate magic token
-    const borrower = await prisma.borrower.findFirst({
-      where: {
-        magicToken: token,
-        magicExpires: { gte: new Date() },
-      },
-      select: { id: true, email: true },
-    });
+    const borrowerRows = await sql`
+      SELECT id, email FROM borrowers
+      WHERE magic_token = ${token} AND magic_expires >= NOW()
+      LIMIT 1
+    `;
+    const borrower = borrowerRows[0];
 
     if (!borrower) {
       return NextResponse.json({ error: 'Link expired or invalid. Contact your loan officer for a new quote link.' }, { status: 401 });
     }
 
     // Load quote
-    const quote = await prisma.borrowerQuote.findUnique({
-      where: { id },
-    });
+    const quoteRows = await sql`SELECT * FROM borrower_quotes WHERE id = ${id} LIMIT 1`;
+    const quote = quoteRows[0];
 
     if (!quote) {
       return NextResponse.json({ error: 'Quote not found' }, { status: 404 });
     }
 
     // Verify the borrower email matches the quote
-    if (quote.borrowerEmail?.toLowerCase() !== borrower.email?.toLowerCase()) {
+    if (quote.borrower_email?.toLowerCase() !== borrower.email?.toLowerCase()) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
     // Check expiration
-    if (quote.expiresAt && new Date(quote.expiresAt) < new Date()) {
+    if (quote.expires_at && new Date(quote.expires_at) < new Date()) {
       return NextResponse.json({ error: 'This quote has expired. Contact your loan officer for updated pricing.' }, { status: 410 });
     }
 
     // Track first view
-    if (!quote.viewedAt) {
-      await prisma.borrowerQuote.update({
-        where: { id },
-        data: { viewedAt: new Date(), status: 'viewed' },
-      });
+    if (!quote.viewed_at) {
+      await sql`
+        UPDATE borrower_quotes SET viewed_at = NOW(), status = 'viewed', updated_at = NOW()
+        WHERE id = ${id}
+      `;
     }
 
     // Return sanitized quote (no internal IDs)
     return NextResponse.json({
       quote: {
         id: quote.id,
-        borrowerName: quote.borrowerName,
+        borrower_name: quote.borrower_name,
         purpose: quote.purpose,
-        propertyValue: quote.propertyValue,
-        loanAmount: quote.loanAmount,
+        property_value: quote.property_value,
+        loan_amount: quote.loan_amount,
         ltv: quote.ltv,
         fico: quote.fico,
         state: quote.state,
         county: quote.county,
-        loanType: quote.loanType,
+        loan_type: quote.loan_type,
         term: quote.term,
         scenarios: quote.scenarios,
-        feeBreakdown: quote.feeBreakdown,
-        monthlyPayment: quote.monthlyPayment,
-        pdfUrl: quote.pdfUrl,
+        fee_breakdown: quote.fee_breakdown,
+        monthly_payment: quote.monthly_payment,
+        pdf_url: quote.pdf_url,
         status: quote.status,
-        expiresAt: quote.expiresAt,
-        createdAt: quote.createdAt,
+        expires_at: quote.expires_at,
+        created_at: quote.created_at,
       },
     });
   } catch (err) {

@@ -3,7 +3,7 @@
 
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 import { put } from '@vercel/blob';
 
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -49,25 +49,21 @@ export async function POST(request, { params }) {
   }
 
   // Verify ticket exists
-  const ticket = await prisma.ticket.findUnique({ where: { id } });
-  if (!ticket) return Response.json({ error: 'Ticket not found' }, { status: 404 });
+  const ticketRows = await sql`SELECT id FROM tickets WHERE id = ${id} LIMIT 1`;
+  if (!ticketRows[0]) return Response.json({ error: 'Ticket not found' }, { status: 404 });
 
-  const entry = await prisma.ticketEntry.create({
-    data: {
-      ticketId: id,
-      content: content.trim() || (imageUrl ? '(screenshot)' : ''),
-      imageUrl,
-      authorId: session.user.id,
-      authorLabel: `${session.user.firstName} ${session.user.lastName}`,
-      entryType: 'comment',
-    },
-  });
+  const entryRows = await sql`
+    INSERT INTO ticket_entries (ticket_id, content, image_url, author_id, author_label, entry_type, created_at)
+    VALUES (
+      ${id}, ${content.trim() || (imageUrl ? '(screenshot)' : '')}, ${imageUrl},
+      ${session.user.id}, ${`${session.user.firstName} ${session.user.lastName}`},
+      'comment', NOW()
+    )
+    RETURNING *
+  `;
 
-  // Touch the ticket's updatedAt
-  await prisma.ticket.update({
-    where: { id },
-    data: { updatedAt: new Date() },
-  });
+  // Touch the ticket's updated_at
+  await sql`UPDATE tickets SET updated_at = NOW() WHERE id = ${id}`;
 
-  return Response.json({ entry }, { status: 201 });
+  return Response.json({ entry: entryRows[0] }, { status: 201 });
 }

@@ -9,7 +9,7 @@
 
 import { NextResponse } from 'next/server';
 import { put } from '@vercel/blob';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 import { requireBorrowerAuth } from '@/lib/borrower-session';
 import { uploadFile, getSubfolderForDocType } from '@/lib/zoho-workdrive';
 
@@ -23,18 +23,12 @@ export async function GET(request, { params }) {
     const { id: loanId } = await params;
 
     // Verify borrower owns this loan
-    const loan = await prisma.loan.findFirst({
-      where: { id: loanId, borrowerId: session.borrowerId },
-    });
-
-    if (!loan) {
+    const loanRows = await sql`SELECT id FROM loans WHERE id = ${loanId} AND borrower_id = ${session.borrowerId} LIMIT 1`;
+    if (!loanRows[0]) {
       return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
     }
 
-    const documents = await prisma.document.findMany({
-      where: { loanId },
-      orderBy: { createdAt: 'desc' },
-    });
+    const documents = await sql`SELECT * FROM documents WHERE loan_id = ${loanId} ORDER BY created_at DESC`;
 
     return NextResponse.json({ documents });
   } catch (error) {
@@ -53,18 +47,19 @@ export async function POST(request, { params }) {
     const { id: loanId } = await params;
 
     // Verify borrower owns this loan
-    const loan = await prisma.loan.findFirst({
-      where: { id: loanId, borrowerId: session.borrowerId },
-    });
-
+    const loanRows = await sql`
+      SELECT id, work_drive_folder_id, work_drive_subfolders FROM loans
+      WHERE id = ${loanId} AND borrower_id = ${session.borrowerId} LIMIT 1
+    `;
+    const loan = loanRows[0];
     if (!loan) {
       return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
     }
 
     const formData = await request.formData();
     const file = formData.get('file');
-    const documentId = formData.get('documentId'); // If uploading to a requested doc
-    const docType = formData.get('docType') || 'other'; // For subfolder routing
+    const documentId = formData.get('documentId');
+    const docType = formData.get('docType') || 'other';
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
@@ -76,45 +71,29 @@ export async function POST(request, { params }) {
     const fileExt = '.' + file.name.split('.').pop().toLowerCase();
 
     if (!ALLOWED_TYPES.includes(file.type) && !ALLOWED_EXTENSIONS.includes(fileExt)) {
-      return NextResponse.json(
-        { error: 'Only PDF, PNG, and JPG files are accepted.' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Only PDF, PNG, and JPG files are accepted.' }, { status: 400 });
     }
 
-    // ─── File Size Validation (10 MB max) ────────────────────
-    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+    const MAX_FILE_SIZE = 10 * 1024 * 1024;
     if (file.size > MAX_FILE_SIZE) {
-      return NextResponse.json(
-        { error: 'File size exceeds 10 MB limit.' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'File size exceeds 10 MB limit.' }, { status: 400 });
     }
 
     // ─── Upload to Storage ───────────────────────────────────
-    // Primary: Zoho WorkDrive (if loan has folder IDs)
-    // Fallback: Vercel Blob (if WorkDrive not set up yet)
     let fileUrl;
-    let storageType = 'blob'; // Track where the file went
+    let storageType = 'blob';
 
-    const subfolders = loan.workDriveSubfolders;
+    const subfolders = loan.work_drive_subfolders;
 
-    if (loan.workDriveFolderId && subfolders) {
-      // Route to correct subfolder based on doc type
-      // If uploading to an existing document request, use that doc's type
+    if (loan.work_drive_folder_id && subfolders) {
       let effectiveDocType = docType;
       if (documentId) {
-        const existingDoc = await prisma.document.findUnique({
-          where: { id: documentId },
-          select: { docType: true },
-        });
-        if (existingDoc?.docType) {
-          effectiveDocType = existingDoc.docType;
-        }
+        const existingDoc = await sql`SELECT doc_type FROM documents WHERE id = ${documentId} LIMIT 1`;
+        if (existingDoc[0]?.doc_type) effectiveDocType = existingDoc[0].doc_type;
       }
 
       const subfolderName = getSubfolderForDocType(effectiveDocType);
-      const targetFolderId = subfolders[subfolderName] || loan.workDriveFolderId;
+      const targetFolderId = subfolders[subfolderName] || loan.work_drive_folder_id;
 
       try {
         const uploaded = await uploadFile(file, file.name, targetFolderId, true);
@@ -122,75 +101,46 @@ export async function POST(request, { params }) {
         storageType = 'workdrive';
         console.log(`Doc uploaded to WorkDrive: ${file.name} → ${subfolderName} (${uploaded.id})`);
       } catch (wdError) {
-        // WorkDrive failed — fall back to Vercel Blob
         console.error('WorkDrive upload failed, falling back to Blob:', wdError?.message);
-        const blob = await put(`loans/${loanId}/${file.name}`, file, {
-          access: 'public',
-          addRandomSuffix: true,
-        });
+        const blob = await put(`loans/${loanId}/${file.name}`, file, { access: 'public', addRandomSuffix: true });
         fileUrl = blob.url;
       }
     } else {
-      // No WorkDrive folder — use Vercel Blob
-      const blob = await put(`loans/${loanId}/${file.name}`, file, {
-        access: 'public',
-        addRandomSuffix: true,
-      });
+      const blob = await put(`loans/${loanId}/${file.name}`, file, { access: 'public', addRandomSuffix: true });
       fileUrl = blob.url;
     }
 
     if (documentId) {
       // Update existing document request with the upload
-      const doc = await prisma.document.update({
-        where: { id: documentId },
-        data: {
-          status: 'uploaded',
-          fileUrl,
-          fileName: file.name,
-          fileSize: file.size,
-          uploadedAt: new Date(),
-        },
-      });
+      const docRows = await sql`
+        UPDATE documents SET status = 'uploaded', file_url = ${fileUrl}, file_name = ${file.name},
+          file_size = ${file.size}, uploaded_at = NOW()
+        WHERE id = ${documentId}
+        RETURNING *
+      `;
+      const doc = docRows[0];
 
-      // Audit trail
-      await prisma.loanEvent.create({
-        data: {
-          loanId,
-          eventType: 'doc_uploaded',
-          actorType: 'borrower',
-          actorId: session.borrowerId,
-          newValue: doc.label,
-          details: { documentId: doc.id, fileName: file.name, storageType },
-        },
-      });
+      await sql`
+        INSERT INTO loan_events (loan_id, event_type, actor_type, actor_id, new_value, details, created_at)
+        VALUES (${loanId}, 'doc_uploaded', 'borrower', ${session.borrowerId}, ${doc.label},
+          ${JSON.stringify({ documentId: doc.id, fileName: file.name, storageType })}::jsonb, NOW())
+      `;
 
       return NextResponse.json({ document: doc });
     } else {
       // Create a new document entry (borrower-initiated upload)
-      const doc = await prisma.document.create({
-        data: {
-          loanId,
-          docType: docType || 'other',
-          label: file.name,
-          status: 'uploaded',
-          fileUrl,
-          fileName: file.name,
-          fileSize: file.size,
-          uploadedAt: new Date(),
-        },
-      });
+      const docRows = await sql`
+        INSERT INTO documents (loan_id, doc_type, label, status, file_url, file_name, file_size, uploaded_at, created_at)
+        VALUES (${loanId}, ${docType || 'other'}, ${file.name}, 'uploaded', ${fileUrl}, ${file.name}, ${file.size}, NOW(), NOW())
+        RETURNING *
+      `;
+      const doc = docRows[0];
 
-      // Audit trail
-      await prisma.loanEvent.create({
-        data: {
-          loanId,
-          eventType: 'doc_uploaded',
-          actorType: 'borrower',
-          actorId: session.borrowerId,
-          newValue: file.name,
-          details: { documentId: doc.id, fileName: file.name, storageType },
-        },
-      });
+      await sql`
+        INSERT INTO loan_events (loan_id, event_type, actor_type, actor_id, new_value, details, created_at)
+        VALUES (${loanId}, 'doc_uploaded', 'borrower', ${session.borrowerId}, ${file.name},
+          ${JSON.stringify({ documentId: doc.id, fileName: file.name, storageType })}::jsonb, NOW())
+      `;
 
       return NextResponse.json({ document: doc });
     }

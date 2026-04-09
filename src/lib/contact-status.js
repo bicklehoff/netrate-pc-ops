@@ -2,7 +2,7 @@
 // Updates contact lifecycle status based on loan/lead events.
 // Status progression: subscriber → lead → applicant → in_process → funded → past_client
 
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 
 const STATUS_ORDER = ['subscriber', 'lead', 'applicant', 'in_process', 'funded', 'past_client'];
 
@@ -26,17 +26,13 @@ const LOAN_STATUS_MAP = {
  */
 export async function updateContactFromLoanStatus(loanId, newLoanStatus) {
   try {
-    const loan = await prisma.loan.findUnique({
-      where: { id: loanId },
-      select: { borrowerId: true },
-    });
-    if (!loan?.borrowerId) return;
+    const loanRows = await sql`SELECT borrower_id FROM loans WHERE id = ${loanId} LIMIT 1`;
+    if (!loanRows.length || !loanRows[0].borrower_id) return;
 
-    const contact = await prisma.contact.findFirst({
-      where: { borrowerId: loan.borrowerId },
-    });
-    if (!contact) return;
+    const contactRows = await sql`SELECT * FROM contacts WHERE borrower_id = ${loanRows[0].borrower_id} LIMIT 1`;
+    if (!contactRows.length) return;
 
+    const contact = contactRows[0];
     const targetStatus = LOAN_STATUS_MAP[newLoanStatus];
     if (!targetStatus) return;
 
@@ -45,19 +41,20 @@ export async function updateContactFromLoanStatus(loanId, newLoanStatus) {
 
     // Only upgrade
     if (targetIdx > currentIdx) {
-      const data = { status: targetStatus };
-
       if (newLoanStatus === 'funded') {
-        data.fundedDate = new Date();
-        if (!contact.tags.includes('mailing-list')) {
-          data.tags = [...contact.tags, 'mailing-list'];
-        }
+        const newTags = contact.tags?.includes('mailing-list')
+          ? contact.tags
+          : [...(contact.tags || []), 'mailing-list'];
+        await sql`
+          UPDATE contacts SET status = ${targetStatus}, funded_date = NOW(), tags = ${newTags}, updated_at = NOW()
+          WHERE id = ${contact.id}
+        `;
+      } else {
+        await sql`
+          UPDATE contacts SET status = ${targetStatus}, updated_at = NOW()
+          WHERE id = ${contact.id}
+        `;
       }
-
-      await prisma.contact.update({
-        where: { id: contact.id },
-        data,
-      });
     }
   } catch (error) {
     console.error('Contact status update error:', error?.message);

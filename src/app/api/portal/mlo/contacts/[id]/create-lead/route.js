@@ -5,7 +5,7 @@
 
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 
 export async function POST(req, { params }) {
   try {
@@ -18,48 +18,48 @@ export async function POST(req, { params }) {
     const body = await req.json().catch(() => ({}));
 
     // Find the contact
-    const contact = await prisma.contact.findUnique({
-      where: { id },
-    });
+    const contactRows = await sql`SELECT * FROM contacts WHERE id = ${id} LIMIT 1`;
+    const contact = contactRows[0];
 
     if (!contact) {
       return Response.json({ error: 'Contact not found' }, { status: 404 });
     }
 
     // Check if there's already an active lead for this contact
-    const existingLead = await prisma.lead.findFirst({
-      where: {
-        contactId: contact.id,
-        status: { in: ['new', 'contacted', 'qualified'] },
-      },
-    });
+    const existingLead = await sql`
+      SELECT id FROM leads
+      WHERE contact_id = ${contact.id} AND status IN ('new', 'contacted', 'qualified')
+      LIMIT 1
+    `;
 
-    if (existingLead) {
+    if (existingLead[0]) {
       return Response.json({
         error: 'This contact already has an active lead',
-        leadId: existingLead.id,
+        leadId: existingLead[0].id,
       }, { status: 409 });
     }
 
     // Create the lead
-    const lead = await prisma.lead.create({
-      data: {
-        name: `${contact.firstName} ${contact.lastName}`,
-        email: contact.email,
-        phone: contact.phone,
-        source: 'contact',
-        sourceDetail: `Created from contact by ${session.user.name || session.user.email}`,
-        status: 'new',
-        loanPurpose: body.loanPurpose || null,
-        propertyState: body.propertyState || null,
-        loanAmount: body.loanAmount ? parseFloat(body.loanAmount) : null,
-        creditScoreRange: body.creditScoreRange || null,
-        notes: body.notes || null,
-        contactId: contact.id,
-      },
-    });
+    const leadRows = await sql`
+      INSERT INTO leads (
+        name, email, phone, source, source_detail, status,
+        loan_purpose, property_state, loan_amount, credit_score_range,
+        notes, contact_id, created_at, updated_at
+      ) VALUES (
+        ${`${contact.first_name} ${contact.last_name}`},
+        ${contact.email}, ${contact.phone}, 'contact',
+        ${`Created from contact by ${session.user.name || session.user.email}`},
+        'new',
+        ${body.loanPurpose || null}, ${body.propertyState || null},
+        ${body.loanAmount ? parseFloat(body.loanAmount) : null},
+        ${body.creditScoreRange || null},
+        ${body.notes || null}, ${contact.id},
+        NOW(), NOW()
+      )
+      RETURNING *
+    `;
 
-    return Response.json({ success: true, lead }, { status: 201 });
+    return Response.json({ success: true, lead: leadRows[0] }, { status: 201 });
   } catch (error) {
     console.error('Create lead from contact error:', error?.message);
     return Response.json({ error: 'Failed to create lead' }, { status: 500 });

@@ -4,7 +4,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 
 export async function GET(request, { params }) {
   try {
@@ -15,21 +15,18 @@ export async function GET(request, { params }) {
 
     const { id } = await params;
 
-    const loan = await prisma.loan.findUnique({
-      where: { id },
-      select: { borrowerId: true },
-    });
+    const loanRows = await sql`SELECT borrower_id FROM loans WHERE id = ${id} LIMIT 1`;
+    const loan = loanRows[0];
 
-    if (!loan?.borrowerId) {
-      return NextResponse.json({ contactId: null });
+    if (!loan?.borrower_id) {
+      return NextResponse.json({ contact_id: null });
     }
 
-    const contact = await prisma.contact.findFirst({
-      where: { borrowerId: loan.borrowerId },
-      select: { id: true },
-    });
+    const contactRows = await sql`
+      SELECT id FROM contacts WHERE borrower_id = ${loan.borrower_id} LIMIT 1
+    `;
 
-    return NextResponse.json({ contactId: contact?.id || null });
+    return NextResponse.json({ contact_id: contactRows[0]?.id || null });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

@@ -5,7 +5,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 
 export async function GET(request, { params }) {
   try {
@@ -15,10 +15,9 @@ export async function GET(request, { params }) {
     }
 
     const { id } = await params;
-    const tasks = await prisma.loanTask.findMany({
-      where: { loanId: id },
-      orderBy: { createdAt: 'asc' },
-    });
+    const tasks = await sql`
+      SELECT * FROM loan_tasks WHERE loan_id = ${id} ORDER BY created_at ASC
+    `;
 
     return NextResponse.json({ tasks });
   } catch (error) {
@@ -36,17 +35,13 @@ export async function POST(request, { params }) {
     const { id } = await params;
     const body = await request.json();
 
-    const task = await prisma.loanTask.create({
-      data: {
-        loanId: id,
-        title: body.title,
-        priority: body.priority || 'normal',
-        completedAt: body.completedAt || null,
-        createdById: session.user.id,
-      },
-    });
+    const taskRows = await sql`
+      INSERT INTO loan_tasks (id, loan_id, title, priority, completed_at, created_by_id, created_at, updated_at)
+      VALUES (gen_random_uuid(), ${id}, ${body.title}, ${body.priority || 'normal'}, ${body.completedAt || null}, ${session.user.id}, NOW(), NOW())
+      RETURNING *
+    `;
 
-    return NextResponse.json({ task }, { status: 201 });
+    return NextResponse.json({ task: taskRows[0] }, { status: 201 });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

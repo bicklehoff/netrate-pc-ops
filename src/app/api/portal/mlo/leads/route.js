@@ -6,7 +6,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 
 export async function GET(request) {
   try {
@@ -21,33 +21,27 @@ export async function GET(request) {
     const mloId = searchParams.get('mloId');
     const q = searchParams.get('q');
 
-    const where = {};
-    if (statusFilter && statusFilter !== 'all') where.status = statusFilter;
-    if (mloId) where.mloId = mloId;
-    if (q) {
-      where.OR = [
-        { name: { contains: q, mode: 'insensitive' } },
-        { email: { contains: q, mode: 'insensitive' } },
-        { phone: { contains: q } },
-      ];
-    }
+    const effectiveStatus = (statusFilter && statusFilter !== 'all') ? statusFilter : null;
+    const pattern = q ? `%${q}%` : null;
 
-    const leads = await prisma.lead.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      include: {
-        contact: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            status: true,
-          },
-        },
-      },
-    });
+    const leads = await sql`
+      SELECT l.*,
+        json_build_object('id', c.id, 'first_name', c.first_name, 'last_name', c.last_name, 'status', c.status) AS contact
+      FROM leads l
+      LEFT JOIN contacts c ON c.id = l.contact_id
+      WHERE (${effectiveStatus}::text IS NULL OR l.status = ${effectiveStatus})
+        AND (${mloId}::uuid IS NULL OR l.mlo_id = ${mloId})
+        AND (${pattern}::text IS NULL OR l.name ILIKE ${pattern} OR l.email ILIKE ${pattern} OR l.phone LIKE ${pattern})
+      ORDER BY l.created_at DESC
+    `;
 
-    return NextResponse.json({ leads });
+    // Null out contact if no contact_id
+    const result = leads.map(lead => ({
+      ...lead,
+      contact: lead.contact?.id ? lead.contact : null,
+    }));
+
+    return NextResponse.json({ leads: result });
   } catch (error) {
     console.error('Leads list error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

@@ -8,7 +8,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 import { createLoanFolder } from '@/lib/zoho-workdrive';
 
 export async function POST(request, { params }) {
@@ -19,59 +19,51 @@ export async function POST(request, { params }) {
     }
 
     const { id } = await params;
-    const loan = await prisma.loan.findUnique({
-      where: { id },
-      include: {
-        borrower: { select: { firstName: true, lastName: true } },
-      },
-    });
+
+    const loanRows = await sql`
+      SELECT l.*, b.first_name AS b_first_name, b.last_name AS b_last_name
+      FROM loans l
+      LEFT JOIN borrowers b ON b.id = l.borrower_id
+      WHERE l.id = ${id} LIMIT 1
+    `;
+    const loan = loanRows[0];
 
     if (!loan) {
       return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
     }
 
     const isAdmin = session.user.role === 'admin';
-    if (!isAdmin && loan.mloId !== session.user.id) {
+    if (!isAdmin && loan.mlo_id !== session.user.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
-    if (loan.workDriveFolderId) {
+    if (loan.work_drive_folder_id) {
       return NextResponse.json({ error: 'Loan already has a WorkDrive folder' }, { status: 400 });
     }
 
-    if (!loan.borrower?.firstName || !loan.borrower?.lastName) {
+    if (!loan.b_first_name || !loan.b_last_name) {
       return NextResponse.json({ error: 'Borrower name is required to create folder' }, { status: 400 });
     }
 
     // Create folder structure in WorkDrive
     const folder = await createLoanFolder({
-      borrowerFirstName: loan.borrower.firstName,
-      borrowerLastName: loan.borrower.lastName,
+      borrowerFirstName: loan.b_first_name,
+      borrowerLastName: loan.b_last_name,
       purpose: loan.purpose || 'purchase',
     });
 
     // Link folder to loan
-    await prisma.loan.update({
-      where: { id },
-      data: {
-        workDriveFolderId: folder.rootFolderId,
-        workDriveSubfolders: folder.subfolders,
-      },
-    });
+    await sql`
+      UPDATE loans SET work_drive_folder_id = ${folder.rootFolderId}, work_drive_subfolders = ${JSON.stringify(folder.subfolders)}, updated_at = NOW()
+      WHERE id = ${id}
+    `;
 
     // Audit
-    await prisma.loanEvent.create({
-      data: {
-        loanId: id,
-        eventType: 'workdrive_folder_created',
-        actorType: 'mlo',
-        actorId: session.user.id,
-        details: {
-          folderId: folder.rootFolderId,
-          subfolders: folder.subfolders,
-        },
-      },
-    });
+    await sql`
+      INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, details, created_at)
+      VALUES (gen_random_uuid(), ${id}, 'workdrive_folder_created', 'mlo', ${session.user.id},
+              ${JSON.stringify({ folderId: folder.rootFolderId, subfolders: folder.subfolders })}, NOW())
+    `;
 
     return NextResponse.json({
       success: true,

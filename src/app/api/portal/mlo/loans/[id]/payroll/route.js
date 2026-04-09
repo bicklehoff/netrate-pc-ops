@@ -12,26 +12,24 @@ export const maxDuration = 30;
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 import { uploadFile, createLoanFolder } from '@/lib/zoho-workdrive';
 import { extractCdData } from '@/lib/cd-extractor';
 
 async function verifyMloAccess(loanId, session) {
   if (!session || session.user.userType !== 'mlo') return null;
-  const loan = await prisma.loan.findUnique({
-    where: { id: loanId },
-    include: {
-      borrower: {
-        select: { id: true, firstName: true, lastName: true, email: true },
-      },
-      mlo: {
-        select: { id: true, firstName: true, lastName: true, email: true, nmls: true },
-      },
-    },
-  });
+  const rows = await sql`
+    SELECT l.*, b.id AS b_id, b.first_name AS b_first_name, b.last_name AS b_last_name, b.email AS b_email,
+           m.id AS m_id, m.first_name AS m_first_name, m.last_name AS m_last_name, m.email AS m_email, m.nmls AS m_nmls
+    FROM loans l
+    LEFT JOIN borrowers b ON b.id = l.borrower_id
+    LEFT JOIN mlos m ON m.id = l.mlo_id
+    WHERE l.id = ${loanId} LIMIT 1
+  `;
+  const loan = rows[0];
   if (!loan) return null;
   const isAdmin = session.user.role === 'admin';
-  if (!isAdmin && loan.mloId !== session.user.id) return null;
+  if (!isAdmin && loan.mlo_id !== session.user.id) return null;
   return loan;
 }
 
@@ -47,51 +45,42 @@ export async function GET(request, { params }) {
 
     // Dup-check: other loans for same borrower not settled/cancelled
     let relatedLoans = [];
-    if (loan.borrowerId) {
-      relatedLoans = await prisma.loan.findMany({
-        where: {
-          borrowerId: loan.borrowerId,
-          id: { not: id },
-          status: { notIn: ['settled', 'cancelled'] },
-        },
-        select: {
-          id: true, status: true, loanNumber: true, lenderName: true,
-          loanType: true, loanAmount: true, purpose: true, createdAt: true,
-        },
-        orderBy: { createdAt: 'desc' },
-      });
+    if (loan.borrower_id) {
+      relatedLoans = await sql`
+        SELECT id, status, loan_number, lender_name, loan_type, loan_amount, purpose, created_at
+        FROM loans
+        WHERE borrower_id = ${loan.borrower_id} AND id != ${id} AND status NOT IN ('settled', 'cancelled')
+        ORDER BY created_at DESC
+      `;
     }
 
     const response = {
-      loanId: loan.id,
+      loan_id: loan.id,
       status: loan.status,
-      cdWorkDriveFileId: loan.cdWorkDriveFileId,
-      cdFileName: loan.cdFileName,
-      cdExtractedData: loan.cdExtractedData,
-      cdProcessedAt: loan.cdProcessedAt,
-      cdApprovedAt: loan.cdApprovedAt,
-      cdApprovedBy: loan.cdApprovedBy,
-      payrollSentAt: loan.payrollSentAt,
-      isFunded: loan.status === 'funded',
-      hasCD: !!loan.cdWorkDriveFileId,
-      isExtracted: loan.cdExtractedData?.status === 'success',
-      isApproved: !!loan.cdApprovedAt,
-      isSent: !!loan.payrollSentAt,
-      relatedLoans,
-      payrollDetails: null,
+      cd_work_drive_file_id: loan.cd_work_drive_file_id,
+      cd_file_name: loan.cd_file_name,
+      cd_extracted_data: loan.cd_extracted_data,
+      cd_processed_at: loan.cd_processed_at,
+      cd_approved_at: loan.cd_approved_at,
+      cd_approved_by: loan.cd_approved_by,
+      payroll_sent_at: loan.payroll_sent_at,
+      is_funded: loan.status === 'funded',
+      has_cd: !!loan.cd_work_drive_file_id,
+      is_extracted: loan.cd_extracted_data?.status === 'success',
+      is_approved: !!loan.cd_approved_at,
+      is_sent: !!loan.payroll_sent_at,
+      related_loans: relatedLoans,
+      payroll_details: null,
     };
 
-    if (loan.payrollSentAt) {
-      // Find the most recent payroll event with a successful tracker result
-      const payrollEvents = await prisma.loanEvent.findMany({
-        where: { loanId: id, eventType: 'payroll_sent' },
-        orderBy: { createdAt: 'desc' },
-        select: { details: true, createdAt: true },
-        take: 5,
-      });
-      // Prefer the most recent successful one, fall back to latest
+    if (loan.payroll_sent_at) {
+      const payrollEvents = await sql`
+        SELECT details, created_at FROM loan_events
+        WHERE loan_id = ${id} AND event_type = 'payroll_sent'
+        ORDER BY created_at DESC LIMIT 5
+      `;
       const successfulEvent = payrollEvents.find(e => e.details?.trackerResult?.success);
-      response.payrollDetails = successfulEvent?.details || payrollEvents[0]?.details || null;
+      response.payroll_details = successfulEvent?.details || payrollEvents[0]?.details || null;
     }
 
     return NextResponse.json(response);
@@ -124,37 +113,32 @@ export async function PUT(request, { params }) {
     if (!file || typeof file === 'string') {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
-
     if (!file.name.toLowerCase().endsWith('.pdf')) {
       return NextResponse.json({ error: 'Closing Disclosure must be a PDF file' }, { status: 400 });
     }
-
     if (file.size > 25 * 1024 * 1024) {
       return NextResponse.json({ error: 'File size exceeds 25 MB limit' }, { status: 400 });
     }
 
     // Upload to WorkDrive CLOSING subfolder — auto-create if missing
-    let closingFolderId = loan.workDriveSubfolders?.CLOSING;
+    let closingFolderId = loan.work_drive_subfolders?.CLOSING;
 
     if (!closingFolderId) {
-      const loName = loan.mlo
-        ? `${loan.mlo.firstName} ${loan.mlo.lastName}`
+      const loName = loan.m_first_name
+        ? `${loan.m_first_name} ${loan.m_last_name}`
         : 'David Burson';
 
       const wdResult = await createLoanFolder({
-        borrowerFirstName: loan.borrower?.firstName || 'Unknown',
-        borrowerLastName: loan.borrower?.lastName || 'Unknown',
+        borrowerFirstName: loan.b_first_name || 'Unknown',
+        borrowerLastName: loan.b_last_name || 'Unknown',
         purpose: loan.purpose || 'purchase',
         loName,
       });
 
-      await prisma.loan.update({
-        where: { id },
-        data: {
-          workDriveFolderId: wdResult.rootFolderId,
-          workDriveSubfolders: wdResult.subfolders,
-        },
-      });
+      await sql`
+        UPDATE loans SET work_drive_folder_id = ${wdResult.rootFolderId}, work_drive_subfolders = ${JSON.stringify(wdResult.subfolders)}, updated_at = NOW()
+        WHERE id = ${id}
+      `;
 
       closingFolderId = wdResult.subfolders.CLOSING;
     }
@@ -162,102 +146,62 @@ export async function PUT(request, { params }) {
     const uploaded = await uploadFile(file, file.name, closingFolderId, true);
 
     // Store CD reference + clear any previous extraction/approval/payroll state
-    await prisma.loan.update({
-      where: { id },
-      data: {
-        cdWorkDriveFileId: uploaded.id,
-        cdFileName: file.name,
-        cdExtractedData: null,
-        cdProcessedAt: null,
-        cdApprovedAt: null,
-        cdApprovedBy: null,
-        payrollSentAt: null,
-      },
-    });
+    await sql`
+      UPDATE loans SET cd_work_drive_file_id = ${uploaded.id}, cd_file_name = ${file.name},
+        cd_extracted_data = NULL, cd_processed_at = NULL, cd_approved_at = NULL, cd_approved_by = NULL, payroll_sent_at = NULL,
+        updated_at = NOW()
+      WHERE id = ${id}
+    `;
 
     // Audit: CD uploaded
-    await prisma.loanEvent.create({
-      data: {
-        loanId: id,
-        eventType: 'cd_uploaded',
-        actorType: 'mlo',
-        actorId: session.user.id,
-        newValue: file.name,
-        details: {
-          workDriveFileId: uploaded.id,
-          fileName: file.name,
-          fileSize: file.size,
-          folder: 'CLOSING',
-          replacedPrevious: !!loan.cdWorkDriveFileId,
-        },
-      },
-    });
+    await sql`
+      INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, new_value, details, created_at)
+      VALUES (gen_random_uuid(), ${id}, 'cd_uploaded', 'mlo', ${session.user.id}, ${file.name},
+              ${JSON.stringify({ workDriveFileId: uploaded.id, fileName: file.name, fileSize: file.size, folder: 'CLOSING', replacedPrevious: !!loan.cd_work_drive_file_id })},
+              NOW())
+    `;
 
-    // Trigger CD extraction via Claude — pass file bytes directly to avoid WorkDrive round-trip
+    // Trigger CD extraction via Claude
     const loanContext = {
-      borrowerName: loan.borrower
-        ? `${loan.borrower.firstName} ${loan.borrower.lastName}`
-        : null,
-      loanNumber: loan.loanNumber,
-      propertyAddress: loan.propertyAddress,
+      borrowerName: loan.b_first_name ? `${loan.b_first_name} ${loan.b_last_name}` : null,
+      loanNumber: loan.loan_number,
+      propertyAddress: loan.property_address,
     };
 
     const fileBuffer = await file.arrayBuffer();
     const extraction = await extractCdData({ fileBuffer, loanContext });
 
-    await prisma.loan.update({
-      where: { id },
-      data: {
-        cdExtractedData: extraction,
-        cdProcessedAt: new Date(),
-      },
-    });
+    await sql`
+      UPDATE loans SET cd_extracted_data = ${JSON.stringify(extraction)}, cd_processed_at = NOW(), updated_at = NOW()
+      WHERE id = ${id}
+    `;
 
     // Audit: extraction result
-    await prisma.loanEvent.create({
-      data: {
-        loanId: id,
-        eventType: extraction.status === 'success' ? 'cd_extracted' : 'cd_extraction_failed',
-        actorType: 'system',
-        actorId: 'cd-extractor',
-        newValue: extraction.status,
-        details: extraction.status === 'success'
-          ? { fields: Object.keys(extraction.data) }
-          : { error: extraction.error },
-      },
-    });
+    await sql`
+      INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, new_value, details, created_at)
+      VALUES (gen_random_uuid(), ${id}, ${extraction.status === 'success' ? 'cd_extracted' : 'cd_extraction_failed'}, 'system', 'cd-extractor', ${extraction.status},
+              ${JSON.stringify(extraction.status === 'success' ? { fields: Object.keys(extraction.data) } : { error: extraction.error })},
+              NOW())
+    `;
 
-    // Dup-check: find other loans for the same borrower that aren't settled
+    // Dup-check
     let relatedLoans = [];
-    if (loan.borrowerId) {
-      const others = await prisma.loan.findMany({
-        where: {
-          borrowerId: loan.borrowerId,
-          id: { not: id },
-          status: { notIn: ['settled', 'cancelled'] },
-        },
-        select: {
-          id: true,
-          status: true,
-          loanNumber: true,
-          lenderName: true,
-          loanType: true,
-          loanAmount: true,
-          purpose: true,
-          createdAt: true,
-        },
-        orderBy: { createdAt: 'desc' },
-      });
-      relatedLoans = others;
+    if (loan.borrower_id) {
+      relatedLoans = await sql`
+        SELECT id, status, loan_number, lender_name, loan_type, loan_amount, purpose, created_at
+        FROM loans
+        WHERE borrower_id = ${loan.borrower_id} AND id != ${id} AND status NOT IN ('settled', 'cancelled')
+        ORDER BY created_at DESC
+      `;
     }
 
     return NextResponse.json({
       success: true,
-      cdWorkDriveFileId: uploaded.id,
-      cdFileName: file.name,
-      cdExtractedData: extraction,
-      cdProcessedAt: new Date().toISOString(),
-      relatedLoans,
+      cd_work_drive_file_id: uploaded.id,
+      cd_file_name: file.name,
+      cd_extracted_data: extraction,
+      cd_processed_at: new Date().toISOString(),
+      related_loans: relatedLoans,
     });
   } catch (error) {
     console.error('CD upload error:', error);
@@ -279,74 +223,63 @@ export async function PATCH(request, { params }) {
     const { action, notes, nicknameConfirmed, unmatchedPersons, reimbursementSelections } = body;
 
     if (action === 'approve') {
-      if (!loan.cdExtractedData || loan.cdExtractedData.status !== 'success') {
-        return NextResponse.json(
-          { error: 'No successful CD extraction to approve' },
-          { status: 400 }
-        );
+      if (!loan.cd_extracted_data || loan.cd_extracted_data.status !== 'success') {
+        return NextResponse.json({ error: 'No successful CD extraction to approve' }, { status: 400 });
       }
-
-      if (loan.cdApprovedAt) {
-        return NextResponse.json(
-          { error: 'CD data already approved' },
-          { status: 400 }
-        );
+      if (loan.cd_approved_at) {
+        return NextResponse.json({ error: 'CD data already approved' }, { status: 400 });
       }
 
       const now = new Date();
-      const cd = loan.cdExtractedData.data;
+      const cd = loan.cd_extracted_data.data;
 
-      // Write CD data back to the loan record — CD is source of truth at closing
-      const loanUpdate = {
-        cdApprovedAt: now,
-        cdApprovedBy: session.user.id,
-      };
+      // Build loan update fields from CD extraction
+      const loanUpdate = { cd_approved_at: now, cd_approved_by: session.user.id };
+      if (cd.loanAmount != null) loanUpdate.loan_amount = cd.loanAmount;
+      if (cd.interestRate != null) loanUpdate.interest_rate = cd.interestRate;
+      if (cd.loanTerm != null) loanUpdate.loan_term = cd.loanTerm;
+      if (cd.loanType && cd.loanType !== 'other') loanUpdate.loan_type = cd.loanType;
+      if (cd.lenderName) loanUpdate.lender_name = cd.lenderName;
+      if (cd.loanNumber) loanUpdate.lender_loan_number = cd.loanNumber;
+      if (cd.monthlyPI != null) loanUpdate.monthly_payment = cd.monthlyPI;
+      if (cd.brokerCompensation != null) loanUpdate.broker_compensation = cd.brokerCompensation;
+      if (cd.totalClosingCosts != null) loanUpdate.total_closing_costs = cd.totalClosingCosts;
+      if (cd.cashToClose != null) loanUpdate.cash_to_close = cd.cashToClose;
+      if (cd.lenderCredits != null) loanUpdate.lender_credits = cd.lenderCredits;
+      if (cd.closingDate) loanUpdate.closing_date = new Date(cd.closingDate);
+      if (cd.disbursementDate) loanUpdate.funding_date = new Date(cd.disbursementDate);
 
-      // Update loan fields from CD extraction
-      if (cd.loanAmount != null) loanUpdate.loanAmount = cd.loanAmount;
-      if (cd.interestRate != null) loanUpdate.interestRate = cd.interestRate;
-      if (cd.loanTerm != null) loanUpdate.loanTerm = cd.loanTerm;
-      if (cd.loanType && cd.loanType !== 'other') loanUpdate.loanType = cd.loanType;
-      if (cd.lenderName) loanUpdate.lenderName = cd.lenderName;
-      if (cd.loanNumber) loanUpdate.lenderLoanNumber = cd.loanNumber;
-      if (cd.monthlyPI != null) loanUpdate.monthlyPayment = cd.monthlyPI;
-      if (cd.brokerCompensation != null) loanUpdate.brokerCompensation = cd.brokerCompensation;
-      if (cd.totalClosingCosts != null) loanUpdate.totalClosingCosts = cd.totalClosingCosts;
-      if (cd.cashToClose != null) loanUpdate.cashToClose = cd.cashToClose;
-      if (cd.lenderCredits != null) loanUpdate.lenderCredits = cd.lenderCredits;
-      if (cd.closingDate) loanUpdate.closingDate = new Date(cd.closingDate);
-      if (cd.disbursementDate) loanUpdate.fundingDate = new Date(cd.disbursementDate);
-
-      // Persist reimbursement selections into cdExtractedData
+      // Persist reimbursement selections into cd_extracted_data
       if (reimbursementSelections) {
         const updatedExtraction = {
-          ...loan.cdExtractedData,
-          data: {
-            ...cd,
-            _reimbursementSelections: reimbursementSelections,
-          },
+          ...loan.cd_extracted_data,
+          data: { ...cd, _reimbursementSelections: reimbursementSelections },
         };
-        loanUpdate.cdExtractedData = updatedExtraction;
+        loanUpdate.cd_extracted_data = JSON.stringify(updatedExtraction);
       }
 
-      await prisma.loan.update({ where: { id }, data: loanUpdate });
+      // Dynamic update
+      const cols = Object.keys(loanUpdate);
+      const vals = Object.values(loanUpdate);
+      const setFragments = cols.map((c, i) => `"${c}" = $${i + 1}`);
+      await sql(`UPDATE loans SET ${setFragments.join(', ')}, updated_at = NOW() WHERE id = $${cols.length + 1}`, [...vals, id]);
 
-      // Handle nickname — if MLO confirmed, store legal name from CD on borrower
+      // Handle nickname
       let nicknameUpdate = null;
-      if (nicknameConfirmed && loan.borrowerId && Array.isArray(cd.borrowerNames) && cd.borrowerNames.length > 0) {
+      if (nicknameConfirmed && loan.borrower_id && Array.isArray(cd.borrowerNames) && cd.borrowerNames.length > 0) {
         const primaryCd = cd.borrowerNames[0];
         nicknameUpdate = {
           legalFirstName: primaryCd.firstName,
           legalLastName: primaryCd.lastName,
-          nickname: loan.borrower.firstName,
+          nickname: loan.b_first_name,
         };
-        await prisma.borrower.update({
-          where: { id: loan.borrowerId },
-          data: nicknameUpdate,
-        });
+        await sql`
+          UPDATE borrowers SET legal_first_name = ${primaryCd.firstName}, legal_last_name = ${primaryCd.lastName}, nickname = ${loan.b_first_name}, updated_at = NOW()
+          WHERE id = ${loan.borrower_id}
+        `;
       }
 
-      // Process unmatched persons from CD — create contacts and loan borrower links
+      // Process unmatched persons from CD
       const personsCreated = [];
       if (unmatchedPersons && unmatchedPersons.length > 0) {
         for (const person of unmatchedPersons) {
@@ -354,108 +287,62 @@ export async function PATCH(request, { params }) {
 
           let contactId = null;
 
-          // Create contact if requested
           if (person.saveAsContact) {
-            const contact = await prisma.contact.create({
-              data: {
-                firstName: person.firstName,
-                lastName: person.lastName,
-                email: person.email || null,
-                phone: person.phone || null,
-                source: 'cd_extraction',
-                contactType: person.role === 'nbs' ? 'nbs' : 'borrower',
-                tags: [person.role === 'nbs' ? 'non-borrowing-spouse' : 'co-borrower'],
-              },
-            });
-            contactId = contact.id;
+            const contactRows = await sql`
+              INSERT INTO contacts (id, first_name, last_name, email, phone, source, contact_type, tags, created_at, updated_at)
+              VALUES (gen_random_uuid(), ${person.firstName}, ${person.lastName}, ${person.email || null}, ${person.phone || null}, 'cd_extraction', ${person.role === 'nbs' ? 'nbs' : 'borrower'}, ${[person.role === 'nbs' ? 'non-borrowing-spouse' : 'co-borrower']}, NOW(), NOW())
+              RETURNING *
+            `;
+            contactId = contactRows[0].id;
           }
 
-          // Create borrower record for co-borrowers (NBS don't get borrower records)
           if (person.role === 'co_borrower') {
-            // Create a minimal borrower record
-            const borrower = await prisma.borrower.create({
-              data: {
-                firstName: person.firstName,
-                lastName: person.lastName,
-                legalFirstName: person.firstName,
-                legalLastName: person.lastName,
-                email: person.email || `${person.firstName.toLowerCase()}.${person.lastName.toLowerCase()}@placeholder.local`,
-                dobEncrypted: '',
-                ssnEncrypted: '',
-                ssnLastFour: '0000',
-                ...(contactId ? { contact: { connect: { id: contactId } } } : {}),
-              },
-            });
+            const borrowerRows = await sql`
+              INSERT INTO borrowers (id, first_name, last_name, legal_first_name, legal_last_name, email, dob_encrypted, ssn_encrypted, ssn_last_four, created_at, updated_at)
+              VALUES (gen_random_uuid(), ${person.firstName}, ${person.lastName}, ${person.firstName}, ${person.lastName}, ${person.email || `${person.firstName.toLowerCase()}.${person.lastName.toLowerCase()}@placeholder.local`}, '', '', '0000', NOW(), NOW())
+              RETURNING *
+            `;
+            const borrower = borrowerRows[0];
 
-            // Link to loan as co-borrower
-            await prisma.loanBorrower.create({
-              data: {
-                loanId: id,
-                borrowerId: borrower.id,
-                borrowerType: 'co_borrower',
-                ordinal: 1,
-              },
-            });
+            await sql`
+              INSERT INTO loan_borrowers (id, loan_id, borrower_id, borrower_type, ordinal, created_at, updated_at)
+              VALUES (gen_random_uuid(), ${id}, ${borrower.id}, 'co_borrower', 1, NOW(), NOW())
+            `;
 
             personsCreated.push({ ...person, borrowerId: borrower.id, contactId });
           } else {
-            // NBS — just the contact, no borrower/loan link
             personsCreated.push({ ...person, contactId });
           }
         }
       }
 
-      await prisma.loanEvent.create({
-        data: {
-          loanId: id,
-          eventType: 'cd_approved',
-          actorType: 'mlo',
-          actorId: session.user.id,
-          newValue: 'approved',
-          details: {
-            extractedData: cd,
-            fieldsUpdated: Object.keys(loanUpdate).filter(k => k !== 'cdApprovedAt' && k !== 'cdApprovedBy'),
-            ...(nicknameUpdate ? { nicknameUpdate } : {}),
-            ...(personsCreated.length > 0 ? { personsCreated } : {}),
-            ...(notes ? { notes } : {}),
-          },
-        },
-      });
+      const fieldsUpdated = cols.filter(k => k !== 'cd_approved_at' && k !== 'cd_approved_by');
+      await sql`
+        INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, new_value, details, created_at)
+        VALUES (gen_random_uuid(), ${id}, 'cd_approved', 'mlo', ${session.user.id}, 'approved',
+                ${JSON.stringify({ extractedData: cd, fieldsUpdated, ...(nicknameUpdate ? { nicknameUpdate } : {}), ...(personsCreated.length > 0 ? { personsCreated } : {}), ...(notes ? { notes } : {}) })},
+                NOW())
+      `;
 
       return NextResponse.json({
         success: true,
-        cdApprovedAt: now.toISOString(),
-        fieldsUpdated: Object.keys(loanUpdate).filter(k => k !== 'cdApprovedAt' && k !== 'cdApprovedBy'),
-        personsCreated,
+        cd_approved_at: now.toISOString(),
+        fields_updated: fieldsUpdated,
+        persons_created: personsCreated,
       });
     }
 
     if (action === 'dispute') {
-      // Clear CD + extraction — MLO needs to re-upload
-      await prisma.loan.update({
-        where: { id },
-        data: {
-          cdWorkDriveFileId: null,
-          cdFileName: null,
-          cdExtractedData: null,
-          cdProcessedAt: null,
-          cdApprovedAt: null,
-          cdApprovedBy: null,
-        },
-      });
+      await sql`
+        UPDATE loans SET cd_work_drive_file_id = NULL, cd_file_name = NULL, cd_extracted_data = NULL, cd_processed_at = NULL, cd_approved_at = NULL, cd_approved_by = NULL, updated_at = NOW()
+        WHERE id = ${id}
+      `;
 
-      await prisma.loanEvent.create({
-        data: {
-          loanId: id,
-          eventType: 'cd_disputed',
-          actorType: 'mlo',
-          actorId: session.user.id,
-          newValue: 'disputed',
-          details: {
-            reason: notes || 'MLO disputed extracted CD data',
-          },
-        },
-      });
+      await sql`
+        INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, new_value, details, created_at)
+        VALUES (gen_random_uuid(), ${id}, 'cd_disputed', 'mlo', ${session.user.id}, 'disputed',
+                ${JSON.stringify({ reason: notes || 'MLO disputed extracted CD data' })}, NOW())
+      `;
 
       return NextResponse.json({ success: true, cleared: true });
     }
@@ -480,77 +367,63 @@ export async function POST(request, { params }) {
     if (loan.status !== 'funded') {
       return NextResponse.json({ error: 'Loan must be in Funded status' }, { status: 400 });
     }
-
-    if (!loan.cdWorkDriveFileId) {
-      return NextResponse.json(
-        { error: 'Upload the final Closing Disclosure before sending to payroll' },
-        { status: 400 }
-      );
+    if (!loan.cd_work_drive_file_id) {
+      return NextResponse.json({ error: 'Upload the final Closing Disclosure before sending to payroll' }, { status: 400 });
     }
-
-    if (!loan.cdApprovedAt) {
-      return NextResponse.json(
-        { error: 'CD data must be reviewed and approved before sending to payroll' },
-        { status: 400 }
-      );
+    if (!loan.cd_approved_at) {
+      return NextResponse.json({ error: 'CD data must be reviewed and approved before sending to payroll' }, { status: 400 });
     }
-
-    if (loan.payrollSentAt) {
-      return NextResponse.json(
-        { error: 'Already sent to payroll. Upload a new CD to re-send.' },
-        { status: 400 }
-      );
+    if (loan.payroll_sent_at) {
+      return NextResponse.json({ error: 'Already sent to payroll. Upload a new CD to re-send.' }, { status: 400 });
     }
 
     const now = new Date();
 
     // Re-read loan with fresh data (approval may have updated fields)
-    const freshLoan = await prisma.loan.findUnique({
-      where: { id },
-      include: {
-        borrower: { select: { firstName: true, lastName: true, email: true } },
-        mlo: { select: { firstName: true, lastName: true, email: true, nmls: true } },
-      },
-    });
+    const freshRows = await sql`
+      SELECT l.*, b.first_name AS b_first_name, b.last_name AS b_last_name, b.email AS b_email,
+             m.first_name AS m_first_name, m.last_name AS m_last_name, m.email AS m_email, m.nmls AS m_nmls
+      FROM loans l
+      LEFT JOIN borrowers b ON b.id = l.borrower_id
+      LEFT JOIN mlos m ON m.id = l.mlo_id
+      WHERE l.id = ${id} LIMIT 1
+    `;
+    const freshLoan = freshRows[0];
 
-    // Parse state from property address
-    const propState = freshLoan.propertyAddress?.state || null;
+    const propState = freshLoan.property_address?.state || null;
 
-    // Build TrackerPortal payload
-    // Pull reimbursement data from MLO-confirmed selections (Section B picker)
-    const cdData = freshLoan.cdExtractedData?.data || {};
-    const grossComp = freshLoan.brokerCompensation ? Number(freshLoan.brokerCompensation) : null;
+    const cdData = freshLoan.cd_extracted_data?.data || {};
+    const grossComp = freshLoan.broker_compensation ? Number(freshLoan.broker_compensation) : null;
     const reimbSelections = cdData._reimbursementSelections || [];
     const totalReimb = reimbSelections.reduce((sum, r) => sum + (r.editedAmount || 0), 0);
-    // Use totalDueToBroker from CD if available, otherwise sum components
     const wireTotal = cdData.totalDueToBroker
       ? Number(cdData.totalDueToBroker)
       : (grossComp || 0) + totalReimb;
 
     const trackerPayload = {
-      borrowerName: `${freshLoan.borrower.firstName} ${freshLoan.borrower.lastName}`,
-      loanNumber: freshLoan.lenderLoanNumber || freshLoan.loanNumber,
-      propertyAddress: freshLoan.propertyAddress
-        ? `${freshLoan.propertyAddress.street}, ${freshLoan.propertyAddress.city}, ${freshLoan.propertyAddress.state} ${freshLoan.propertyAddress.zipCode}`
+      borrowerName: `${freshLoan.b_first_name} ${freshLoan.b_last_name}`,
+      loanNumber: freshLoan.lender_loan_number || freshLoan.loan_number,
+      propertyAddress: freshLoan.property_address
+        ? `${freshLoan.property_address.street}, ${freshLoan.property_address.city}, ${freshLoan.property_address.state} ${freshLoan.property_address.zipCode}`
         : null,
       propertyState: propState,
-      lender: freshLoan.lenderName,
-      loanAmount: freshLoan.loanAmount ? Number(freshLoan.loanAmount) : null,
-      loanType: freshLoan.loanType,
+      lender: freshLoan.lender_name,
+      loanAmount: freshLoan.loan_amount ? Number(freshLoan.loan_amount) : null,
+      loanType: freshLoan.loan_type,
       loanPurpose: freshLoan.purpose ? freshLoan.purpose.charAt(0).toUpperCase() + freshLoan.purpose.slice(1) : null,
-      interestRate: freshLoan.interestRate ? Number(freshLoan.interestRate) : null,
-      loanTerm: freshLoan.loanTerm ? Math.round(freshLoan.loanTerm / 12) : null,
+      interestRate: freshLoan.interest_rate ? Number(freshLoan.interest_rate) : null,
+      loanTerm: freshLoan.loan_term ? Math.round(freshLoan.loan_term / 12) : null,
       grossComp,
       reimbursements: reimbSelections.length > 0 ? reimbSelections : null,
       totalReimb: totalReimb || null,
       wireTotal,
-      closingDate: freshLoan.closingDate?.toISOString()?.split('T')[0] || null,
-      fundingDate: freshLoan.fundingDate?.toISOString()?.split('T')[0] || null,
-      loName: freshLoan.mlo ? `${freshLoan.mlo.firstName} ${freshLoan.mlo.lastName}` : null,
-      loNmls: freshLoan.mlo?.nmls || null,
-      confirmedBy: freshLoan.mlo ? freshLoan.mlo.firstName.toLowerCase() : session.user.id,
-      confirmedAt: freshLoan.cdApprovedAt?.toISOString() || now.toISOString(),
-      cdWorkDriveFileId: freshLoan.cdWorkDriveFileId || null,
+      closingDate: freshLoan.closing_date?.toISOString?.()?.split('T')[0] || (freshLoan.closing_date ? String(freshLoan.closing_date).split('T')[0] : null),
+      fundingDate: freshLoan.funding_date?.toISOString?.()?.split('T')[0] || (freshLoan.funding_date ? String(freshLoan.funding_date).split('T')[0] : null),
+      loName: freshLoan.m_first_name ? `${freshLoan.m_first_name} ${freshLoan.m_last_name}` : null,
+      loNmls: freshLoan.m_nmls || null,
+      confirmedBy: freshLoan.m_first_name ? freshLoan.m_first_name.toLowerCase() : session.user.id,
+      confirmedAt: freshLoan.cd_approved_at?.toISOString?.() || now.toISOString(),
+      cdWorkDriveFileId: freshLoan.cd_work_drive_file_id || null,
     };
 
     // POST to TrackerPortal
@@ -573,32 +446,20 @@ export async function POST(request, { params }) {
       trackerResult = { error: trackerErr.message };
     }
 
-    // Mark loan as sent regardless of TrackerPortal result
-    await prisma.loan.update({
-      where: { id },
-      data: { payrollSentAt: now },
-    });
+    // Mark loan as sent
+    await sql`UPDATE loans SET payroll_sent_at = ${now}, updated_at = NOW() WHERE id = ${id}`;
 
-    await prisma.loanEvent.create({
-      data: {
-        loanId: id,
-        eventType: 'payroll_sent',
-        actorType: 'mlo',
-        actorId: session.user.id,
-        newValue: 'Sent to payroll',
-        details: {
-          trackerPayload,
-          trackerResult,
-          sentAt: now.toISOString(),
-          sentBy: session.user.id,
-        },
-      },
-    });
+    await sql`
+      INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, new_value, details, created_at)
+      VALUES (gen_random_uuid(), ${id}, 'payroll_sent', 'mlo', ${session.user.id}, 'Sent to payroll',
+              ${JSON.stringify({ trackerPayload, trackerResult, sentAt: now.toISOString(), sentBy: session.user.id })},
+              NOW())
+    `;
 
     return NextResponse.json({
       success: true,
-      payrollSentAt: now.toISOString(),
-      trackerResult,
+      payroll_sent_at: now.toISOString(),
+      tracker_result: trackerResult,
     });
   } catch (error) {
     console.error('Send to payroll error:', error);
