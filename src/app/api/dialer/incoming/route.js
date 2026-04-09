@@ -5,7 +5,7 @@
 // This is the "Voice URL" on your Twilio phone number configuration.
 
 import { buildIncomingTwiml } from '@/lib/twilio-voice';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 import { normalizePhone } from '@/lib/normalize-phone';
 
 export async function POST(req) {
@@ -22,10 +22,10 @@ export async function POST(req) {
   let contactId = null;
   if (normalizedFrom) {
     try {
-      const contact = await prisma.contact.findFirst({ where: { phone: normalizedFrom } });
-      if (contact) {
-        callerName = `${contact.firstName} ${contact.lastName}`;
-        contactId = contact.id;
+      const rows = await sql`SELECT id, first_name, last_name FROM contacts WHERE phone = ${normalizedFrom} LIMIT 1`;
+      if (rows.length) {
+        callerName = `${rows[0].first_name} ${rows[0].last_name}`;
+        contactId = rows[0].id;
       }
     } catch (e) {
       console.error('Incoming contact lookup failed:', e);
@@ -33,26 +33,17 @@ export async function POST(req) {
   }
 
   // Find the first available MLO to ring.
-  // For now, ring all MLOs (can be smarter later with availability/routing).
-  // TODO: Implement round-robin or availability-based routing
   let targetIdentity = 'mlo-default';
   try {
-    const mlos = await prisma.mlo.findMany({ select: { id: true }, take: 1 });
+    const mlos = await sql`SELECT id FROM mlos LIMIT 1`;
     if (mlos.length > 0) {
       targetIdentity = `mlo-${mlos[0].id}`;
 
       // Log the inbound call
-      await prisma.callLog.create({
-        data: {
-          mloId: mlos[0].id,
-          contactId,
-          direction: 'inbound',
-          fromNumber: normalizedFrom || from || '',
-          toNumber: normalizePhone(to) || to || '',
-          status: 'ringing',
-          twilioCallSid: callSid,
-        },
-      });
+      await sql`
+        INSERT INTO call_logs (mlo_id, contact_id, direction, from_number, to_number, status, twilio_call_sid)
+        VALUES (${mlos[0].id}, ${contactId}, 'inbound', ${normalizedFrom || from || ''}, ${normalizePhone(to) || to || ''}, 'ringing', ${callSid})
+      `;
     }
   } catch (e) {
     console.error('MLO lookup failed:', e);

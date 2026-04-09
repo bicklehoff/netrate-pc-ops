@@ -1,8 +1,8 @@
 // Dialer Recording Status — Receives recording completion events from Twilio
 // Twilio POSTs here when a call recording is ready.
-// Updates the CallLog with the recording URL.
+// Updates the call_logs with the recording URL.
 
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 
 export async function POST(req) {
   const formData = await req.formData();
@@ -12,10 +12,10 @@ export async function POST(req) {
 
   if (callSid && recordingUrl && recordingStatus === 'completed') {
     try {
-      await prisma.callLog.updateMany({
-        where: { twilioCallSid: callSid },
-        data: { recordingUrl },
-      });
+      await sql`
+        UPDATE call_logs SET recording_url = ${recordingUrl}
+        WHERE twilio_call_sid = ${callSid}
+      `;
     } catch (e) {
       console.error('Failed to save recording URL:', e);
     }

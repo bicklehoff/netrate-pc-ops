@@ -5,7 +5,7 @@
 // This is the "Voice URL" configured in your TwiML App.
 
 import { buildOutboundTwiml } from '@/lib/twilio-voice';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 import { normalizePhone } from '@/lib/normalize-phone';
 
 export async function POST(req) {
@@ -31,8 +31,8 @@ export async function POST(req) {
   let contactId = null;
   if (normalizedTo) {
     try {
-      const contact = await prisma.contact.findFirst({ where: { phone: normalizedTo } });
-      if (contact) contactId = contact.id;
+      const rows = await sql`SELECT id FROM contacts WHERE phone = ${normalizedTo} LIMIT 1`;
+      if (rows.length) contactId = rows[0].id;
     } catch (e) {
       console.error('Contact lookup failed:', e);
     }
@@ -41,17 +41,10 @@ export async function POST(req) {
   // Log the outbound call
   if (mloId) {
     try {
-      await prisma.callLog.create({
-        data: {
-          mloId,
-          contactId,
-          direction: 'outbound',
-          fromNumber: process.env.TWILIO_PHONE_NUMBER || '',
-          toNumber: normalizedTo || to,
-          status: 'initiated',
-          twilioCallSid: callSid,
-        },
-      });
+      await sql`
+        INSERT INTO call_logs (mlo_id, contact_id, direction, from_number, to_number, status, twilio_call_sid)
+        VALUES (${mloId}, ${contactId}, 'outbound', ${process.env.TWILIO_PHONE_NUMBER || ''}, ${normalizedTo || to}, 'initiated', ${callSid})
+      `;
     } catch (e) {
       console.error('Failed to log outbound call:', e);
     }

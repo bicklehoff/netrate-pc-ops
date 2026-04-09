@@ -2,7 +2,7 @@
 // Twilio POSTs here after a caller leaves a voicemail.
 // Saves the recording URL to the call log.
 
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 import { buildVoicemailTwiml } from '@/lib/twilio-voice';
 
 export async function POST(req) {
@@ -12,13 +12,10 @@ export async function POST(req) {
 
   if (callSid && recordingUrl) {
     try {
-      await prisma.callLog.updateMany({
-        where: { twilioCallSid: callSid },
-        data: {
-          recordingUrl,
-          status: 'voicemail',
-        },
-      });
+      await sql`
+        UPDATE call_logs SET recording_url = ${recordingUrl}, status = 'voicemail'
+        WHERE twilio_call_sid = ${callSid}
+      `;
     } catch (e) {
       console.error('Failed to save voicemail:', e);
     }

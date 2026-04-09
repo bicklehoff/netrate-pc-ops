@@ -4,7 +4,7 @@
 
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 
 export async function GET(req) {
   const session = await getServerSession(authOptions);
@@ -20,28 +20,18 @@ export async function GET(req) {
   }
 
   try {
-    const contacts = await prisma.contact.findMany({
-      where: {
-        OR: [
-          { firstName: { contains: q, mode: 'insensitive' } },
-          { lastName: { contains: q, mode: 'insensitive' } },
-          { email: { contains: q, mode: 'insensitive' } },
-          { phone: { contains: q } },
-          { company: { contains: q, mode: 'insensitive' } },
-        ],
-      },
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        phone: true,
-        email: true,
-        company: true,
-        tags: true,
-      },
-      orderBy: { updatedAt: 'desc' },
-      take: 10,
-    });
+    const pattern = `%${q}%`;
+    const contacts = await sql`
+      SELECT id, first_name, last_name, phone, email, company, tags
+      FROM contacts
+      WHERE first_name ILIKE ${pattern}
+        OR last_name ILIKE ${pattern}
+        OR email ILIKE ${pattern}
+        OR phone LIKE ${pattern}
+        OR company ILIKE ${pattern}
+      ORDER BY updated_at DESC
+      LIMIT 10
+    `;
 
     return Response.json({ contacts });
   } catch (e) {
