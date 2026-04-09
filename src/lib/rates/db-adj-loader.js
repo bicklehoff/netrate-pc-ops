@@ -184,6 +184,8 @@ function buildAdjObject(allRows) {
           productGroup: row.productGroup,
           ficoMin: row.ficoMin,
           ficoMax: row.ficoMax,
+          ltvMin: row.ltvMin,
+          ltvMax: row.ltvMax,
           value: val,
         });
         break;

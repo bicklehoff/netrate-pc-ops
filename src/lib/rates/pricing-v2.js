@@ -489,6 +489,9 @@ export function priceRate(rateEntry, product, scenario, lenderAdj, brokerConfig,
   // Elite Govt has its own adjustment path — skip generic features (but purchase credit above still applies)
   if (lenderAdj?.productFeatures?.length && !isEliteGovt) {
     const scenarioPropertyType = scenario.propertyType || 'sfr';
+    const scenarioOccupancy = scenario.occupancy || 'primary';
+    const isArm = productType === 'arm';
+
     for (const pf of lenderAdj.productFeatures) {
       // Skip purchase credit — already handled in Step 5b above
       if (pf.featureName === 'purposeAdj' && pf.purpose === 'purchase' && !pf.tier) continue;
@@ -499,21 +502,44 @@ export function priceRate(rateEntry, product, scenario, lenderAdj, brokerConfig,
       if (pf.purpose && pf.purpose !== loanPurpose) continue;
       if (pf.state && pf.state !== state) continue;
 
+      // LTV range filter — rows with LTV bounds only apply within that range
+      if (pf.ltvMin != null && ltv < Number(pf.ltvMin)) continue;
+      if (pf.ltvMax != null && ltv > Number(pf.ltvMax)) continue;
+
+      // additionalAdj — conditional features that only apply if the scenario matches
+      if (pf.featureName === 'additionalAdj') {
+        const pg = pf.productGroup;
+        if (pg === 'condo' && scenarioPropertyType !== 'condo') continue;
+        if (pg === 'manufactured' && scenarioPropertyType !== 'manufactured') continue;
+        if (pg === '2to4unit' && scenarioPropertyType !== '2-4unit' && scenarioPropertyType !== '2to4unit') continue;
+        if (pg === 'investment' && scenarioOccupancy !== 'investment') continue;
+        if (pg === 'secondHome' && scenarioOccupancy !== 'secondHome') continue;
+        if (pg === 'arm' && !isArm) continue;
+        if (pg === 'highBalArm' && !isArm) continue;
+        if (pg === 'highBalFixed15' && (isArm || term !== 15)) continue;
+        if (pg === 'subFinancing') continue; // subordinate financing not tracked in scenario
+      }
+
+      // allTermsAdj — conditional product features (buydowns, renovation, LPMI, etc.)
+      // Skip entirely: none of these are tracked in the current scenario model
+      if (pf.featureName === 'allTermsAdj') continue;
+
       // Property type adjustments only apply if scenario matches
       if (pf.featureName === 'propertyType') {
         if (pf.productGroup === 'condo' && scenarioPropertyType !== 'condo') continue;
         if (pf.productGroup === 'manufactured' && scenarioPropertyType !== 'manufactured') continue;
         if (pf.productGroup === '3-4unit' && scenarioPropertyType !== '3-4unit') continue;
-        if (pf.productGroup === 'secondHome' && (scenario.occupancy || 'primary') !== 'secondHome') continue;
-        if (pf.productGroup === 'investment' && (scenario.occupancy || 'primary') !== 'investment') continue;
+        if (pf.productGroup === 'secondHome' && scenarioOccupancy !== 'secondHome') continue;
+        if (pf.productGroup === 'investment' && scenarioOccupancy !== 'investment') continue;
       }
       // Occupancy adjustments only for non-primary
-      if (pf.featureName === 'occupancy') continue; // skip for now — all scenarios are primary
+      if (pf.featureName === 'occupancy') continue;
 
       const label = pf.featureName === 'ficoAdj' ? `FICO ${pf.ficoMin}-${pf.ficoMax} adj`
         : pf.featureName === 'purposeAdj' ? `${pf.purpose} adj`
         : pf.featureName === 'stateAdj' ? `State ${pf.state} adj`
         : pf.featureName === 'propertyType' ? `${pf.productGroup} adj`
+        : pf.featureName === 'additionalAdj' ? `${pf.productGroup} adj`
         : pf.featureName;
       price += pf.value;
       breakdown.push({ label, value: pf.value });
