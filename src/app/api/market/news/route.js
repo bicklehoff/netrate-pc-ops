@@ -11,24 +11,26 @@
 
 import { NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const limit = Math.min(parseInt(searchParams.get('limit') || '10', 10), 50);
 
-    const headlines = await prisma.marketNewsHeadline.findMany({
-      orderBy: { publishedAt: 'desc' },
-      take: limit,
-    });
+    const headlines = await sql`
+      SELECT id, title, source, url, published_at
+      FROM market_news_headlines
+      ORDER BY published_at DESC
+      LIMIT ${limit}
+    `;
 
     const formatted = headlines.map(h => ({
       id: h.id,
       title: h.title,
       source: h.source,
       url: h.url,
-      publishedAt: h.publishedAt.toISOString(),
+      published_at: h.published_at instanceof Date ? h.published_at.toISOString() : h.published_at,
     }));
 
     const response = NextResponse.json({ headlines: formatted, count: formatted.length });
@@ -71,28 +73,17 @@ export async function POST(request) {
         continue;
       }
 
-      const record = await prisma.marketNewsHeadline.upsert({
-        where: {
-          title_publishedAt: {
-            title: h.title,
-            publishedAt: new Date(h.publishedAt),
-          },
-        },
-        create: {
-          title: h.title,
-          source: h.source,
-          url: h.url,
-          publishedAt: new Date(h.publishedAt),
-          postedBy: h.postedBy ?? 'claw',
-        },
-        update: {
-          source: h.source,
-          url: h.url,
-          postedBy: h.postedBy ?? 'claw',
-        },
-      });
+      const rows = await sql`
+        INSERT INTO market_news_headlines (title, source, url, published_at, posted_by)
+        VALUES (${h.title}, ${h.source}, ${h.url}, ${new Date(h.publishedAt)}, ${h.postedBy ?? 'claw'})
+        ON CONFLICT (title, published_at) DO UPDATE SET
+          source = EXCLUDED.source,
+          url = EXCLUDED.url,
+          posted_by = EXCLUDED.posted_by
+        RETURNING id, title
+      `;
 
-      results.push({ id: record.id, title: record.title });
+      results.push({ id: rows[0].id, title: rows[0].title });
     }
 
     revalidatePath('/rate-watch');

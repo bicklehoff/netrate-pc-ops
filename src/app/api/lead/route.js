@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 import { normalizePhone } from '@/lib/normalize-phone';
 
 export async function POST(request) {
@@ -20,21 +20,13 @@ export async function POST(request) {
       ? [message, `[SMS Consent: ${smsConsent ? 'YES' : 'NO'}]`].filter(Boolean).join('\n')
       : message;
 
-    const lead = await prisma.lead.create({
-      data: {
-        name,
-        email,
-        phone: normalizePhone(phone) || phone || null,
-        message: fullMessage || null,
-        source: source || leadSource || 'website',
-        sourceDetail: sourceDetail || null,
-        utmSource: utmSource || null,
-        utmMedium: utmMedium || null,
-        utmCampaign: utmCampaign || null,
-      },
-    });
+    const rows = await sql`
+      INSERT INTO leads (name, email, phone, message, source, source_detail, utm_source, utm_medium, utm_campaign)
+      VALUES (${name}, ${email}, ${normalizePhone(phone) || phone || null}, ${fullMessage || null}, ${source || leadSource || 'website'}, ${sourceDetail || null}, ${utmSource || null}, ${utmMedium || null}, ${utmCampaign || null})
+      RETURNING id
+    `;
 
-    return NextResponse.json({ success: true, id: lead.id });
+    return NextResponse.json({ success: true, id: rows[0].id });
   } catch (err) {
     console.error('Lead API error:', err);
     return NextResponse.json(

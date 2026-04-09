@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 import { priceScenario } from '@/lib/rates/price-scenario';
 import { sendEmail } from '@/lib/resend';
 import { rateAlertWelcomeTemplate } from '@/lib/email-templates/borrower';
@@ -30,25 +30,15 @@ export async function POST(request) {
       : FREQUENCY_DEFAULTS[freq];
 
     // Create lead with scenario data
-    const lead = await prisma.lead.create({
-      data: {
-        name,
-        email: email.trim().toLowerCase(),
-        phone: phone || null,
-        source: 'rate-tool-save',
-        sourceDetail: 'saved-scenario',
-        scenarioData,
-        loanPurpose: scenarioData.purpose || null,
-        loanAmount: scenarioData.loanAmount || null,
-        propertyState: scenarioData.state || null,
-        propertyValue: scenarioData.propertyValue || null,
-        propertyCounty: scenarioData.county || null,
-        creditScore: scenarioData.fico || null,
-      },
-    });
+    const leadRows = await sql`
+      INSERT INTO leads (name, email, phone, source, source_detail, scenario_data, loan_purpose, loan_amount, property_state, property_value, property_county, credit_score)
+      VALUES (${name}, ${email.trim().toLowerCase()}, ${phone || null}, 'rate-tool-save', 'saved-scenario', ${JSON.stringify(scenarioData)}, ${scenarioData.purpose || null}, ${scenarioData.loanAmount || null}, ${scenarioData.state || null}, ${scenarioData.propertyValue || null}, ${scenarioData.county || null}, ${scenarioData.fico || null})
+      RETURNING id
+    `;
+    const leadId = leadRows[0].id;
 
-    // Fetch the DB-generated viewToken via raw query (Prisma client doesn't expose this field)
-    const tokenRow = await prisma.$queryRaw`SELECT view_token::text FROM leads WHERE id::text = ${lead.id}`;
+    // Fetch the DB-generated view_token
+    const tokenRow = await sql`SELECT view_token::text FROM leads WHERE id::text = ${leadId}`;
     const viewToken = tokenRow?.[0]?.view_token || null;
 
     // Use client-side selected rates if provided, otherwise run server-side pricing
@@ -90,17 +80,12 @@ export async function POST(request) {
     }
 
     // Create saved scenario
-    const savedScenario = await prisma.savedScenario.create({
-      data: {
-        leadId: lead.id,
-        scenarioData,
-        alertFrequency: freq,
-        alertDays: days,
-        alertStatus: 'active',
-        lastPricingData: initialPricing,
-        lastPricedAt: initialPricing ? new Date() : null,
-      },
-    });
+    const scenarioRows = await sql`
+      INSERT INTO saved_scenarios (lead_id, scenario_data, alert_frequency, alert_days, alert_status, last_pricing_data, last_priced_at, updated_at)
+      VALUES (${leadId}, ${JSON.stringify(scenarioData)}, ${freq}, ${days}, 'active', ${initialPricing ? JSON.stringify(initialPricing) : null}, ${initialPricing ? new Date() : null}, NOW())
+      RETURNING id, unsub_token
+    `;
+    const savedScenario = scenarioRows[0];
 
     // Send welcome email
     const SITE_URL = process.env.NEXTAUTH_URL || 'https://www.netratemortgage.com';
@@ -119,7 +104,7 @@ export async function POST(request) {
         initialRates: initialPricing || [],
         frequency: freq,
         days,
-        unsubscribeLink: `${SITE_URL}/api/saved-scenario/unsubscribe?token=${savedScenario.unsubToken}`,
+        unsubscribeLink: `${SITE_URL}/api/saved-scenario/unsubscribe?token=${savedScenario.unsub_token}`,
         myRatesLink: `${SITE_URL}/portal/my-rates?token=${viewToken}`,
       });
       const emailResult = await sendEmail({
@@ -139,7 +124,7 @@ export async function POST(request) {
     return NextResponse.json({
       success: true,
       scenarioId: savedScenario.id,
-      leadId: lead.id,
+      leadId,
       viewToken,
       emailStatus,
     });

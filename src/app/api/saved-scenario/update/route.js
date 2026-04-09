@@ -3,7 +3,7 @@
 // Token-based auth — validates borrower owns the scenario, updates it with new inputs + fresh pricing.
 
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 import { priceScenario } from '@/lib/rates/price-scenario';
 import { calcMonthlyPI } from '@/lib/rates/math';
 
@@ -19,7 +19,7 @@ export async function POST(request) {
     }
 
     // Validate token → get lead email
-    const leads = await prisma.$queryRaw`
+    const leads = await sql`
       SELECT id::text, email, name FROM leads WHERE view_token::text = ${token} LIMIT 1
     `;
     const lead = leads?.[0];
@@ -29,22 +29,22 @@ export async function POST(request) {
     }
 
     // Find all leads with this email (same borrower may have multiple lead records)
-    const allLeads = await prisma.lead.findMany({
-      where: { email: lead.email },
-      select: { id: true },
-    });
+    const allLeads = await sql`SELECT id FROM leads WHERE email = ${lead.email}`;
     const leadIds = allLeads.map(l => l.id);
 
     // Find the latest saved scenario for this borrower
-    const existingScenario = await prisma.savedScenario.findFirst({
-      where: { leadId: { in: leadIds } },
-      orderBy: { createdAt: 'desc' },
-      select: { id: true, alertFrequency: true, alertDays: true },
-    });
+    const existingRows = await sql`
+      SELECT id, alert_frequency, alert_days
+      FROM saved_scenarios
+      WHERE lead_id = ANY(${leadIds})
+      ORDER BY created_at DESC
+      LIMIT 1
+    `;
 
-    if (!existingScenario) {
+    if (!existingRows.length) {
       return NextResponse.json({ error: 'No saved scenario found' }, { status: 404 });
     }
+    const existingScenario = existingRows[0];
 
     // Use client-side selected rates if provided, otherwise run server-side pricing
     let pricingData = null;
@@ -85,28 +85,28 @@ export async function POST(request) {
     }
 
     // Update the scenario with new inputs + pricing
-    await prisma.savedScenario.update({
-      where: { id: existingScenario.id },
-      data: {
-        scenarioData,
-        lastPricingData: pricingData,
-        lastPricedAt: pricingData ? new Date() : undefined,
-      },
-    });
+    await sql`
+      UPDATE saved_scenarios
+      SET scenario_data = ${JSON.stringify(scenarioData)},
+          last_pricing_data = ${pricingData ? JSON.stringify(pricingData) : null},
+          last_priced_at = ${pricingData ? new Date() : null},
+          updated_at = NOW()
+      WHERE id = ${existingScenario.id}
+    `;
 
     // Also update the lead record with latest scenario details
-    await prisma.lead.update({
-      where: { id: lead.id },
-      data: {
-        scenarioData,
-        loanPurpose: scenarioData.purpose || null,
-        loanAmount: scenarioData.loanAmount || null,
-        propertyState: scenarioData.state || null,
-        propertyValue: scenarioData.propertyValue || null,
-        propertyCounty: scenarioData.county || null,
-        creditScore: scenarioData.fico || null,
-      },
-    });
+    await sql`
+      UPDATE leads
+      SET scenario_data = ${JSON.stringify(scenarioData)},
+          loan_purpose = ${scenarioData.purpose || null},
+          loan_amount = ${scenarioData.loanAmount || null},
+          property_state = ${scenarioData.state || null},
+          property_value = ${scenarioData.propertyValue || null},
+          property_county = ${scenarioData.county || null},
+          credit_score = ${scenarioData.fico || null},
+          updated_at = NOW()
+      WHERE id::text = ${lead.id}
+    `;
 
     return NextResponse.json({
       success: true,
