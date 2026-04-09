@@ -3,7 +3,7 @@
 // Fetches loans server-side, renders status, documents, and timeline.
 
 import { redirect } from 'next/navigation';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 import { requireBorrowerAuth } from '@/lib/borrower-session';
 import LoanStatusCard from '@/components/Portal/LoanStatusCard';
 import BorrowerChecklist from '@/components/Portal/BorrowerChecklist';
@@ -16,47 +16,98 @@ export default async function BorrowerDashboardPage() {
     redirect('/portal/auth/login');
   }
 
-  const borrower = await prisma.borrower.findUnique({
-    where: { id: session.borrowerId },
-    select: { firstName: true, lastName: true, email: true },
-  });
+  const borrowerRows = await sql`
+    SELECT first_name, last_name, email FROM borrowers
+    WHERE id = ${session.borrowerId}
+    LIMIT 1
+  `;
+  const borrower = borrowerRows[0];
 
   // Find loans where this borrower is either primary or co-borrower
-  const loanBorrowers = await prisma.loanBorrower.findMany({
-    where: { borrowerId: session.borrowerId },
-    select: { loanId: true, borrowerType: true },
-    orderBy: { loan: { createdAt: 'desc' } },
-  });
-  const loanIds = loanBorrowers.map((lb) => lb.loanId);
+  const loanBorrowers = await sql`
+    SELECT lb.loan_id, lb.borrower_type
+    FROM loan_borrowers lb
+    JOIN loans l ON lb.loan_id = l.id
+    WHERE lb.borrower_id = ${session.borrowerId}
+    ORDER BY l.created_at DESC
+  `;
+  const loanIds = loanBorrowers.map((lb) => lb.loan_id);
 
-  const loans = await prisma.loan.findMany({
-    where: { id: { in: loanIds } },
-    include: {
-      documents: {
-        orderBy: { createdAt: 'desc' },
-      },
-      events: {
-        orderBy: { createdAt: 'desc' },
-        take: 15,
-      },
-      mlo: {
-        select: { firstName: true, lastName: true, email: true },
-      },
-      loanBorrowers: {
-        where: { borrowerType: 'primary' },
-        include: { borrower: { select: { firstName: true } } },
-        take: 1,
-      },
-    },
-    orderBy: { createdAt: 'desc' },
-  });
+  let loans = [];
+  if (loanIds.length > 0) {
+    // Load loans
+    loans = await sql`
+      SELECT * FROM loans
+      WHERE id = ANY(${loanIds})
+      ORDER BY created_at DESC
+    `;
+
+    // Load related data for all loans in batch
+    const [allDocuments, allEvents, allMlos, allPrimaryBorrowers] = await Promise.all([
+      sql`
+        SELECT * FROM documents
+        WHERE loan_id = ANY(${loanIds})
+        ORDER BY created_at DESC
+      `,
+      sql`
+        SELECT * FROM loan_events
+        WHERE loan_id = ANY(${loanIds})
+        ORDER BY created_at DESC
+      `,
+      sql`
+        SELECT m.id, m.first_name, m.last_name, m.email
+        FROM mlos m
+        WHERE m.id = ANY(${loans.map(l => l.mlo_id).filter(Boolean)})
+      `,
+      sql`
+        SELECT lb.loan_id, b.first_name
+        FROM loan_borrowers lb
+        JOIN borrowers b ON lb.borrower_id = b.id
+        WHERE lb.loan_id = ANY(${loanIds})
+          AND lb.borrower_type = 'primary'
+      `,
+    ]);
+
+    // Group by loan_id and attach
+    const docsByLoan = {};
+    for (const d of allDocuments) {
+      if (!docsByLoan[d.loan_id]) docsByLoan[d.loan_id] = [];
+      docsByLoan[d.loan_id].push(d);
+    }
+
+    const eventsByLoan = {};
+    for (const e of allEvents) {
+      if (!eventsByLoan[e.loan_id]) eventsByLoan[e.loan_id] = [];
+      eventsByLoan[e.loan_id].push(e);
+    }
+
+    const mloById = {};
+    for (const m of allMlos) {
+      mloById[m.id] = { firstName: m.first_name, lastName: m.last_name, email: m.email };
+    }
+
+    const primaryByLoan = {};
+    for (const pb of allPrimaryBorrowers) {
+      if (!primaryByLoan[pb.loan_id]) primaryByLoan[pb.loan_id] = pb;
+    }
+
+    // Attach to loans
+    for (const loan of loans) {
+      loan.documents = docsByLoan[loan.id] || [];
+      loan.events = (eventsByLoan[loan.id] || []).slice(0, 15);
+      loan.mlo = loan.mlo_id ? mloById[loan.mlo_id] || null : null;
+      loan.loanBorrowers = primaryByLoan[loan.id]
+        ? [{ borrower: { firstName: primaryByLoan[loan.id].first_name } }]
+        : [];
+    }
+  }
 
   // Most recent loan (borrowers typically have one active)
   const loan = loans[0] || null;
 
   // Use the primary borrower's name for the greeting, not the session borrower
   // (handles shared-email cases where co-borrower's name overwrites the record)
-  const primaryName = loan?.loanBorrowers?.[0]?.borrower?.firstName || borrower?.firstName;
+  const primaryName = loan?.loanBorrowers?.[0]?.borrower?.firstName || borrower?.first_name;
 
   return (
     <div className="max-w-3xl mx-auto">

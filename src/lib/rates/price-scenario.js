@@ -37,14 +37,16 @@ async function loadRateData() {
 
 async function getEffectiveDate() {
   try {
-    const prisma = (await import('@/lib/prisma')).default;
-    const sheet = await prisma.rateSheet.findFirst({
-      where: { status: 'active' },
-      orderBy: { effectiveDate: 'desc' },
-      select: { effectiveDate: true },
-    });
-    if (sheet?.effectiveDate) {
-      const d = new Date(sheet.effectiveDate);
+    const sql = (await import('@/lib/db')).default;
+    const rows = await sql`
+      SELECT effective_date FROM rate_sheets
+      WHERE status = 'active'
+      ORDER BY effective_date DESC
+      LIMIT 1
+    `;
+    const sheet = rows[0];
+    if (sheet?.effective_date) {
+      const d = new Date(sheet.effective_date);
       return `${d.getUTCMonth() + 1}/${d.getUTCDate()}/${d.getUTCFullYear()}`;
     }
   } catch { /* fall through */ }

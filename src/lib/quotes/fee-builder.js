@@ -14,7 +14,7 @@
  * Section J: TOTAL CLOSING COSTS (D + I)
  */
 
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 import { calculateEscrowSections } from './escrow-calc';
 
 // 10-minute cache for fee templates (they rarely change)
@@ -34,22 +34,31 @@ async function loadTemplate(state, county, purpose) {
   }
 
   // Try exact match (state + county + purpose), then fall back to state-level
-  let template = await prisma.feeTemplate.findUnique({
-    where: {
-      state_county_purpose: { state, county: county ?? '', purpose },
-    },
-  });
+  const exactRows = await sql`
+    SELECT * FROM fee_templates
+    WHERE state = ${state} AND county = ${county ?? ''} AND purpose = ${purpose}
+    LIMIT 1
+  `;
+  let template = exactRows[0] || null;
 
   if (!template && county) {
-    template = await prisma.feeTemplate.findFirst({
-      where: { state, county: null, purpose, status: 'active' },
-    });
+    const stateRows = await sql`
+      SELECT * FROM fee_templates
+      WHERE state = ${state} AND county IS NULL AND purpose = ${purpose} AND status = 'active'
+      ORDER BY created_at DESC
+      LIMIT 1
+    `;
+    template = stateRows[0] || null;
   }
 
   if (!template) {
-    template = await prisma.feeTemplate.findFirst({
-      where: { state, purpose, status: 'active' },
-    });
+    const fallbackRows = await sql`
+      SELECT * FROM fee_templates
+      WHERE state = ${state} AND purpose = ${purpose} AND status = 'active'
+      ORDER BY created_at DESC
+      LIMIT 1
+    `;
+    template = fallbackRows[0] || null;
   }
 
   templateCache.data.set(key, template);
@@ -93,8 +102,8 @@ const FHA_UFMIP_RATE = 0.0175; // 1.75%
  * @param {Date|string} [params.fundingDate]      — used for escrow & prepaid interest calc
  * @param {number}      [params.annualRate]       — interest rate for per diem (e.g. 6.75)
  * @param {boolean}     [params.isEscrowing]      — default true; false → Section G is empty
- * @param {number}      [params.annualTaxes]      — override annual tax; falls back to template.propertyTaxMonthly×12
- * @param {number}      [params.annualInsurance]  — override annual HOI; falls back to template.homeInsuranceAtClose
+ * @param {number}      [params.annualTaxes]      — override annual tax; falls back to template.property_tax_monthly×12
+ * @param {number}      [params.annualInsurance]  — override annual HOI; falls back to template.home_insurance_at_close
  * @param {Date|string} [params.hoiEffectiveDate] — HOI policy date (purchase: defaults to fundingDate)
  * @param {boolean}     [params.hasFlood]
  * @param {number}      [params.annualFlood]
@@ -134,8 +143,8 @@ export async function buildFeeBreakdown({
   const template = await loadTemplate(state, county, mappedPurpose);
 
   // Resolve annual escrow amounts: use passed values → template defaults → 0
-  const resolvedAnnualTaxes    = annualTaxes    != null ? Number(annualTaxes)    : toNum(template?.propertyTaxMonthly) * 12;
-  const resolvedAnnualIns      = annualInsurance != null ? Number(annualInsurance) : toNum(template?.homeInsuranceAtClose);
+  const resolvedAnnualTaxes    = annualTaxes    != null ? Number(annualTaxes)    : toNum(template?.property_tax_monthly) * 12;
+  const resolvedAnnualIns      = annualInsurance != null ? Number(annualInsurance) : toNum(template?.home_insurance_at_close);
   const resolvedAnnualFlood    = annualFlood    != null ? Number(annualFlood)    : 0;
   const resolvedAnnualMud      = annualMud      != null ? Number(annualMud)      : 0;
   const resolvedAnnualHailWind = annualHailWind != null ? Number(annualHailWind) : 0;
@@ -171,11 +180,11 @@ export async function buildFeeBreakdown({
     label: 'A. Origination Charges',
     items: [
       { label: 'Underwriting Fee', amount: lenderFeeUw },
-      ...(toNum(template?.lenderFeeOrigination) > 0
-        ? [{ label: 'Origination Fee', amount: toNum(template.lenderFeeOrigination) }]
+      ...(toNum(template?.lender_fee_origination) > 0
+        ? [{ label: 'Origination Fee', amount: toNum(template.lender_fee_origination) }]
         : []),
     ],
-    total: lenderFeeUw + toNum(template?.lenderFeeOrigination),
+    total: lenderFeeUw + toNum(template?.lender_fee_origination),
   };
 
   if (!template) {
@@ -234,11 +243,11 @@ export async function buildFeeBreakdown({
       ? [{ label: 'FHA Upfront MIP (1.75%)', amount: ufmip, note: 'Financed into loan' }]
       : []),
     { label: 'Appraisal', amount: toNum(template.appraisal) },
-    { label: 'Credit Report', amount: toNum(template.creditReport) },
-    { label: 'MERS Fee', amount: toNum(template.mersFee) },
-    { label: 'Flood Certification', amount: toNum(template.floodCert) },
-    { label: 'Tax Service', amount: toNum(template.taxService) },
-    { label: 'Title Endorsement', amount: toNum(template.titleEndorsement) },
+    { label: 'Credit Report', amount: toNum(template.credit_report) },
+    { label: 'MERS Fee', amount: toNum(template.mers_fee) },
+    { label: 'Flood Certification', amount: toNum(template.flood_cert) },
+    { label: 'Tax Service', amount: toNum(template.tax_service) },
+    { label: 'Title Endorsement', amount: toNum(template.title_endorsement) },
   ].filter(i => i.amount > 0);
   const sectionB = {
     label: 'B. Services You Cannot Shop For',
@@ -250,9 +259,9 @@ export async function buildFeeBreakdown({
   const sectionC = {
     label: 'C. Services You Can Shop For',
     items: [
-      { label: "Lender's Title Policy", amount: toNum(template.titleLendersPolicy) },
-      { label: 'Closing Protection Letter', amount: toNum(template.closingProtectionLetter) },
-      { label: 'Settlement Agent Fee', amount: toNum(template.settlementAgentFee) },
+      { label: "Lender's Title Policy", amount: toNum(template.title_lenders_policy) },
+      { label: 'Closing Protection Letter', amount: toNum(template.closing_protection_letter) },
+      { label: 'Settlement Agent Fee', amount: toNum(template.settlement_agent_fee) },
     ].filter(i => i.amount > 0),
   };
   sectionC.total = sectionC.items.reduce((s, i) => s + i.amount, 0);
@@ -261,9 +270,9 @@ export async function buildFeeBreakdown({
   const sectionE = {
     label: 'E. Taxes and Other Government Fees',
     items: [
-      { label: 'Recording Service Fee', amount: toNum(template.recordingServiceFee) },
-      { label: 'Recording Fees', amount: toNum(template.recordingFees) },
-      { label: 'County Recording Fee', amount: toNum(template.countyRecordingFee) },
+      { label: 'Recording Service Fee', amount: toNum(template.recording_service_fee) },
+      { label: 'Recording Fees', amount: toNum(template.recording_fees) },
+      { label: 'County Recording Fee', amount: toNum(template.county_recording_fee) },
     ].filter(i => i.amount > 0),
   };
   sectionE.total = sectionE.items.reduce((s, i) => s + i.amount, 0);
