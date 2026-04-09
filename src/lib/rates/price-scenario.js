@@ -175,6 +175,9 @@ export async function priceScenario(body) {
       // Filter HomeReady / Home Possible — require firstTimeBuyer flag
       if (isFthbVariant && !scenario.firstTimeBuyer) continue;
 
+      // Filter FastTrack products — requires eligibility fields not in scenario model
+      if (program.tier === 'fasttrack') continue;
+
       if (loanClassification) {
         if (loanClassification === 'conforming' && program.isHighBalance) continue;
         if (loanClassification === 'jumbo') continue;
