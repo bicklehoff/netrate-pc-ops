@@ -1,34 +1,62 @@
 // PrequalLetterPDF.js — @react-pdf/renderer component for Pre-Qualification Letters
-// Single-page professional PDF with NetRate branding and trust signals.
-// Uses react-pdf primitives (Document, Page, View, Text) — NO HTML/CSS.
+// Single-page professional PDF with NetRate Mortgage branding (2026 retheme).
+// Uses react-pdf primitives (Document, Page, View, Text, Svg, Line, Rect) — NO HTML/CSS.
 
 import {
   Document,
   Page,
   View,
   Text,
+  Svg,
+  Line,
+  Rect,
   StyleSheet,
 } from '@react-pdf/renderer';
 
-// ---------- Colors ----------
+// ---------- Brand Colors (2026 retheme) ----------
 
-const BRAND = '#0891b2';
-const BRAND_LIGHT = '#ecfeff';
-const GREEN = '#15803d';
-const GREEN_LIGHT = '#f0fdf4';
-const GOLD = '#d97706';
+const BRAND = '#024c4f';
+
+const BRAND_LIGHT = '#e6f0f0';
+const YELLOW = '#fff000';
+const DEEP = '#012d30';
+const GREEN = '#059669';
+const GRAY_100 = '#f3f4f6';
 const GRAY_200 = '#e5e7eb';
 const GRAY_300 = '#d1d5db';
 const GRAY_500 = '#6b7280';
 const GRAY_600 = '#4b5563';
 const GRAY_700 = '#374151';
 const GRAY_800 = '#1f2937';
+const GRAY_900 = '#111827';
+
+// ---------- Logo Mark (D-variation: yellow slashes on teal rounded square) ----------
+
+function LogoMark({ size = 36 }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 44 44">
+      <Rect x="0" y="0" width="44" height="44" rx="14" ry="14" fill={BRAND} />
+      <Line
+        x1="10" y1="33" x2="19" y2="11"
+        stroke={YELLOW}
+        strokeWidth="4.5"
+        strokeLinecap="round"
+      />
+      <Line
+        x1="25" y1="33" x2="34" y2="11"
+        stroke={YELLOW}
+        strokeWidth="4.5"
+        strokeLinecap="round"
+      />
+    </Svg>
+  );
+}
 
 // ---------- Styles ----------
 
 const s = StyleSheet.create({
   page: {
-    paddingTop: 36,
+    paddingTop: 32,
     paddingBottom: 28,
     paddingHorizontal: 48,
     fontSize: 11,
@@ -41,27 +69,52 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 4,
+    marginBottom: 6,
   },
-  companyName: { fontSize: 20, fontFamily: 'Helvetica-Bold', color: BRAND },
-  companyNameBlack: { fontSize: 20, fontFamily: 'Helvetica-Bold', color: GRAY_800 },
-  companyNmls: { fontSize: 10, color: GRAY_500, marginTop: 2 },
-  companyAddress: { fontSize: 10, color: GRAY_500, marginTop: 1 },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  wordmark: {
+    flexDirection: 'column',
+  },
+  wordmarkRow: {
+    flexDirection: 'row',
+  },
+  wordNet: { fontSize: 18, fontFamily: 'Helvetica-Bold', color: GRAY_900 },
+  wordRate: { fontSize: 18, fontFamily: 'Helvetica-Bold', color: BRAND },
+  wordMortgage: { fontSize: 18, fontFamily: 'Helvetica-Bold', color: GRAY_700 },
+  companyNmls: { fontSize: 9, color: GRAY_500, marginTop: 1 },
+  companyAddress: { fontSize: 9, color: GRAY_500, marginTop: 1 },
+  headerRight: { alignItems: 'flex-end' },
+
+  // Accent stripe under header
+  accentStripe: {
+    height: 3,
+    backgroundColor: BRAND,
+    marginBottom: 2,
+  },
+  yellowStripe: {
+    height: 1.5,
+    backgroundColor: YELLOW,
+    marginBottom: 14,
+  },
 
   // Title bar
   titleBar: {
-    backgroundColor: BRAND,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 3,
-    marginBottom: 12,
-    marginTop: 8,
+    backgroundColor: GRAY_100,
+    paddingVertical: 9,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    marginBottom: 14,
   },
   titleText: {
     fontSize: 14,
     fontFamily: 'Helvetica-Bold',
-    color: 'white',
+    color: BRAND,
     textAlign: 'center',
+    letterSpacing: 0.5,
   },
 
   // Borrower info grid
@@ -70,8 +123,8 @@ const s = StyleSheet.create({
     marginBottom: 10,
   },
   infoCol: { width: '50%' },
-  infoLabel: { fontSize: 9, color: GRAY_500, marginBottom: 1 },
-  infoValue: { fontSize: 11, color: GRAY_800, fontFamily: 'Helvetica-Bold', marginBottom: 4 },
+  infoLabel: { fontSize: 8, color: GRAY_500, marginBottom: 1, textTransform: 'uppercase', letterSpacing: 0.6 },
+  infoValue: { fontSize: 11, color: GRAY_900, fontFamily: 'Helvetica-Bold', marginBottom: 5 },
 
   // Body text
   bodyText: {
@@ -83,46 +136,45 @@ const s = StyleSheet.create({
 
   // Property address callout
   propertyCallout: {
-    paddingVertical: 6,
+    paddingVertical: 7,
     paddingHorizontal: 12,
     backgroundColor: BRAND_LIGHT,
     borderLeftWidth: 3,
     borderLeftColor: BRAND,
-    marginBottom: 10,
+    borderRadius: 3,
+    marginBottom: 12,
   },
   propertyText: {
     fontSize: 11,
     fontFamily: 'Helvetica-Bold',
-    color: GRAY_800,
+    color: GRAY_900,
   },
 
   // Hero boxes
   heroRow: {
     flexDirection: 'row',
-    gap: 10,
-    marginBottom: 10,
+    gap: 12,
+    marginBottom: 12,
   },
   heroBox: {
     flex: 1,
-    backgroundColor: BRAND_LIGHT,
-    borderWidth: 1,
-    borderColor: BRAND,
-    borderRadius: 4,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    alignItems: 'center',
+    backgroundColor: GRAY_100,
+    borderRadius: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
   },
   heroLabel: {
-    fontSize: 9,
-    color: GRAY_600,
+    fontSize: 8,
+    color: BRAND,
     textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginBottom: 2,
+    letterSpacing: 1,
+    fontFamily: 'Helvetica-Bold',
+    marginBottom: 3,
   },
   heroValue: {
-    fontSize: 20,
+    fontSize: 24,
     fontFamily: 'Helvetica-Bold',
-    color: BRAND,
+    color: GRAY_900,
   },
 
   // Loan details + verification side by side
@@ -135,10 +187,9 @@ const s = StyleSheet.create({
   detailsTitle: {
     fontSize: 10,
     fontFamily: 'Helvetica-Bold',
-    color: GRAY_800,
-    marginBottom: 4,
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
+    color: BRAND,
+    marginBottom: 6,
+    letterSpacing: 0.3,
   },
   detailRow: {
     flexDirection: 'row',
@@ -148,55 +199,58 @@ const s = StyleSheet.create({
     borderBottomColor: GRAY_200,
   },
   detailLabel: { fontSize: 10, color: GRAY_600 },
-  detailValue: { fontSize: 10, color: GRAY_800, fontFamily: 'Helvetica-Bold' },
+  detailValue: { fontSize: 10, color: GRAY_900, fontFamily: 'Helvetica-Bold' },
 
   // Verification checklist
   checkRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 3,
-    borderBottomWidth: 0.5,
-    borderBottomColor: GRAY_200,
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    backgroundColor: GRAY_100,
+    borderRadius: 4,
+    marginBottom: 3,
   },
   checkIcon: {
     width: 14,
     height: 14,
     borderRadius: 7,
-    backgroundColor: GREEN_LIGHT,
-    borderWidth: 0.5,
-    borderColor: GREEN,
     marginRight: 6,
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkMark: { fontSize: 9, color: GREEN, fontFamily: 'Helvetica-Bold' },
-  checkLabel: { fontSize: 10, color: GRAY_700 },
+  checkLabel: { fontSize: 10, color: GRAY_900, fontFamily: 'Helvetica-Bold' },
+  uncheckRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    borderRadius: 4,
+    marginBottom: 3,
+  },
   uncheckIcon: {
     width: 14,
     height: 14,
     borderRadius: 7,
-    backgroundColor: '#f9fafb',
+    backgroundColor: GRAY_100,
     borderWidth: 0.5,
     borderColor: GRAY_300,
     marginRight: 6,
   },
+  uncheckLabel: { fontSize: 10, color: GRAY_500 },
 
-  // Disclaimer
-  disclaimer: {
-    marginTop: 6,
-    borderTopWidth: 0.5,
-    borderTopColor: GRAY_300,
-    paddingTop: 5,
-  },
-  disclaimerText: {
-    fontSize: 9,
-    color: GRAY_500,
+  // Conditions note
+  conditionsText: {
+    fontSize: 10,
+    color: GRAY_600,
     lineHeight: 1.4,
+    marginBottom: 8,
   },
 
   // Signature block
   signatureBlock: {
-    marginTop: 12,
+    marginTop: 10,
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
@@ -204,24 +258,26 @@ const s = StyleSheet.create({
   signatureLine: {
     width: 180,
     borderBottomWidth: 1,
-    borderBottomColor: GRAY_800,
+    borderBottomColor: BRAND,
     marginBottom: 4,
-    marginTop: 20,
+    marginTop: 18,
   },
-  signatureName: { fontSize: 12, fontFamily: 'Helvetica-Bold', color: GRAY_800 },
-  signatureDetail: { fontSize: 10, color: GRAY_500, marginTop: 1 },
-  companyBlock: { fontSize: 10, color: GRAY_700, fontFamily: 'Helvetica-Bold' },
+  signatureName: { fontSize: 12, fontFamily: 'Helvetica-Bold', color: GRAY_900 },
+  signatureDetail: { fontSize: 9, color: GRAY_500, marginTop: 1 },
+  companyBlockRight: { alignItems: 'flex-end', justifyContent: 'flex-end' },
+  companyBlock: { fontSize: 10, color: BRAND, fontFamily: 'Helvetica-Bold' },
   nmlsBlock: { fontSize: 9, color: GRAY_500, marginTop: 1 },
 
   // Trust bar
   trustBar: {
     position: 'absolute',
-    bottom: 28,
+    bottom: 24,
     left: 48,
     right: 48,
-    borderTopWidth: 1,
-    borderTopColor: GRAY_200,
-    paddingTop: 8,
+    backgroundColor: DEEP,
+    borderRadius: 4,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -231,28 +287,37 @@ const s = StyleSheet.create({
     flex: 1,
   },
   trustLabel: {
-    fontSize: 9,
-    color: GRAY_500,
+    fontSize: 7,
+    color: '#9ca3af',
   },
   trustValue: {
-    fontSize: 10,
+    fontSize: 8,
     fontFamily: 'Helvetica-Bold',
-    color: GRAY_800,
+    color: 'white',
   },
   trustDivider: {
-    width: 1,
-    height: 26,
-    backgroundColor: GRAY_200,
+    width: 0.5,
+    height: 16,
+    backgroundColor: '#ffffff30',
   },
-  // Star rating
   starRow: {
     flexDirection: 'row',
-    gap: 1,
-    marginBottom: 1,
+    gap: 0.5,
+    marginBottom: 0.5,
   },
   star: {
-    fontSize: 10,
-    color: GOLD,
+    fontSize: 7,
+    color: YELLOW,
+  },
+
+  // Disclaimer
+  disclaimer: {
+    marginBottom: 46,
+  },
+  disclaimerText: {
+    fontSize: 8,
+    color: GRAY_500,
+    lineHeight: 1.4,
   },
 });
 
@@ -304,7 +369,6 @@ export default function PrequalLetterPDF({ data }) {
     mloEmail,
   } = data;
 
-  // Build verification items — only show checked ones plus AUS if checked
   const verificationItems = [
     { key: 'creditReviewed', label: 'Credit Report Reviewed' },
     { key: 'incomeDocumented', label: 'Income Documented' },
@@ -313,8 +377,6 @@ export default function PrequalLetterPDF({ data }) {
     { key: 'appraisalWaiver', label: 'Appraisal Waiver Accepted' },
   ];
 
-  const hasMultiple = borrowerNames.includes('&');
-
   return (
     <Document
       title="Pre-Qualification Letter — NetRate Mortgage"
@@ -322,25 +384,30 @@ export default function PrequalLetterPDF({ data }) {
     >
       <Page size="LETTER" style={s.page}>
 
-        {/* ===== HEADER ===== */}
+        {/* ===== HEADER: Logo Mark + Wordmark ===== */}
         <View style={s.headerRow}>
-          <View>
-            <View style={{ flexDirection: 'row' }}>
-              <Text style={s.companyNameBlack}>Net</Text>
-              <Text style={s.companyName}>Rate</Text>
-              <Text style={s.companyNameBlack}> Mortgage</Text>
+          <View style={s.headerLeft}>
+            <LogoMark size={36} />
+            <View style={s.wordmark}>
+              <View style={s.wordmarkRow}>
+                <Text style={s.wordNet}>Net</Text>
+                <Text style={s.wordRate}>Rate</Text>
+                <Text style={s.wordMortgage}> Mortgage</Text>
+              </View>
+              <Text style={s.companyNmls}>NMLS #1111861</Text>
             </View>
-            <Text style={s.companyNmls}>NMLS #1111861</Text>
-            <Text style={s.companyAddress}>
-              357 S McCaslin Blvd #200, Louisville, CO 80027
-            </Text>
           </View>
-          <View style={{ alignItems: 'flex-end' }}>
-            <Text style={s.companyAddress}>303-444-5251</Text>
-            <Text style={s.companyAddress}>david@netratemortgage.com</Text>
+          <View style={s.headerRight}>
+            <Text style={s.companyAddress}>357 S McCaslin Blvd #200</Text>
+            <Text style={s.companyAddress}>Louisville, CO 80027</Text>
+            <Text style={[s.companyAddress, { marginTop: 3 }]}>303-444-5251</Text>
             <Text style={s.companyAddress}>netratemortgage.com</Text>
           </View>
         </View>
+
+        {/* ===== ACCENT STRIPES ===== */}
+        <View style={s.accentStripe} />
+        <View style={s.yellowStripe} />
 
         {/* ===== TITLE BAR ===== */}
         <View style={s.titleBar}>
@@ -372,7 +439,7 @@ export default function PrequalLetterPDF({ data }) {
           Dear {borrowerNames},
         </Text>
         <Text style={s.bodyText}>
-          Thank you for the opportunity to serve your home financing needs. Based on the application and documentation provided, I am pleased to confirm that {hasMultiple ? 'you have' : 'you have'} been pre-qualified for a home purchase at the following address:
+          Thank you for the opportunity to serve your home financing needs. Based on the application and documentation provided, I am pleased to confirm that you have been pre-qualified for a home purchase at the following address:
         </Text>
 
         {/* Property address callout */}
@@ -426,23 +493,26 @@ export default function PrequalLetterPDF({ data }) {
           {/* Right: Verification Checklist */}
           <View style={s.detailsCol}>
             <Text style={s.detailsTitle}>Verified</Text>
-            {verificationItems.map((item) => (
-              <View key={item.key} style={s.checkRow}>
-                {verifications[item.key] ? (
+            {verificationItems.map((item) =>
+              verifications[item.key] ? (
+                <View key={item.key} style={s.checkRow}>
                   <View style={s.checkIcon}>
                     <Text style={s.checkMark}>✓</Text>
                   </View>
-                ) : (
+                  <Text style={s.checkLabel}>{item.label}</Text>
+                </View>
+              ) : (
+                <View key={item.key} style={s.uncheckRow}>
                   <View style={s.uncheckIcon} />
-                )}
-                <Text style={s.checkLabel}>{item.label}</Text>
-              </View>
-            ))}
+                  <Text style={s.uncheckLabel}>{item.label}</Text>
+                </View>
+              )
+            )}
           </View>
         </View>
 
         {/* ===== CONDITIONS NOTE ===== */}
-        <Text style={[s.bodyText, { fontSize: 10 }]}>
+        <Text style={s.conditionsText}>
           All information is subject to re-verification and acceptable appraisal, executed contract, and title commitment. This pre-qualification is subject to final underwriting approval and verification that financial condition has not materially changed.
         </Text>
 
@@ -455,7 +525,7 @@ export default function PrequalLetterPDF({ data }) {
             <Text style={s.signatureDetail}>NMLS #{mloNmls}</Text>
             <Text style={s.signatureDetail}>{mloPhone} | {mloEmail}</Text>
           </View>
-          <View style={{ alignItems: 'flex-end' }}>
+          <View style={s.companyBlockRight}>
             <Text style={s.companyBlock}>NetRate Mortgage LLC</Text>
             <Text style={s.nmlsBlock}>NMLS #1111861</Text>
             <Text style={s.nmlsBlock}>netratemortgage.com</Text>
@@ -469,7 +539,7 @@ export default function PrequalLetterPDF({ data }) {
           </Text>
         </View>
 
-        {/* ===== TRUST BAR (pinned to bottom) ===== */}
+        {/* ===== TRUST BAR (pinned to bottom, dark band) ===== */}
         <View style={s.trustBar}>
           <View style={s.trustItem}>
             <View style={s.starRow}>
@@ -486,7 +556,7 @@ export default function PrequalLetterPDF({ data }) {
           <View style={s.trustDivider} />
 
           <View style={s.trustItem}>
-            <Text style={[s.trustValue, { color: BRAND, fontSize: 13 }]}>A+</Text>
+            <Text style={[s.trustValue, { color: YELLOW, fontSize: 10 }]}>A+</Text>
             <Text style={s.trustLabel}>BBB Rating</Text>
           </View>
 
