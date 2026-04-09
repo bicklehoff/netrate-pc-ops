@@ -56,8 +56,8 @@ function LogoMark({ size = 36 }) {
 
 const s = StyleSheet.create({
   page: {
-    paddingTop: 32,
-    paddingBottom: 28,
+    paddingTop: 28,
+    paddingBottom: 24,
     paddingHorizontal: 48,
     fontSize: 11,
     fontFamily: 'Helvetica',
@@ -98,7 +98,7 @@ const s = StyleSheet.create({
   yellowStripe: {
     height: 1.5,
     backgroundColor: YELLOW,
-    marginBottom: 14,
+    marginBottom: 10,
   },
 
   // Title bar
@@ -107,7 +107,7 @@ const s = StyleSheet.create({
     paddingVertical: 9,
     paddingHorizontal: 16,
     borderRadius: 6,
-    marginBottom: 14,
+    marginBottom: 10,
   },
   titleText: {
     fontSize: 14,
@@ -120,18 +120,18 @@ const s = StyleSheet.create({
   // Borrower info grid
   infoGrid: {
     flexDirection: 'row',
-    marginBottom: 10,
+    marginBottom: 6,
   },
   infoCol: { width: '50%' },
   infoLabel: { fontSize: 8, color: GRAY_500, marginBottom: 1, textTransform: 'uppercase', letterSpacing: 0.6 },
-  infoValue: { fontSize: 11, color: GRAY_900, fontFamily: 'Helvetica-Bold', marginBottom: 5 },
+  infoValue: { fontSize: 11, color: GRAY_900, fontFamily: 'Helvetica-Bold', marginBottom: 3 },
 
   // Body text
   bodyText: {
     fontSize: 11,
     color: GRAY_700,
-    lineHeight: 1.5,
-    marginBottom: 7,
+    lineHeight: 1.45,
+    marginBottom: 5,
   },
 
   // Property address callout
@@ -142,7 +142,7 @@ const s = StyleSheet.create({
     borderLeftWidth: 3,
     borderLeftColor: BRAND,
     borderRadius: 3,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   propertyText: {
     fontSize: 11,
@@ -153,15 +153,15 @@ const s = StyleSheet.create({
   // Hero boxes
   heroRow: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 12,
+    gap: 10,
+    marginBottom: 8,
   },
   heroBox: {
     flex: 1,
     backgroundColor: GRAY_100,
     borderRadius: 6,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
   },
   heroLabel: {
     fontSize: 8,
@@ -169,10 +169,10 @@ const s = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1,
     fontFamily: 'Helvetica-Bold',
-    marginBottom: 3,
+    marginBottom: 2,
   },
   heroValue: {
-    fontSize: 24,
+    fontSize: 20,
     fontFamily: 'Helvetica-Bold',
     color: GRAY_900,
   },
@@ -181,14 +181,14 @@ const s = StyleSheet.create({
   detailsRow: {
     flexDirection: 'row',
     gap: 14,
-    marginBottom: 10,
+    marginBottom: 6,
   },
   detailsCol: { flex: 1 },
   detailsTitle: {
     fontSize: 10,
     fontFamily: 'Helvetica-Bold',
     color: BRAND,
-    marginBottom: 6,
+    marginBottom: 4,
     letterSpacing: 0.3,
   },
   detailRow: {
@@ -205,11 +205,11 @@ const s = StyleSheet.create({
   checkRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 5,
-    paddingHorizontal: 8,
+    paddingVertical: 3,
+    paddingHorizontal: 6,
     backgroundColor: GRAY_100,
     borderRadius: 4,
-    marginBottom: 3,
+    marginBottom: 2,
   },
   checkIcon: {
     width: 14,
@@ -224,10 +224,10 @@ const s = StyleSheet.create({
   uncheckRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 5,
-    paddingHorizontal: 8,
+    paddingVertical: 3,
+    paddingHorizontal: 6,
     borderRadius: 4,
-    marginBottom: 3,
+    marginBottom: 2,
   },
   uncheckIcon: {
     width: 14,
@@ -242,15 +242,15 @@ const s = StyleSheet.create({
 
   // Conditions note
   conditionsText: {
-    fontSize: 10,
+    fontSize: 9,
     color: GRAY_600,
-    lineHeight: 1.4,
-    marginBottom: 8,
+    lineHeight: 1.35,
+    marginBottom: 4,
   },
 
   // Signature block
   signatureBlock: {
-    marginTop: 10,
+    marginTop: 6,
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
@@ -260,7 +260,7 @@ const s = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: BRAND,
     marginBottom: 4,
-    marginTop: 18,
+    marginTop: 12,
   },
   signatureName: { fontSize: 12, fontFamily: 'Helvetica-Bold', color: GRAY_900 },
   signatureDetail: { fontSize: 9, color: GRAY_500, marginTop: 1 },
@@ -312,7 +312,7 @@ const s = StyleSheet.create({
 
   // Disclaimer
   disclaimer: {
-    marginBottom: 46,
+    marginBottom: 34,
   },
   disclaimerText: {
     fontSize: 8,
