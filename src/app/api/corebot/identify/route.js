@@ -8,7 +8,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 import { identifyFile } from '@/lib/corebot/processor';
 
 export async function POST(request) {
@@ -23,41 +23,51 @@ export async function POST(request) {
       return NextResponse.json({ error: 'loanId, fileId, and fileName are required' }, { status: 400 });
     }
 
-    // Verify MLO owns this loan
-    const loan = await prisma.loan.findUnique({
-      where: { id: loanId },
-      include: {
-        borrower: { select: { firstName: true, lastName: true } },
-        loanBorrowers: {
-          include: { borrower: { select: { firstName: true, lastName: true } } },
-        },
-      },
-    });
+    // Verify MLO owns this loan (with borrower + loanBorrowers)
+    const loanRows = await sql`
+      SELECT l.*,
+             b.first_name AS borrower_first_name,
+             b.last_name AS borrower_last_name
+      FROM "Loan" l
+      LEFT JOIN "Borrower" b ON b.id = l.borrower_id
+      WHERE l.id = ${loanId}
+      LIMIT 1
+    `;
+    const loan = loanRows[0];
 
     if (!loan) {
       return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
     }
 
     const isAdmin = session.user.role === 'admin';
-    if (!isAdmin && loan.mloId !== session.user.id) {
+    if (!isAdmin && loan.mlo_id !== session.user.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
+    // Fetch loan borrowers for co-borrower context
+    const loanBorrowers = await sql`
+      SELECT lb.borrower_type,
+             b.first_name, b.last_name
+      FROM "LoanBorrower" lb
+      JOIN "Borrower" b ON b.id = lb.borrower_id
+      WHERE lb.loan_id = ${loanId}
+    `;
+
     // Build context
     const loanContext = {
-      borrowerFirstName: loan.borrower?.firstName,
-      borrowerLastName: loan.borrower?.lastName,
-      propertyAddress: loan.propertyStreet || null,
-      loanType: loan.loanType || null,
+      borrowerFirstName: loan.borrower_first_name,
+      borrowerLastName: loan.borrower_last_name,
+      propertyAddress: loan.property_street || null,
+      loanType: loan.loan_type || null,
       purpose: loan.purpose || null,
-      lenderName: loan.lenderName || null,
+      lenderName: loan.lender_name || null,
     };
 
-    if (loan.loanBorrowers?.length > 1) {
-      const coBorrower = loan.loanBorrowers.find((lb) => lb.borrowerType === 'co_borrower');
-      if (coBorrower?.borrower) {
-        loanContext.coBorrowerFirstName = coBorrower.borrower.firstName;
-        loanContext.coBorrowerLastName = coBorrower.borrower.lastName;
+    if (loanBorrowers.length > 1) {
+      const coBorrower = loanBorrowers.find((lb) => lb.borrower_type === 'co_borrower');
+      if (coBorrower) {
+        loanContext.coBorrowerFirstName = coBorrower.first_name;
+        loanContext.coBorrowerLastName = coBorrower.last_name;
       }
     }
 

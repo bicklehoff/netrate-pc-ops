@@ -8,7 +8,7 @@
 // Borrowers matched by email, created if new (with PII encryption).
 
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 import { encrypt } from '@/lib/encryption';
 import { enrichPropertyAddress } from '@/lib/geocode';
 
@@ -111,9 +111,12 @@ async function processLoan(loanData) {
   // ── 1. Match or create borrower ──────────────────────────
   let borrower = null;
   if (borrowerData?.contacts?.email) {
-    borrower = await prisma.borrower.findUnique({
-      where: { email: borrowerData.contacts.email.toLowerCase() },
-    });
+    const borrowerRows = await sql`
+      SELECT * FROM "Borrower"
+      WHERE email = ${borrowerData.contacts.email.toLowerCase()}
+      LIMIT 1
+    `;
+    borrower = borrowerRows[0] || null;
   }
 
   if (!borrower && borrowerData) {
@@ -129,17 +132,20 @@ async function processLoan(loanData) {
     // Pad SSN to 9 digits (LDox sends as integer, leading zeros stripped)
     const ssnPadded = ssnRaw ? ssnRaw.padStart(9, '0') : null;
 
-    borrower = await prisma.borrower.create({
-      data: {
-        email,
-        firstName: borrowerData.firstName || 'Unknown',
-        lastName: borrowerData.lastName || 'Unknown',
-        phone: normalizePhone(borrowerData.contacts?.mobilePhone || borrowerData.contacts?.homePhone),
-        ssnEncrypted: ssnPadded ? encrypt(ssnPadded) : encrypt('000000000'),
-        dobEncrypted: dobRaw ? encrypt(dobRaw) : encrypt('1900-01-01'),
-        ssnLastFour: ssnPadded ? ssnPadded.slice(-4) : '0000',
-      },
-    });
+    const rows = await sql`
+      INSERT INTO "Borrower" (email, first_name, last_name, phone, ssn_encrypted, dob_encrypted, ssn_last_four)
+      VALUES (
+        ${email},
+        ${borrowerData.firstName || 'Unknown'},
+        ${borrowerData.lastName || 'Unknown'},
+        ${normalizePhone(borrowerData.contacts?.mobilePhone || borrowerData.contacts?.homePhone)},
+        ${ssnPadded ? encrypt(ssnPadded) : encrypt('000000000')},
+        ${dobRaw ? encrypt(dobRaw) : encrypt('1900-01-01')},
+        ${ssnPadded ? ssnPadded.slice(-4) : '0000'}
+      )
+      RETURNING *
+    `;
+    borrower = rows[0];
   }
 
   if (!borrower) {
@@ -151,50 +157,44 @@ async function processLoan(loanData) {
   if (loanData.loanOfficer) {
     const loValue = String(loanData.loanOfficer);
     // Try ldoxOfficerId first (integer)
-    const mloByLdox = await prisma.mlo.findUnique({
-      where: { ldoxOfficerId: parseInt(loValue, 10) },
-    }).catch(() => null);
-    if (mloByLdox) {
-      mloId = mloByLdox.id;
-    } else {
-      // Fallback: match by NMLS (loanOfficer field often contains NMLS)
-      const mloByNmls = await prisma.mlo.findFirst({
-        where: { nmls: loValue },
-      });
-      if (mloByNmls) mloId = mloByNmls.id;
+    const loInt = parseInt(loValue, 10);
+    if (!isNaN(loInt)) {
+      const mloByLdox = await sql`
+        SELECT id FROM "Mlo" WHERE ldox_officer_id = ${loInt} LIMIT 1
+      `;
+      if (mloByLdox[0]) mloId = mloByLdox[0].id;
+    }
+    if (!mloId) {
+      // Fallback: match by NMLS
+      const mloByNmls = await sql`
+        SELECT id FROM "Mlo" WHERE nmls = ${loValue} LIMIT 1
+      `;
+      if (mloByNmls[0]) mloId = mloByNmls[0].id;
     }
   }
   // Also check explicit loanOfficerNmls field
   if (!mloId && loanData.loanOfficerNmls) {
-    const mlo = await prisma.mlo.findFirst({
-      where: { nmls: String(loanData.loanOfficerNmls) },
-    });
-    if (mlo) mloId = mlo.id;
+    const mloRows = await sql`
+      SELECT id FROM "Mlo" WHERE nmls = ${String(loanData.loanOfficerNmls)} LIMIT 1
+    `;
+    if (mloRows[0]) mloId = mloRows[0].id;
   }
 
-  // ── 3. Build loan data object ────────────────────────────
-  const loanFields = {
-    borrowerId: borrower.id,
-    mloId,
-    status: coreStatus,
-    ballInCourt,
-    ldoxLoanId,
-    loanNumber,
-    loanAmount: loanData.loanAmount ? parseFloat(loanData.loanAmount) : null,
-    interestRate: loanData.noteRate ? parseFloat(loanData.noteRate) : null,
-    loanTerm: loanData.term ? parseInt(loanData.term, 10) : null,
-    purpose: loanData.purpose?.name?.toLowerCase() || null,
-    occupancy: loanData.occupancy?.name?.toLowerCase() || null,
-    loanType: loanData.loanType?.name?.toLowerCase() || null,
-    lenderName: loanData.lender || null,
-    purchasePrice: loanData.purchasePrice ? parseFloat(loanData.purchasePrice) : null,
-    estimatedValue: loanData.appraisalValue ? parseFloat(loanData.appraisalValue) : null,
-    numUnits: loanData.units ? parseInt(loanData.units, 10) : null,
-    propertyType: loanData.propertyType?.name || null,
-    propertyAddress: normalizeAddress(loanData.subjectPropertyAddress),
-    currentAddress: normalizeAddress(borrowerData?.currentAddress),
-    creditScore: loanData.creditScore ? parseInt(loanData.creditScore, 10) : null,
-  };
+  // ── 3. Build loan field values ────────────────────────────
+  const loanAmount = loanData.loanAmount ? parseFloat(loanData.loanAmount) : null;
+  const interestRate = loanData.noteRate ? parseFloat(loanData.noteRate) : null;
+  const loanTerm = loanData.term ? parseInt(loanData.term, 10) : null;
+  const purpose = loanData.purpose?.name?.toLowerCase() || null;
+  const occupancy = loanData.occupancy?.name?.toLowerCase() || null;
+  const loanType = loanData.loanType?.name?.toLowerCase() || null;
+  const lenderName = loanData.lender || null;
+  const purchasePrice = loanData.purchasePrice ? parseFloat(loanData.purchasePrice) : null;
+  const estimatedValue = loanData.appraisalValue ? parseFloat(loanData.appraisalValue) : null;
+  const numUnits = loanData.units ? parseInt(loanData.units, 10) : null;
+  const propertyType = loanData.propertyType?.name || null;
+  const propertyAddress = normalizeAddress(loanData.subjectPropertyAddress);
+  const currentAddress = normalizeAddress(borrowerData?.currentAddress);
+  const creditScore = loanData.creditScore ? parseInt(loanData.creditScore, 10) : null;
 
   // ── 4. Upsert loan ──────────────────────────────────────
   let loan;
@@ -202,103 +202,163 @@ async function processLoan(loanData) {
 
   // Try match by ldoxLoanId first
   if (ldoxLoanId) {
-    loan = await prisma.loan.findUnique({ where: { ldoxLoanId } });
+    const rows = await sql`
+      SELECT * FROM "Loan" WHERE ldox_loan_id = ${ldoxLoanId} LIMIT 1
+    `;
+    loan = rows[0] || null;
   }
 
   // Fallback: match by loanNumber + borrower
   if (!loan && loanNumber) {
-    loan = await prisma.loan.findFirst({
-      where: { loanNumber, borrowerId: borrower.id },
-    });
+    const rows = await sql`
+      SELECT * FROM "Loan"
+      WHERE loan_number = ${loanNumber} AND borrower_id = ${borrower.id}
+      LIMIT 1
+    `;
+    loan = rows[0] || null;
   }
 
   if (loan) {
     // Update existing
     const oldStatus = loan.status;
-    loan = await prisma.loan.update({
-      where: { id: loan.id },
-      data: loanFields,
-    });
+    const updatedRows = await sql`
+      UPDATE "Loan" SET
+        borrower_id = ${borrower.id},
+        mlo_id = ${mloId},
+        status = ${coreStatus},
+        ball_in_court = ${ballInCourt},
+        ldox_loan_id = ${ldoxLoanId},
+        loan_number = ${loanNumber},
+        loan_amount = ${loanAmount},
+        interest_rate = ${interestRate},
+        loan_term = ${loanTerm},
+        purpose = ${purpose},
+        occupancy = ${occupancy},
+        loan_type = ${loanType},
+        lender_name = ${lenderName},
+        purchase_price = ${purchasePrice},
+        estimated_value = ${estimatedValue},
+        num_units = ${numUnits},
+        property_type = ${propertyType},
+        property_address = ${propertyAddress ? JSON.stringify(propertyAddress) : null}::jsonb,
+        current_address = ${currentAddress ? JSON.stringify(currentAddress) : null}::jsonb,
+        credit_score = ${creditScore},
+        updated_at = NOW()
+      WHERE id = ${loan.id}
+      RETURNING *
+    `;
+    loan = updatedRows[0];
 
     // Log status change if it changed
     if (oldStatus !== coreStatus) {
-      await prisma.loanEvent.create({
-        data: {
-          loanId: loan.id,
-          eventType: 'status_change',
-          actorType: 'system',
-          oldValue: oldStatus,
-          newValue: coreStatus,
-          details: { source: 'corebot', ldoxStatus: loanData.loanStatus?.name },
-        },
-      });
+      await sql`
+        INSERT INTO "LoanEvent" (loan_id, event_type, actor_type, old_value, new_value, details)
+        VALUES (
+          ${loan.id},
+          'status_change',
+          'system',
+          ${oldStatus},
+          ${coreStatus},
+          ${JSON.stringify({ source: 'corebot', ldoxStatus: loanData.loanStatus?.name })}::jsonb
+        )
+      `;
     }
   } else {
     // Create new
     isNew = true;
-    loan = await prisma.loan.create({
-      data: {
-        ...loanFields,
-        applicationStep: coreStatus === 'prospect' ? 1 : 6,
-        submittedAt: coreStatus !== 'prospect' ? new Date() : null,
-      },
-    });
+    const applicationStep = coreStatus === 'prospect' ? 1 : 6;
+    const submittedAt = coreStatus !== 'prospect' ? new Date() : null;
+    const rows = await sql`
+      INSERT INTO "Loan" (
+        borrower_id, mlo_id, status, ball_in_court, ldox_loan_id, loan_number,
+        loan_amount, interest_rate, loan_term, purpose, occupancy, loan_type,
+        lender_name, purchase_price, estimated_value, num_units, property_type,
+        property_address, current_address, credit_score, application_step, submitted_at
+      ) VALUES (
+        ${borrower.id}, ${mloId}, ${coreStatus}, ${ballInCourt}, ${ldoxLoanId}, ${loanNumber},
+        ${loanAmount}, ${interestRate}, ${loanTerm}, ${purpose}, ${occupancy}, ${loanType},
+        ${lenderName}, ${purchasePrice}, ${estimatedValue}, ${numUnits}, ${propertyType},
+        ${propertyAddress ? JSON.stringify(propertyAddress) : null}::jsonb,
+        ${currentAddress ? JSON.stringify(currentAddress) : null}::jsonb,
+        ${creditScore}, ${applicationStep}, ${submittedAt}
+      )
+      RETURNING *
+    `;
+    loan = rows[0];
   }
 
   // Log import event
-  await prisma.loanEvent.create({
-    data: {
-      loanId: loan.id,
-      eventType: 'field_updated',
-      actorType: 'system',
-      details: {
+  await sql`
+    INSERT INTO "LoanEvent" (loan_id, event_type, actor_type, details)
+    VALUES (
+      ${loan.id},
+      'field_updated',
+      'system',
+      ${JSON.stringify({
         source: 'corebot',
         action: isNew ? 'created' : 'updated',
         ldoxLoanId,
         loanNumber,
-      },
-    },
-  });
+      })}::jsonb
+    )
+  `;
 
   // ── 5. Upsert dates ─────────────────────────────────────
   if (loanData.dates) {
     const d = loanData.dates;
-    const dateFields = {
-      applicationDate: parseDate(d.applicationTaken),
-      lockedDate: parseDate(d.rateLocked),
-      lockExpiration: parseDate(d.lockExpiration),
-      estimatedClosing: parseDate(d.estimatedClosing),
-      closingDate: parseDate(d.closed),
-      fundingDate: parseDate(d.funded),
-      firstPaymentDate: parseDate(d.firstPaymentDate),
-      estimatedFunding: parseDate(d.fundingEstimate),
-      appraisalOrdered: parseDate(d.brokersRequestForAppraisal),
-    };
+    const applicationDate = parseDate(d.applicationTaken);
+    const lockedDate = parseDate(d.rateLocked);
+    const lockExpiration = parseDate(d.lockExpiration);
+    const estimatedClosing = parseDate(d.estimatedClosing);
+    const closingDate = parseDate(d.closed);
+    const fundingDate = parseDate(d.funded);
+    const firstPaymentDate = parseDate(d.firstPaymentDate);
+    const estimatedFunding = parseDate(d.fundingEstimate);
+    const appraisalOrdered = parseDate(d.brokersRequestForAppraisal);
 
     // Only upsert if at least one date is non-null
-    const hasAnyDate = Object.values(dateFields).some((v) => v !== null);
+    const hasAnyDate = [applicationDate, lockedDate, lockExpiration, estimatedClosing, closingDate, fundingDate, firstPaymentDate, estimatedFunding, appraisalOrdered].some((v) => v !== null);
     if (hasAnyDate) {
-      await prisma.loanDates.upsert({
-        where: { loanId: loan.id },
-        create: { loanId: loan.id, ...dateFields },
-        update: dateFields,
-      });
+      await sql`
+        INSERT INTO "LoanDates" (
+          loan_id, application_date, locked_date, lock_expiration, estimated_closing,
+          closing_date, funding_date, first_payment_date, estimated_funding, appraisal_ordered
+        ) VALUES (
+          ${loan.id}, ${applicationDate}, ${lockedDate}, ${lockExpiration}, ${estimatedClosing},
+          ${closingDate}, ${fundingDate}, ${firstPaymentDate}, ${estimatedFunding}, ${appraisalOrdered}
+        )
+        ON CONFLICT (loan_id) DO UPDATE SET
+          application_date = COALESCE(EXCLUDED.application_date, "LoanDates".application_date),
+          locked_date = COALESCE(EXCLUDED.locked_date, "LoanDates".locked_date),
+          lock_expiration = COALESCE(EXCLUDED.lock_expiration, "LoanDates".lock_expiration),
+          estimated_closing = COALESCE(EXCLUDED.estimated_closing, "LoanDates".estimated_closing),
+          closing_date = COALESCE(EXCLUDED.closing_date, "LoanDates".closing_date),
+          funding_date = COALESCE(EXCLUDED.funding_date, "LoanDates".funding_date),
+          first_payment_date = COALESCE(EXCLUDED.first_payment_date, "LoanDates".first_payment_date),
+          estimated_funding = COALESCE(EXCLUDED.estimated_funding, "LoanDates".estimated_funding),
+          appraisal_ordered = COALESCE(EXCLUDED.appraisal_ordered, "LoanDates".appraisal_ordered),
+          updated_at = NOW()
+      `;
     }
   }
 
   // ── 6. Create LoanBorrower junction if new ───────────────
   if (isNew) {
-    await prisma.loanBorrower.create({
-      data: {
-        loanId: loan.id,
-        borrowerId: borrower.id,
-        borrowerType: 'primary',
-        ordinal: 0,
-        currentAddress: normalizeAddress(borrowerData?.currentAddress),
-      },
-    }).catch(() => {
-      // Ignore if junction already exists (unique constraint)
-    });
+    try {
+      await sql`
+        INSERT INTO "LoanBorrower" (loan_id, borrower_id, borrower_type, ordinal, current_address)
+        VALUES (
+          ${loan.id},
+          ${borrower.id},
+          'primary',
+          0,
+          ${currentAddress ? JSON.stringify(currentAddress) : null}::jsonb
+        )
+        ON CONFLICT DO NOTHING
+      `;
+    } catch {
+      // Ignore if junction already exists
+    }
   }
 
   // ── 7. Handle co-borrower if present ─────────────────────
@@ -306,53 +366,65 @@ async function processLoan(loanData) {
     const cb = loanData.coBorrower;
     const cbEmail = cb.contacts?.email?.toLowerCase();
     if (cbEmail) {
-      let coBorrower = await prisma.borrower.findUnique({ where: { email: cbEmail } });
+      let cbRows = await sql`
+        SELECT * FROM "Borrower" WHERE email = ${cbEmail} LIMIT 1
+      `;
+      let coBorrower = cbRows[0] || null;
+
       if (!coBorrower) {
         const cbSsn = cb.ssn ? String(cb.ssn).padStart(9, '0') : null;
-        coBorrower = await prisma.borrower.create({
-          data: {
-            email: cbEmail,
-            firstName: cb.firstName || 'Unknown',
-            lastName: cb.lastName || 'Unknown',
-            phone: normalizePhone(cb.contacts?.mobilePhone || cb.contacts?.homePhone),
-            ssnEncrypted: cbSsn ? encrypt(cbSsn) : encrypt('000000000'),
-            dobEncrypted: cb.birthDate ? encrypt(cb.birthDate) : encrypt('1900-01-01'),
-            ssnLastFour: cbSsn ? cbSsn.slice(-4) : '0000',
-          },
-        });
+        const newCbRows = await sql`
+          INSERT INTO "Borrower" (email, first_name, last_name, phone, ssn_encrypted, dob_encrypted, ssn_last_four)
+          VALUES (
+            ${cbEmail},
+            ${cb.firstName || 'Unknown'},
+            ${cb.lastName || 'Unknown'},
+            ${normalizePhone(cb.contacts?.mobilePhone || cb.contacts?.homePhone)},
+            ${cbSsn ? encrypt(cbSsn) : encrypt('000000000')},
+            ${cb.birthDate ? encrypt(cb.birthDate) : encrypt('1900-01-01')},
+            ${cbSsn ? cbSsn.slice(-4) : '0000'}
+          )
+          RETURNING *
+        `;
+        coBorrower = newCbRows[0];
       }
 
-      await prisma.loanBorrower.upsert({
-        where: { loanId_borrowerId: { loanId: loan.id, borrowerId: coBorrower.id } },
-        create: {
-          loanId: loan.id,
-          borrowerId: coBorrower.id,
-          borrowerType: 'co_borrower',
-          ordinal: 1,
-          currentAddress: normalizeAddress(cb.currentAddress),
-        },
-        update: {
-          currentAddress: normalizeAddress(cb.currentAddress),
-        },
-      });
+      const cbAddress = normalizeAddress(cb.currentAddress);
+      await sql`
+        INSERT INTO "LoanBorrower" (loan_id, borrower_id, borrower_type, ordinal, current_address)
+        VALUES (
+          ${loan.id},
+          ${coBorrower.id},
+          'co_borrower',
+          1,
+          ${cbAddress ? JSON.stringify(cbAddress) : null}::jsonb
+        )
+        ON CONFLICT (loan_id, borrower_id) DO UPDATE SET
+          current_address = ${cbAddress ? JSON.stringify(cbAddress) : null}::jsonb,
+          updated_at = NOW()
+      `;
 
       // Update co-borrower count
-      await prisma.loan.update({
-        where: { id: loan.id },
-        data: { numBorrowers: 2 },
-      });
+      await sql`
+        UPDATE "Loan" SET num_borrowers = 2, updated_at = NOW()
+        WHERE id = ${loan.id}
+      `;
     }
   }
 
   // ── 8. Geocode property address (non-blocking) ───────────
   // Enriches with zip, county, lat/lng if missing
-  if (loanFields.propertyAddress?.street) {
-    enrichPropertyAddress(loanFields.propertyAddress).then(async (result) => {
+  if (propertyAddress?.street) {
+    enrichPropertyAddress(propertyAddress).then(async (result) => {
       if (result.enriched) {
-        await prisma.loan.update({
-          where: { id: loan.id },
-          data: { propertyAddress: result.address },
-        }).catch(() => {});
+        try {
+          await sql`
+            UPDATE "Loan" SET
+              property_address = ${JSON.stringify(result.address)}::jsonb,
+              updated_at = NOW()
+            WHERE id = ${loan.id}
+          `;
+        } catch { /* ignore */ }
       }
     }).catch(() => {});
   }

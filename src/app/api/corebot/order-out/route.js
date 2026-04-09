@@ -9,7 +9,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 import { sendEmail } from '@/lib/resend';
 import {
   titleOrderTemplate,
@@ -22,22 +22,22 @@ import {
 const ORDER_CONFIG = {
   title: {
     template: titleOrderTemplate,
-    dateField: 'titleOrdered',
+    dateField: 'title_ordered',
     label: 'Title',
   },
   appraisal: {
     template: appraisalOrderTemplate,
-    dateField: 'appraisalOrdered',
+    dateField: 'appraisal_ordered',
     label: 'Appraisal',
   },
   hoi: {
     template: hoiOrderTemplate,
-    dateField: 'hoiOrdered',
+    dateField: 'hoi_ordered',
     label: 'HOI',
   },
   flood: {
     template: floodCertOrderTemplate,
-    dateField: 'floodCertOrdered',
+    dateField: 'flood_cert_ordered',
     label: 'Flood Cert',
   },
 };
@@ -67,43 +67,53 @@ export async function POST(request) {
     }
 
     // Load loan with borrower context
-    const loan = await prisma.loan.findUnique({
-      where: { id: loanId },
-      include: {
-        borrower: { select: { firstName: true, lastName: true } },
-        loanBorrowers: {
-          include: { borrower: { select: { firstName: true, lastName: true } } },
-        },
-      },
-    });
+    const loanRows = await sql`
+      SELECT l.*,
+             b.first_name AS borrower_first_name,
+             b.last_name AS borrower_last_name
+      FROM "Loan" l
+      LEFT JOIN "Borrower" b ON b.id = l.borrower_id
+      WHERE l.id = ${loanId}
+      LIMIT 1
+    `;
+    const loan = loanRows[0];
 
     if (!loan) {
       return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
     }
 
     const isAdmin = session.user.role === 'admin';
-    if (!isAdmin && loan.mloId !== session.user.id) {
+    if (!isAdmin && loan.mlo_id !== session.user.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
+    // Fetch loan borrowers for co-borrower context
+    const loanBorrowers = await sql`
+      SELECT lb.borrower_type,
+             b.first_name, b.last_name
+      FROM "LoanBorrower" lb
+      JOIN "Borrower" b ON b.id = lb.borrower_id
+      WHERE lb.loan_id = ${loanId}
+    `;
+
     // Build loan context for template
     const loanContext = {
-      borrowerFirstName: loan.borrower?.firstName,
-      borrowerLastName: loan.borrower?.lastName,
-      propertyAddress: loan.propertyStreet || null,
-      loanType: loan.loanType || null,
+      borrowerFirstName: loan.borrower_first_name,
+      borrowerLastName: loan.borrower_last_name,
+      propertyAddress: loan.property_street || null,
+      loanType: loan.loan_type || null,
       purpose: loan.purpose || null,
-      lenderName: loan.lenderName || null,
-      loanNumber: loan.loanNumber || null,
-      loanAmount: loan.loanAmount || null,
+      lenderName: loan.lender_name || null,
+      loanNumber: loan.loan_number || null,
+      loanAmount: loan.loan_amount ? Number(loan.loan_amount) : null,
     };
 
     // Add co-borrower if exists
-    if (loan.loanBorrowers?.length > 1) {
-      const coBorrower = loan.loanBorrowers.find((lb) => lb.borrowerType === 'co_borrower');
-      if (coBorrower?.borrower) {
-        loanContext.coBorrowerFirstName = coBorrower.borrower.firstName;
-        loanContext.coBorrowerLastName = coBorrower.borrower.lastName;
+    if (loanBorrowers.length > 1) {
+      const coBorrower = loanBorrowers.find((lb) => lb.borrower_type === 'co_borrower');
+      if (coBorrower) {
+        loanContext.coBorrowerFirstName = coBorrower.first_name;
+        loanContext.coBorrowerLastName = coBorrower.last_name;
       }
     }
 
@@ -129,37 +139,44 @@ export async function POST(request) {
 
     // Auto-update LoanDates with ordered date
     const now = new Date();
-    await prisma.loanDates.upsert({
-      where: { loanId },
-      update: { [config.dateField]: now },
-      create: { loanId, [config.dateField]: now },
-    });
+    // dateField is from ORDER_CONFIG (safe, not user input) — use per-type queries
+    if (config.dateField === 'title_ordered') {
+      await sql`INSERT INTO "LoanDates" (loan_id, title_ordered) VALUES (${loanId}, ${now}) ON CONFLICT (loan_id) DO UPDATE SET title_ordered = ${now}, updated_at = NOW()`;
+    } else if (config.dateField === 'appraisal_ordered') {
+      await sql`INSERT INTO "LoanDates" (loan_id, appraisal_ordered) VALUES (${loanId}, ${now}) ON CONFLICT (loan_id) DO UPDATE SET appraisal_ordered = ${now}, updated_at = NOW()`;
+    } else if (config.dateField === 'hoi_ordered') {
+      await sql`INSERT INTO "LoanDates" (loan_id, hoi_ordered) VALUES (${loanId}, ${now}) ON CONFLICT (loan_id) DO UPDATE SET hoi_ordered = ${now}, updated_at = NOW()`;
+    } else if (config.dateField === 'flood_cert_ordered') {
+      await sql`INSERT INTO "LoanDates" (loan_id, flood_cert_ordered) VALUES (${loanId}, ${now}) ON CONFLICT (loan_id) DO UPDATE SET flood_cert_ordered = ${now}, updated_at = NOW()`;
+    }
 
     // Create audit event
-    await prisma.loanEvent.create({
-      data: {
-        loanId,
-        eventType: 'order_out',
-        actorType: 'mlo',
-        actorId: session.user.id,
-        details: {
+    await sql`
+      INSERT INTO "LoanEvent" (loan_id, event_type, actor_type, actor_id, details)
+      VALUES (
+        ${loanId},
+        'order_out',
+        'mlo',
+        ${session.user.id},
+        ${JSON.stringify({
           orderType,
           recipientEmail,
           recipientName: recipientName || null,
           dateField: config.dateField,
           emailId: emailResult?.id || null,
-        },
-      },
-    });
+        })}::jsonb
+      )
+    `;
 
     // Create loan note
-    await prisma.loanNote.create({
-      data: {
-        loanId,
-        authorId: session.user.id,
-        content: `${config.label} ordered — sent to ${recipientName || recipientEmail}${notes ? `. Notes: ${notes}` : ''}`,
-      },
-    });
+    await sql`
+      INSERT INTO "LoanNote" (loan_id, author_id, content)
+      VALUES (
+        ${loanId},
+        ${session.user.id},
+        ${`${config.label} ordered — sent to ${recipientName || recipientEmail}${notes ? `. Notes: ${notes}` : ''}`}
+      )
+    `;
 
     return NextResponse.json({
       success: true,
