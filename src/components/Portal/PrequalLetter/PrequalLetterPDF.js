@@ -245,7 +245,7 @@ const s = StyleSheet.create({
     fontSize: 10,
     color: GRAY_600,
     lineHeight: 1.4,
-    marginBottom: 4,
+    marginBottom: 8,
   },
 
   // Signature block
@@ -271,13 +271,13 @@ const s = StyleSheet.create({
   // Trust bar
   trustBar: {
     position: 'absolute',
-    bottom: 28,
+    bottom: 24,
     left: 48,
     right: 48,
     backgroundColor: DEEP,
-    borderRadius: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    borderRadius: 4,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -287,32 +287,32 @@ const s = StyleSheet.create({
     flex: 1,
   },
   trustLabel: {
-    fontSize: 8,
+    fontSize: 7,
     color: '#9ca3af',
   },
   trustValue: {
-    fontSize: 10,
+    fontSize: 8,
     fontFamily: 'Helvetica-Bold',
     color: 'white',
   },
   trustDivider: {
-    width: 1,
-    height: 24,
-    backgroundColor: '#ffffff20',
+    width: 0.5,
+    height: 16,
+    backgroundColor: '#ffffff30',
   },
   starRow: {
     flexDirection: 'row',
-    gap: 1,
-    marginBottom: 1,
+    gap: 0.5,
+    marginBottom: 0.5,
   },
   star: {
-    fontSize: 9,
+    fontSize: 7,
     color: YELLOW,
   },
 
   // Disclaimer
   disclaimer: {
-    marginBottom: 40,
+    marginBottom: 46,
   },
   disclaimerText: {
     fontSize: 8,
@@ -556,7 +556,7 @@ export default function PrequalLetterPDF({ data }) {
           <View style={s.trustDivider} />
 
           <View style={s.trustItem}>
-            <Text style={[s.trustValue, { color: YELLOW, fontSize: 13 }]}>A+</Text>
+            <Text style={[s.trustValue, { color: YELLOW, fontSize: 10 }]}>A+</Text>
             <Text style={s.trustLabel}>BBB Rating</Text>
           </View>
 
