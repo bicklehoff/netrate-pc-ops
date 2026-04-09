@@ -21,7 +21,6 @@ const BRAND_LIGHT = '#e6f0f0';
 const YELLOW = '#fff000';
 const DEEP = '#012d30';
 const GREEN = '#059669';
-const GREEN_LIGHT = '#ecfdf5';
 const GRAY_100 = '#f3f4f6';
 const GRAY_200 = '#e5e7eb';
 const GRAY_300 = '#d1d5db';
@@ -38,13 +37,13 @@ function LogoMark({ size = 36 }) {
     <Svg width={size} height={size} viewBox="0 0 44 44">
       <Rect x="0" y="0" width="44" height="44" rx="14" ry="14" fill={BRAND} />
       <Line
-        x1={11 * 1} y1={33 * 1} x2={23 * 1} y2={14 * 1}
+        x1="10" y1="33" x2="19" y2="11"
         stroke={YELLOW}
         strokeWidth="4.5"
         strokeLinecap="round"
       />
       <Line
-        x1={23 * 1} y1={30 * 1} x2={35 * 1} y2={11 * 1}
+        x1="25" y1="33" x2="34" y2="11"
         stroke={YELLOW}
         strokeWidth="4.5"
         strokeLinecap="round"
@@ -104,7 +103,7 @@ const s = StyleSheet.create({
 
   // Title bar
   titleBar: {
-    backgroundColor: BRAND,
+    backgroundColor: GRAY_100,
     paddingVertical: 9,
     paddingHorizontal: 16,
     borderRadius: 6,
@@ -113,7 +112,7 @@ const s = StyleSheet.create({
   titleText: {
     fontSize: 14,
     fontFamily: 'Helvetica-Bold',
-    color: YELLOW,
+    color: BRAND,
     textAlign: 'center',
     letterSpacing: 0.5,
   },
@@ -159,23 +158,23 @@ const s = StyleSheet.create({
   },
   heroBox: {
     flex: 1,
-    backgroundColor: BRAND,
+    backgroundColor: GRAY_100,
     borderRadius: 6,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
   },
   heroLabel: {
     fontSize: 8,
-    color: YELLOW,
+    color: BRAND,
     textTransform: 'uppercase',
     letterSpacing: 1,
-    marginBottom: 2,
+    fontFamily: 'Helvetica-Bold',
+    marginBottom: 3,
   },
   heroValue: {
-    fontSize: 22,
+    fontSize: 24,
     fontFamily: 'Helvetica-Bold',
-    color: 'white',
+    color: GRAY_900,
   },
 
   // Loan details + verification side by side
@@ -186,15 +185,11 @@ const s = StyleSheet.create({
   },
   detailsCol: { flex: 1 },
   detailsTitle: {
-    fontSize: 9,
+    fontSize: 10,
     fontFamily: 'Helvetica-Bold',
     color: BRAND,
-    marginBottom: 5,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-    borderBottomWidth: 1.5,
-    borderBottomColor: BRAND,
-    paddingBottom: 3,
+    marginBottom: 6,
+    letterSpacing: 0.3,
   },
   detailRow: {
     flexDirection: 'row',
@@ -210,23 +205,30 @@ const s = StyleSheet.create({
   checkRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 3,
-    borderBottomWidth: 0.5,
-    borderBottomColor: GRAY_200,
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    backgroundColor: GRAY_100,
+    borderRadius: 4,
+    marginBottom: 3,
   },
   checkIcon: {
     width: 14,
     height: 14,
     borderRadius: 7,
-    backgroundColor: GREEN_LIGHT,
-    borderWidth: 0.5,
-    borderColor: GREEN,
     marginRight: 6,
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkMark: { fontSize: 9, color: GREEN, fontFamily: 'Helvetica-Bold' },
-  checkLabel: { fontSize: 10, color: GRAY_700 },
+  checkLabel: { fontSize: 10, color: GRAY_900, fontFamily: 'Helvetica-Bold' },
+  uncheckRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    borderRadius: 4,
+    marginBottom: 3,
+  },
   uncheckIcon: {
     width: 14,
     height: 14,
@@ -236,6 +238,7 @@ const s = StyleSheet.create({
     borderColor: GRAY_300,
     marginRight: 6,
   },
+  uncheckLabel: { fontSize: 10, color: GRAY_500 },
 
   // Conditions note
   conditionsText: {
@@ -490,18 +493,21 @@ export default function PrequalLetterPDF({ data }) {
           {/* Right: Verification Checklist */}
           <View style={s.detailsCol}>
             <Text style={s.detailsTitle}>Verified</Text>
-            {verificationItems.map((item) => (
-              <View key={item.key} style={s.checkRow}>
-                {verifications[item.key] ? (
+            {verificationItems.map((item) =>
+              verifications[item.key] ? (
+                <View key={item.key} style={s.checkRow}>
                   <View style={s.checkIcon}>
                     <Text style={s.checkMark}>✓</Text>
                   </View>
-                ) : (
+                  <Text style={s.checkLabel}>{item.label}</Text>
+                </View>
+              ) : (
+                <View key={item.key} style={s.uncheckRow}>
                   <View style={s.uncheckIcon} />
-                )}
-                <Text style={s.checkLabel}>{item.label}</Text>
-              </View>
-            ))}
+                  <Text style={s.uncheckLabel}>{item.label}</Text>
+                </View>
+              )
+            )}
           </View>
         </View>
 
