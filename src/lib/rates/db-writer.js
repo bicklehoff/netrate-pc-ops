@@ -64,15 +64,16 @@ async function upsertProducts(client, lenderId, programs) {
       INSERT INTO rate_products (
         id, lender_id, raw_name, display_name, loan_type, agency, tier, term, product_type,
         occupancy, loan_amount_min, loan_amount_max, is_high_balance, is_streamline,
-        is_buydown, is_interest_only, arm_structure, status, created_at, updated_at
+        is_buydown, is_interest_only, arm_structure, loan_purpose, status, created_at, updated_at
       ) VALUES (
         gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8,
-        $9, $10, $11, $12, $13, $14, $15, $16, 'active', NOW(), NOW()
+        $9, $10, $11, $12, $13, $14, $15, $16, $17, 'active', NOW(), NOW()
       )
       ON CONFLICT (lender_id, raw_name) DO UPDATE SET
         display_name = EXCLUDED.display_name,
         loan_amount_min = EXCLUDED.loan_amount_min,
         loan_amount_max = EXCLUDED.loan_amount_max,
+        loan_purpose = EXCLUDED.loan_purpose,
         updated_at = NOW()
       RETURNING id, (xmax = 0) AS is_new
     `, [
@@ -90,6 +91,7 @@ async function upsertProducts(client, lenderId, programs) {
       prog.isBuydown || false,
       prog.isInterestOnly || false,
       prog.armStructure || null,
+      prog.loanPurpose || null,
     ]);
 
     if (result.rows[0]?.is_new) created++;
