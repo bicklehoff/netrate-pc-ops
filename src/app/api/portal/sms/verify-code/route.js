@@ -7,7 +7,7 @@
 // and marks the phone as verified in the database.
 
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 import { getBorrowerSession, createBorrowerSession } from '@/lib/borrower-session';
 import { checkVerification } from '@/lib/twilio-verify';
 
@@ -26,10 +26,8 @@ export async function POST(request) {
     }
 
     // Look up borrower's phone to pass to Twilio Verify
-    const borrower = await prisma.borrower.findUnique({
-      where: { id: session.borrowerId },
-      select: { phone: true },
-    });
+    const rows = await sql`SELECT phone FROM borrowers WHERE id = ${session.borrowerId} LIMIT 1`;
+    const borrower = rows[0];
 
     if (!borrower?.phone) {
       return NextResponse.json({ error: 'No phone number on file' }, { status: 400 });
@@ -46,10 +44,7 @@ export async function POST(request) {
     }
 
     // Mark phone as verified in DB and upgrade session
-    await prisma.borrower.update({
-      where: { id: session.borrowerId },
-      data: { phoneVerified: true },
-    });
+    await sql`UPDATE borrowers SET phone_verified = true, updated_at = NOW() WHERE id = ${session.borrowerId}`;
 
     await createBorrowerSession(session.borrowerId, { smsVerified: true });
 

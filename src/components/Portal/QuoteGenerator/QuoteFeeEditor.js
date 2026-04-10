@@ -19,12 +19,12 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
   const isEscrowing = !escrowsWaived;
 
   // ── Escrow inputs (escrow election is now on page 1 via escrowsWaived) ─────
-  const [fundingDate,    setFundingDate]    = useState(() => fees?.fundingDate || scenario?.fundingDate || scenario?.closingDate || '');
+  const [fundingDate,    setFundingDate]    = useState(() => fees?.funding_date || scenario?.funding_date || scenario?.closing_date || '');
   const [annualTaxes,    setAnnualTaxes]    = useState(() => fees?.annualTaxes ?? 0);
   const [annualIns,      setAnnualIns]      = useState(() => fees?.annualInsurance ?? 0);
   const [hoiDate,        setHoiDate]        = useState(() => {
     if (fees?.hoiEffectiveDate) return fees.hoiEffectiveDate;
-    if (isPurchase) return fees?.fundingDate || scenario?.fundingDate || scenario?.closingDate || '';
+    if (isPurchase) return fees?.funding_date || scenario?.funding_date || scenario?.closing_date || '';
     return '';
   });
   const [hasFlood,       setHasFlood]       = useState(() => fees?.hasFlood ?? false);
@@ -63,8 +63,8 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
   } = {}) => {
     if (!fees) return;
     const escrow = calculateEscrowSections({
-      fundingDate: funding,
-      loanAmount: Number(scenario?.loanAmount) || 0,
+      funding_date: funding,
+      loan_amount: Number(scenario?.loan_amount) || 0,
       annualRate: Number(selectedRates[0]?.rate) || 0,
       state, purpose: scenario?.purpose || 'purchase',
       isEscrowing,
@@ -82,7 +82,7 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
       ...fees, sectionF: sF, sectionG: sG,
       monthlyTax: escrow.escrowMonthly.taxes,
       monthlyInsurance: escrow.escrowMonthly.insurance,
-      isEscrowing, fundingDate: funding,
+      isEscrowing, funding_date: funding,
       firstPaymentDateStr: escrow.firstPaymentDateStr,
       isInterestCredit: escrow.isInterestCredit,
       annualTaxes: taxes, annualInsurance: ins, hoiEffectiveDate: hoi || null,
@@ -163,8 +163,8 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
   const creditTotal = credits.reduce((s,c) => s + (c.amount || 0), 0);
 
   // ── Payment / CTC calcs ────────────────────────────────────────────────────
-  const loanAmount = Number(scenario?.loanAmount) || 0;
-  const downPayment = isPurchase ? (Number(scenario?.propertyValue)||0) - loanAmount : 0;
+  const loanAmount = Number(scenario?.loan_amount) || 0;
+  const downPayment = isPurchase ? (Number(scenario?.property_value)||0) - loan_amount : 0;
   const fixedFees = ['sectionA','sectionB','sectionC','sectionE','sectionG','sectionH']
     .reduce((s,k) => s + (fees?.[k]?.total||0), 0);
   const otherFItems = (fees?.sectionF?.items||[])
@@ -607,9 +607,9 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
             Preview PDF
           </button>
           <button onClick={onSendToBorrower}
-            disabled={loading || !scenario.borrowerEmail || selectedRates.length === 0}
+            disabled={loading || !scenario.borrower_email || selectedRates.length === 0}
             className="px-5 py-2 bg-cyan-600 text-white rounded-lg text-sm font-bold hover:bg-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            title={!scenario.borrowerEmail ? 'Add borrower email to send' : 'Send quote with PDF to borrower'}>
+            title={!scenario.borrower_email ? 'Add borrower email to send' : 'Send quote with PDF to borrower'}>
             {loading ? 'Sending...' : 'Send to Borrower'}
           </button>
         </div>

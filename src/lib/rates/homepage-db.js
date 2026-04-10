@@ -6,7 +6,7 @@
  * Used by: page.js (homepage), rate-watch/page.js
  */
 
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 import { priceRate } from './pricing-v2';
 import { getDbLenderAdj } from './db-adj-loader';
 import { DEFAULT_SCENARIO } from './defaults';
@@ -55,17 +55,23 @@ async function priceProduct(loanType, termYears) {
   const fico = DEFAULT_SCENARIO.fico;
   const purpose = DEFAULT_SCENARIO.loanPurpose;
 
-  // Get active rate sheet
-  const activeSheet = await prisma.rateSheet.findFirst({
-    where: { status: 'active' },
-    include: { lender: true },
-    orderBy: { effectiveDate: 'desc' },
-  });
+  // Get active rate sheet with lender info
+  const sheetRows = await sql`
+    SELECT
+      rs.id, rs.lender_id, rs.effective_date,
+      rl.code AS lender_code, rl.name AS lender_name,
+      rl.max_comp_cap_purchase, rl.max_comp_cap_refi, rl.price_format
+    FROM rate_sheets rs
+    JOIN rate_lenders rl ON rs.lender_id = rl.id
+    WHERE rs.status = 'active'
+    ORDER BY rs.effective_date DESC
+    LIMIT 1
+  `;
+  const activeSheet = sheetRows[0];
 
-  if (!activeSheet?.lender) return null;
+  if (!activeSheet) return null;
 
-  const lenderCode = activeSheet.lender.code;
-  const lender = activeSheet.lender;
+  const lenderCode = activeSheet.lender_code;
 
   // Build broker config for public display — comp is excluded.
   // Homepage/rate-watch shows borrower-facing par rates from the sheet.
@@ -73,8 +79,8 @@ async function priceProduct(loanType, termYears) {
   // the "par" selection lower and produces misleading APRs.
   const brokerConfig = {
     compRate: 0,
-    compCapPurchase: Number(lender.maxCompCapPurchase) || 3595,
-    compCapRefi: Number(lender.maxCompCapRefi) || 3595,
+    compCapPurchase: Number(activeSheet.max_comp_cap_purchase) || 3595,
+    compCapRefi: Number(activeSheet.max_comp_cap_refi) || 3595,
   };
 
   // Get DB adjustments for this lender + loan type
@@ -82,27 +88,25 @@ async function priceProduct(loanType, termYears) {
   if (!lenderAdj) return null;
 
   // Find products matching our criteria
-  // Products have loan amount ranges in display_name — filter by loanType + term
-  const products = await prisma.rateProduct.findMany({
-    where: {
-      lenderId: activeSheet.lenderId,
-      loanType,
-      term: termYears,
-      productType: 'fixed',
-      occupancy: 'primary',
-      isHighBalance: false,
-      isStreamline: false,
-      isBuydown: false,
-      isInterestOnly: false,
-    },
-  });
+  const products = await sql`
+    SELECT * FROM rate_products
+    WHERE lender_id = ${activeSheet.lender_id}
+      AND loan_type = ${loanType}
+      AND term = ${termYears}
+      AND product_type = 'fixed'
+      AND occupancy = 'primary'
+      AND is_high_balance = false
+      AND is_streamline = false
+      AND is_buydown = false
+      AND is_interest_only = false
+  `;
 
   if (!products.length) return null;
 
   // Filter products that cover our loan amount
   const matchingProducts = products.filter(p => {
-    if (p.loanAmountMin && loanAmount < p.loanAmountMin) return false;
-    if (p.loanAmountMax && loanAmount > p.loanAmountMax) return false;
+    if (p.loan_amount_min && loanAmount < p.loan_amount_min) return false;
+    if (p.loan_amount_max && loanAmount > p.loan_amount_max) return false;
     return true;
   });
 
@@ -112,14 +116,13 @@ async function priceProduct(loanType, termYears) {
 
   for (const product of matchingProducts) {
     // Get prices for this product from the active sheet
-    const prices = await prisma.ratePrice.findMany({
-      where: {
-        productId: product.id,
-        rateSheetId: activeSheet.id,
-        lockDays: 30,
-      },
-      orderBy: { rate: 'asc' },
-    });
+    const prices = await sql`
+      SELECT * FROM rate_prices
+      WHERE product_id = ${product.id}
+        AND rate_sheet_id = ${activeSheet.id}
+        AND lock_days = 30
+      ORDER BY rate ASC
+    `;
 
     for (const price of prices) {
       const rate = Number(price.rate);
@@ -131,9 +134,9 @@ async function priceProduct(loanType, termYears) {
         productType: 'fixed',
         investor: product.agency,
         tier: product.tier || 'core',
-        name: product.displayName,
+        name: product.display_name,
         lenderCode: lenderCode,
-        uwFee: product.originationFee || product.uwFee || 999,
+        uwFee: product.origination_fee || product.uw_fee || 999,
       };
       const scenarioObj = {
         creditScore: fico,
@@ -181,13 +184,15 @@ async function priceProduct(loanType, termYears) {
 export async function getHomepageRatesFromDB() {
   try {
     // Check active sheet date — this is ONE tiny query (just a date field)
-    const latestSheet = await prisma.rateSheet.findFirst({
-      where: { status: 'active' },
-      orderBy: { effectiveDate: 'desc' },
-      select: { effectiveDate: true },
-    });
+    const dateRows = await sql`
+      SELECT effective_date FROM rate_sheets
+      WHERE status = 'active'
+      ORDER BY effective_date DESC
+      LIMIT 1
+    `;
+    const latestSheet = dateRows[0];
 
-    const sheetDate = latestSheet?.effectiveDate?.toISOString() || null;
+    const sheetDate = latestSheet?.effective_date ? new Date(latestSheet.effective_date).toISOString() : null;
     const now = Date.now();
 
     // Return cached result if:
@@ -202,8 +207,8 @@ export async function getHomepageRatesFromDB() {
     }
 
     let dateShort = null;
-    if (latestSheet?.effectiveDate) {
-      const d = new Date(latestSheet.effectiveDate);
+    if (latestSheet?.effective_date) {
+      const d = new Date(latestSheet.effective_date);
       dateShort = `${MONTHS_SHORT[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
     }
 

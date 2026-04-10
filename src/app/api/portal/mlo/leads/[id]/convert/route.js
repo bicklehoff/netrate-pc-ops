@@ -6,7 +6,7 @@
 
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 import { encrypt } from '@/lib/encryption';
 import { normalizePhone } from '@/lib/normalize-phone';
 
@@ -18,7 +18,8 @@ export async function POST(req, { params }) {
     }
 
     const { id } = await params;
-    const lead = await prisma.lead.findUnique({ where: { id } });
+    const leadRows = await sql`SELECT * FROM leads WHERE id = ${id} LIMIT 1`;
+    const lead = leadRows[0];
 
     if (!lead) {
       return Response.json({ error: 'Lead not found' }, { status: 404 });
@@ -33,7 +34,7 @@ export async function POST(req, { params }) {
     }
 
     const emailLower = lead.email.toLowerCase().trim();
-    const mloId = lead.mloId || session.user.id;
+    const mloId = lead.mlo_id || session.user.id;
 
     // Split name into first/last
     const nameParts = (lead.name || '').trim().split(/\s+/);
@@ -41,128 +42,99 @@ export async function POST(req, { params }) {
     const lastName = nameParts.slice(1).join(' ') || 'Unknown';
 
     // ─── 1. Find or create Contact ────────────────────────────
-    let contact = await prisma.contact.findFirst({
-      where: { email: emailLower },
-    });
+    let contactRows = await sql`SELECT * FROM contacts WHERE email = ${emailLower} LIMIT 1`;
+    let contact = contactRows[0];
 
     if (!contact) {
-      contact = await prisma.contact.create({
-        data: {
-          firstName,
-          lastName,
-          email: emailLower,
-          phone: normalizePhone(lead.phone) || lead.phone || null,
-          source: 'lead',
-          status: 'applicant',
-          contactType: 'borrower',
-          assignedMloId: mloId,
-          tags: [],
-        },
-      });
+      const created = await sql`
+        INSERT INTO contacts (first_name, last_name, email, phone, source, status, contact_type, assigned_mlo_id, tags, created_at, updated_at)
+        VALUES (${firstName}, ${lastName}, ${emailLower}, ${normalizePhone(lead.phone) || lead.phone || null}, 'lead', 'applicant', 'borrower', ${mloId}, '{}', NOW(), NOW())
+        RETURNING *
+      `;
+      contact = created[0];
     } else {
       // Update existing contact status
-      await prisma.contact.update({
-        where: { id: contact.id },
-        data: {
-          status: 'applicant',
-          lastContactedAt: new Date(),
-          ...(contact.assignedMloId ? {} : { assignedMloId: mloId }),
-        },
-      });
+      if (!contact.assigned_mlo_id) {
+        await sql`
+          UPDATE contacts SET status = 'applicant', last_contacted_at = NOW(), assigned_mlo_id = ${mloId}, updated_at = NOW()
+          WHERE id = ${contact.id}
+        `;
+      } else {
+        await sql`
+          UPDATE contacts SET status = 'applicant', last_contacted_at = NOW(), updated_at = NOW()
+          WHERE id = ${contact.id}
+        `;
+      }
     }
 
     // ─── 2. Find or create Borrower ───────────────────────────
-    let borrower = await prisma.borrower.findUnique({
-      where: { email: emailLower },
-    });
+    let borrowerRows = await sql`SELECT * FROM borrowers WHERE email = ${emailLower} LIMIT 1`;
+    let borrower = borrowerRows[0];
 
     if (!borrower) {
-      // Create minimal borrower — no SSN/DOB yet (will be collected during processing)
-      // Use placeholder encrypted values
       const placeholderSsn = encrypt('000000000');
       const placeholderDob = encrypt('1900-01-01');
 
-      borrower = await prisma.borrower.create({
-        data: {
-          email: emailLower,
-          firstName,
-          lastName,
-          phone: normalizePhone(lead.phone) || lead.phone || null,
-          ssnEncrypted: placeholderSsn,
-          dobEncrypted: placeholderDob,
-          ssnLastFour: '0000',
-        },
-      });
+      const created = await sql`
+        INSERT INTO borrowers (email, first_name, last_name, phone, ssn_encrypted, dob_encrypted, ssn_last_four, created_at, updated_at)
+        VALUES (${emailLower}, ${firstName}, ${lastName}, ${normalizePhone(lead.phone) || lead.phone || null}, ${placeholderSsn}, ${placeholderDob}, '0000', NOW(), NOW())
+        RETURNING *
+      `;
+      borrower = created[0];
     }
 
     // Link contact to borrower if not already linked
-    if (!contact.borrowerId) {
-      await prisma.contact.update({
-        where: { id: contact.id },
-        data: { borrowerId: borrower.id },
-      });
+    if (!contact.borrower_id) {
+      await sql`UPDATE contacts SET borrower_id = ${borrower.id}, updated_at = NOW() WHERE id = ${contact.id}`;
     }
 
     // ─── 3. Create Loan (draft) ───────────────────────────────
-    const loan = await prisma.loan.create({
-      data: {
-        borrowerId: borrower.id,
-        mloId,
-        status: 'draft',
-        ballInCourt: 'mlo',
-        purpose: lead.loanPurpose || null,
-        occupancy: lead.occupancy || null,
-        propertyType: lead.propertyType || null,
-        loanAmount: lead.loanAmount || null,
-        purchasePrice: lead.purchasePrice || lead.propertyValue || null,
-        downPayment: lead.downPayment || null,
-        estimatedValue: lead.propertyValue || null,
-        currentBalance: lead.currentBalance || null,
-        creditScore: lead.creditScore || null,
-        employmentStatus: lead.employmentType || null,
-        propertyAddress: lead.propertyState ? { state: lead.propertyState, county: lead.propertyCounty || null } : null,
-        leadSource: lead.source || null,
-        referralSource: lead.source === 'contact' ? 'past_client' : (lead.source || null),
-        numBorrowers: 1,
-        applicationStep: 1,
-      },
-    });
+    const propertyAddress = lead.property_state
+      ? JSON.stringify({ state: lead.property_state, county: lead.property_county || null })
+      : null;
+
+    const loanRows = await sql`
+      INSERT INTO loans (
+        borrower_id, mlo_id, status, ball_in_court, purpose, occupancy, property_type,
+        loan_amount, purchase_price, down_payment, estimated_value, current_balance,
+        credit_score, employment_status, property_address, lead_source, referral_source,
+        num_borrowers, application_step, created_at, updated_at
+      ) VALUES (
+        ${borrower.id}, ${mloId}, 'draft', 'mlo',
+        ${lead.loan_purpose || null}, ${lead.occupancy || null}, ${lead.property_type || null},
+        ${lead.loan_amount || null}, ${lead.purchase_price || lead.property_value || null},
+        ${lead.down_payment || null}, ${lead.property_value || null}, ${lead.current_balance || null},
+        ${lead.credit_score || null}, ${lead.employment_type || null},
+        ${propertyAddress}::jsonb,
+        ${lead.source || null},
+        ${lead.source === 'contact' ? 'past_client' : (lead.source || null)},
+        1, 1, NOW(), NOW()
+      )
+      RETURNING *
+    `;
+    const loan = loanRows[0];
 
     // ─── 4. Create LoanBorrower ───────────────────────────────
-    await prisma.loanBorrower.create({
-      data: {
-        loanId: loan.id,
-        borrowerId: borrower.id,
-        borrowerType: 'primary',
-        ordinal: 0,
-      },
-    });
+    await sql`
+      INSERT INTO loan_borrowers (loan_id, borrower_id, borrower_type, ordinal, created_at, updated_at)
+      VALUES (${loan.id}, ${borrower.id}, 'primary', 0, NOW(), NOW())
+    `;
 
     // ─── 5. Create LoanEvent ──────────────────────────────────
-    await prisma.loanEvent.create({
-      data: {
-        loanId: loan.id,
-        eventType: 'status_change',
-        actorType: 'mlo',
-        actorId: session.user.id,
-        oldValue: null,
-        newValue: 'draft',
-        details: {
-          source: 'lead_conversion',
-          leadId: lead.id,
-          leadSource: lead.source,
-        },
-      },
-    });
+    await sql`
+      INSERT INTO loan_events (loan_id, event_type, actor_type, actor_id, old_value, new_value, details, created_at)
+      VALUES (
+        ${loan.id}, 'status_change', 'mlo', ${session.user.id}, NULL, 'draft',
+        ${JSON.stringify({ source: 'lead_conversion', leadId: lead.id, leadSource: lead.source })}::jsonb,
+        NOW()
+      )
+    `;
 
     // ─── 6. Update Lead → converted ──────────────────────────
-    await prisma.lead.update({
-      where: { id },
-      data: {
-        status: 'converted',
-        contactId: contact.id,
-      },
-    });
+    await sql`
+      UPDATE leads SET status = 'converted', contact_id = ${contact.id}, updated_at = NOW()
+      WHERE id = ${id}
+    `;
 
     return Response.json({
       success: true,

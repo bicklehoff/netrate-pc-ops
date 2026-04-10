@@ -26,13 +26,13 @@ function CoverPage() {
 
       <div className="border-t-2 border-cyan-600 pt-6 mb-6">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">HECM Reverse Mortgage Analysis</h2>
-        <p className="text-sm text-gray-600 mb-1">Prepared for: <strong>{state.borrowerName || 'Borrower'}</strong></p>
-        {state.coBorrowerName && (
-          <p className="text-sm text-gray-600 mb-1">Co-Borrower: <strong>{state.coBorrowerName}</strong></p>
+        <p className="text-sm text-gray-600 mb-1">Prepared for: <strong>{state.borrower_name || 'Borrower'}</strong></p>
+        {state.co_borrower_name && (
+          <p className="text-sm text-gray-600 mb-1">Co-Borrower: <strong>{state.co_borrower_name}</strong></p>
         )}
         <p className="text-sm text-gray-600 mb-1">Date: <strong>{state.todayDate || new Date().toLocaleDateString()}</strong></p>
-        {state.referenceNumber && (
-          <p className="text-sm text-gray-600 mb-1">Reference: <strong>{state.referenceNumber}</strong></p>
+        {state.reference_number && (
+          <p className="text-sm text-gray-600 mb-1">Reference: <strong>{state.reference_number}</strong></p>
         )}
       </div>
 
@@ -41,7 +41,7 @@ function CoverPage() {
         <h3 className="text-sm font-semibold text-gray-700 mb-2">Property & Borrower Summary</h3>
         <div className="grid grid-cols-2 gap-2 text-sm">
           <div><span className="text-gray-500">Address:</span> {state.address}{state.city ? `, ${state.city}` : ''}{state.state ? `, ${state.state}` : ''} {state.zip}</div>
-          <div><span className="text-gray-500">Home Value:</span> {fmtDollar(state.homeValue)}</div>
+          <div><span className="text-gray-500">Home Value:</span> {fmtDollar(state.home_value)}</div>
           <div><span className="text-gray-500">Age (youngest):</span> {age || '—'}</div>
           <div><span className="text-gray-500">Existing Liens:</span> {fmtDollar(state.existingLiens)}</div>
         </div>

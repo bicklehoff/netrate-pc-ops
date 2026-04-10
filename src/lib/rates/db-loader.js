@@ -10,7 +10,7 @@
  * Each rate has: { rate, price, lockDays }
  */
 
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 
 /**
  * Load all active rate data from the database.
@@ -18,12 +18,16 @@ import prisma from '@/lib/prisma';
  */
 export async function loadRateDataFromDB() {
   // Get all active rate sheets with their lenders
-  const activeSheets = await prisma.rateSheet.findMany({
-    where: { status: 'active' },
-    include: {
-      lender: true,
-    },
-  });
+  const activeSheets = await sql`
+    SELECT
+      rs.id, rs.lender_id, rs.effective_date, rs.status,
+      rl.id AS lender_db_id, rl.code AS lender_code, rl.name AS lender_name,
+      rl.uw_fee, rl.max_comp_cap_purchase, rl.max_comp_cap_refi,
+      rl.comp_rate, rl.fha_ufmip, rl.price_format
+    FROM rate_sheets rs
+    JOIN rate_lenders rl ON rs.lender_id = rl.id
+    WHERE rs.status = 'active'
+  `;
 
   if (activeSheets.length === 0) return [];
 
@@ -31,48 +35,52 @@ export async function loadRateDataFromDB() {
   const lenderDataMap = {};
 
   for (const sheet of activeSheets) {
-    const lender = sheet.lender;
-    const lenderId = lender.code;
+    const lenderId = sheet.lender_code;
 
     // Load all prices for this sheet with their product taxonomy
-    const prices = await prisma.ratePrice.findMany({
-      where: { rateSheetId: sheet.id },
-      include: {
-        product: true,
-      },
-      orderBy: { rate: 'asc' },
-    });
+    const prices = await sql`
+      SELECT
+        rp.rate, rp.price, rp.lock_days,
+        rprod.id AS product_id, rprod.display_name, rprod.raw_name,
+        rprod.loan_type, rprod.agency, rprod.term, rprod.product_type,
+        rprod.arm_structure, rprod.tier, rprod.occupancy,
+        rprod.is_high_balance, rprod.is_streamline, rprod.is_buydown,
+        rprod.is_interest_only, rprod.loan_amount_min, rprod.loan_amount_max
+      FROM rate_prices rp
+      JOIN rate_products rprod ON rp.product_id = rprod.id
+      WHERE rp.rate_sheet_id = ${sheet.id}
+      ORDER BY rp.rate ASC
+    `;
 
     // Group prices by product
     const programMap = {};
 
     for (const price of prices) {
-      const prod = price.product;
-      const key = prod.id;
+      const key = price.product_id;
 
       if (!programMap[key]) {
         programMap[key] = {
-          id: prod.id,
-          name: prod.displayName,
-          rawName: prod.rawName,
-          loanType: prod.loanType,
-          investor: prod.agency,
-          category: ['conventional', 'fha', 'va', 'usda'].includes(prod.loanType) ? 'agency' : 'nonqm',
-          subcategory: prod.loanType === 'conventional' ? (prod.isHighBalance ? 'jumbo' : 'conventional') : prod.loanType,
-          term: prod.term,
-          productType: prod.productType,
-          armStructure: prod.armStructure,
-          tier: prod.tier,
-          occupancy: prod.occupancy,
-          isHighBalance: prod.isHighBalance,
-          isStreamline: prod.isStreamline,
-          isBuydown: prod.isBuydown,
-          isInterestOnly: prod.isInterestOnly,
+          id: price.product_id,
+          name: price.display_name,
+          rawName: price.raw_name,
+          loanType: price.loan_type,
+          investor: price.agency,
+          category: ['conventional', 'fha', 'va', 'usda'].includes(price.loan_type) ? 'agency' : 'nonqm',
+          subcategory: price.loan_type === 'conventional' ? (price.is_high_balance ? 'jumbo' : 'conventional') : price.loan_type,
+          term: price.term,
+          productType: price.product_type,
+          armStructure: price.arm_structure,
+          tier: price.tier,
+          occupancy: price.occupancy,
+          isHighBalance: price.is_high_balance,
+          isStreamline: price.is_streamline,
+          isBuydown: price.is_buydown,
+          isInterestOnly: price.is_interest_only,
           loanAmountRange: {
-            min: prod.loanAmountMin || 0,
-            max: prod.loanAmountMax || null,
+            min: price.loan_amount_min || 0,
+            max: price.loan_amount_max || null,
           },
-          priceFormat: lender.priceFormat || '100-based',
+          priceFormat: sheet.price_format || '100-based',
           rates: [],
           lockDays: [],
         };
@@ -81,11 +89,11 @@ export async function loadRateDataFromDB() {
       programMap[key].rates.push({
         rate: Number(price.rate),
         price: Number(price.price),
-        lockDays: price.lockDays,
+        lockDays: price.lock_days,
       });
 
-      if (!programMap[key].lockDays.includes(price.lockDays)) {
-        programMap[key].lockDays.push(price.lockDays);
+      if (!programMap[key].lockDays.includes(price.lock_days)) {
+        programMap[key].lockDays.push(price.lock_days);
       }
     }
 
@@ -93,16 +101,16 @@ export async function loadRateDataFromDB() {
     if (!lenderDataMap[lenderId]) {
       lenderDataMap[lenderId] = {
         lenderId,
-        lenderName: lender.name,
-        sheetDate: sheet.effectiveDate?.toISOString()?.split('T')[0] || null,
-        lenderFee: lender.uwFee != null ? Number(lender.uwFee) : null,
+        lenderName: sheet.lender_name,
+        sheetDate: sheet.effective_date ? new Date(sheet.effective_date).toISOString().split('T')[0] : null,
+        lenderFee: sheet.uw_fee != null ? Number(sheet.uw_fee) : null,
         compCap: {
-          purchase: lender.maxCompCapPurchase != null ? Number(lender.maxCompCapPurchase) : null,
-          refinance: lender.maxCompCapRefi != null ? Number(lender.maxCompCapRefi) : null,
+          purchase: sheet.max_comp_cap_purchase != null ? Number(sheet.max_comp_cap_purchase) : null,
+          refinance: sheet.max_comp_cap_refi != null ? Number(sheet.max_comp_cap_refi) : null,
         },
-        compRate: lender.compRate != null ? Number(lender.compRate) : null,
-        fhaUfmip: lender.fhaUfmip != null ? Number(lender.fhaUfmip) : null,
-        priceFormat: lender.priceFormat || '100-based',
+        compRate: sheet.comp_rate != null ? Number(sheet.comp_rate) : null,
+        fhaUfmip: sheet.fha_ufmip != null ? Number(sheet.fha_ufmip) : null,
+        priceFormat: sheet.price_format || '100-based',
         programs: [],
       };
     }

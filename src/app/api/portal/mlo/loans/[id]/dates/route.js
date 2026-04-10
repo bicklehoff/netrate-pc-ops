@@ -7,27 +7,26 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 
-// All date fields that can be updated
-const DATE_FIELDS = [
-  'applicationDate', 'lockedDate', 'lockExpiration', 'lockTerm',
-  'creditPulledDate', 'creditExpiration',
-  'appraisalOrdered', 'appraisalScheduled', 'appraisalReceived',
-  'appraisalDue', 'appraisalDeadline', 'appraisalExpiry',
-  'titleOrdered', 'titleReceived', 'titleExpiry',
-  'hoiOrdered', 'hoiReceived', 'hoiBound',
-  'floodCertOrdered', 'floodCertReceived',
-  'estimatedClosing', 'closingDate', 'estimatedFunding', 'fundingDate',
-  'firstPaymentDate',
-  'submittedToUwDate', 'condApprovedDate', 'ctcDate', 'docsOutDate',
-];
+// camelCase → snake_case date column mapping
+const DATE_FIELD_MAP = {
+  applicationDate: 'application_date', lockedDate: 'locked_date', lockExpiration: 'lock_expiration',
+  lockTerm: 'lock_term', creditPulledDate: 'credit_pulled_date', creditExpiration: 'credit_expiration',
+  appraisalOrdered: 'appraisal_ordered', appraisalScheduled: 'appraisal_scheduled',
+  appraisalReceived: 'appraisal_received', appraisalDue: 'appraisal_due',
+  appraisalDeadline: 'appraisal_deadline', appraisalExpiry: 'appraisal_expiry',
+  titleOrdered: 'title_ordered', titleReceived: 'title_received', titleExpiry: 'title_expiry',
+  hoiOrdered: 'hoi_ordered', hoiReceived: 'hoi_received', hoiBound: 'hoi_bound',
+  floodCertOrdered: 'flood_cert_ordered', floodCertReceived: 'flood_cert_received',
+  estimatedClosing: 'estimated_closing', closingDate: 'closing_date',
+  estimatedFunding: 'estimated_funding', fundingDate: 'funding_date',
+  firstPaymentDate: 'first_payment_date', submittedToUwDate: 'submitted_to_uw_date',
+  condApprovedDate: 'cond_approved_date', ctcDate: 'ctc_date', docsOutDate: 'docs_out_date',
+};
 
-// Boolean fields
-const BOOLEAN_FIELDS = ['appraisalWaiver'];
-
-// Integer fields
-const INT_FIELDS = ['lockTerm'];
+const BOOLEAN_FIELDS = { appraisalWaiver: 'appraisal_waiver' };
+const INT_FIELDS = { lockTerm: 'lock_term' };
 
 export async function GET(request, { params }) {
   try {
@@ -38,24 +37,19 @@ export async function GET(request, { params }) {
 
     const { id } = await params;
 
-    // Verify loan access
-    const loan = await prisma.loan.findUnique({
-      where: { id },
-      select: { id: true, mloId: true },
-    });
-    if (!loan) {
+    const loanRows = await sql`SELECT id, mlo_id FROM loans WHERE id = ${id} LIMIT 1`;
+    if (loanRows.length === 0) {
       return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
     }
+    const loan = loanRows[0];
     const isAdmin = session.user.role === 'admin';
-    if (!isAdmin && loan.mloId !== session.user.id) {
+    if (!isAdmin && loan.mlo_id !== session.user.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
-    const dates = await prisma.loanDates.findUnique({
-      where: { loanId: id },
-    });
+    const datesRows = await sql`SELECT * FROM loan_dates WHERE loan_id = ${id} LIMIT 1`;
 
-    return NextResponse.json({ dates: dates || {} });
+    return NextResponse.json({ dates: datesRows[0] || {} });
   } catch (error) {
     console.error('Loan dates GET error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -72,16 +66,13 @@ export async function PATCH(request, { params }) {
     const { id } = await params;
     const body = await request.json();
 
-    // Verify loan access
-    const loan = await prisma.loan.findUnique({
-      where: { id },
-      select: { id: true, mloId: true },
-    });
-    if (!loan) {
+    const loanRows = await sql`SELECT id, mlo_id FROM loans WHERE id = ${id} LIMIT 1`;
+    if (loanRows.length === 0) {
       return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
     }
+    const loan = loanRows[0];
     const isAdmin = session.user.role === 'admin';
-    if (!isAdmin && loan.mloId !== session.user.id) {
+    if (!isAdmin && loan.mlo_id !== session.user.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
@@ -89,24 +80,24 @@ export async function PATCH(request, { params }) {
     const updateData = {};
     const changedFields = [];
 
-    for (const field of DATE_FIELDS) {
-      if (body[field] !== undefined) {
-        updateData[field] = body[field] ? new Date(body[field]) : null;
-        changedFields.push(field);
+    for (const [camel, snake] of Object.entries(DATE_FIELD_MAP)) {
+      if (body[camel] !== undefined && !INT_FIELDS[camel]) {
+        updateData[snake] = body[camel] ? new Date(body[camel]) : null;
+        changedFields.push(camel);
       }
     }
 
-    for (const field of BOOLEAN_FIELDS) {
-      if (body[field] !== undefined) {
-        updateData[field] = Boolean(body[field]);
-        changedFields.push(field);
+    for (const [camel, snake] of Object.entries(BOOLEAN_FIELDS)) {
+      if (body[camel] !== undefined) {
+        updateData[snake] = Boolean(body[camel]);
+        changedFields.push(camel);
       }
     }
 
-    for (const field of INT_FIELDS) {
-      if (body[field] !== undefined) {
-        updateData[field] = body[field] ? parseInt(body[field], 10) : null;
-        changedFields.push(field);
+    for (const [camel, snake] of Object.entries(INT_FIELDS)) {
+      if (body[camel] !== undefined) {
+        updateData[snake] = body[camel] ? parseInt(body[camel], 10) : null;
+        changedFields.push(camel);
       }
     }
 
@@ -114,29 +105,28 @@ export async function PATCH(request, { params }) {
       return NextResponse.json({ error: 'No valid date fields provided' }, { status: 400 });
     }
 
-    // Upsert — create LoanDates record if it doesn't exist yet
-    const dates = await prisma.loanDates.upsert({
-      where: { loanId: id },
-      create: {
-        loanId: id,
-        ...updateData,
-      },
-      update: updateData,
-    });
+    // Upsert — create loan_dates record if it doesn't exist yet
+    const cols = Object.keys(updateData);
+    const vals = Object.values(updateData);
+    const updateFragments = cols.map((c, i) => `"${c}" = $${i + 2}`);
+    const insertCols = ['loan_id', ...cols];
+    const insertPlaceholders = insertCols.map((_, i) => `$${i + 1}`);
+    const q = `INSERT INTO loan_dates (id, ${insertCols.map(c => `"${c}"`).join(', ')}, created_at, updated_at)
+               VALUES (gen_random_uuid(), ${insertPlaceholders.join(', ')}, NOW(), NOW())
+               ON CONFLICT (loan_id) DO UPDATE SET ${updateFragments.join(', ')}, updated_at = NOW()
+               RETURNING *`;
+    const datesRows = await sql(q, [id, ...vals]);
 
     // Audit event
-    await prisma.loanEvent.create({
-      data: {
-        loanId: id,
-        eventType: 'field_updated',
-        actorType: 'mlo',
-        actorId: session.user.id,
-        newValue: JSON.stringify(updateData),
-        details: { fields: changedFields, source: 'processing_checklist' },
-      },
-    });
+    await sql`
+      INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, new_value, details, created_at)
+      VALUES (gen_random_uuid(), ${id}, 'field_updated', 'mlo', ${session.user.id},
+              ${JSON.stringify(updateData)},
+              ${JSON.stringify({ fields: changedFields, source: 'processing_checklist' })},
+              NOW())
+    `;
 
-    return NextResponse.json({ dates });
+    return NextResponse.json({ dates: datesRows[0] });
   } catch (error) {
     console.error('Loan dates PATCH error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

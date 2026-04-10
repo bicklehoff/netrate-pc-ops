@@ -27,8 +27,8 @@ export default function SubFinancingComparison() {
     secondLienBalance: 50000,
     secondLienPayment: 375,
     secondLienRate: 8.5,
-    propertyValue: 500000,
-    creditScore: 780,
+    property_value: 500000,
+    credit_score: 780,
   });
 
   const update = (field, value) => {
@@ -36,7 +36,7 @@ export default function SubFinancingComparison() {
   };
 
   const result = useMemo(() => {
-    if (!inputs.firstMortgageBalance || !inputs.secondLienBalance || !inputs.propertyValue) return null;
+    if (!inputs.firstMortgageBalance || !inputs.secondLienBalance || !inputs.property_value) return null;
     try {
       return compareSubFinancingOptions(inputs);
     } catch {
@@ -97,15 +97,15 @@ export default function SubFinancingComparison() {
             <label className="block text-xs text-gray-500 mb-1">Property Value</label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-              <input type="number" value={inputs.propertyValue}
-                onChange={e => update('propertyValue', Number(e.target.value))}
+              <input type="number" value={inputs.property_value}
+                onChange={e => update('property_value', Number(e.target.value))}
                 className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg text-sm" />
             </div>
           </div>
           <div>
             <label className="block text-xs text-gray-500 mb-1">Credit Score</label>
-            <input type="number" value={inputs.creditScore}
-              onChange={e => update('creditScore', Number(e.target.value))}
+            <input type="number" value={inputs.credit_score}
+              onChange={e => update('credit_score', Number(e.target.value))}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
           </div>
           <div>
@@ -136,7 +136,7 @@ export default function SubFinancingComparison() {
               <div className="space-y-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">New first mortgage</span>
-                  <span className="font-medium">{formatDollars(result.optionA.loanAmount)}</span>
+                  <span className="font-medium">{formatDollars(result.optionA.loan_amount)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">LTV / CLTV</span>
@@ -196,7 +196,7 @@ export default function SubFinancingComparison() {
               <div className="space-y-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">New mortgage (includes payoff)</span>
-                  <span className="font-medium">{formatDollars(result.optionB.loanAmount)}</span>
+                  <span className="font-medium">{formatDollars(result.optionB.loan_amount)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">LTV</span>

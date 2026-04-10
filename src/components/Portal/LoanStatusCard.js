@@ -51,8 +51,8 @@ export default function LoanStatusCard({ loan }) {
 
   // Determine loan amount display
   const loanAmount = loan.purpose === 'purchase'
-    ? loan.purchasePrice
-    : loan.estimatedValue;
+    ? loan.purchase_price
+    : loan.estimated_value;
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
@@ -61,7 +61,7 @@ export default function LoanStatusCard({ loan }) {
           <h2 className="text-lg font-semibold text-gray-900">Loan Status</h2>
           {loan.mlo && (
             <p className="text-sm text-gray-500 mt-0.5">
-              Loan Officer: {loan.mlo.firstName} {loan.mlo.lastName}
+              Loan Officer: {loan.mlo.first_name} {loan.mlo.last_name}
             </p>
           )}
         </div>
@@ -90,7 +90,7 @@ export default function LoanStatusCard({ loan }) {
       <div className="text-sm mb-4">
         <span className="text-gray-400 block">Property</span>
         <span className="text-gray-800 font-medium">
-          {formatAddress(loan.propertyAddress)}
+          {formatAddress(loan.property_address)}
         </span>
       </div>
 
@@ -109,7 +109,7 @@ export default function LoanStatusCard({ loan }) {
         <div>
           <span className="text-gray-400 block">Type</span>
           <span className="text-gray-800 font-medium">
-            {PROPERTY_TYPE_LABELS[loan.propertyType] || loan.propertyType || '—'}
+            {PROPERTY_TYPE_LABELS[loan.property_type] || loan.property_type || '—'}
           </span>
         </div>
       </div>

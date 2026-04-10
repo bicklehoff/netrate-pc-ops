@@ -10,23 +10,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
-
-// Helper: convert Decimal fields in object to numbers
-function serializeDecimals(obj) {
-  if (!obj) return null;
-  const result = { ...obj };
-  for (const [key, val] of Object.entries(result)) {
-    if (val && typeof val === 'object' && typeof val.toNumber === 'function') {
-      result[key] = Number(val);
-    }
-  }
-  return result;
-}
-
-function serializeArray(arr) {
-  return (arr || []).map(serializeDecimals);
-}
+import sql from '@/lib/db';
 
 // ─── GET: Full 1003 application data ───
 export async function GET(request, { params }) {
@@ -38,58 +22,59 @@ export async function GET(request, { params }) {
 
     const { id } = await params;
 
-    const loan = await prisma.loan.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        amortizationType: true,
-        titleHeldAs: true,
-        estateHeldIn: true,
-        armIndex: true,
-        armMargin: true,
-        armInitialCap: true,
-        armPeriodicCap: true,
-        armLifetimeCap: true,
-        armAdjustmentPeriod: true,
-        loanBorrowers: {
-          orderBy: { ordinal: 'asc' },
-          include: {
-            borrower: {
-              select: { id: true, firstName: true, lastName: true },
-            },
-            employments: { orderBy: { isPrimary: 'desc' } },
-            income: true,
-            declaration: true,
-          },
-        },
-        assets: { orderBy: { createdAt: 'asc' } },
-        liabilities: { orderBy: { createdAt: 'asc' } },
-        reos: { orderBy: { createdAt: 'asc' } },
-        transaction: true,
-      },
-    });
-
-    if (!loan) {
+    // Loan-level 1003 fields
+    const loans = await sql`
+      SELECT id, amortization_type, title_held_as, estate_held_in,
+             arm_index, arm_margin, arm_initial_cap, arm_periodic_cap, arm_lifetime_cap, arm_adjustment_period
+      FROM loans WHERE id = ${id} LIMIT 1
+    `;
+    if (loans.length === 0) {
       return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
     }
+    const loan = loans[0];
 
-    // Serialize decimals
+    // LoanBorrowers with borrower info
+    const loanBorrowers = await sql`
+      SELECT lb.*, b.id AS b_id, b.first_name AS b_first_name, b.last_name AS b_last_name
+      FROM loan_borrowers lb
+      LEFT JOIN borrowers b ON b.id = lb.borrower_id
+      WHERE lb.loan_id = ${id}
+      ORDER BY lb.ordinal ASC
+    `;
+
+    const lbIds = loanBorrowers.map(lb => lb.id);
+    let employments = [];
+    let incomes = [];
+    let declarations = [];
+    if (lbIds.length > 0) {
+      employments = await sql`SELECT * FROM loan_employments WHERE loan_borrower_id = ANY(${lbIds}) ORDER BY is_primary DESC`;
+      incomes = await sql`SELECT * FROM loan_incomes WHERE loan_borrower_id = ANY(${lbIds})`;
+      declarations = await sql`SELECT * FROM loan_declarations WHERE loan_borrower_id = ANY(${lbIds})`;
+    }
+
+    const assets = await sql`SELECT * FROM loan_assets WHERE loan_id = ${id} ORDER BY created_at ASC`;
+    const liabilities = await sql`SELECT * FROM loan_liabilities WHERE loan_id = ${id} ORDER BY created_at ASC`;
+    const reos = await sql`SELECT * FROM loan_reos WHERE loan_id = ${id} ORDER BY created_at ASC`;
+    const transactionRows = await sql`SELECT * FROM loan_transactions WHERE loan_id = ${id} LIMIT 1`;
+
     const serialized = {
       ...loan,
-      armMargin: loan.armMargin ? Number(loan.armMargin) : null,
-      armInitialCap: loan.armInitialCap ? Number(loan.armInitialCap) : null,
-      armPeriodicCap: loan.armPeriodicCap ? Number(loan.armPeriodicCap) : null,
-      armLifetimeCap: loan.armLifetimeCap ? Number(loan.armLifetimeCap) : null,
-      loanBorrowers: loan.loanBorrowers.map((lb) => ({
+      arm_margin: loan.arm_margin ? Number(loan.arm_margin) : null,
+      arm_initial_cap: loan.arm_initial_cap ? Number(loan.arm_initial_cap) : null,
+      arm_periodic_cap: loan.arm_periodic_cap ? Number(loan.arm_periodic_cap) : null,
+      arm_lifetime_cap: loan.arm_lifetime_cap ? Number(loan.arm_lifetime_cap) : null,
+      loan_borrowers: loanBorrowers.map((lb) => ({
         ...lb,
-        monthlyRent: lb.monthlyRent ? Number(lb.monthlyRent) : null,
-        income: serializeDecimals(lb.income),
-        employments: serializeArray(lb.employments),
+        monthly_rent: lb.monthly_rent ? Number(lb.monthly_rent) : null,
+        borrower: { id: lb.b_id, first_name: lb.b_first_name, last_name: lb.b_last_name },
+        employments: employments.filter(e => e.loan_borrower_id === lb.id),
+        income: incomes.find(i => i.loan_borrower_id === lb.id) || null,
+        declaration: declarations.find(d => d.loan_borrower_id === lb.id) || null,
       })),
-      assets: serializeArray(loan.assets),
-      liabilities: serializeArray(loan.liabilities),
-      reos: serializeArray(loan.reos),
-      transaction: serializeDecimals(loan.transaction),
+      assets,
+      liabilities,
+      reos,
+      transaction: transactionRows[0] || null,
     };
 
     return NextResponse.json({ application: serialized });
@@ -118,8 +103,8 @@ export async function PUT(request, { params }) {
     }
 
     // Verify loan exists
-    const loan = await prisma.loan.findUnique({ where: { id } });
-    if (!loan) {
+    const loanRows = await sql`SELECT id FROM loans WHERE id = ${id} LIMIT 1`;
+    if (loanRows.length === 0) {
       return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
     }
 
@@ -127,182 +112,251 @@ export async function PUT(request, { params }) {
 
     switch (section) {
       case 'borrower': {
-        // Update LoanBorrower fields (housing, address, etc.)
         if (!loanBorrowerId) return NextResponse.json({ error: 'loanBorrowerId required' }, { status: 400 });
         const borrowerFields = {};
-        const allowed = ['citizenship', 'housingType', 'monthlyRent', 'previousAddress',
-          'previousAddressYears', 'previousAddressMonths', 'cellPhone', 'suffix',
-          'currentAddress', 'addressYears', 'addressMonths', 'mailingAddress',
-          'maritalStatus'];
-        for (const f of allowed) {
-          if (data[f] !== undefined) {
-            let val = data[f];
+        // Map camelCase input to snake_case
+        const camelToSnake = {
+          citizenship: 'citizenship', housingType: 'housing_type', monthlyRent: 'monthly_rent',
+          previousAddress: 'previous_address', previousAddressYears: 'previous_address_years',
+          previousAddressMonths: 'previous_address_months', cellPhone: 'cell_phone', suffix: 'suffix',
+          currentAddress: 'current_address', addressYears: 'address_years', addressMonths: 'address_months',
+          mailingAddress: 'mailing_address', maritalStatus: 'marital_status',
+        };
+        for (const [camel, snake] of Object.entries(camelToSnake)) {
+          if (data[camel] !== undefined) {
+            let val = data[camel];
             if (val === '') val = null;
-            if (f === 'monthlyRent' && val !== null) val = parseFloat(val) || null;
-            if (['previousAddressYears', 'previousAddressMonths', 'addressYears', 'addressMonths'].includes(f) && val !== null) {
+            if (snake === 'monthly_rent' && val !== null) val = parseFloat(val) || null;
+            if (['previous_address_years', 'previous_address_months', 'address_years', 'address_months'].includes(snake) && val !== null) {
               val = parseInt(val, 10) || null;
             }
-            borrowerFields[f] = val;
+            borrowerFields[snake] = val;
           }
         }
-        result = await prisma.loanBorrower.update({
-          where: { id: loanBorrowerId },
-          data: borrowerFields,
-        });
+        if (Object.keys(borrowerFields).length > 0) {
+          const cols = Object.keys(borrowerFields);
+          const vals = Object.values(borrowerFields);
+          const setFragments = cols.map((c, i) => `"${c}" = $${i + 1}`);
+          const q = `UPDATE loan_borrowers SET ${setFragments.join(', ')}, updated_at = NOW() WHERE id = $${cols.length + 1} RETURNING *`;
+          const rows = await sql(q, [...vals.map(v => typeof v === 'object' && v !== null ? JSON.stringify(v) : v), loanBorrowerId]);
+          result = rows[0];
+        }
         break;
       }
 
       case 'employment': {
-        // Upsert employment record
         if (!loanBorrowerId) return NextResponse.json({ error: 'loanBorrowerId required' }, { status: 400 });
         const empData = {
-          employerName: data.employerName ?? null,
-          employerAddress: data.employerAddress ?? null,
-          employerPhone: data.employerPhone ?? null,
+          employer_name: data.employerName ?? null,
+          employer_address: data.employerAddress ? JSON.stringify(data.employerAddress) : null,
+          employer_phone: data.employerPhone ?? null,
           position: data.position ?? null,
-          startDate: data.startDate ? new Date(data.startDate) : null,
-          endDate: data.endDate ? new Date(data.endDate) : null,
-          yearsOnJob: data.yearsOnJob != null ? parseInt(data.yearsOnJob, 10) : null,
-          monthsOnJob: data.monthsOnJob != null ? parseInt(data.monthsOnJob, 10) : null,
-          selfEmployed: data.selfEmployed ?? false,
-          isPrimary: data.isPrimary ?? true,
+          start_date: data.startDate ? new Date(data.startDate) : null,
+          end_date: data.endDate ? new Date(data.endDate) : null,
+          years_on_job: data.yearsOnJob != null ? parseInt(data.yearsOnJob, 10) : null,
+          months_on_job: data.monthsOnJob != null ? parseInt(data.monthsOnJob, 10) : null,
+          self_employed: data.selfEmployed ?? false,
+          is_primary: data.isPrimary ?? true,
         };
         if (itemId) {
-          result = await prisma.loanEmployment.update({ where: { id: itemId }, data: empData });
+          const cols = Object.keys(empData);
+          const vals = Object.values(empData);
+          const setFragments = cols.map((c, i) => `"${c}" = $${i + 1}`);
+          const q = `UPDATE loan_employments SET ${setFragments.join(', ')}, updated_at = NOW() WHERE id = $${cols.length + 1} RETURNING *`;
+          const rows = await sql(q, [...vals, itemId]);
+          result = rows[0];
         } else {
-          result = await prisma.loanEmployment.create({
-            data: { loanBorrowerId, ...empData },
-          });
+          const rows = await sql`
+            INSERT INTO loan_employments (id, loan_borrower_id, employer_name, employer_address, employer_phone, position, start_date, end_date, years_on_job, months_on_job, self_employed, is_primary, created_at, updated_at)
+            VALUES (gen_random_uuid(), ${loanBorrowerId}, ${empData.employer_name}, ${empData.employer_address}, ${empData.employer_phone}, ${empData.position}, ${empData.start_date}, ${empData.end_date}, ${empData.years_on_job}, ${empData.months_on_job}, ${empData.self_employed}, ${empData.is_primary}, NOW(), NOW())
+            RETURNING *
+          `;
+          result = rows[0];
         }
         break;
       }
 
       case 'income': {
-        // Upsert income (1:1 per borrower)
         if (!loanBorrowerId) return NextResponse.json({ error: 'loanBorrowerId required' }, { status: 400 });
         const incomeData = {};
-        const incomeFields = ['baseMonthly', 'overtimeMonthly', 'bonusMonthly', 'commissionMonthly',
-          'dividendsMonthly', 'interestMonthly', 'rentalIncomeMonthly', 'otherMonthly', 'otherIncomeSource'];
-        for (const f of incomeFields) {
-          if (data[f] !== undefined) {
-            incomeData[f] = f === 'otherIncomeSource' ? (data[f] || null) : (parseFloat(data[f]) || null);
+        const incomeFields = {
+          baseMonthly: 'base_monthly', overtimeMonthly: 'overtime_monthly', bonusMonthly: 'bonus_monthly',
+          commissionMonthly: 'commission_monthly', dividendsMonthly: 'dividends_monthly',
+          interestMonthly: 'interest_monthly', rentalIncomeMonthly: 'rental_income_monthly',
+          otherMonthly: 'other_monthly', otherIncomeSource: 'other_income_source',
+        };
+        for (const [camel, snake] of Object.entries(incomeFields)) {
+          if (data[camel] !== undefined) {
+            incomeData[snake] = snake === 'other_income_source' ? (data[camel] || null) : (parseFloat(data[camel]) || null);
           }
         }
-        result = await prisma.loanIncome.upsert({
-          where: { loanBorrowerId },
-          create: { loanBorrowerId, ...incomeData },
-          update: incomeData,
-        });
+        if (Object.keys(incomeData).length > 0) {
+          const cols = Object.keys(incomeData);
+          const vals = Object.values(incomeData);
+          const updateFragments = cols.map((c, i) => `"${c}" = $${i + 2}`);
+          const insertCols = ['loan_borrower_id', ...cols];
+          const insertPlaceholders = insertCols.map((_, i) => `$${i + 1}`);
+          const q = `INSERT INTO loan_incomes (id, ${insertCols.map(c => `"${c}"`).join(', ')}, created_at, updated_at)
+                     VALUES (gen_random_uuid(), ${insertPlaceholders.join(', ')}, NOW(), NOW())
+                     ON CONFLICT (loan_borrower_id) DO UPDATE SET ${updateFragments.join(', ')}, updated_at = NOW()
+                     RETURNING *`;
+          const rows = await sql(q, [loanBorrowerId, ...vals]);
+          result = rows[0];
+        }
         break;
       }
 
       case 'asset': {
-        // Update existing asset row
         if (!itemId) return NextResponse.json({ error: 'itemId required for asset update' }, { status: 400 });
         const assetData = {};
         if (data.institution !== undefined) assetData.institution = data.institution || null;
-        if (data.accountType !== undefined) assetData.accountType = data.accountType || null;
-        if (data.accountNumber !== undefined) assetData.accountNumber = data.accountNumber || null;
+        if (data.accountType !== undefined) assetData.account_type = data.accountType || null;
+        if (data.accountNumber !== undefined) assetData.account_number = data.accountNumber || null;
         if (data.balance !== undefined) assetData.balance = data.balance ? parseFloat(data.balance) : null;
-        if (data.borrowerType !== undefined) assetData.borrowerType = data.borrowerType || null;
-        if (data.isJoint !== undefined) assetData.isJoint = data.isJoint ?? false;
-        result = await prisma.loanAsset.update({ where: { id: itemId }, data: assetData });
+        if (data.borrowerType !== undefined) assetData.borrower_type = data.borrowerType || null;
+        if (data.isJoint !== undefined) assetData.is_joint = data.isJoint ?? false;
+        if (Object.keys(assetData).length > 0) {
+          const cols = Object.keys(assetData);
+          const vals = Object.values(assetData);
+          const setFragments = cols.map((c, i) => `"${c}" = $${i + 1}`);
+          const q = `UPDATE loan_assets SET ${setFragments.join(', ')}, updated_at = NOW() WHERE id = $${cols.length + 1} RETURNING *`;
+          const rows = await sql(q, [...vals, itemId]);
+          result = rows[0];
+        }
         break;
       }
 
       case 'liability': {
-        // Update existing liability row
         if (!itemId) return NextResponse.json({ error: 'itemId required for liability update' }, { status: 400 });
         const liabData = {};
         if (data.creditor !== undefined) liabData.creditor = data.creditor || null;
-        if (data.accountNumber !== undefined) liabData.accountNumber = data.accountNumber || null;
-        if (data.liabilityType !== undefined) liabData.liabilityType = data.liabilityType || null;
-        if (data.monthlyPayment !== undefined) liabData.monthlyPayment = data.monthlyPayment ? parseFloat(data.monthlyPayment) : null;
-        if (data.unpaidBalance !== undefined) liabData.unpaidBalance = data.unpaidBalance ? parseFloat(data.unpaidBalance) : null;
-        if (data.monthsRemaining !== undefined) liabData.monthsRemaining = data.monthsRemaining ? parseInt(data.monthsRemaining, 10) : null;
-        if (data.paidOffAtClosing !== undefined) liabData.paidOffAtClosing = data.paidOffAtClosing ?? false;
-        result = await prisma.loanLiability.update({ where: { id: itemId }, data: liabData });
+        if (data.accountNumber !== undefined) liabData.account_number = data.accountNumber || null;
+        if (data.liabilityType !== undefined) liabData.liability_type = data.liabilityType || null;
+        if (data.monthlyPayment !== undefined) liabData.monthly_payment = data.monthlyPayment ? parseFloat(data.monthlyPayment) : null;
+        if (data.unpaidBalance !== undefined) liabData.unpaid_balance = data.unpaidBalance ? parseFloat(data.unpaidBalance) : null;
+        if (data.monthsRemaining !== undefined) liabData.months_remaining = data.monthsRemaining ? parseInt(data.monthsRemaining, 10) : null;
+        if (data.paidOffAtClosing !== undefined) liabData.paid_off_at_closing = data.paidOffAtClosing ?? false;
+        if (Object.keys(liabData).length > 0) {
+          const cols = Object.keys(liabData);
+          const vals = Object.values(liabData);
+          const setFragments = cols.map((c, i) => `"${c}" = $${i + 1}`);
+          const q = `UPDATE loan_liabilities SET ${setFragments.join(', ')}, updated_at = NOW() WHERE id = $${cols.length + 1} RETURNING *`;
+          const rows = await sql(q, [...vals, itemId]);
+          result = rows[0];
+        }
         break;
       }
 
       case 'reo': {
-        // Update existing REO row
         if (!itemId) return NextResponse.json({ error: 'itemId required for REO update' }, { status: 400 });
         const reoData = {};
-        if (data.address !== undefined) reoData.address = data.address || null;
-        if (data.propertyType !== undefined) reoData.propertyType = data.propertyType || null;
-        if (data.presentMarketValue !== undefined) reoData.presentMarketValue = data.presentMarketValue ? parseFloat(data.presentMarketValue) : null;
-        if (data.mortgageBalance !== undefined) reoData.mortgageBalance = data.mortgageBalance ? parseFloat(data.mortgageBalance) : null;
-        if (data.mortgagePayment !== undefined) reoData.mortgagePayment = data.mortgagePayment ? parseFloat(data.mortgagePayment) : null;
-        if (data.grossRentalIncome !== undefined) reoData.grossRentalIncome = data.grossRentalIncome ? parseFloat(data.grossRentalIncome) : null;
-        if (data.netRentalIncome !== undefined) reoData.netRentalIncome = data.netRentalIncome ? parseFloat(data.netRentalIncome) : null;
-        if (data.insuranceTaxesMaintenance !== undefined) reoData.insuranceTaxesMaintenance = data.insuranceTaxesMaintenance ? parseFloat(data.insuranceTaxesMaintenance) : null;
+        if (data.address !== undefined) reoData.address = data.address ? JSON.stringify(data.address) : null;
+        if (data.propertyType !== undefined) reoData.property_type = data.propertyType || null;
+        if (data.presentMarketValue !== undefined) reoData.present_market_value = data.presentMarketValue ? parseFloat(data.presentMarketValue) : null;
+        if (data.mortgageBalance !== undefined) reoData.mortgage_balance = data.mortgageBalance ? parseFloat(data.mortgageBalance) : null;
+        if (data.mortgagePayment !== undefined) reoData.mortgage_payment = data.mortgagePayment ? parseFloat(data.mortgagePayment) : null;
+        if (data.grossRentalIncome !== undefined) reoData.gross_rental_income = data.grossRentalIncome ? parseFloat(data.grossRentalIncome) : null;
+        if (data.netRentalIncome !== undefined) reoData.net_rental_income = data.netRentalIncome ? parseFloat(data.netRentalIncome) : null;
+        if (data.insuranceTaxesMaintenance !== undefined) reoData.insurance_taxes_maintenance = data.insuranceTaxesMaintenance ? parseFloat(data.insuranceTaxesMaintenance) : null;
         if (data.status !== undefined) reoData.status = data.status || null;
-        result = await prisma.loanREO.update({ where: { id: itemId }, data: reoData });
+        if (Object.keys(reoData).length > 0) {
+          const cols = Object.keys(reoData);
+          const vals = Object.values(reoData);
+          const setFragments = cols.map((c, i) => `"${c}" = $${i + 1}`);
+          const q = `UPDATE loan_reos SET ${setFragments.join(', ')}, updated_at = NOW() WHERE id = $${cols.length + 1} RETURNING *`;
+          const rows = await sql(q, [...vals, itemId]);
+          result = rows[0];
+        }
         break;
       }
 
       case 'declaration': {
-        // Upsert declarations (1:1 per borrower)
         if (!loanBorrowerId) return NextResponse.json({ error: 'loanBorrowerId required' }, { status: 400 });
         const declData = {};
-        const boolFields = ['outstandingJudgments', 'bankruptcy', 'foreclosure', 'partyToLawsuit',
-          'loanDefault', 'alimonyObligation', 'delinquentFederalDebt', 'coSignerOnOtherLoan',
-          'intentToOccupy', 'ownershipInterestLastThreeYears'];
-        const strFields = ['bankruptcyType', 'propertyTypeOfOwnership'];
-        const dateFields = ['bankruptcyDate', 'foreclosureDate'];
-        for (const f of boolFields) {
-          if (data[f] !== undefined) declData[f] = data[f] === true || data[f] === 'true';
+        const boolFields = {
+          outstandingJudgments: 'outstanding_judgments', bankruptcy: 'bankruptcy', foreclosure: 'foreclosure',
+          partyToLawsuit: 'party_to_lawsuit', loanDefault: 'loan_default', alimonyObligation: 'alimony_obligation',
+          delinquentFederalDebt: 'delinquent_federal_debt', coSignerOnOtherLoan: 'co_signer_on_other_loan',
+          intentToOccupy: 'intent_to_occupy', ownershipInterestLastThreeYears: 'ownership_interest_last_three_years',
+        };
+        const strFields = { bankruptcyType: 'bankruptcy_type', propertyTypeOfOwnership: 'property_type_of_ownership' };
+        const dateFields = { bankruptcyDate: 'bankruptcy_date', foreclosureDate: 'foreclosure_date' };
+        for (const [camel, snake] of Object.entries(boolFields)) {
+          if (data[camel] !== undefined) declData[snake] = data[camel] === true || data[camel] === 'true';
         }
-        for (const f of strFields) {
-          if (data[f] !== undefined) declData[f] = data[f] || null;
+        for (const [camel, snake] of Object.entries(strFields)) {
+          if (data[camel] !== undefined) declData[snake] = data[camel] || null;
         }
-        for (const f of dateFields) {
-          if (data[f] !== undefined) declData[f] = data[f] ? new Date(data[f]) : null;
+        for (const [camel, snake] of Object.entries(dateFields)) {
+          if (data[camel] !== undefined) declData[snake] = data[camel] ? new Date(data[camel]) : null;
         }
-        result = await prisma.loanDeclaration.upsert({
-          where: { loanBorrowerId },
-          create: { loanBorrowerId, ...declData },
-          update: declData,
-        });
+        if (Object.keys(declData).length > 0) {
+          const cols = Object.keys(declData);
+          const vals = Object.values(declData);
+          const updateFragments = cols.map((c, i) => `"${c}" = $${i + 2}`);
+          const insertCols = ['loan_borrower_id', ...cols];
+          const insertPlaceholders = insertCols.map((_, i) => `$${i + 1}`);
+          const q = `INSERT INTO loan_declarations (id, ${insertCols.map(c => `"${c}"`).join(', ')}, created_at, updated_at)
+                     VALUES (gen_random_uuid(), ${insertPlaceholders.join(', ')}, NOW(), NOW())
+                     ON CONFLICT (loan_borrower_id) DO UPDATE SET ${updateFragments.join(', ')}, updated_at = NOW()
+                     RETURNING *`;
+          const rows = await sql(q, [loanBorrowerId, ...vals]);
+          result = rows[0];
+        }
         break;
       }
 
       case 'transaction': {
-        // Upsert transaction details (1:1 per loan)
         const txData = {};
-        const decimalFields = ['purchasePrice', 'alterationsAmount', 'landValue',
-          'refinanceOriginalCost', 'existingLiens', 'closingCostsEstimate',
-          'discountPoints', 'pmiMip', 'sellerConcessions', 'subordinateFinancing',
-          'cashFromBorrower'];
-        for (const f of decimalFields) {
-          if (data[f] !== undefined) txData[f] = parseFloat(data[f]) || null;
+        const decimalFields = {
+          purchasePrice: 'purchase_price', alterationsAmount: 'alterations_amount', landValue: 'land_value',
+          refinanceOriginalCost: 'refinance_original_cost', existingLiens: 'existing_liens',
+          closingCostsEstimate: 'closing_costs_estimate', discountPoints: 'discount_points',
+          pmiMip: 'pmi_mip', sellerConcessions: 'seller_concessions',
+          subordinateFinancing: 'subordinate_financing', cashFromBorrower: 'cash_from_borrower',
+        };
+        for (const [camel, snake] of Object.entries(decimalFields)) {
+          if (data[camel] !== undefined) txData[snake] = parseFloat(data[camel]) || null;
         }
-        if (data.yearAcquired !== undefined) txData.yearAcquired = parseInt(data.yearAcquired, 10) || null;
-        if (data.sourceOfDownPayment !== undefined) txData.sourceOfDownPayment = data.sourceOfDownPayment || null;
-        result = await prisma.loanTransaction.upsert({
-          where: { loanId: id },
-          create: { loanId: id, ...txData },
-          update: txData,
-        });
+        if (data.yearAcquired !== undefined) txData.year_acquired = parseInt(data.yearAcquired, 10) || null;
+        if (data.sourceOfDownPayment !== undefined) txData.source_of_down_payment = data.sourceOfDownPayment || null;
+        if (Object.keys(txData).length > 0) {
+          const cols = Object.keys(txData);
+          const vals = Object.values(txData);
+          const updateFragments = cols.map((c, i) => `"${c}" = $${i + 2}`);
+          const insertCols = ['loan_id', ...cols];
+          const insertPlaceholders = insertCols.map((_, i) => `$${i + 1}`);
+          const q = `INSERT INTO loan_transactions (id, ${insertCols.map(c => `"${c}"`).join(', ')}, created_at, updated_at)
+                     VALUES (gen_random_uuid(), ${insertPlaceholders.join(', ')}, NOW(), NOW())
+                     ON CONFLICT (loan_id) DO UPDATE SET ${updateFragments.join(', ')}, updated_at = NOW()
+                     RETURNING *`;
+          const rows = await sql(q, [id, ...vals]);
+          result = rows[0];
+        }
         break;
       }
 
       case 'loanDetails': {
-        // Update Loan-level 1003 fields (amortization, title, ARM)
         const loanData = {};
-        const strFields = ['amortizationType', 'titleHeldAs', 'estateHeldIn', 'armIndex'];
-        const decFields = ['armMargin', 'armInitialCap', 'armPeriodicCap', 'armLifetimeCap'];
-        for (const f of strFields) {
-          if (data[f] !== undefined) loanData[f] = data[f] || null;
+        const strFields = { amortizationType: 'amortization_type', titleHeldAs: 'title_held_as', estateHeldIn: 'estate_held_in', armIndex: 'arm_index' };
+        const decFields = { armMargin: 'arm_margin', armInitialCap: 'arm_initial_cap', armPeriodicCap: 'arm_periodic_cap', armLifetimeCap: 'arm_lifetime_cap' };
+        for (const [camel, snake] of Object.entries(strFields)) {
+          if (data[camel] !== undefined) loanData[snake] = data[camel] || null;
         }
-        for (const f of decFields) {
-          if (data[f] !== undefined) loanData[f] = parseFloat(data[f]) || null;
+        for (const [camel, snake] of Object.entries(decFields)) {
+          if (data[camel] !== undefined) loanData[snake] = parseFloat(data[camel]) || null;
         }
         if (data.armAdjustmentPeriod !== undefined) {
-          loanData.armAdjustmentPeriod = parseInt(data.armAdjustmentPeriod, 10) || null;
+          loanData.arm_adjustment_period = parseInt(data.armAdjustmentPeriod, 10) || null;
         }
-        result = await prisma.loan.update({ where: { id }, data: loanData });
+        if (Object.keys(loanData).length > 0) {
+          const cols = Object.keys(loanData);
+          const vals = Object.values(loanData);
+          const setFragments = cols.map((c, i) => `"${c}" = $${i + 1}`);
+          const q = `UPDATE loans SET ${setFragments.join(', ')}, updated_at = NOW() WHERE id = $${cols.length + 1} RETURNING *`;
+          const rows = await sql(q, [...vals, id]);
+          result = rows[0];
+        }
         break;
       }
 
@@ -311,18 +365,15 @@ export async function PUT(request, { params }) {
     }
 
     // Audit
-    await prisma.loanEvent.create({
-      data: {
-        loanId: id,
-        eventType: 'field_updated',
-        actorType: 'mlo',
-        actorId: session.user.id,
-        newValue: JSON.stringify({ section, loanBorrowerId, itemId }),
-        details: { source: '1003_application', section },
-      },
-    });
+    await sql`
+      INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, new_value, details, created_at)
+      VALUES (gen_random_uuid(), ${id}, 'field_updated', 'mlo', ${session.user.id},
+              ${JSON.stringify({ section, loanBorrowerId, itemId })},
+              ${JSON.stringify({ source: '1003_application', section })},
+              NOW())
+    `;
 
-    return NextResponse.json({ success: true, result: serializeDecimals(result) });
+    return NextResponse.json({ success: true, result });
   } catch (error) {
     console.error('1003 PUT error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -341,76 +392,57 @@ export async function POST(request, { params }) {
     const body = await request.json();
     const { itemType, data } = body;
 
-    const loan = await prisma.loan.findUnique({ where: { id } });
-    if (!loan) {
+    const loanRows = await sql`SELECT id FROM loans WHERE id = ${id} LIMIT 1`;
+    if (loanRows.length === 0) {
       return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
     }
 
     let result;
 
     switch (itemType) {
-      case 'asset':
-        result = await prisma.loanAsset.create({
-          data: {
-            loanId: id,
-            borrowerType: data.borrowerType || null,
-            institution: data.institution || null,
-            accountType: data.accountType || null,
-            accountNumber: data.accountNumber || null,
-            balance: data.balance ? parseFloat(data.balance) : null,
-            isJoint: data.isJoint ?? false,
-          },
-        });
+      case 'asset': {
+        const rows = await sql`
+          INSERT INTO loan_assets (id, loan_id, borrower_type, institution, account_type, account_number, balance, is_joint, created_at, updated_at)
+          VALUES (gen_random_uuid(), ${id}, ${data.borrowerType || null}, ${data.institution || null}, ${data.accountType || null}, ${data.accountNumber || null}, ${data.balance ? parseFloat(data.balance) : null}, ${data.isJoint ?? false}, NOW(), NOW())
+          RETURNING *
+        `;
+        result = rows[0];
         break;
+      }
 
-      case 'liability':
-        result = await prisma.loanLiability.create({
-          data: {
-            loanId: id,
-            creditor: data.creditor || null,
-            accountNumber: data.accountNumber || null,
-            liabilityType: data.liabilityType || null,
-            monthlyPayment: data.monthlyPayment ? parseFloat(data.monthlyPayment) : null,
-            unpaidBalance: data.unpaidBalance ? parseFloat(data.unpaidBalance) : null,
-            monthsRemaining: data.monthsRemaining ? parseInt(data.monthsRemaining, 10) : null,
-            paidOffAtClosing: data.paidOffAtClosing ?? false,
-          },
-        });
+      case 'liability': {
+        const rows = await sql`
+          INSERT INTO loan_liabilities (id, loan_id, creditor, account_number, liability_type, monthly_payment, unpaid_balance, months_remaining, paid_off_at_closing, created_at, updated_at)
+          VALUES (gen_random_uuid(), ${id}, ${data.creditor || null}, ${data.accountNumber || null}, ${data.liabilityType || null}, ${data.monthlyPayment ? parseFloat(data.monthlyPayment) : null}, ${data.unpaidBalance ? parseFloat(data.unpaidBalance) : null}, ${data.monthsRemaining ? parseInt(data.monthsRemaining, 10) : null}, ${data.paidOffAtClosing ?? false}, NOW(), NOW())
+          RETURNING *
+        `;
+        result = rows[0];
         break;
+      }
 
-      case 'reo':
-        result = await prisma.loanREO.create({
-          data: {
-            loanId: id,
-            address: data.address || null,
-            propertyType: data.propertyType || null,
-            presentMarketValue: data.presentMarketValue ? parseFloat(data.presentMarketValue) : null,
-            mortgageBalance: data.mortgageBalance ? parseFloat(data.mortgageBalance) : null,
-            mortgagePayment: data.mortgagePayment ? parseFloat(data.mortgagePayment) : null,
-            grossRentalIncome: data.grossRentalIncome ? parseFloat(data.grossRentalIncome) : null,
-            netRentalIncome: data.netRentalIncome ? parseFloat(data.netRentalIncome) : null,
-            insuranceTaxesMaintenance: data.insuranceTaxesMaintenance ? parseFloat(data.insuranceTaxesMaintenance) : null,
-            status: data.status || 'retained',
-          },
-        });
+      case 'reo': {
+        const rows = await sql`
+          INSERT INTO loan_reos (id, loan_id, address, property_type, present_market_value, mortgage_balance, mortgage_payment, gross_rental_income, net_rental_income, insurance_taxes_maintenance, status, created_at, updated_at)
+          VALUES (gen_random_uuid(), ${id}, ${data.address ? JSON.stringify(data.address) : null}, ${data.propertyType || null}, ${data.presentMarketValue ? parseFloat(data.presentMarketValue) : null}, ${data.mortgageBalance ? parseFloat(data.mortgageBalance) : null}, ${data.mortgagePayment ? parseFloat(data.mortgagePayment) : null}, ${data.grossRentalIncome ? parseFloat(data.grossRentalIncome) : null}, ${data.netRentalIncome ? parseFloat(data.netRentalIncome) : null}, ${data.insuranceTaxesMaintenance ? parseFloat(data.insuranceTaxesMaintenance) : null}, ${data.status || 'retained'}, NOW(), NOW())
+          RETURNING *
+        `;
+        result = rows[0];
         break;
+      }
 
       default:
         return NextResponse.json({ error: `Unknown itemType: ${itemType}` }, { status: 400 });
     }
 
-    await prisma.loanEvent.create({
-      data: {
-        loanId: id,
-        eventType: 'field_updated',
-        actorType: 'mlo',
-        actorId: session.user.id,
-        newValue: JSON.stringify({ itemType, itemId: result.id }),
-        details: { source: '1003_application', action: 'add', itemType },
-      },
-    });
+    await sql`
+      INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, new_value, details, created_at)
+      VALUES (gen_random_uuid(), ${id}, 'field_updated', 'mlo', ${session.user.id},
+              ${JSON.stringify({ itemType, itemId: result.id })},
+              ${JSON.stringify({ source: '1003_application', action: 'add', itemType })},
+              NOW())
+    `;
 
-    return NextResponse.json({ success: true, item: serializeDecimals(result) });
+    return NextResponse.json({ success: true, item: result });
   } catch (error) {
     console.error('1003 POST error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -434,30 +466,27 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ error: 'itemType and itemId required' }, { status: 400 });
     }
 
-    const modelMap = {
-      asset: prisma.loanAsset,
-      liability: prisma.loanLiability,
-      reo: prisma.loanREO,
-      employment: prisma.loanEmployment,
+    const tableMap = {
+      asset: 'loan_assets',
+      liability: 'loan_liabilities',
+      reo: 'loan_reos',
+      employment: 'loan_employments',
     };
 
-    const model = modelMap[itemType];
-    if (!model) {
+    const table = tableMap[itemType];
+    if (!table) {
       return NextResponse.json({ error: `Unknown itemType: ${itemType}` }, { status: 400 });
     }
 
-    await model.delete({ where: { id: itemId } });
+    await sql(`DELETE FROM ${table} WHERE id = $1`, [itemId]);
 
-    await prisma.loanEvent.create({
-      data: {
-        loanId: id,
-        eventType: 'field_updated',
-        actorType: 'mlo',
-        actorId: session.user.id,
-        newValue: JSON.stringify({ itemType, itemId }),
-        details: { source: '1003_application', action: 'delete', itemType },
-      },
-    });
+    await sql`
+      INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, new_value, details, created_at)
+      VALUES (gen_random_uuid(), ${id}, 'field_updated', 'mlo', ${session.user.id},
+              ${JSON.stringify({ itemType, itemId })},
+              ${JSON.stringify({ source: '1003_application', action: 'delete', itemType })},
+              NOW())
+    `;
 
     return NextResponse.json({ success: true });
   } catch (error) {

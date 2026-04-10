@@ -4,7 +4,7 @@
 //
 // Configure this URL as the "Messaging Webhook" on your Twilio phone number.
 
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 import { normalizePhone } from '@/lib/normalize-phone';
 
 export async function POST(req) {
@@ -21,8 +21,8 @@ export async function POST(req) {
   let contactId = null;
   if (normalizedFrom) {
     try {
-      const contact = await prisma.contact.findFirst({ where: { phone: normalizedFrom } });
-      if (contact) contactId = contact.id;
+      const rows = await sql`SELECT id FROM contacts WHERE phone = ${normalizedFrom} LIMIT 1`;
+      if (rows.length) contactId = rows[0].id;
     } catch (e) {
       console.error('Contact lookup for incoming SMS failed:', e);
     }
@@ -30,17 +30,10 @@ export async function POST(req) {
 
   // Store the inbound message
   try {
-    await prisma.smsMessage.create({
-      data: {
-        contactId,
-        direction: 'inbound',
-        fromNumber: normalizedFrom || from || '',
-        toNumber: normalizePhone(to) || to || '',
-        body: body || '',
-        status: 'received',
-        twilioMessageSid: messageSid,
-      },
-    });
+    await sql`
+      INSERT INTO sms_messages (contact_id, direction, from_number, to_number, body, status, twilio_message_sid)
+      VALUES (${contactId}, 'inbound', ${normalizedFrom || from || ''}, ${normalizePhone(to) || to || ''}, ${body || ''}, 'received', ${messageSid})
+    `;
   } catch (e) {
     console.error('Failed to store incoming SMS:', e);
   }

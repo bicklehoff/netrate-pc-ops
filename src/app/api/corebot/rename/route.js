@@ -8,7 +8,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 import { renameFile } from '@/lib/zoho-workdrive';
 
 export async function POST(request) {
@@ -24,29 +24,34 @@ export async function POST(request) {
     }
 
     // Verify MLO owns this loan
-    const loan = await prisma.loan.findUnique({ where: { id: loanId } });
+    const loanRows = await sql`
+      SELECT * FROM "Loan" WHERE id = ${loanId} LIMIT 1
+    `;
+    const loan = loanRows[0];
+
     if (!loan) {
       return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
     }
 
     const isAdmin = session.user.role === 'admin';
-    if (!isAdmin && loan.mloId !== session.user.id) {
+    if (!isAdmin && loan.mlo_id !== session.user.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
     const result = await renameFile(fileId, newFileName);
 
     // Audit trail
-    await prisma.loanEvent.create({
-      data: {
-        loanId,
-        eventType: 'doc_renamed',
-        actorType: 'mlo',
-        actorId: session.user.id,
-        newValue: newFileName,
-        details: { fileId, source: 'manual_rename' },
-      },
-    });
+    await sql`
+      INSERT INTO "LoanEvent" (loan_id, event_type, actor_type, actor_id, new_value, details)
+      VALUES (
+        ${loanId},
+        'doc_renamed',
+        'mlo',
+        ${session.user.id},
+        ${newFileName},
+        ${JSON.stringify({ fileId, source: 'manual_rename' })}::jsonb
+      )
+    `;
 
     return NextResponse.json({ success: true, result });
   } catch (error) {

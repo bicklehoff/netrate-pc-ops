@@ -5,7 +5,7 @@
 // Sends a verification code via Twilio Verify (Twilio manages code generation, delivery, and expiry).
 
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 import { getBorrowerSession } from '@/lib/borrower-session';
 import { sendVerification } from '@/lib/twilio-verify';
 
@@ -17,10 +17,8 @@ export async function POST() {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    const borrower = await prisma.borrower.findUnique({
-      where: { id: session.borrowerId },
-      select: { id: true, phone: true },
-    });
+    const rows = await sql`SELECT id, phone FROM borrowers WHERE id = ${session.borrowerId} LIMIT 1`;
+    const borrower = rows[0];
 
     if (!borrower) {
       return NextResponse.json({ error: 'Borrower not found' }, { status: 404 });
@@ -40,7 +38,6 @@ export async function POST() {
   } catch (error) {
     console.error('Send SMS code error:', error);
 
-    // Twilio rate limit error
     if (error.message?.includes('Max send attempts reached')) {
       return NextResponse.json(
         { error: 'Too many attempts. Please wait a few minutes and try again.' },

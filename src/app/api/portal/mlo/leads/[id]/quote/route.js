@@ -5,7 +5,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 import { priceScenario } from '@/lib/rates/pricing';
 import { fetchGCSFile, isGCSConfigured } from '@/lib/gcs';
 
@@ -18,22 +18,23 @@ export async function POST(request, { params }) {
 
     const { id } = await params;
 
-    const lead = await prisma.lead.findUnique({ where: { id } });
+    const leadRows = await sql`SELECT * FROM leads WHERE id = ${id} LIMIT 1`;
+    const lead = leadRows[0];
     if (!lead) {
       return NextResponse.json({ error: 'Lead not found' }, { status: 404 });
     }
 
     // Build scenario from lead data
     const scenario = {
-      loanAmount: lead.loanAmount ? Number(lead.loanAmount) : null,
-      propertyValue: lead.propertyValue ? Number(lead.propertyValue) : null,
-      creditScore: lead.creditScore || null,
-      state: lead.propertyState || null,
-      county: lead.propertyCounty || null,
-      propertyType: lead.propertyType || 'sfr',
+      loanAmount: lead.loan_amount ? Number(lead.loan_amount) : null,
+      propertyValue: lead.property_value ? Number(lead.property_value) : null,
+      creditScore: lead.credit_score || null,
+      state: lead.property_state || null,
+      county: lead.property_county || null,
+      propertyType: lead.property_type || 'sfr',
       occupancy: lead.occupancy || 'primary',
-      loanPurpose: lead.loanPurpose || 'purchase',
-      employmentType: lead.employmentType || 'w2',
+      loanPurpose: lead.loan_purpose || 'purchase',
+      employmentType: lead.employment_type || 'w2',
       loanTerm: 30,
     };
 
@@ -109,26 +110,21 @@ export async function POST(request, { params }) {
     }
 
     // Save quote
-    const quote = await prisma.leadQuote.create({
-      data: {
-        leadId: id,
-        scenario,
-        results: results || {},
-        bestRate: best?.rate || null,
-        bestLender: best?.lender || null,
-        bestPrice: best?.adjustedPrice || null,
-        monthlyPayment,
-        compAmount: results?.comp?.amount || null,
-        lenderFee: best?.lenderFee || null,
-      },
-    });
+    const quoteRows = await sql`
+      INSERT INTO lead_quotes (lead_id, scenario, results, best_rate, best_lender, best_price, monthly_payment, comp_amount, lender_fee, created_at)
+      VALUES (
+        ${id}, ${JSON.stringify(scenario)}::jsonb, ${JSON.stringify(results || {})}::jsonb,
+        ${best?.rate || null}, ${best?.lender || null}, ${best?.adjustedPrice || null},
+        ${monthlyPayment}, ${results?.comp?.amount || null}, ${best?.lenderFee || null},
+        NOW()
+      )
+      RETURNING *
+    `;
+    const quote = quoteRows[0];
 
     // Update lead status to 'quoted' if it was new/contacted/qualified
     if (['new', 'contacted', 'qualified'].includes(lead.status)) {
-      await prisma.lead.update({
-        where: { id },
-        data: { status: 'quoted' },
-      });
+      await sql`UPDATE leads SET status = 'quoted', updated_at = NOW() WHERE id = ${id}`;
     }
 
     return NextResponse.json({

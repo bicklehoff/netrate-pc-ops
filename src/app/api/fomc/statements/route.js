@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 import {
   getRecentMeetings,
   statementUrl,
@@ -9,10 +9,10 @@ import {
 
 async function fetchAndCacheStatement(meetingDate) {
   // Check DB cache first
-  const cached = await prisma.fomcStatement.findUnique({
-    where: { meetingDate: new Date(meetingDate + 'T00:00:00Z') },
-  });
-  if (cached) return cached;
+  const cached = await sql`
+    SELECT * FROM fomc_statements WHERE meeting_date = ${new Date(meetingDate + 'T00:00:00Z')} LIMIT 1
+  `;
+  if (cached.length) return cached[0];
 
   // Scrape from Fed website
   const url = statementUrl(meetingDate);
@@ -40,21 +40,16 @@ async function fetchAndCacheStatement(meetingDate) {
     }
 
     // Cache in DB
-    const statement = await prisma.fomcStatement.upsert({
-      where: { meetingDate: new Date(meetingDate + 'T00:00:00Z') },
-      create: {
-        meetingDate: new Date(meetingDate + 'T00:00:00Z'),
-        statementUrl: url,
-        statementText: paragraphs.join('\n\n'),
-        paragraphs: paragraphs,
-      },
-      update: {
-        statementText: paragraphs.join('\n\n'),
-        paragraphs: paragraphs,
-      },
-    });
+    const rows = await sql`
+      INSERT INTO fomc_statements (meeting_date, statement_url, statement_text, paragraphs)
+      VALUES (${new Date(meetingDate + 'T00:00:00Z')}, ${url}, ${paragraphs.join('\n\n')}, ${JSON.stringify(paragraphs)})
+      ON CONFLICT (meeting_date) DO UPDATE SET
+        statement_text = EXCLUDED.statement_text,
+        paragraphs = EXCLUDED.paragraphs
+      RETURNING *
+    `;
 
-    return statement;
+    return rows[0];
   } catch (error) {
     clearTimeout(timeout);
     console.error(`FOMC statement fetch error for ${meetingDate}:`, error.message);
@@ -97,13 +92,13 @@ export async function GET() {
       current: {
         date: meetings.current,
         dateFormatted: formatDate(meetings.current),
-        url: current.statementUrl,
+        url: current.statement_url,
         paragraphs: currentParagraphs,
       },
       previous: {
         date: meetings.previous,
         dateFormatted: formatDate(meetings.previous),
-        url: previous.statementUrl,
+        url: previous.statement_url,
         paragraphs: previousParagraphs,
       },
       diff,

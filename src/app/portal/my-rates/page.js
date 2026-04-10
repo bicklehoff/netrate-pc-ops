@@ -10,7 +10,7 @@ function formatDollar(n) {
 }
 
 /** Calculate monthly P&I from rate, loan amount, and term */
-function calcMonthlyPI(rate, loanAmount, termYears = 30) {
+function calcMonthlyPI(rate, loan_amount, termYears = 30) {
   if (!rate || !loanAmount) return null;
   const r = rate / 100 / 12;
   const n = termYears * 12;
@@ -29,43 +29,43 @@ function buildRepriceUrl(sd, token) {
   const params = new URLSearchParams();
   if (token) params.set('token', token);
   if (sd.purpose) params.set('purpose', sd.purpose);
-  if (sd.loanType) params.set('loanType', sd.loanType);
-  if (sd.propertyType) params.set('propertyType', sd.propertyType);
-  if (sd.propertyValue) params.set('propertyValue', sd.propertyValue);
+  if (sd.loan_type) params.set('loan_type', sd.loan_type);
+  if (sd.property_type) params.set('property_type', sd.property_type);
+  if (sd.property_value) params.set('property_value', sd.property_value);
   if (sd.downPaymentPct) params.set('downPaymentPct', sd.downPaymentPct);
-  if (sd.loanAmount) params.set('loanAmount', sd.loanAmount);
+  if (sd.loan_amount) params.set('loan_amount', sd.loan_amount);
   if (sd.fico) params.set('fico', sd.fico);
   if (sd.term) params.set('term', sd.term);
   if (sd.state) params.set('state', sd.state);
   if (sd.county) params.set('county', sd.county);
   if (sd.currentPayoff) params.set('currentPayoff', sd.currentPayoff);
-  if (sd.currentRate) params.set('currentRate', sd.currentRate);
+  if (sd.current_rate) params.set('current_rate', sd.current_rate);
   return `/rates?${params.toString()}`;
 }
 
 function ScenarioView({ scenario, token }) {
-  const sd = scenario.scenarioData || {};
-  const rates = scenario.lastPricingData || [];
+  const sd = scenario.scenario_data || {};
+  const rates = scenario.last_pricing_data || [];
   const bestRate = rates[0];
 
   const purposeLabel = PURPOSE_LABELS[sd.purpose] || sd.purpose || 'Loan';
-  const loanTypeLabel = LOAN_TYPE_LABELS[(sd.loanType || '').toLowerCase()] || (sd.loanType || '').toUpperCase();
-  const propLabel = PROP_LABELS[sd.propertyType] || sd.propertyType;
+  const loanTypeLabel = LOAN_TYPE_LABELS[(sd.loan_type || '').toLowerCase()] || (sd.loan_type || '').toUpperCase();
+  const propLabel = PROP_LABELS[sd.property_type] || sd.property_type;
   const calcs = getMatchedCalculators(sd, bestRate?.rate);
 
-  const savedDate = new Date(scenario.createdAt).toLocaleDateString('en-US', {
+  const savedDate = new Date(scenario.created_at).toLocaleDateString('en-US', {
     month: 'long', day: 'numeric', year: 'numeric',
   });
 
-  const pricedDate = scenario.lastPricedAt
-    ? new Date(scenario.lastPricedAt).toLocaleDateString('en-US', {
+  const pricedDate = scenario.last_priced_at
+    ? new Date(scenario.last_priced_at).toLocaleDateString('en-US', {
         month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit',
       })
     : null;
 
   // Down payment for purchase
-  const downPayment = sd.purpose === 'purchase' && sd.propertyValue && sd.loanAmount
-    ? sd.propertyValue - sd.loanAmount
+  const downPayment = sd.purpose === 'purchase' && sd.property_value && sd.loan_amount
+    ? sd.property_value - sd.loan_amount
     : null;
 
   return (
@@ -96,13 +96,13 @@ function ScenarioView({ scenario, token }) {
             </div>
             <div className="flex items-center gap-2">
               <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
-                scenario.alertStatus === 'active' ? 'bg-green-50 text-green-700 border border-green-200' :
-                scenario.alertStatus === 'paused' ? 'bg-yellow-50 text-yellow-700 border border-yellow-200' :
+                scenario.alert_status === 'active' ? 'bg-green-50 text-green-700 border border-green-200' :
+                scenario.alert_status === 'paused' ? 'bg-yellow-50 text-yellow-700 border border-yellow-200' :
                 'bg-gray-100 text-gray-500 border border-gray-200'
               }`}>
-                {scenario.alertStatus === 'active' ? 'Alerts Active' :
-                 scenario.alertStatus === 'paused' ? 'Alerts Paused' :
-                 scenario.alertStatus}
+                {scenario.alert_status === 'active' ? 'Alerts Active' :
+                 scenario.alert_status === 'paused' ? 'Alerts Paused' :
+                 scenario.alert_status}
               </span>
             </div>
           </div>
@@ -111,18 +111,18 @@ function ScenarioView({ scenario, token }) {
         {/* Scenario Details Grid */}
         <div className="px-6 py-5">
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4">
-            {sd.loanAmount > 0 && (
+            {sd.loan_amount > 0 && (
               <div>
                 <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Loan Amount</p>
-                <p className="text-base font-semibold text-gray-900 mt-0.5">{formatDollar(sd.loanAmount)}</p>
+                <p className="text-base font-semibold text-gray-900 mt-0.5">{formatDollar(sd.loan_amount)}</p>
               </div>
             )}
-            {sd.propertyValue > 0 && (
+            {sd.property_value > 0 && (
               <div>
                 <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">
                   {sd.purpose === 'purchase' ? 'Home Price' : 'Property Value'}
                 </p>
-                <p className="text-base font-semibold text-gray-900 mt-0.5">{formatDollar(sd.propertyValue)}</p>
+                <p className="text-base font-semibold text-gray-900 mt-0.5">{formatDollar(sd.property_value)}</p>
               </div>
             )}
             {downPayment > 0 && (
@@ -193,7 +193,7 @@ function ScenarioView({ scenario, token }) {
               </thead>
               <tbody>
                 {rates.map((r, i) => {
-                  const pi = r.monthlyPI || calcMonthlyPI(r.rate, sd.loanAmount, sd.term);
+                  const pi = r.monthlyPI || calcMonthlyPI(r.rate, sd.loan_amount, sd.term);
                   return (
                     <tr key={i} className={`border-t border-gray-100 ${i === 0 ? 'bg-brand/3' : ''}`}>
                       <td className="py-3">
@@ -230,7 +230,7 @@ function ScenarioView({ scenario, token }) {
                   <p className="text-sm text-gray-500">Best available rate</p>
                   <p className="text-2xl font-bold text-brand tabular-nums">{Number(bestRate.rate).toFixed(3)}%</p>
                   {(() => {
-                    const pi = bestRate.monthlyPI || calcMonthlyPI(bestRate.rate, sd.loanAmount, sd.term);
+                    const pi = bestRate.monthlyPI || calcMonthlyPI(bestRate.rate, sd.loan_amount, sd.term);
                     return pi ? (
                       <p className="text-sm text-gray-500">{formatDollar(Math.round(pi))}/mo estimated payment</p>
                     ) : null;
@@ -256,25 +256,25 @@ function ScenarioView({ scenario, token }) {
             <div className="bg-gray-50 rounded-lg px-4 py-2.5">
               <p className="text-xs text-gray-400 mb-0.5">Frequency</p>
               <p className="text-sm font-medium text-gray-900">
-                {FREQ_LABELS[scenario.alertFrequency] || scenario.alertFrequency}
+                {FREQ_LABELS[scenario.alert_frequency] || scenario.alert_frequency}
               </p>
             </div>
-            {scenario.alertDays?.length > 0 && (
+            {scenario.alert_days?.length > 0 && (
               <div className="bg-gray-50 rounded-lg px-4 py-2.5">
                 <p className="text-xs text-gray-400 mb-0.5">Days</p>
                 <p className="text-sm font-medium text-gray-900">
-                  {scenario.alertDays.map(d => DAY_NAMES[d] || d).join(', ')}
+                  {scenario.alert_days.map(d => DAY_NAMES[d] || d).join(', ')}
                 </p>
               </div>
             )}
-            {scenario.sendCount > 0 && (
+            {scenario.send_count > 0 && (
               <div className="bg-gray-50 rounded-lg px-4 py-2.5">
                 <p className="text-xs text-gray-400 mb-0.5">Updates Sent</p>
                 <p className="text-sm font-medium text-gray-900">
-                  {scenario.sendCount}
-                  {scenario.lastSentAt && (
+                  {scenario.send_count}
+                  {scenario.last_sent_at && (
                     <span className="text-gray-400 text-xs ml-1">
-                      (last: {new Date(scenario.lastSentAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})
+                      (last: {new Date(scenario.last_sent_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})
                     </span>
                   )}
                 </p>

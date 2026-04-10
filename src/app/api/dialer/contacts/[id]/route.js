@@ -3,7 +3,7 @@
 
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 import { normalizePhone } from '@/lib/normalize-phone';
 
 export async function GET(req, { params }) {
@@ -15,40 +15,60 @@ export async function GET(req, { params }) {
   const { id } = await params;
 
   try {
-    const contact = await prisma.contact.findUnique({
-      where: { id },
-      include: {
-        callLogs: {
-          orderBy: { startedAt: 'desc' },
-          take: 20,
-          include: {
-            notes: true,
-            mlo: { select: { firstName: true, lastName: true } },
-          },
-        },
-        smsMessages: {
-          orderBy: { sentAt: 'desc' },
-          take: 50,
-        },
-        borrower: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            loans: {
-              select: { id: true, status: true, purpose: true },
-              orderBy: { createdAt: 'desc' },
-              take: 5,
-            },
-          },
-        },
-      },
-    });
-
-    if (!contact) {
+    // Main contact
+    const contactRows = await sql`SELECT * FROM contacts WHERE id = ${id} LIMIT 1`;
+    if (!contactRows.length) {
       return Response.json({ error: 'Contact not found' }, { status: 404 });
     }
+
+    const contact = contactRows[0];
+
+    // Fetch related data in parallel
+    const [callLogs, smsMessages, borrowerRows] = await Promise.all([
+      sql`
+        SELECT cl.*, m.first_name AS mlo_first_name, m.last_name AS mlo_last_name
+        FROM call_logs cl
+        LEFT JOIN mlos m ON cl.mlo_id = m.id
+        WHERE cl.contact_id = ${id}
+        ORDER BY cl.started_at DESC
+        LIMIT 20
+      `,
+      sql`
+        SELECT * FROM sms_messages
+        WHERE contact_id = ${id}
+        ORDER BY sent_at DESC
+        LIMIT 50
+      `,
+      contact.borrower_id
+        ? sql`
+            SELECT b.id, b.first_name, b.last_name, b.email FROM borrowers b WHERE b.id = ${contact.borrower_id} LIMIT 1
+          `
+        : Promise.resolve([]),
+    ]);
+
+    // Fetch call notes for these calls
+    const callIds = callLogs.map(c => c.id);
+    const callNotes = callIds.length
+      ? await sql`SELECT * FROM call_notes WHERE call_log_id = ANY(${callIds}) ORDER BY created_at DESC`
+      : [];
+
+    // Attach notes to their calls
+    for (const call of callLogs) {
+      call.notes = callNotes.filter(n => n.call_log_id === call.id);
+    }
+
+    // Fetch borrower loans if borrower exists
+    const borrower = borrowerRows[0] || null;
+    if (borrower) {
+      const loans = await sql`
+        SELECT id, status, purpose FROM loans WHERE borrower_id = ${borrower.id} ORDER BY created_at DESC LIMIT 5
+      `;
+      borrower.loans = loans;
+    }
+
+    contact.call_logs = callLogs;
+    contact.sms_messages = smsMessages;
+    contact.borrower = borrower;
 
     return Response.json({ contact });
   } catch (e) {
@@ -67,21 +87,39 @@ export async function PUT(req, { params }) {
   const body = await req.json();
   const { firstName, lastName, email, phone, company, tags, notes } = body;
 
-  try {
-    const contact = await prisma.contact.update({
-      where: { id },
-      data: {
-        ...(firstName !== undefined && { firstName }),
-        ...(lastName !== undefined && { lastName }),
-        ...(email !== undefined && { email }),
-        ...(phone !== undefined && { phone: normalizePhone(phone) || phone }),
-        ...(company !== undefined && { company }),
-        ...(tags !== undefined && { tags }),
-        ...(notes !== undefined && { notes }),
-      },
-    });
+  // Build SET clauses dynamically
+  const sets = [];
+  const values = [];
+  if (firstName !== undefined) { sets.push('first_name'); values.push(firstName); }
+  if (lastName !== undefined) { sets.push('last_name'); values.push(lastName); }
+  if (email !== undefined) { sets.push('email'); values.push(email); }
+  if (phone !== undefined) { sets.push('phone'); values.push(normalizePhone(phone) || phone); }
+  if (company !== undefined) { sets.push('company'); values.push(company); }
+  if (tags !== undefined) { sets.push('tags'); values.push(tags); }
+  if (notes !== undefined) { sets.push('notes'); values.push(notes); }
 
-    return Response.json({ contact });
+  if (sets.length === 0) {
+    return Response.json({ error: 'No fields to update' }, { status: 400 });
+  }
+
+  try {
+    // Build a dynamic update — since neon tagged templates don't support dynamic column names easily,
+    // use a full update with COALESCE pattern
+    const rows = await sql`
+      UPDATE contacts SET
+        first_name = COALESCE(${firstName !== undefined ? firstName : null}, first_name),
+        last_name = COALESCE(${lastName !== undefined ? lastName : null}, last_name),
+        email = ${email !== undefined ? email : null},
+        phone = ${phone !== undefined ? (normalizePhone(phone) || phone) : null},
+        company = ${company !== undefined ? company : null},
+        tags = ${tags !== undefined ? tags : null},
+        notes = ${notes !== undefined ? notes : null},
+        updated_at = NOW()
+      WHERE id = ${id}
+      RETURNING *
+    `;
+
+    return Response.json({ contact: rows[0] });
   } catch (e) {
     console.error('Contact update failed:', e);
     return Response.json({ error: 'Failed to update contact' }, { status: 500 });
@@ -97,7 +135,7 @@ export async function DELETE(req, { params }) {
   const { id } = await params;
 
   try {
-    await prisma.contact.delete({ where: { id } });
+    await sql`DELETE FROM contacts WHERE id = ${id}`;
     return Response.json({ success: true });
   } catch (e) {
     console.error('Contact delete failed:', e);

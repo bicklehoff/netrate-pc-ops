@@ -8,7 +8,7 @@
  * Only "zero eligible lenders" is a hard stop.
  */
 
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 import { classifyLoan, getLoanLimits } from '@/data/county-loan-limits';
 import { FHA_BASELINE_LIMIT } from '@/lib/rates/defaults';
 
@@ -23,42 +23,23 @@ async function loadLenderMeta() {
   }
 
   const [lenders, products] = await Promise.all([
-    prisma.rateLender.findMany({
-      where: { status: 'active' },
-      select: {
-        id: true,
-        code: true,
-        name: true,
-        excludedStateVariants: true,
-        maxCompRate: true,
-        fhaUfmip: true,
-      },
-    }),
-    prisma.rateProduct.findMany({
-      where: { status: 'active' },
-      select: {
-        id: true,
-        lenderId: true,
-        loanType: true,
-        term: true,
-        ficoMin: true,
-        ficoMax: true,
-        maxLtv: true,
-        loanAmountMin: true,
-        loanAmountMax: true,
-        isHighBalance: true,
-        occupancy: true,
-        productType: true,
-      },
-    }),
+    sql`
+      SELECT id, code, name, excluded_state_variants, max_comp_rate, fha_ufmip
+      FROM rate_lenders
+      WHERE status = 'active'
+    `,
+    sql`
+      SELECT id, lender_id, loan_type, term, fico_min, fico_max, max_ltv,
+             loan_amount_min, loan_amount_max, is_high_balance, occupancy, product_type
+      FROM rate_products
+      WHERE status = 'active'
+    `,
   ]);
 
-  const activeSheets = await prisma.rateSheet.findMany({
-    where: { status: 'active' },
-    select: { lenderId: true },
-    distinct: ['lenderId'],
-  });
-  const lendersWithSheets = new Set(activeSheets.map(s => s.lenderId));
+  const activeSheets = await sql`
+    SELECT DISTINCT lender_id FROM rate_sheets WHERE status = 'active'
+  `;
+  const lendersWithSheets = new Set(activeSheets.map(s => s.lender_id));
 
   metaCache = {
     data: { lenders, products, lendersWithSheets },
@@ -129,7 +110,7 @@ export async function checkEligibility(scenario) {
     const reasons = [];
 
     // State exclusion
-    const excluded = lender.excludedStateVariants;
+    const excluded = lender.excluded_state_variants;
     if (excluded) {
       const excludedList = typeof excluded === 'string' ? JSON.parse(excluded) : excluded;
       if (Array.isArray(excludedList) && excludedList.includes(state)) {
@@ -144,8 +125,8 @@ export async function checkEligibility(scenario) {
 
     // Filter products for this lender + loan type + term
     const lenderProducts = products.filter(p =>
-      p.lenderId === lender.id &&
-      p.loanType === loanType &&
+      p.lender_id === lender.id &&
+      p.loan_type === loanType &&
       p.term === term
     );
 
@@ -155,7 +136,7 @@ export async function checkEligibility(scenario) {
 
     // FICO check against product minimums
     if (lenderProducts.length > 0) {
-      const ficoMins = lenderProducts.map(p => Number(p.ficoMin ?? 0)).filter(v => v > 0);
+      const ficoMins = lenderProducts.map(p => Number(p.fico_min ?? 0)).filter(v => v > 0);
       if (ficoMins.length > 0) {
         const minFico = Math.min(...ficoMins);
         if (creditScore < minFico) {
@@ -166,7 +147,7 @@ export async function checkEligibility(scenario) {
 
     // LTV check
     if (lenderProducts.length > 0) {
-      const maxLtv = Math.max(...lenderProducts.map(p => Number(p.maxLtv ?? 100)));
+      const maxLtv = Math.max(...lenderProducts.map(p => Number(p.max_ltv ?? 100)));
       if (maxLtv < 100 && ltv > maxLtv) {
         reasons.push(`LTV ${ltv}% exceeds maximum ${maxLtv}%`);
       }
@@ -175,8 +156,8 @@ export async function checkEligibility(scenario) {
     // Loan amount range
     if (lenderProducts.length > 0) {
       const hasInRange = lenderProducts.some(p => {
-        const min = Number(p.loanAmountMin ?? 0);
-        const max = Number(p.loanAmountMax ?? 999999999);
+        const min = Number(p.loan_amount_min ?? 0);
+        const max = Number(p.loan_amount_max ?? 999999999);
         return loanAmount > min && loanAmount <= max;
       });
       if (!hasInRange && lenderProducts.length > 0) {

@@ -72,7 +72,7 @@ export default function PayrollSection({ loan }) {
   const [dragOver, setDragOver] = useState(false);
   const [relatedLoans, setRelatedLoans] = useState(loan?.relatedLoans || []);
   const [nicknameConfirmed, setNicknameConfirmed] = useState(false);
-  const [unmatchedPersons, setUnmatchedPersons] = useState([]); // { firstName, lastName, role, email, phone, saveAsContact }
+  const [unmatchedPersons, setUnmatchedPersons] = useState([]); // { first_name, last_name, role, email, phone, saveAsContact }
   const [payrollDetails, setPayrollDetails] = useState(null);
   const [showStartOver, setShowStartOver] = useState(false);
   const [reimbursements, setReimbursements] = useState([]); // { label, payee, amount, editedAmount, selected }
@@ -267,33 +267,33 @@ export default function PayrollSection({ loan }) {
     : 'Processing...';
 
   // ─── Build comparison rows for review phase ───────────────
-  const fullAddress = loan.propertyAddress
-    ? `${loan.propertyAddress.street}, ${loan.propertyAddress.city}, ${loan.propertyAddress.state} ${loan.propertyAddress.zipCode}`
+  const fullAddress = loan.property_address
+    ? `${loan.property_address.street}, ${loan.property_address.city}, ${loan.property_address.state} ${loan.property_address.zipCode}`
     : null;
 
   const comparisonRows = isExtracted ? [
-    { label: 'Loan Amount', ...compareValues(extraction.data.loanAmount, loan.loanAmount, 'currency') },
-    { label: 'Interest Rate', ...compareValues(extraction.data.interestRate, loan.interestRate ? Number(loan.interestRate) : null, 'rate') },
+    { label: 'Loan Amount', ...compareValues(extraction.data.loan_amount, loan.loan_amount, 'currency') },
+    { label: 'Interest Rate', ...compareValues(extraction.data.interest_rate, loan.interest_rate ? Number(loan.interest_rate) : null, 'rate') },
     { label: 'Monthly P&I', ...compareValues(extraction.data.monthlyPI, loan.monthlyPayment, 'currency') },
-    { label: 'Loan Term', ...compareValues(extraction.data.loanTerm ? `${extraction.data.loanTerm} mo` : null, loan.loanTerm ? `${loan.loanTerm} mo` : null, 'text') },
+    { label: 'Loan Term', ...compareValues(extraction.data.loan_term ? `${extraction.data.loan_term} mo` : null, loan.loan_term ? `${loan.loan_term} mo` : null, 'text') },
     { label: 'Broker Compensation', ...compareValues(extraction.data.brokerCompensation, loan.brokerCompensation, 'currency') },
     { label: 'Total Closing Costs', ...compareValues(extraction.data.totalClosingCosts, loan.totalClosingCosts, 'currency') },
     { label: 'Cash to Close', ...compareValues(extraction.data.cashToClose, loan.cashToClose, 'currency') },
     { label: 'Lender Credits', ...compareValues(extraction.data.lenderCredits, loan.lenderCredits, 'currency') },
-    { label: 'Lender', ...compareValues(extraction.data.lenderName, loan.lenderName, 'text') },
-    { label: 'Loan Number', ...compareValues(extraction.data.loanNumber, loan.loanNumber, 'text') },
+    { label: 'Lender', ...compareValues(extraction.data.lender_name, loan.lender_name, 'text') },
+    { label: 'Loan Number', ...compareValues(extraction.data.loan_number, loan.loan_number, 'text') },
     { label: 'Borrower', ...(() => {
       // Handle both array (new) and string (old) format from extraction
       const cdNames = Array.isArray(extraction.data.borrowerNames)
-        ? extraction.data.borrowerNames.map(n => `${n.firstName} ${n.lastName}`).join(', ')
+        ? extraction.data.borrowerNames.map(n => `${n.first_name} ${n.last_name}`).join(', ')
         : extraction.data.borrowerNames;
-      const onFile = loan.borrower ? `${loan.borrower.firstName} ${loan.borrower.lastName}` : null;
+      const onFile = loan.borrower ? `${loan.borrower.first_name} ${loan.borrower.last_name}` : null;
       return compareValues(cdNames, onFile, 'text');
     })() },
-    { label: 'Property', ...compareValues(extraction.data.propertyAddress, fullAddress, 'text') },
-    { label: 'Closing Date', ...compareValues(extraction.data.closingDate, loan.closingDate?.split('T')[0] || null, 'text') },
-    { label: 'Funding Date', ...compareValues(extraction.data.disbursementDate, loan.fundingDate?.split('T')[0] || null, 'text') },
-    { label: 'Loan Type', ...compareValues(extraction.data.loanType, loan.loanType, 'text') },
+    { label: 'Property', ...compareValues(extraction.data.property_address, fullAddress, 'text') },
+    { label: 'Closing Date', ...compareValues(extraction.data.closing_date, loan.closing_date?.split('T')[0] || null, 'text') },
+    { label: 'Funding Date', ...compareValues(extraction.data.disbursementDate, loan.funding_date?.split('T')[0] || null, 'text') },
+    { label: 'Loan Type', ...compareValues(extraction.data.loan_type, loan.loan_type, 'text') },
   ] : [];
 
   // Detect unmatched persons from CD — people on the CD but not on the loan
@@ -302,32 +302,32 @@ export default function PayrollSection({ loan }) {
   const knownNames = new Set();
   if (loan.borrower) {
     const norm = (s) => (s || '').toLowerCase().trim();
-    knownNames.add(`${norm(loan.borrower.firstName)}|${norm(loan.borrower.lastName)}`);
+    knownNames.add(`${norm(loan.borrower.first_name)}|${norm(loan.borrower.last_name)}`);
     // Also match legal name if set
-    if (loan.borrower.legalFirstName) {
-      knownNames.add(`${norm(loan.borrower.legalFirstName)}|${norm(loan.borrower.legalLastName || loan.borrower.lastName)}`);
+    if (loan.borrower.legal_first_name) {
+      knownNames.add(`${norm(loan.borrower.legal_first_name)}|${norm(loan.borrower.legal_last_name || loan.borrower.last_name)}`);
     }
   }
   // If nickname confirmed, the first CD person IS the primary borrower (legal name)
   if (nicknameConfirmed && cdPersons.length > 0) {
     const norm = (s) => (s || '').toLowerCase().trim();
-    knownNames.add(`${norm(cdPersons[0].firstName)}|${norm(cdPersons[0].lastName)}`);
+    knownNames.add(`${norm(cdPersons[0].first_name)}|${norm(cdPersons[0].last_name)}`);
   }
   // TODO: also check existing loanBorrowers for co-borrowers already on file
   const detectedUnmatched = cdPersons.filter(p => {
-    const key = `${(p.firstName || '').toLowerCase().trim()}|${(p.lastName || '').toLowerCase().trim()}`;
+    const key = `${(p.first_name || '').toLowerCase().trim()}|${(p.last_name || '').toLowerCase().trim()}`;
     return !knownNames.has(key);
   });
 
   // Initialize or update unmatched state when detection changes
-  const unmatchedKey = detectedUnmatched.map(p => `${p.firstName}|${p.lastName}`).join(',');
+  const unmatchedKey = detectedUnmatched.map(p => `${p.first_name}|${p.last_name}`).join(',');
   if (isExtracted && !isApproved) {
-    const currentKey = unmatchedPersons.map(p => `${p.firstName}|${p.lastName}`).join(',');
+    const currentKey = unmatchedPersons.map(p => `${p.first_name}|${p.last_name}`).join(',');
     if (unmatchedKey !== currentKey) {
       setTimeout(() => {
         setUnmatchedPersons(detectedUnmatched.map(p => ({
-          firstName: p.firstName,
-          lastName: p.lastName,
+          first_name: p.first_name,
+          last_name: p.last_name,
           role: '', // 'co_borrower' or 'nbs'
           email: '',
           phone: '',
@@ -391,15 +391,15 @@ export default function PayrollSection({ loan }) {
             <div className="space-y-1.5 ml-7">
               {relatedLoans.map((rl) => (
                 <div key={rl.id} className="flex items-center gap-2 text-xs text-amber-700">
-                  <span className="font-mono">{rl.loanNumber || '—'}</span>
+                  <span className="font-mono">{rl.loan_number || '—'}</span>
                   <span className="text-amber-400">|</span>
-                  <span>{rl.lenderName || 'No lender'}</span>
+                  <span>{rl.lender_name || 'No lender'}</span>
                   <span className="text-amber-400">|</span>
                   <span className="capitalize">{rl.status}</span>
-                  {rl.loanAmount && (
+                  {rl.loan_amount && (
                     <>
                       <span className="text-amber-400">|</span>
-                      <span>${Number(rl.loanAmount).toLocaleString()}</span>
+                      <span>${Number(rl.loan_amount).toLocaleString()}</span>
                     </>
                   )}
                 </div>
@@ -655,19 +655,19 @@ export default function PayrollSection({ loan }) {
                 ? extraction.data.borrowerNames
                 : null;
               if (!cdNames || cdNames.length === 0) return null;
-              const onFileFirst = loan.borrower.firstName?.toLowerCase();
-              const onFileLast = loan.borrower.lastName?.toLowerCase();
+              const onFileFirst = loan.borrower.first_name?.toLowerCase();
+              const onFileLast = loan.borrower.last_name?.toLowerCase();
               const primaryCd = cdNames[0];
-              const cdFirst = primaryCd.firstName?.toLowerCase();
-              const cdLast = primaryCd.lastName?.toLowerCase();
+              const cdFirst = primaryCd.first_name?.toLowerCase();
+              const cdLast = primaryCd.last_name?.toLowerCase();
               // Same last name but different first name = likely nickname
               if (cdLast === onFileLast && cdFirst !== onFileFirst) {
                 return (
                   <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
                     <p className="text-sm font-medium text-blue-800 mb-1">Name mismatch detected</p>
                     <p className="text-xs text-blue-700">
-                      CD shows <span className="font-semibold">{primaryCd.firstName} {primaryCd.lastName}</span> but
-                      loan has <span className="font-semibold">{loan.borrower.firstName} {loan.borrower.lastName}</span>.
+                      CD shows <span className="font-semibold">{primaryCd.first_name} {primaryCd.last_name}</span> but
+                      loan has <span className="font-semibold">{loan.borrower.first_name} {loan.borrower.last_name}</span>.
                     </p>
                     <label className="mt-2 flex items-center gap-2 cursor-pointer">
                       <input
@@ -677,8 +677,8 @@ export default function PayrollSection({ loan }) {
                         className="rounded border-blue-300 text-blue-600 focus:ring-blue-500"
                       />
                       <span className="text-xs text-blue-700">
-                        Yes, <span className="font-semibold">{loan.borrower.firstName}</span> is a nickname
-                        for <span className="font-semibold">{primaryCd.firstName}</span>
+                        Yes, <span className="font-semibold">{loan.borrower.first_name}</span> is a nickname
+                        for <span className="font-semibold">{primaryCd.first_name}</span>
                       </span>
                     </label>
                   </div>
@@ -699,7 +699,7 @@ export default function PayrollSection({ loan }) {
                 {unmatchedPersons.map((person, idx) => (
                   <div key={idx} className="bg-white rounded-lg border border-purple-100 px-4 py-3 space-y-2">
                     <p className="text-sm font-medium text-gray-900">
-                      {person.firstName} {person.lastName}
+                      {person.first_name} {person.last_name}
                     </p>
                     <div className="flex gap-2">
                       <button
@@ -849,16 +849,16 @@ export default function PayrollSection({ loan }) {
                   Verified CD Data
                 </p>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                  {extraction.data.loanAmount != null && (
+                  {extraction.data.loan_amount != null && (
                     <div className="flex justify-between">
                       <span className="text-gray-500">Loan Amount</span>
-                      <span className="text-gray-800 font-medium">{formatCurrency(extraction.data.loanAmount)}</span>
+                      <span className="text-gray-800 font-medium">{formatCurrency(extraction.data.loan_amount)}</span>
                     </div>
                   )}
-                  {extraction.data.interestRate != null && (
+                  {extraction.data.interest_rate != null && (
                     <div className="flex justify-between">
                       <span className="text-gray-500">Rate</span>
-                      <span className="text-gray-800 font-medium">{formatRate(extraction.data.interestRate)}</span>
+                      <span className="text-gray-800 font-medium">{formatRate(extraction.data.interest_rate)}</span>
                     </div>
                   )}
                   {extraction.data.brokerCompensation != null && (
@@ -975,11 +975,11 @@ export default function PayrollSection({ loan }) {
                     <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                       <div className="flex justify-between">
                         <span className="text-gray-500">Borrower</span>
-                        <span className="text-gray-800 font-medium">{payrollDetails.trackerPayload.borrowerName}</span>
+                        <span className="text-gray-800 font-medium">{payrollDetails.trackerPayload.borrower_name}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Loan #</span>
-                        <span className="text-gray-800 font-medium">{payrollDetails.trackerPayload.loanNumber}</span>
+                        <span className="text-gray-800 font-medium">{payrollDetails.trackerPayload.loan_number}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Lender</span>
@@ -987,11 +987,11 @@ export default function PayrollSection({ loan }) {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Amount</span>
-                        <span className="text-gray-800 font-medium">{formatCurrency(payrollDetails.trackerPayload.loanAmount)}</span>
+                        <span className="text-gray-800 font-medium">{formatCurrency(payrollDetails.trackerPayload.loan_amount)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Rate</span>
-                        <span className="text-gray-800 font-medium">{formatRate(payrollDetails.trackerPayload.interestRate)}</span>
+                        <span className="text-gray-800 font-medium">{formatRate(payrollDetails.trackerPayload.interest_rate)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Gross Comp</span>
@@ -999,11 +999,11 @@ export default function PayrollSection({ loan }) {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Closing</span>
-                        <span className="text-gray-800 font-medium">{payrollDetails.trackerPayload.closingDate}</span>
+                        <span className="text-gray-800 font-medium">{payrollDetails.trackerPayload.closing_date}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Funding</span>
-                        <span className="text-gray-800 font-medium">{payrollDetails.trackerPayload.fundingDate}</span>
+                        <span className="text-gray-800 font-medium">{payrollDetails.trackerPayload.funding_date}</span>
                       </div>
                     </div>
                   </div>

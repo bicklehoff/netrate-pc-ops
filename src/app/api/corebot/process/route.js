@@ -9,7 +9,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 import { processLoanDocuments } from '@/lib/corebot/processor';
 
 export async function POST(request) {
@@ -25,13 +25,17 @@ export async function POST(request) {
     }
 
     // Verify MLO owns this loan
-    const loan = await prisma.loan.findUnique({ where: { id: loanId } });
+    const loanRows = await sql`
+      SELECT * FROM "Loan" WHERE id = ${loanId} LIMIT 1
+    `;
+    const loan = loanRows[0];
+
     if (!loan) {
       return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
     }
 
     const isAdmin = session.user.role === 'admin';
-    if (!isAdmin && loan.mloId !== session.user.id) {
+    if (!isAdmin && loan.mlo_id !== session.user.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 

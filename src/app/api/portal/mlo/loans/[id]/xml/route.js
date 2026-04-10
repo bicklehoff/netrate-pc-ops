@@ -8,33 +8,73 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 import { decrypt } from '@/lib/encryption';
 import { put } from '@vercel/blob';
 import { buildMismoXml } from '@/lib/mismo-builder';
 
 // Fetch full loan with all 1003 relations
 async function fetchFullLoan(id) {
-  return prisma.loan.findUnique({
-    where: { id },
-    include: {
-      borrower: true,
-      mlo: { select: { id: true, firstName: true, lastName: true, email: true, nmls: true } },
-      loanBorrowers: {
-        orderBy: { ordinal: 'asc' },
-        include: {
-          borrower: true,
-          employments: { orderBy: { isPrimary: 'desc' } },
-          income: true,
-          declaration: true,
-        },
-      },
-      assets: { orderBy: { createdAt: 'asc' } },
-      liabilities: { orderBy: { createdAt: 'asc' } },
-      reos: { orderBy: { createdAt: 'asc' } },
-      transaction: true,
+  const loanRows = await sql`SELECT * FROM loans WHERE id = ${id} LIMIT 1`;
+  const loan = loanRows[0];
+  if (!loan) return null;
+
+  // Borrower
+  const borrowerRows = loan.borrower_id
+    ? await sql`SELECT * FROM borrowers WHERE id = ${loan.borrower_id} LIMIT 1`
+    : [];
+
+  // MLO
+  const mloRows = loan.mlo_id
+    ? await sql`SELECT id, first_name, last_name, email, nmls FROM mlos WHERE id = ${loan.mlo_id} LIMIT 1`
+    : [];
+
+  // LoanBorrowers with sub-models
+  const loanBorrowers = await sql`
+    SELECT lb.*, b.id AS b_id, b.first_name AS b_first_name, b.last_name AS b_last_name,
+           b.email AS b_email, b.phone AS b_phone, b.ssn_encrypted AS b_ssn_encrypted,
+           b.dob_encrypted AS b_dob_encrypted
+    FROM loan_borrowers lb
+    LEFT JOIN borrowers b ON b.id = lb.borrower_id
+    WHERE lb.loan_id = ${id}
+    ORDER BY lb.ordinal ASC
+  `;
+
+  const lbIds = loanBorrowers.map(lb => lb.id);
+  let employments = [];
+  let incomes = [];
+  let declarations = [];
+  if (lbIds.length > 0) {
+    employments = await sql`SELECT * FROM loan_employments WHERE loan_borrower_id = ANY(${lbIds}) ORDER BY is_primary DESC`;
+    incomes = await sql`SELECT * FROM loan_incomes WHERE loan_borrower_id = ANY(${lbIds})`;
+    declarations = await sql`SELECT * FROM loan_declarations WHERE loan_borrower_id = ANY(${lbIds})`;
+  }
+
+  const assets = await sql`SELECT * FROM loan_assets WHERE loan_id = ${id} ORDER BY created_at ASC`;
+  const liabilities = await sql`SELECT * FROM loan_liabilities WHERE loan_id = ${id} ORDER BY created_at ASC`;
+  const reos = await sql`SELECT * FROM loan_reos WHERE loan_id = ${id} ORDER BY created_at ASC`;
+  const transactionRows = await sql`SELECT * FROM loan_transactions WHERE loan_id = ${id} LIMIT 1`;
+
+  // Assemble into a loan-like object
+  loan.borrower = borrowerRows[0] || null;
+  loan.mlo = mloRows[0] || null;
+  loan.loanBorrowers = loanBorrowers.map(lb => ({
+    ...lb,
+    borrower: {
+      id: lb.b_id, first_name: lb.b_first_name, last_name: lb.b_last_name,
+      email: lb.b_email, phone: lb.b_phone,
+      ssnEncrypted: lb.b_ssn_encrypted, dobEncrypted: lb.b_dob_encrypted,
     },
-  });
+    employments: employments.filter(e => e.loan_borrower_id === lb.id),
+    income: incomes.find(i => i.loan_borrower_id === lb.id) || null,
+    declaration: declarations.find(d => d.loan_borrower_id === lb.id) || null,
+  }));
+  loan.assets = assets;
+  loan.liabilities = liabilities;
+  loan.reos = reos;
+  loan.transaction = transactionRows[0] || null;
+
+  return loan;
 }
 
 // Decrypt PII for all borrowers
@@ -48,7 +88,7 @@ function decryptBorrowers(loan) {
     try {
       if (borr.ssnEncrypted) ssn = decrypt(borr.ssnEncrypted);
       if (borr.dobEncrypted) dob = decrypt(borr.dobEncrypted);
-      if (lb.dobEncrypted) dob = decrypt(lb.dobEncrypted) || dob;
+      if (lb.dob_encrypted) dob = decrypt(lb.dob_encrypted) || dob;
     } catch {
       // Decryption fail — leave blank
     }
@@ -57,44 +97,24 @@ function decryptBorrowers(loan) {
   return result;
 }
 
-// Serialize decimals for the loan object
-function serializeDecimals(obj) {
-  if (!obj) return null;
-  const result = { ...obj };
-  for (const [key, val] of Object.entries(result)) {
-    if (val && typeof val === 'object' && typeof val.toNumber === 'function') {
-      result[key] = Number(val);
-    }
-  }
-  return result;
-}
-
+// Serialize decimal strings to numbers
 function serializeLoan(loan) {
-  return {
-    ...loan,
-    loanAmount: loan.loanAmount ? Number(loan.loanAmount) : null,
-    interestRate: loan.interestRate ? Number(loan.interestRate) : null,
-    purchasePrice: loan.purchasePrice ? Number(loan.purchasePrice) : null,
-    estimatedValue: loan.estimatedValue ? Number(loan.estimatedValue) : null,
-    armMargin: loan.armMargin ? Number(loan.armMargin) : null,
-    armInitialCap: loan.armInitialCap ? Number(loan.armInitialCap) : null,
-    armPeriodicCap: loan.armPeriodicCap ? Number(loan.armPeriodicCap) : null,
-    armLifetimeCap: loan.armLifetimeCap ? Number(loan.armLifetimeCap) : null,
-    loanBorrowers: (loan.loanBorrowers || []).map((lb) => ({
-      ...lb,
-      monthlyRent: lb.monthlyRent ? Number(lb.monthlyRent) : null,
-      income: serializeDecimals(lb.income),
-      employments: (lb.employments || []).map(serializeDecimals),
-    })),
-    assets: (loan.assets || []).map(serializeDecimals),
-    liabilities: (loan.liabilities || []).map(serializeDecimals),
-    reos: (loan.reos || []).map(serializeDecimals),
-    transaction: serializeDecimals(loan.transaction),
-  };
+  const DECIMAL_FIELDS = [
+    'loan_amount', 'interest_rate', 'purchase_price', 'estimated_value',
+    'arm_margin', 'arm_initial_cap', 'arm_periodic_cap', 'arm_lifetime_cap',
+  ];
+  const serialized = { ...loan };
+  for (const f of DECIMAL_FIELDS) {
+    if (serialized[f] != null) serialized[f] = Number(serialized[f]);
+  }
+  serialized.loanBorrowers = (loan.loanBorrowers || []).map((lb) => ({
+    ...lb,
+    monthly_rent: lb.monthly_rent ? Number(lb.monthly_rent) : null,
+  }));
+  return serialized;
 }
 
 // ─── GET: Download XML (no snapshot) ──────────────────────
-
 export async function GET(request, { params }) {
   try {
     const session = await getServerSession(authOptions);
@@ -114,20 +134,16 @@ export async function GET(request, { params }) {
     const xml = buildMismoXml(serialized, { decryptedBorrowers });
 
     const borrowerName = loan.borrower
-      ? `${loan.borrower.lastName}_${loan.borrower.firstName}`.replace(/\s+/g, '_')
+      ? `${loan.borrower.last_name}_${loan.borrower.first_name}`.replace(/\s+/g, '_')
       : 'export';
-    const filename = `${borrowerName}_${loan.loanNumber || id.substring(0, 8)}.xml`;
+    const filename = `${borrowerName}_${loan.loan_number || id.substring(0, 8)}.xml`;
 
     // Audit event
-    await prisma.loanEvent.create({
-      data: {
-        loanId: id,
-        eventType: 'xml_export',
-        actorType: 'mlo',
-        actorId: session.user.id,
-        details: { action: 'download', format: 'MISMO_3.4' },
-      },
-    });
+    await sql`
+      INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, details, created_at)
+      VALUES (gen_random_uuid(), ${id}, 'xml_export', 'mlo', ${session.user.id},
+              ${JSON.stringify({ action: 'download', format: 'MISMO_3.4' })}, NOW())
+    `;
 
     return new NextResponse(xml, {
       status: 200,
@@ -143,7 +159,6 @@ export async function GET(request, { params }) {
 }
 
 // ─── POST: Export + Snapshot (save to Blob + create Document) ──
-
 export async function POST(request, { params }) {
   try {
     const session = await getServerSession(authOptions);
@@ -166,66 +181,43 @@ export async function POST(request, { params }) {
     const xml = buildMismoXml(serialized, { decryptedBorrowers });
 
     const borrowerName = loan.borrower
-      ? `${loan.borrower.lastName}_${loan.borrower.firstName}`.replace(/\s+/g, '_')
+      ? `${loan.borrower.last_name}_${loan.borrower.first_name}`.replace(/\s+/g, '_')
       : 'export';
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const filename = `${borrowerName}_${loan.loanNumber || id.substring(0, 8)}_${timestamp}.xml`;
+    const filename = `${borrowerName}_${loan.loan_number || id.substring(0, 8)}_${timestamp}.xml`;
 
-    // ─── Save to Vercel Blob (immutable snapshot) ─────────
+    // Save to Vercel Blob (immutable snapshot)
     const blob = await put(
       `loans/${id}/submissions/${filename}`,
       xml,
       { access: 'public', contentType: 'application/xml', addRandomSuffix: true }
     );
 
-    // ─── Create LoanDocument record ───────────────────────
-    const doc = await prisma.document.create({
-      data: {
-        loanId: id,
-        docType: 'submission_package',
-        label: `Submission Package${lender ? ` — ${lender}` : ''} (${new Date().toLocaleDateString('en-US')})`,
-        status: 'uploaded',
-        fileUrl: blob.url,
-        fileName: filename,
-        fileSize: Buffer.byteLength(xml, 'utf-8'),
-        uploadedAt: new Date(),
-        requestedById: session.user.id,
-        notes: JSON.stringify({
-          format: 'MISMO_3.4',
-          lender,
-          exportedBy: session.user.id,
-          exportDate: new Date().toISOString(),
-          borrowerCount: (loan.loanBorrowers || []).length,
-          snapshotType: 'submission_package',
-        }),
-      },
-    });
+    // Create Document record
+    const docRows = await sql`
+      INSERT INTO documents (id, loan_id, doc_type, label, status, file_url, file_name, file_size, uploaded_at, requested_by, notes, created_at)
+      VALUES (gen_random_uuid(), ${id}, 'submission_package',
+              ${`Submission Package${lender ? ` — ${lender}` : ''} (${new Date().toLocaleDateString('en-US')})`},
+              'uploaded', ${blob.url}, ${filename}, ${Buffer.byteLength(xml, 'utf-8')}, NOW(), ${session.user.id},
+              ${JSON.stringify({ format: 'MISMO_3.4', lender, exportedBy: session.user.id, exportDate: new Date().toISOString(), borrowerCount: (loan.loanBorrowers || []).length, snapshotType: 'submission_package' })},
+              NOW())
+      RETURNING *
+    `;
+    const doc = docRows[0];
 
-    // ─── Audit event ──────────────────────────────────────
-    await prisma.loanEvent.create({
-      data: {
-        loanId: id,
-        eventType: 'xml_export',
-        actorType: 'mlo',
-        actorId: session.user.id,
-        newValue: JSON.stringify({
-          documentId: doc.id,
-          blobUrl: blob.url,
-          lender,
-        }),
-        details: {
-          action: 'submission_snapshot',
-          format: 'MISMO_3.4',
-          lender,
-          filename,
-        },
-      },
-    });
+    // Audit event
+    await sql`
+      INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, new_value, details, created_at)
+      VALUES (gen_random_uuid(), ${id}, 'xml_export', 'mlo', ${session.user.id},
+              ${JSON.stringify({ documentId: doc.id, blobUrl: blob.url, lender })},
+              ${JSON.stringify({ action: 'submission_snapshot', format: 'MISMO_3.4', lender, filename })},
+              NOW())
+    `;
 
     return NextResponse.json({
       success: true,
-      documentId: doc.id,
-      blobUrl: blob.url,
+      document_id: doc.id,
+      blob_url: blob.url,
       filename,
       lender,
     });

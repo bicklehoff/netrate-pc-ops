@@ -4,7 +4,7 @@
 
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 
 export async function POST(req, { params }) {
   try {
@@ -21,29 +21,21 @@ export async function POST(req, { params }) {
       return Response.json({ error: 'Note content is required' }, { status: 400 });
     }
 
-    const contact = await prisma.contact.findUnique({ where: { id } });
-    if (!contact) {
+    const contactRows = await sql`SELECT id FROM contacts WHERE id = ${id} LIMIT 1`;
+    if (!contactRows[0]) {
       return Response.json({ error: 'Contact not found' }, { status: 404 });
     }
 
-    const note = await prisma.contactNote.create({
-      data: {
-        contactId: id,
-        content: content.trim(),
-        title: title || null,
-        authorType: 'mlo',
-        authorId: session.user.id,
-        source: 'manual',
-      },
-    });
+    const noteRows = await sql`
+      INSERT INTO contact_notes (contact_id, content, title, author_type, author_id, source, created_at)
+      VALUES (${id}, ${content.trim()}, ${title || null}, 'mlo', ${session.user.id}, 'manual', NOW())
+      RETURNING *
+    `;
 
     // Update lastContactedAt
-    await prisma.contact.update({
-      where: { id },
-      data: { lastContactedAt: new Date() },
-    });
+    await sql`UPDATE contacts SET last_contacted_at = NOW(), updated_at = NOW() WHERE id = ${id}`;
 
-    return Response.json({ success: true, note }, { status: 201 });
+    return Response.json({ success: true, note: noteRows[0] }, { status: 201 });
   } catch (error) {
     console.error('Add contact note error:', error?.message);
     return Response.json({ error: 'Failed to add note' }, { status: 500 });

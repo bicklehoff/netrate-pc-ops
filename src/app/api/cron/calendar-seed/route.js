@@ -18,7 +18,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 
 const FRED_BASE = 'https://api.stlouisfed.org/fred/release/dates';
 
@@ -84,21 +84,14 @@ export async function GET(request) {
 
       for (const dateStr of dates) {
         // Upsert: create skeleton event; never overwrite Claw-owned fields (actual, result, forecast, prior)
-        await prisma.economicCalendarEvent.upsert({
-          where: { date_name: { date: new Date(dateStr), name: release.name } },
-          create: {
-            date:   new Date(dateStr),
-            name:   release.name,
-            time:   release.time,
-            big:    release.big,
-            source: 'fred-calendar',
-          },
-          update: {
-            // Only update schedule metadata — never Claw's data fields
-            time:   release.time,
-            big:    release.big,
-          },
-        });
+        await sql`
+          INSERT INTO economic_calendar_events (date, name, time, big, source, updated_at)
+          VALUES (${new Date(dateStr)}, ${release.name}, ${release.time}, ${release.big}, 'fred-calendar', NOW())
+          ON CONFLICT (date, name) DO UPDATE SET
+            time = EXCLUDED.time,
+            big = EXCLUDED.big,
+            updated_at = NOW()
+        `;
         seeded++;
       }
 

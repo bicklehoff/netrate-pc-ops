@@ -12,7 +12,7 @@ function formatScenarioSummary(scenario) {
     purposeLabels[scenario.purpose] || scenario.purpose,
     scenario.fico ? `${scenario.fico} FICO` : null,
     scenario.ltv ? `${Math.round(scenario.ltv)}% LTV` : null,
-    scenario.loanAmount ? `$${Math.round(scenario.loanAmount).toLocaleString()} loan` : null,
+    scenario.loan_amount ? `$${Math.round(scenario.loan_amount).toLocaleString()} loan` : null,
   ].filter(Boolean);
   return parts.length ? `Rate Tool Quote — ${parts.join(', ')}` : 'Rate Tool Quote';
 }

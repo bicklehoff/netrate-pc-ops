@@ -5,7 +5,7 @@
 
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 
 export async function GET(req) {
   const session = await getServerSession(authOptions);
@@ -18,51 +18,48 @@ export async function GET(req) {
 
   try {
     // Get all SMS messages with contact info, ordered by most recent
-    const messages = await prisma.smsMessage.findMany({
-      orderBy: { sentAt: 'desc' },
-      include: {
-        contact: {
-          select: { id: true, firstName: true, lastName: true, phone: true },
-        },
-      },
-    });
+    const messages = await sql`
+      SELECT sm.*, c.id AS c_id, c.first_name AS c_first_name, c.last_name AS c_last_name, c.phone AS c_phone
+      FROM sms_messages sm
+      LEFT JOIN contacts c ON sm.contact_id = c.id
+      ORDER BY sm.sent_at DESC
+    `;
 
     // Group by contact (or by phone number if no contact)
     const threadMap = new Map();
 
     for (const msg of messages) {
-      // Determine the thread key: contactId if available, otherwise the other party's phone
-      const otherPhone = msg.direction === 'inbound' ? msg.fromNumber : msg.toNumber;
-      const key = msg.contactId || otherPhone;
+      // Determine the thread key: contact_id if available, otherwise the other party's phone
+      const otherPhone = msg.direction === 'inbound' ? msg.from_number : msg.to_number;
+      const key = msg.contact_id || otherPhone;
 
       if (!threadMap.has(key)) {
         threadMap.set(key, {
-          contactId: msg.contactId,
-          contactName: msg.contact
-            ? `${msg.contact.firstName} ${msg.contact.lastName}`.trim()
+          contact_id: msg.contact_id,
+          contact_name: msg.c_first_name
+            ? `${msg.c_first_name} ${msg.c_last_name}`.trim()
             : null,
-          phone: msg.contact?.phone || otherPhone,
-          lastMessage: msg.body,
-          lastMessageAt: msg.sentAt,
-          lastDirection: msg.direction,
+          phone: msg.c_phone || otherPhone,
+          last_message: msg.body,
+          last_message_at: msg.sent_at,
+          last_direction: msg.direction,
           unread: 0,
-          messageCount: 0,
+          message_count: 0,
         });
       }
 
       const thread = threadMap.get(key);
-      thread.messageCount++;
+      thread.message_count++;
 
       // Count inbound messages that are newer than any outbound as "unread" (simple heuristic)
-      if (msg.direction === 'inbound' && thread.messageCount <= 5) {
-        // Check if this inbound message is more recent than the latest outbound in this thread
+      if (msg.direction === 'inbound' && thread.message_count <= 5) {
         thread.unread++;
       }
     }
 
     // Convert to array and sort by most recent
     let threads = Array.from(threadMap.values()).sort(
-      (a, b) => new Date(b.lastMessageAt) - new Date(a.lastMessageAt)
+      (a, b) => new Date(b.last_message_at) - new Date(a.last_message_at)
     );
 
     // Search filter
@@ -70,9 +67,9 @@ export async function GET(req) {
       const lower = q.toLowerCase();
       threads = threads.filter(
         (t) =>
-          t.contactName?.toLowerCase().includes(lower) ||
+          t.contact_name?.toLowerCase().includes(lower) ||
           t.phone?.includes(q) ||
-          t.lastMessage?.toLowerCase().includes(lower)
+          t.last_message?.toLowerCase().includes(lower)
       );
     }
 

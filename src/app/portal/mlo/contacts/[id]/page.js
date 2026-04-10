@@ -70,7 +70,7 @@ export default function ContactDetailPage() {
 
   // Lead creation modal
   const [showLeadModal, setShowLeadModal] = useState(false);
-  const [leadForm, setLeadForm] = useState({ loanPurpose: '', propertyState: '', notes: '' });
+  const [leadForm, setLeadForm] = useState({ loan_purpose: '', property_state: '', notes: '' });
   const [creatingLead, setCreatingLead] = useState(false);
 
   // Action modals
@@ -210,19 +210,19 @@ export default function ContactDetailPage() {
       type: n.source === 'email' ? 'email' : n.source === 'zoho_import' ? 'import' : 'note',
       content: n.content,
       title: n.title,
-      date: n.createdAt,
+      date: n.created_at,
       actor: n.authorType,
     })),
     ...(contact.callLogs || []).map(c => ({
       type: 'call',
       content: `${c.direction === 'inbound' ? 'Inbound' : 'Outbound'} call — ${c.status}${c.duration ? ` (${Math.ceil(c.duration / 60)}min)` : ''}${c.notes?.[0]?.content ? `: ${c.callNotes[0].content}` : ''}`,
-      date: c.startedAt,
+      date: c.started_at,
       actor: 'mlo',
     })),
     ...(contact.smsMessages || []).map(s => ({
       type: 'sms',
       content: s.body,
-      date: s.sentAt,
+      date: s.sent_at,
       actor: s.direction === 'inbound' ? 'borrower' : 'mlo',
     })),
   ].sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -242,11 +242,11 @@ export default function ContactDetailPage() {
             </svg>
           </button>
           <div className="w-12 h-12 bg-brand/10 text-brand rounded-full flex items-center justify-center text-lg font-semibold">
-            {contact.firstName?.[0]}{contact.lastName?.[0]}
+            {contact.first_name?.[0]}{contact.last_name?.[0]}
           </div>
           <div>
             <h1 className="text-xl font-bold text-gray-900">
-              {contact.firstName} {contact.lastName}
+              {contact.first_name} {contact.last_name}
             </h1>
             <div className="flex items-center gap-2 mt-0.5">
               <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[contact.status] || STATUS_COLORS.subscriber}`}>
@@ -254,7 +254,7 @@ export default function ContactDetailPage() {
               </span>
               {contact.assignedMlo && (
                 <span className="text-xs text-gray-500">
-                  MLO: {contact.assignedMlo.firstName} {contact.assignedMlo.lastName}
+                  MLO: {contact.assignedMlo.first_name} {contact.assignedMlo.last_name}
                 </span>
               )}
               {saving && <span className="text-xs text-gray-400">Saving...</span>}
@@ -344,22 +344,22 @@ export default function ContactDetailPage() {
                   </div>
                 </div>
               )}
-              {contact.dateOfBirth && (
+              {contact.date_of_birth && (
                 <div>
                   <span className="text-gray-500 text-xs">DOB</span>
-                  <div className="font-medium">{formatDate(contact.dateOfBirth)}</div>
+                  <div className="font-medium">{formatDate(contact.date_of_birth)}</div>
                 </div>
               )}
-              {contact.coBorrowerName && (
+              {contact.co_borrower_name && (
                 <>
                   <div>
                     <span className="text-gray-500 text-xs">Co-Borrower</span>
-                    <div className="font-medium">{contact.coBorrowerName}</div>
+                    <div className="font-medium">{contact.co_borrower_name}</div>
                   </div>
-                  {contact.coBorrowerEmail && (
+                  {contact.co_borrower_email && (
                     <div>
                       <span className="text-gray-500 text-xs">Co-Borrower Email</span>
-                      <div className="font-medium">{contact.coBorrowerEmail}</div>
+                      <div className="font-medium">{contact.co_borrower_email}</div>
                     </div>
                   )}
                 </>
@@ -384,10 +384,10 @@ export default function ContactDetailPage() {
             <SectionCard title="Active Lead" badge={activeLead.status}>
               <div className="flex items-center justify-between">
                 <div className="text-sm">
-                  <span className="text-gray-500">Purpose:</span> {activeLead.loanPurpose || '—'}
-                  {activeLead.loanAmount && <> · <span className="text-gray-500">Amount:</span> {formatCurrency(activeLead.loanAmount)}</>}
-                  {activeLead.propertyState && <> · <span className="text-gray-500">State:</span> {activeLead.propertyState}</>}
-                  {activeLead.creditScore && <> · <span className="text-gray-500">FICO:</span> {activeLead.creditScore}</>}
+                  <span className="text-gray-500">Purpose:</span> {activeLead.loan_purpose || '—'}
+                  {activeLead.loan_amount && <> · <span className="text-gray-500">Amount:</span> {formatCurrency(activeLead.loan_amount)}</>}
+                  {activeLead.property_state && <> · <span className="text-gray-500">State:</span> {activeLead.property_state}</>}
+                  {activeLead.credit_score && <> · <span className="text-gray-500">FICO:</span> {activeLead.credit_score}</>}
                 </div>
                 <Link
                   href={`/portal/mlo/leads/${activeLead.id}`}
@@ -415,13 +415,13 @@ export default function ContactDetailPage() {
                       </span>
                       <div className="text-sm">
                         <span className="font-medium">{loan.purpose || 'Loan'}</span>
-                        {loan.lenderName && <span className="text-gray-500"> · {loan.lenderName}</span>}
-                        {loan.loanNumber && <span className="text-gray-400"> #{loan.loanNumber}</span>}
+                        {loan.lender_name && <span className="text-gray-500"> · {loan.lender_name}</span>}
+                        {loan.loan_number && <span className="text-gray-400"> #{loan.loan_number}</span>}
                       </div>
                     </div>
                     <div className="text-sm text-right">
-                      <div className="font-medium">{formatCurrency(loan.loanAmount)}</div>
-                      <div className="text-xs text-gray-400">{formatDate(loan.submittedAt || loan.createdAt)}</div>
+                      <div className="font-medium">{formatCurrency(loan.loan_amount)}</div>
+                      <div className="text-xs text-gray-400">{formatDate(loan.submitted_at || loan.created_at)}</div>
                     </div>
                   </Link>
                 ))}
@@ -430,31 +430,31 @@ export default function ContactDetailPage() {
           )}
 
           {/* Property Info */}
-          {(contact.propertyAddress || contact.currentLoanAmount) && (
+          {(contact.property_address || contact.current_loan_amount) && (
             <SectionCard title="Property" defaultOpen={false}>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                {contact.propertyAddress && (
+                {contact.property_address && (
                   <div className="col-span-full">
                     <span className="text-gray-500 text-xs">Property Address</span>
-                    <div className="font-medium">{contact.propertyAddress}</div>
+                    <div className="font-medium">{contact.property_address}</div>
                   </div>
                 )}
                 <div>
                   <span className="text-gray-500 text-xs">Current Loan</span>
-                  <div className="font-medium">{formatCurrency(contact.currentLoanAmount)}</div>
+                  <div className="font-medium">{formatCurrency(contact.current_loan_amount)}</div>
                 </div>
                 <div>
                   <span className="text-gray-500 text-xs">Rate</span>
-                  <div className="font-medium">{contact.currentRate ? `${contact.currentRate}%` : '—'}</div>
+                  <div className="font-medium">{contact.current_rate ? `${contact.current_rate}%` : '—'}</div>
                 </div>
                 <div>
                   <span className="text-gray-500 text-xs">Home Value</span>
-                  <div className="font-medium">{formatCurrency(contact.homeValue)}</div>
+                  <div className="font-medium">{formatCurrency(contact.home_value)}</div>
                 </div>
-                {contact.fundedDate && (
+                {contact.funded_date && (
                   <div>
                     <span className="text-gray-500 text-xs">Last Funded</span>
-                    <div className="font-medium">{formatDate(contact.fundedDate)}</div>
+                    <div className="font-medium">{formatDate(contact.funded_date)}</div>
                   </div>
                 )}
               </div>
@@ -485,8 +485,8 @@ export default function ContactDetailPage() {
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={contact.emailOptOut || false}
-                  onChange={(e) => updateField('emailOptOut', e.target.checked)}
+                  checked={contact.email_opt_out || false}
+                  onChange={(e) => updateField('email_opt_out', e.target.checked)}
                   className="rounded border-gray-300 text-red-500 focus:ring-red-300"
                 />
                 <span className="text-red-600">Email Opt-Out</span>
@@ -553,7 +553,7 @@ export default function ContactDetailPage() {
       {showLeadModal && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setShowLeadModal(false)}>
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold mb-4">Create Lead for {contact.firstName} {contact.lastName}</h3>
+            <h3 className="text-lg font-semibold mb-4">Create Lead for {contact.first_name} {contact.last_name}</h3>
             {contact.status === 'past_client' && (
               <div className="bg-green-50 border border-green-200 text-green-700 px-3 py-2 rounded-lg text-sm mb-4">
                 Returning client — this will be a warm lead
@@ -563,8 +563,8 @@ export default function ContactDetailPage() {
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Loan Purpose</label>
                 <select
-                  value={leadForm.loanPurpose}
-                  onChange={(e) => setLeadForm(f => ({ ...f, loanPurpose: e.target.value }))}
+                  value={leadForm.loan_purpose}
+                  onChange={(e) => setLeadForm(f => ({ ...f, loan_purpose: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none"
                 >
                   <option value="">Select...</option>
@@ -578,8 +578,8 @@ export default function ContactDetailPage() {
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">State</label>
                 <select
-                  value={leadForm.propertyState}
-                  onChange={(e) => setLeadForm(f => ({ ...f, propertyState: e.target.value }))}
+                  value={leadForm.property_state}
+                  onChange={(e) => setLeadForm(f => ({ ...f, property_state: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none"
                 >
                   <option value="">Select...</option>
@@ -620,7 +620,7 @@ export default function ContactDetailPage() {
       {showEmailModal && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setShowEmailModal(false)}>
           <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold mb-4">Send Email to {contact.firstName}</h3>
+            <h3 className="text-lg font-semibold mb-4">Send Email to {contact.first_name}</h3>
             <div className="space-y-3">
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">To</label>
@@ -664,7 +664,7 @@ export default function ContactDetailPage() {
       {showNeedsModal && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setShowNeedsModal(false)}>
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold mb-4">Send Needs List to {contact.firstName}</h3>
+            <h3 className="text-lg font-semibold mb-4">Send Needs List to {contact.first_name}</h3>
             <div className="space-y-3">
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Loan Type</label>

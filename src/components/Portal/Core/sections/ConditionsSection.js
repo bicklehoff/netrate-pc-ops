@@ -20,7 +20,7 @@ const EMPTY_FORM = {
   ownerRole: 'mlo',
   borrowerFacing: false,
   blockingProgress: false,
-  dueDate: '',
+  due_date: '',
 };
 
 export default function ConditionsSection({ loan, onRefresh }) {
@@ -34,7 +34,7 @@ export default function ConditionsSection({ loan, onRefresh }) {
   // Approval documents — filter from loan.documents, newest first
   const approvals = (loan.documents || [])
     .filter((d) => d.docType === 'approval')
-    .sort((a, b) => new Date(b.uploadedAt || b.createdAt) - new Date(a.uploadedAt || a.createdAt));
+    .sort((a, b) => new Date(b.uploaded_at || b.created_at) - new Date(a.uploaded_at || a.created_at));
 
   const apiCall = useCallback(async (method, body) => {
     const res = await fetch(`/api/portal/mlo/loans/${loan.id}/conditions`, {
@@ -143,9 +143,9 @@ export default function ConditionsSection({ loan, onRefresh }) {
                     </svg>
                   </span>
                   <div className="min-w-0">
-                    <span className="text-sm text-gray-700 truncate block">{doc.fileName || doc.label}</span>
+                    <span className="text-sm text-gray-700 truncate block">{doc.file_name || doc.label}</span>
                     <span className="text-[10px] text-gray-400">
-                      {new Date(doc.uploadedAt || doc.createdAt).toLocaleDateString('en-US', {
+                      {new Date(doc.uploaded_at || doc.created_at).toLocaleDateString('en-US', {
                         month: 'short', day: 'numeric', year: 'numeric',
                       })}
                       {doc.fileSize && ` · ${(doc.fileSize / 1024).toFixed(0)} KB`}

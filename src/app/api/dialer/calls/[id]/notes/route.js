@@ -5,7 +5,7 @@
 
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 
 export async function GET(req, { params }) {
   const session = await getServerSession(authOptions);
@@ -16,13 +16,19 @@ export async function GET(req, { params }) {
   const { id } = await params;
 
   try {
-    const notes = await prisma.callNote.findMany({
-      where: { callLogId: id },
-      orderBy: { createdAt: 'desc' },
-      include: {
-        mlo: { select: { firstName: true, lastName: true } },
-      },
-    });
+    const notes = await sql`
+      SELECT cn.*, m.first_name AS mlo_first_name, m.last_name AS mlo_last_name
+      FROM call_notes cn
+      LEFT JOIN mlos m ON cn.mlo_id = m.id
+      WHERE cn.call_log_id = ${id}
+      ORDER BY cn.created_at DESC
+    `;
+
+    // Nest mlo info
+    for (const note of notes) {
+      note.mlo = { first_name: note.mlo_first_name, last_name: note.mlo_last_name };
+      delete note.mlo_first_name; delete note.mlo_last_name;
+    }
 
     return Response.json({ notes });
   } catch (e) {
@@ -51,17 +57,17 @@ export async function POST(req, { params }) {
   }
 
   try {
-    const note = await prisma.callNote.create({
-      data: {
-        callLogId: id,
-        mloId: session.user.id,
-        content,
-        disposition: disposition || null,
-      },
-      include: {
-        mlo: { select: { firstName: true, lastName: true } },
-      },
-    });
+    const rows = await sql`
+      INSERT INTO call_notes (call_log_id, mlo_id, content, disposition)
+      VALUES (${id}, ${session.user.id}, ${content}, ${disposition || null})
+      RETURNING *
+    `;
+
+    const note = rows[0];
+
+    // Fetch mlo name for the response
+    const mloRows = await sql`SELECT first_name, last_name FROM mlos WHERE id = ${session.user.id} LIMIT 1`;
+    note.mlo = mloRows[0] || { first_name: '', last_name: '' };
 
     return Response.json({ note }, { status: 201 });
   } catch (e) {

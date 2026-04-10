@@ -5,7 +5,7 @@
 
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 
 export async function GET(req) {
   try {
@@ -17,35 +17,33 @@ export async function GET(req) {
     const { searchParams } = new URL(req.url);
     const q = searchParams.get('q') || '';
     const industry = searchParams.get('industry');
+    const pattern = q ? `%${q}%` : null;
 
-    const where = {};
-    if (q) {
-      where.name = { contains: q, mode: 'insensitive' };
-    }
-    if (industry) {
-      where.industry = industry;
-    }
-
-    const accounts = await prisma.account.findMany({
-      where,
-      orderBy: { name: 'asc' },
-      include: {
-        accountContacts: {
-          orderBy: [{ isPrimary: 'desc' }, { firstName: 'asc' }],
-        },
-        _count: { select: { accountContacts: true } },
-      },
-    });
+    const accounts = await sql`
+      SELECT a.*,
+        COALESCE(
+          (SELECT json_agg(ac ORDER BY ac.is_primary DESC NULLS LAST, ac.first_name ASC)
+           FROM account_contacts ac WHERE ac.account_id = a.id),
+          '[]'
+        ) AS account_contacts,
+        (SELECT COUNT(*)::int FROM account_contacts WHERE account_id = a.id) AS contact_count
+      FROM accounts a
+      WHERE (${pattern}::text IS NULL OR a.name ILIKE ${pattern})
+        AND (${industry}::text IS NULL OR a.industry = ${industry})
+      ORDER BY a.name ASC
+    `;
 
     // Industry counts for filter badges
-    const industryCounts = await prisma.account.groupBy({
-      by: ['industry'],
-      _count: true,
-    });
+    const industryCounts = await sql`
+      SELECT industry, COUNT(*)::int AS count FROM accounts GROUP BY industry
+    `;
 
     return Response.json({
-      accounts,
-      industryCounts: industryCounts.reduce((acc, i) => ({ ...acc, [i.industry || 'other']: i._count }), {}),
+      accounts: accounts.map(a => ({
+        ...a,
+        _count: { accountContacts: a.contact_count },
+      })),
+      industryCounts: industryCounts.reduce((acc, i) => ({ ...acc, [i.industry || 'other']: i.count }), {}),
     });
   } catch (error) {
     console.error('Accounts list error:', error?.message);
@@ -67,37 +65,37 @@ export async function POST(req) {
       return Response.json({ error: 'Account name is required' }, { status: 400 });
     }
 
-    const account = await prisma.account.create({
-      data: {
-        name,
-        phone: phone || null,
-        website: website || null,
-        industry: industry || 'other',
-        address: address || null,
-        city: city || null,
-        state: state || null,
-        zipCode: zipCode || null,
-        notes: notes || null,
-        ...(contacts?.length > 0 && {
-          accountContacts: {
-            createMany: {
-              data: contacts.map((c, i) => ({
-                firstName: c.firstName || 'Unknown',
-                lastName: c.lastName || '',
-                email: c.email || null,
-                phone: c.phone || null,
-                role: c.role || null,
-                title: c.title || null,
-                isPrimary: i === 0,
-              })),
-            },
-          },
-        }),
-      },
-      include: { accountContacts: true },
-    });
+    // Create account
+    const accountRows = await sql`
+      INSERT INTO accounts (name, phone, website, industry, address, city, state, zip_code, notes, created_at, updated_at)
+      VALUES (
+        ${name}, ${phone || null}, ${website || null}, ${industry || 'other'},
+        ${address || null}, ${city || null}, ${state || null}, ${zipCode || null},
+        ${notes || null}, NOW(), NOW()
+      )
+      RETURNING *
+    `;
+    const account = accountRows[0];
 
-    return Response.json({ success: true, account }, { status: 201 });
+    // Create contacts if provided
+    let accountContacts = [];
+    if (contacts?.length > 0) {
+      for (let i = 0; i < contacts.length; i++) {
+        const c = contacts[i];
+        const acRows = await sql`
+          INSERT INTO account_contacts (account_id, first_name, last_name, email, phone, role, title, is_primary, created_at, updated_at)
+          VALUES (
+            ${account.id}, ${c.firstName || 'Unknown'}, ${c.lastName || ''},
+            ${c.email || null}, ${c.phone || null}, ${c.role || null}, ${c.title || null},
+            ${i === 0}, NOW(), NOW()
+          )
+          RETURNING *
+        `;
+        accountContacts.push(acRows[0]);
+      }
+    }
+
+    return Response.json({ success: true, account: { ...account, account_contacts: accountContacts } }, { status: 201 });
   } catch (error) {
     console.error('Account create error:', error?.message);
     return Response.json({ error: 'Failed to create account' }, { status: 500 });

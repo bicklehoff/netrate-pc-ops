@@ -1,15 +1,15 @@
 // API: MLO Pipeline
 // GET  /api/portal/mlo/pipeline — List all loans with inline-editable fields
-// PATCH /api/portal/mlo/pipeline — Bulk update loans (status, mloId)
+// PATCH /api/portal/mlo/pipeline — Bulk update loans (status, mlo_id)
 //
 // Returns all loans for the authenticated MLO (or all loans if admin).
 // Includes borrower name, status, ball-in-court, pending doc count, and
-// editable fields (loanNumber, lenderName, mloId).
+// editable fields (loan_number, lender_name, mlo_id).
 
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 import { getBallInCourt } from '@/lib/loan-states';
 
 export async function GET() {
@@ -20,139 +20,157 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const loans = await prisma.loan.findMany({
-      where: {},  // All MLOs see full pipeline — LO filter handles scoping
-      include: {
-        borrower: {
-          select: { firstName: true, lastName: true, email: true, phone: true, ssnLastFour: true },
-        },
-        documents: {
-          select: { id: true, status: true },
-        },
-        mlo: {
-          select: { id: true, firstName: true, lastName: true },
-        },
-        dates: true,
-        loanBorrowers: {
-          include: { borrower: { select: { firstName: true, lastName: true, email: true, phone: true } } },
-          orderBy: { ordinal: 'asc' },
-        },
-      },
-      orderBy: { updatedAt: 'desc' },
-    });
+    // Main loan query with borrower + mlo + dates JOINed
+    const loans = await sql`
+      SELECT l.*,
+        b.first_name AS borrower_first_name, b.last_name AS borrower_last_name,
+        b.email AS borrower_email, b.phone AS borrower_phone, b.ssn_last_four,
+        m.id AS mlo_ref_id, m.first_name AS mlo_first_name, m.last_name AS mlo_last_name,
+        ld.application_date, ld.locked_date, ld.lock_expiration, ld.lock_term,
+        ld.credit_pulled_date, ld.credit_expiration,
+        ld.appraisal_ordered, ld.appraisal_scheduled, ld.appraisal_received,
+        ld.appraisal_due, ld.appraisal_waiver,
+        ld.title_ordered, ld.title_received,
+        ld.hoi_ordered, ld.hoi_received, ld.hoi_bound,
+        ld.flood_cert_ordered, ld.flood_cert_received,
+        ld.estimated_closing, ld.closing_date AS dates_closing_date,
+        ld.funding_date AS dates_funding_date, ld.first_payment_date,
+        ld.submitted_to_uw_date, ld.cond_approved_date, ld.ctc_date, ld.docs_out_date,
+        (SELECT COUNT(*)::int FROM documents WHERE loan_id = l.id AND status = 'requested') AS pending_docs,
+        (SELECT COUNT(*)::int FROM documents WHERE loan_id = l.id) AS total_docs
+      FROM loans l
+      LEFT JOIN borrowers b ON l.borrower_id = b.id
+      LEFT JOIN mlos m ON l.mlo_id = m.id
+      LEFT JOIN loan_dates ld ON ld.loan_id = l.id
+      ORDER BY l.updated_at DESC
+    `;
 
-    // Convert Decimal fields to numbers
+    // Fetch co-borrowers for all loans in one query
+    const loanIds = loans.map(l => l.id);
+    const coBorrowers = loanIds.length ? await sql`
+      SELECT lb.loan_id, lb.borrower_type, b.first_name, b.last_name, b.email, b.phone
+      FROM loan_borrowers lb
+      JOIN borrowers b ON lb.borrower_id = b.id
+      WHERE lb.loan_id = ANY(${loanIds}) AND lb.borrower_type != 'primary'
+      ORDER BY lb.ordinal ASC
+    ` : [];
+
+    // Group co-borrowers by loan_id
+    const coMap = new Map();
+    for (const cb of coBorrowers) {
+      if (!coMap.has(cb.loan_id)) coMap.set(cb.loan_id, []);
+      coMap.get(cb.loan_id).push({
+        name: `${cb.first_name} ${cb.last_name}`,
+        email: cb.email,
+        phone: cb.phone,
+        type: cb.borrower_type,
+      });
+    }
+
     const num = (v) => v ? Number(v) : null;
 
     // Transform for the pipeline table
     const pipeline = loans.map((loan) => ({
       id: loan.id,
       // Borrower
-      borrowerName: `${loan.borrower.firstName} ${loan.borrower.lastName}`,
-      borrowerEmail: loan.borrower.email,
-      borrowerPhone: loan.borrower.phone,
-      ssnLastFour: loan.borrower.ssnLastFour,
+      borrower_name: `${loan.borrower_first_name} ${loan.borrower_last_name}`,
+      borrower_email: loan.borrower_email,
+      borrower_phone: loan.borrower_phone,
+      ssn_last_four: loan.ssn_last_four,
       // Co-borrowers
-      coBorrowers: loan.loanBorrowers
-        .filter(lb => lb.borrowerType !== 'primary')
-        .map(lb => ({
-          name: `${lb.borrower.firstName} ${lb.borrower.lastName}`,
-          email: lb.borrower.email,
-          phone: lb.borrower.phone,
-          type: lb.borrowerType,
-        })),
-      numBorrowers: loan.numBorrowers,
+      co_borrowers: coMap.get(loan.id) || [],
+      num_borrowers: loan.num_borrowers,
       // Status
       status: loan.status,
-      ballInCourt: loan.ballInCourt,
+      ball_in_court: loan.ball_in_court,
       // Loan details
       purpose: loan.purpose,
-      loanType: loan.loanType,
-      loanNumber: loan.loanNumber,
-      lenderName: loan.lenderName,
-      loanAmount: num(loan.loanAmount),
-      interestRate: num(loan.interestRate),
-      loanTerm: loan.loanTerm,
-      creditScore: loan.creditScore,
-      lienStatus: loan.lienStatus,
+      loan_type: loan.loan_type,
+      loan_number: loan.loan_number,
+      lender_name: loan.lender_name,
+      loan_amount: num(loan.loan_amount),
+      interest_rate: num(loan.interest_rate),
+      loan_term: loan.loan_term,
+      credit_score: loan.credit_score,
+      lien_status: loan.lien_status,
       // Property
-      propertyAddress: loan.propertyAddress,
-      propertyStreet: loan.propertyAddress?.street || null,
-      propertyCity: loan.propertyAddress?.city || null,
-      propertyState: loan.propertyAddress?.state || null,
-      propertyZip: loan.propertyAddress?.zip || null,
-      propertyCounty: loan.propertyAddress?.county || null,
-      propertyType: loan.propertyType,
-      numUnits: loan.numUnits,
+      property_address: loan.property_address,
+      property_street: loan.property_address?.street || null,
+      property_city: loan.property_address?.city || null,
+      property_state: loan.property_address?.state || null,
+      property_zip: loan.property_address?.zip || null,
+      property_county: loan.property_address?.county || null,
+      property_type: loan.property_type,
+      num_units: loan.num_units,
       occupancy: loan.occupancy,
       // Financials
-      purchasePrice: num(loan.purchasePrice),
-      downPayment: num(loan.downPayment),
-      estimatedValue: num(loan.estimatedValue),
-      currentBalance: num(loan.currentBalance),
-      refiPurpose: loan.refiPurpose,
-      cashOutAmount: num(loan.cashOutAmount),
+      purchase_price: num(loan.purchase_price),
+      down_payment: num(loan.down_payment),
+      estimated_value: num(loan.estimated_value),
+      current_balance: num(loan.current_balance),
+      refi_purpose: loan.refi_purpose,
+      cash_out_amount: num(loan.cash_out_amount),
       // Income / Employment
-      employmentStatus: loan.employmentStatus,
-      employerName: loan.employerName,
-      positionTitle: loan.positionTitle,
-      yearsInPosition: loan.yearsInPosition,
-      monthlyBaseIncome: num(loan.monthlyBaseIncome),
-      otherMonthlyIncome: num(loan.otherMonthlyIncome),
-      otherIncomeSource: loan.otherIncomeSource,
-      presentHousingExpense: num(loan.presentHousingExpense),
+      employment_status: loan.employment_status,
+      employer_name: loan.employer_name,
+      position_title: loan.position_title,
+      years_in_position: loan.years_in_position,
+      monthly_base_income: num(loan.monthly_base_income),
+      other_monthly_income: num(loan.other_monthly_income),
+      other_income_source: loan.other_income_source,
+      present_housing_expense: num(loan.present_housing_expense),
       // MLO
-      mloId: loan.mloId,
-      mloName: loan.mlo ? `${loan.mlo.firstName} ${loan.mlo.lastName}` : null,
+      mlo_id: loan.mlo_id,
+      mlo_name: loan.mlo_first_name ? `${loan.mlo_first_name} ${loan.mlo_last_name}` : null,
       // Documents
-      pendingDocs: loan.documents.filter((d) => d.status === 'requested').length,
-      totalDocs: loan.documents.length,
+      pending_docs: loan.pending_docs,
+      total_docs: loan.total_docs,
       // Source / CRM
-      leadSource: loan.leadSource,
-      referralSource: loan.referralSource,
-      applicationMethod: loan.applicationMethod,
-      applicationChannel: loan.applicationChannel,
-      ldoxLoanId: loan.ldoxLoanId,
+      lead_source: loan.lead_source,
+      referral_source: loan.referral_source,
+      application_method: loan.application_method,
+      application_channel: loan.application_channel,
+      ldox_loan_id: loan.ldox_loan_id,
       // MCR / HMDA
-      actionTaken: loan.actionTaken,
-      actionTakenDate: loan.actionTakenDate,
+      action_taken: loan.action_taken,
+      action_taken_date: loan.action_taken_date,
       // Dates (all)
-      dates: loan.dates ? {
-        applicationDate: loan.dates.applicationDate,
-        lockedDate: loan.dates.lockedDate,
-        lockExpiration: loan.dates.lockExpiration,
-        lockTerm: loan.dates.lockTerm,
-        creditPulledDate: loan.dates.creditPulledDate,
-        creditExpiration: loan.dates.creditExpiration,
-        appraisalOrdered: loan.dates.appraisalOrdered,
-        appraisalScheduled: loan.dates.appraisalScheduled,
-        appraisalReceived: loan.dates.appraisalReceived,
-        appraisalDue: loan.dates.appraisalDue,
-        appraisalWaiver: loan.dates.appraisalWaiver,
-        titleOrdered: loan.dates.titleOrdered,
-        titleReceived: loan.dates.titleReceived,
-        hoiOrdered: loan.dates.hoiOrdered,
-        hoiReceived: loan.dates.hoiReceived,
-        hoiBound: loan.dates.hoiBound,
-        floodCertOrdered: loan.dates.floodCertOrdered,
-        floodCertReceived: loan.dates.floodCertReceived,
-        estimatedClosing: loan.dates.estimatedClosing,
-        closingDate: loan.dates.closingDate,
-        fundingDate: loan.dates.fundingDate,
-        firstPaymentDate: loan.dates.firstPaymentDate,
-        submittedToUwDate: loan.dates.submittedToUwDate,
-        condApprovedDate: loan.dates.condApprovedDate,
-        ctcDate: loan.dates.ctcDate,
-        docsOutDate: loan.dates.docsOutDate,
+      dates: loan.application_date !== undefined ? {
+        application_date: loan.application_date,
+        locked_date: loan.locked_date,
+        lock_expiration: loan.lock_expiration,
+        lock_term: loan.lock_term,
+        credit_pulled_date: loan.credit_pulled_date,
+        credit_expiration: loan.credit_expiration,
+        appraisal_ordered: loan.appraisal_ordered,
+        appraisal_scheduled: loan.appraisal_scheduled,
+        appraisal_received: loan.appraisal_received,
+        appraisal_due: loan.appraisal_due,
+        appraisal_waiver: loan.appraisal_waiver,
+        title_ordered: loan.title_ordered,
+        title_received: loan.title_received,
+        hoi_ordered: loan.hoi_ordered,
+        hoi_received: loan.hoi_received,
+        hoi_bound: loan.hoi_bound,
+        flood_cert_ordered: loan.flood_cert_ordered,
+        flood_cert_received: loan.flood_cert_received,
+        estimated_closing: loan.estimated_closing,
+        closing_date: loan.dates_closing_date,
+        funding_date: loan.dates_funding_date,
+        first_payment_date: loan.first_payment_date,
+        submitted_to_uw_date: loan.submitted_to_uw_date,
+        cond_approved_date: loan.cond_approved_date,
+        ctc_date: loan.ctc_date,
+        docs_out_date: loan.docs_out_date,
       } : null,
       // Convenience date fields for table columns
-      lockExpiration: loan.dates?.lockExpiration || null,
-      estimatedClosing: loan.dates?.estimatedClosing || null,
-      closingDate: loan.dates?.closingDate || null,
+      lock_expiration: loan.lock_expiration || null,
+      estimated_closing: loan.estimated_closing || null,
+      closing_date: loan.dates_closing_date || null,
       // Timestamps
-      submittedAt: loan.submittedAt,
-      updatedAt: loan.updatedAt,
-      createdAt: loan.createdAt,
+      submitted_at: loan.submitted_at,
+      updated_at: loan.updated_at,
+      created_at: loan.created_at,
     }));
 
     return NextResponse.json({ loans: pipeline });
@@ -163,7 +181,7 @@ export async function GET() {
 }
 
 // ─── Bulk Update ─────────────────────────────────────────────
-// Body: { loanIds: string[], updates: { status?, mloId? } }
+// Body: { loanIds: string[], updates: { status?, mlo_id? } }
 // Creates audit events for each loan updated.
 
 export async function PATCH(request) {
@@ -183,26 +201,24 @@ export async function PATCH(request) {
       return NextResponse.json({ error: 'updates object is required' }, { status: 400 });
     }
 
-    // Only allow specific fields for bulk update
-    const allowedFields = ['status', 'mloId'];
-    const updateKeys = Object.keys(updates).filter((k) => allowedFields.includes(k));
-    if (updateKeys.length === 0) {
+    // Only allow specific fields for bulk update (accept both camelCase and snake_case keys)
+    const statusVal = updates.status;
+    const mloIdVal = updates.mlo_id ?? updates.mloId;
+    if (statusVal === undefined && mloIdVal === undefined) {
       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
     }
 
     const isAdmin = session.user.role === 'admin';
 
     // Verify access to all loans
-    const loans = await prisma.loan.findMany({
-      where: { id: { in: loanIds } },
-    });
+    const loans = await sql`SELECT * FROM loans WHERE id = ANY(${loanIds})`;
 
     if (loans.length !== loanIds.length) {
       return NextResponse.json({ error: 'One or more loans not found' }, { status: 404 });
     }
 
     if (!isAdmin) {
-      const unauthorized = loans.find((l) => l.mloId !== session.user.id);
+      const unauthorized = loans.find((l) => l.mlo_id !== session.user.id);
       if (unauthorized) {
         return NextResponse.json({ error: 'Unauthorized access to one or more loans' }, { status: 403 });
       }
@@ -211,46 +227,38 @@ export async function PATCH(request) {
     // Update each loan individually (for audit trail with old/new values)
     let updatedCount = 0;
     for (const loan of loans) {
-      const data = {};
       const events = [];
 
-      if (updates.status && updates.status !== loan.status) {
-        const pendingDocs = await prisma.document.count({
-          where: { loanId: loan.id, status: 'requested' },
-        });
-        data.status = updates.status;
-        data.ballInCourt = getBallInCourt(updates.status, pendingDocs > 0) || 'none';
+      if (statusVal && statusVal !== loan.status) {
+        const pendingDocRows = await sql`SELECT COUNT(*)::int AS c FROM documents WHERE loan_id = ${loan.id} AND status = 'requested'`;
+        const bic = getBallInCourt(statusVal, pendingDocRows[0].c > 0) || 'none';
+        await sql`UPDATE loans SET status = ${statusVal}, ball_in_court = ${bic}, updated_at = NOW() WHERE id = ${loan.id}`;
         events.push({
-          loanId: loan.id,
-          eventType: 'status_change',
-          actorType: 'mlo',
-          actorId: session.user.id,
-          oldValue: loan.status,
-          newValue: updates.status,
-          details: { source: 'bulk_update' },
+          event_type: 'status_change',
+          old_value: loan.status,
+          new_value: statusVal,
+          details: JSON.stringify({ source: 'bulk_update' }),
         });
       }
 
-      if (updates.mloId !== undefined && updates.mloId !== loan.mloId) {
-        data.mloId = updates.mloId || null;
+      if (mloIdVal !== undefined && mloIdVal !== loan.mlo_id) {
+        await sql`UPDATE loans SET mlo_id = ${mloIdVal || null}, updated_at = NOW() WHERE id = ${loan.id}`;
         events.push({
-          loanId: loan.id,
-          eventType: 'field_updated',
-          actorType: 'mlo',
-          actorId: session.user.id,
-          oldValue: loan.mloId,
-          newValue: updates.mloId || null,
-          details: { field: 'mloId', source: 'bulk_update' },
+          event_type: 'field_updated',
+          old_value: loan.mlo_id,
+          new_value: mloIdVal || null,
+          details: JSON.stringify({ field: 'mlo_id', source: 'bulk_update' }),
         });
       }
 
-      if (Object.keys(data).length > 0) {
-        await prisma.loan.update({ where: { id: loan.id }, data });
-        for (const event of events) {
-          await prisma.loanEvent.create({ data: event });
-        }
-        updatedCount++;
+      for (const event of events) {
+        await sql`
+          INSERT INTO loan_events (loan_id, event_type, actor_type, actor_id, old_value, new_value, details)
+          VALUES (${loan.id}, ${event.event_type}, 'mlo', ${session.user.id}, ${event.old_value}, ${event.new_value}, ${event.details})
+        `;
       }
+
+      if (events.length > 0) updatedCount++;
     }
 
     return NextResponse.json({ success: true, updatedCount });
@@ -282,14 +290,14 @@ export async function DELETE(request) {
       return NextResponse.json({ error: 'loanIds array is required' }, { status: 400 });
     }
 
-    // Delete associated records first (non-cascade), then loans (cascade handles the rest)
-    await prisma.condition.deleteMany({ where: { loanId: { in: loanIds } } }).catch(() => {});
-    await prisma.loanEvent.deleteMany({ where: { loanId: { in: loanIds } } }).catch(() => {});
-    await prisma.document.deleteMany({ where: { loanId: { in: loanIds } } }).catch(() => {});
+    // Delete associated records first (non-cascade), then loans
+    await sql`DELETE FROM conditions WHERE loan_id = ANY(${loanIds})`.catch(() => {});
+    await sql`DELETE FROM loan_events WHERE loan_id = ANY(${loanIds})`.catch(() => {});
+    await sql`DELETE FROM documents WHERE loan_id = ANY(${loanIds})`.catch(() => {});
 
-    const result = await prisma.loan.deleteMany({ where: { id: { in: loanIds } } });
+    const result = await sql`DELETE FROM loans WHERE id = ANY(${loanIds})`;
 
-    return NextResponse.json({ success: true, deletedCount: result.count });
+    return NextResponse.json({ success: true, deletedCount: result.length });
   } catch (error) {
     console.error('Bulk delete error:', error);
     return NextResponse.json({ error: 'Bulk delete failed' }, { status: 500 });

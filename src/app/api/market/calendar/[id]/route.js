@@ -3,7 +3,7 @@
 
 import { NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 
 export async function DELETE(request, { params }) {
   try {
@@ -19,15 +19,16 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
     }
 
-    await prisma.economicCalendarEvent.delete({ where: { id } });
+    const rows = await sql`DELETE FROM economic_calendar_events WHERE id = ${id} RETURNING id`;
+
+    if (!rows.length) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
 
     revalidatePath('/rate-watch');
 
     return NextResponse.json({ ok: true, deleted: id });
   } catch (error) {
-    if (error.code === 'P2025') {
-      return NextResponse.json({ error: 'Not found' }, { status: 404 });
-    }
     console.error('Calendar DELETE error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

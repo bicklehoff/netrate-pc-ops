@@ -53,7 +53,7 @@ function CalcField({ label, value, className = '' }) {
 
 export default function BorrowerInputs() {
   const { state, setField, age } = useScenario();
-  const [showCoBorrower, setShowCoBorrower] = useState(!!(state.coBorrowerName || state.coBorrowerDOB));
+  const [showCoBorrower, setShowCoBorrower] = useState(!!(state.co_borrower_name || state.coBorrowerDOB));
 
   const handleChange = (field) => (e) => {
     const val = e.target.type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value;
@@ -68,8 +68,8 @@ export default function BorrowerInputs() {
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-3">
         <Input
           label="Borrower Name"
-          value={state.borrowerName}
-          onChange={handleChange('borrowerName')}
+          value={state.borrower_name}
+          onChange={handleChange('borrower_name')}
           className="lg:col-span-2"
           inputClass="bg-yellow-50"
         />
@@ -101,8 +101,8 @@ export default function BorrowerInputs() {
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-3 pt-2 border-t border-gray-100">
           <Input
             label="Co-Borrower Name"
-            value={state.coBorrowerName}
-            onChange={handleChange('coBorrowerName')}
+            value={state.co_borrower_name}
+            onChange={handleChange('co_borrower_name')}
             className="lg:col-span-2"
             inputClass="bg-yellow-50"
           />
@@ -120,7 +120,7 @@ export default function BorrowerInputs() {
               type="button"
               onClick={() => {
                 setShowCoBorrower(false);
-                setField('coBorrowerName', '');
+                setField('co_borrower_name', '');
                 setField('coBorrowerDOB', '');
               }}
               className="text-xs text-gray-400 hover:text-red-500 transition-colors px-2 py-1.5"
@@ -163,8 +163,8 @@ export default function BorrowerInputs() {
         <Input
           label="Home Value"
           type="number"
-          value={state.homeValue || ''}
-          onChange={handleChange('homeValue')}
+          value={state.home_value || ''}
+          onChange={handleChange('home_value')}
           inputClass="bg-yellow-50 font-medium"
           min={0}
           step={1000}

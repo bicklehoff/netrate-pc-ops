@@ -102,11 +102,11 @@ function getColWidths(rateCount) {
 export default function ReportPDF({ compareRates, scenario, rateData, llpa }) {
   const lenderFees = rateData.lender.lenderFees;
   const thirdPartyCosts = scenario.thirdPartyCosts || 0;
-  const currentPI = scenario.currentRate
+  const currentPI = scenario.current_rate
     ? (() => {
-        const r = scenario.currentRate / 100 / 12;
+        const r = scenario.current_rate / 100 / 12;
         const n = 360;
-        return scenario.loanAmount * (r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+        return scenario.loan_amount * (r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
       })()
     : null;
   const isRefi = scenario.purpose !== 'purchase';
@@ -150,11 +150,11 @@ export default function ReportPDF({ compareRates, scenario, rateData, llpa }) {
             </View>
             <View style={s.scenarioItem}>
               <Text style={s.scenarioLabel}>Property</Text>
-              <Text style={s.scenarioValue}>{fmtDollar(scenario.propertyValue)} | {PROP_LABELS[scenario.propertyType]}</Text>
+              <Text style={s.scenarioValue}>{fmtDollar(scenario.property_value)} | {PROP_LABELS[scenario.property_type]}</Text>
             </View>
             <View style={s.scenarioItem}>
               <Text style={s.scenarioLabel}>Loan Amount</Text>
-              <Text style={s.scenarioValueBold}>{fmtDollar(scenario.loanAmount)}</Text>
+              <Text style={s.scenarioValueBold}>{fmtDollar(scenario.loan_amount)}</Text>
             </View>
             <View style={s.scenarioItem}>
               <Text style={s.scenarioLabel}>LTV</Text>
@@ -171,7 +171,7 @@ export default function ReportPDF({ compareRates, scenario, rateData, llpa }) {
             {currentPI && (
               <View style={s.scenarioItem}>
                 <Text style={s.scenarioLabel}>Current Rate</Text>
-                <Text style={s.scenarioValueBold}>{scenario.currentRate}%</Text>
+                <Text style={s.scenarioValueBold}>{scenario.current_rate}%</Text>
               </View>
             )}
             {currentPI && (
@@ -408,7 +408,7 @@ export default function ReportPDF({ compareRates, scenario, rateData, llpa }) {
               </View>
               {ratesToShow.map(r => (
                 <View key={r.rate} style={[s.tableCell, { width: dataWidth }]}>
-                  <Text style={[s.tableCellMono, { fontFamily: 'Helvetica-Bold', color: GRAY_600 }]}>{fmtDollar(scenario.loanAmount)}</Text>
+                  <Text style={[s.tableCellMono, { fontFamily: 'Helvetica-Bold', color: GRAY_600 }]}>{fmtDollar(scenario.loan_amount)}</Text>
                 </View>
               ))}
             </View>

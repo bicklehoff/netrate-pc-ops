@@ -8,7 +8,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 import { downloadFile, uploadFile, deleteResource } from '@/lib/zoho-workdrive';
 
 const VALID_FOLDERS = ['FLOOR', 'SUBMITTED', 'EXTRA', 'CLOSING'];
@@ -21,14 +21,15 @@ export async function POST(request, { params }) {
     }
 
     const { id } = await params;
-    const loan = await prisma.loan.findUnique({ where: { id } });
+    const loanRows = await sql`SELECT * FROM loans WHERE id = ${id} LIMIT 1`;
+    const loan = loanRows[0];
 
     if (!loan) {
       return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
     }
 
     const isAdmin = session.user.role === 'admin';
-    if (!isAdmin && loan.mloId !== session.user.id) {
+    if (!isAdmin && loan.mlo_id !== session.user.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
@@ -44,12 +45,11 @@ export async function POST(request, { params }) {
       );
     }
 
-    const subfolders = loan.workDriveSubfolders || {};
+    const subfolders = loan.work_drive_subfolders || {};
 
-    // Determine target folder ID
     let targetFolderId;
     if (targetFolder === 'FLOOR') {
-      targetFolderId = loan.workDriveFolderId;
+      targetFolderId = loan.work_drive_folder_id;
     } else {
       targetFolderId = subfolders[targetFolder];
     }
@@ -80,7 +80,6 @@ export async function POST(request, { params }) {
       offset += chunk.length;
     }
 
-    // Create blob for upload
     const name = fileName || 'moved-file';
     const blob = new Blob([buffer], { type: contentType || 'application/octet-stream' });
 
@@ -91,20 +90,12 @@ export async function POST(request, { params }) {
     await deleteResource(fileId);
 
     // Audit
-    await prisma.loanEvent.create({
-      data: {
-        loanId: id,
-        eventType: 'doc_moved',
-        actorType: 'mlo',
-        actorId: session.user.id,
-        details: {
-          fileName: name,
-          targetFolder,
-          originalFileId: fileId,
-          newFileId: uploaded?.id || null,
-        },
-      },
-    });
+    await sql`
+      INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, details, created_at)
+      VALUES (gen_random_uuid(), ${id}, 'doc_moved', 'mlo', ${session.user.id},
+              ${JSON.stringify({ fileName: name, targetFolder, originalFileId: fileId, newFileId: uploaded?.id || null })},
+              NOW())
+    `;
 
     return NextResponse.json({
       success: true,

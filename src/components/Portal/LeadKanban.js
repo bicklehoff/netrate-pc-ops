@@ -104,7 +104,7 @@ export default function LeadKanban({ leads, onStatusChange }) {
                 </div>
               )}
               {colLeads.map(lead => {
-                const days = daysAgo(lead.createdAt);
+                const days = daysAgo(lead.created_at);
                 const isDraggingThis = dragging === lead.id;
                 const isUpdating = updating === lead.id;
 
@@ -126,7 +126,7 @@ export default function LeadKanban({ leads, onStatusChange }) {
                       >
                         {lead.name || lead.first_name || 'Unknown'}
                       </Link>
-                      {lead.isWarm && (
+                      {lead.is_warm && (
                         <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-green-100 text-green-700 flex-shrink-0">
                           WARM
                         </span>
@@ -142,10 +142,10 @@ export default function LeadKanban({ leads, onStatusChange }) {
                       </span>
                     </div>
 
-                    {lead.loanPurpose && (
+                    {lead.loan_purpose && (
                       <div className="mt-1.5 text-xs text-gray-400 capitalize">
-                        {lead.loanPurpose.replace('_', ' ')}
-                        {lead.loanAmount && ` — $${Number(lead.loanAmount).toLocaleString()}`}
+                        {lead.loan_purpose.replace('_', ' ')}
+                        {lead.loan_amount && ` — $${Number(lead.loan_amount).toLocaleString()}`}
                       </div>
                     )}
 
@@ -157,7 +157,7 @@ export default function LeadKanban({ leads, onStatusChange }) {
                       )}
                       {lead.contact && (
                         <Link
-                          href={`/portal/mlo/contacts/${lead.contact.id || lead.contactId}`}
+                          href={`/portal/mlo/contacts/${lead.contact.id || lead.contact_id}`}
                           className="text-[10px] text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded hover:bg-purple-100"
                           onClick={(e) => e.stopPropagation()}
                         >

@@ -1,6 +1,6 @@
 // NextAuth.js Configuration
 // Two providers: EmailProvider (borrower magic link) + CredentialsProvider (MLO password)
-// Session stored in database via Prisma adapter
+// Session stored in JWT (no DB adapter)
 //
 // NOTE: Full NextAuth setup requires DATABASE_URL and NEXTAUTH_SECRET.
 // This file defines the configuration — the route handler is at /api/auth/[...nextauth]/route.js
@@ -8,7 +8,7 @@
 import NextAuth from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 import { randomBytes } from 'crypto';
 
 export const authOptions = {
@@ -26,15 +26,14 @@ export const authOptions = {
 
         const email = credentials.email.toLowerCase();
 
-        const mlo = await prisma.mlo.findUnique({
-          where: { email },
-        });
+        const rows = await sql`SELECT * FROM mlos WHERE email = ${email} LIMIT 1`;
+        const mlo = rows[0];
 
         if (!mlo) return null;
 
         const passwordValid = await bcrypt.compare(
           credentials.password,
-          mlo.passwordHash
+          mlo.password_hash
         );
 
         if (!passwordValid) return null;
@@ -42,7 +41,7 @@ export const authOptions = {
         return {
           id: mlo.id,
           email: mlo.email,
-          name: `${mlo.firstName} ${mlo.lastName}`,
+          name: `${mlo.first_name} ${mlo.last_name}`,
           role: mlo.role,
           userType: 'mlo',
         };
@@ -97,13 +96,10 @@ export async function generateMagicToken(borrowerId) {
   const token = randomBytes(32).toString('hex');
   const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
-  await prisma.borrower.update({
-    where: { id: borrowerId },
-    data: {
-      magicToken: token,
-      magicExpires: expires,
-    },
-  });
+  await sql`
+    UPDATE borrowers SET magic_token = ${token}, magic_expires = ${expires}
+    WHERE id = ${borrowerId}
+  `;
 
   return token;
 }
@@ -112,23 +108,21 @@ export async function generateMagicToken(borrowerId) {
  * Verify a magic link token. Returns the borrower if valid, null if not.
  */
 export async function verifyMagicToken(token) {
-  const borrower = await prisma.borrower.findFirst({
-    where: {
-      magicToken: token,
-      magicExpires: { gt: new Date() },
-    },
-  });
+  const rows = await sql`
+    SELECT * FROM borrowers
+    WHERE magic_token = ${token} AND magic_expires > NOW()
+    LIMIT 1
+  `;
 
-  if (!borrower) return null;
+  if (!rows.length) return null;
+
+  const borrower = rows[0];
 
   // Clear the token (single-use)
-  await prisma.borrower.update({
-    where: { id: borrower.id },
-    data: {
-      magicToken: null,
-      magicExpires: null,
-    },
-  });
+  await sql`
+    UPDATE borrowers SET magic_token = NULL, magic_expires = NULL
+    WHERE id = ${borrower.id}
+  `;
 
   return borrower;
 }
@@ -138,16 +132,15 @@ export async function verifyMagicToken(token) {
  * Stores hashed code in DB.
  */
 export async function generateSmsCode(borrowerId) {
-  const borrower = await prisma.borrower.findUnique({
-    where: { id: borrowerId },
-  });
+  const rows = await sql`SELECT * FROM borrowers WHERE id = ${borrowerId} LIMIT 1`;
+  const borrower = rows[0];
 
   if (!borrower) throw new Error('Borrower not found');
 
   // Check lockout
-  if (borrower.smsLockedUntil && borrower.smsLockedUntil > new Date()) {
+  if (borrower.sms_locked_until && new Date(borrower.sms_locked_until) > new Date()) {
     const minutesLeft = Math.ceil(
-      (borrower.smsLockedUntil.getTime() - Date.now()) / 60000
+      (new Date(borrower.sms_locked_until).getTime() - Date.now()) / 60000
     );
     throw new Error(`Too many attempts. Try again in ${minutesLeft} minutes.`);
   }
@@ -156,15 +149,14 @@ export async function generateSmsCode(borrowerId) {
   const code = Math.floor(100000 + Math.random() * 900000).toString();
   const hashedCode = await bcrypt.hash(code, 10);
 
-  await prisma.borrower.update({
-    where: { id: borrowerId },
-    data: {
-      smsCode: hashedCode,
-      smsCodeExpires: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
-      smsAttempts: 0,
-      smsLockedUntil: null,
-    },
-  });
+  await sql`
+    UPDATE borrowers SET
+      sms_code = ${hashedCode},
+      sms_code_expires = ${new Date(Date.now() + 10 * 60 * 1000)},
+      sms_attempts = 0,
+      sms_locked_until = NULL
+    WHERE id = ${borrowerId}
+  `;
 
   return code; // Return plaintext code to send via SMS
 }
@@ -174,52 +166,52 @@ export async function generateSmsCode(borrowerId) {
  * Returns true if valid, false if not. Handles lockout after 3 failed attempts.
  */
 export async function verifySmsCode(borrowerId, code) {
-  const borrower = await prisma.borrower.findUnique({
-    where: { id: borrowerId },
-  });
+  const rows = await sql`SELECT * FROM borrowers WHERE id = ${borrowerId} LIMIT 1`;
+  const borrower = rows[0];
 
-  if (!borrower || !borrower.smsCode) return false;
+  if (!borrower || !borrower.sms_code) return false;
 
   // Check lockout
-  if (borrower.smsLockedUntil && borrower.smsLockedUntil > new Date()) {
+  if (borrower.sms_locked_until && new Date(borrower.sms_locked_until) > new Date()) {
     return false;
   }
 
   // Check expiry
-  if (!borrower.smsCodeExpires || borrower.smsCodeExpires < new Date()) {
+  if (!borrower.sms_code_expires || new Date(borrower.sms_code_expires) < new Date()) {
     return false;
   }
 
-  const isValid = await bcrypt.compare(code, borrower.smsCode);
+  const isValid = await bcrypt.compare(code, borrower.sms_code);
 
   if (!isValid) {
-    const newAttempts = borrower.smsAttempts + 1;
-    const updateData = { smsAttempts: newAttempts };
+    const newAttempts = borrower.sms_attempts + 1;
 
-    // Lock after 3 failed attempts
     if (newAttempts >= 3) {
-      updateData.smsLockedUntil = new Date(Date.now() + 15 * 60 * 1000); // 15 min lockout
+      // Lock after 3 failed attempts
+      await sql`
+        UPDATE borrowers SET sms_attempts = ${newAttempts}, sms_locked_until = ${new Date(Date.now() + 15 * 60 * 1000)}
+        WHERE id = ${borrowerId}
+      `;
+    } else {
+      await sql`
+        UPDATE borrowers SET sms_attempts = ${newAttempts}
+        WHERE id = ${borrowerId}
+      `;
     }
-
-    await prisma.borrower.update({
-      where: { id: borrowerId },
-      data: updateData,
-    });
 
     return false;
   }
 
   // Success — clear the code and mark phone as verified
-  await prisma.borrower.update({
-    where: { id: borrowerId },
-    data: {
-      smsCode: null,
-      smsCodeExpires: null,
-      smsAttempts: 0,
-      smsLockedUntil: null,
-      phoneVerified: true,
-    },
-  });
+  await sql`
+    UPDATE borrowers SET
+      sms_code = NULL,
+      sms_code_expires = NULL,
+      sms_attempts = 0,
+      sms_locked_until = NULL,
+      phone_verified = true
+    WHERE id = ${borrowerId}
+  `;
 
   return true;
 }

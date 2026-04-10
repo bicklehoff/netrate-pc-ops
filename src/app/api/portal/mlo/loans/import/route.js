@@ -8,7 +8,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 import { encrypt, ssnLastFour } from '@/lib/encryption';
 import { parseMismoXml } from '@/lib/mismo-parser';
 import { createLoanFolder } from '@/lib/zoho-workdrive';
@@ -61,7 +61,6 @@ export async function PUT(request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Parse the form data — may include overrides
     const formData = await request.formData();
     const file = formData.get('file');
     const statusOverride = formData.get('status') || 'processing';
@@ -80,18 +79,13 @@ export async function PUT(request) {
 
     const primary = result.primaryBorrower;
 
-    // Validate minimum required data
     if (!primary.firstName || !primary.lastName) {
       return NextResponse.json({ error: 'Borrower name is required' }, { status: 400 });
     }
 
-    // ─── Environment Check ────────────────────────────────
     if (!process.env.PII_ENCRYPTION_KEY) {
       console.error('FATAL: PII_ENCRYPTION_KEY not set');
-      return NextResponse.json(
-        { error: 'Server configuration error. Contact support.' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Server configuration error. Contact support.' }, { status: 500 });
     }
 
     // ─── Create/Update Primary Borrower ───────────────────
@@ -101,80 +95,54 @@ export async function PUT(request) {
     const loanData = result.loan;
     const propAddress = result.property?.address || null;
 
-    const loan = await prisma.loan.create({
-      data: {
-        borrowerId: borrower.id,
-        mloId: mloId || null,
-        status: statusOverride,
-        ballInCourt: 'mlo',
-        purpose: loanData.purpose,
-        occupancy: loanData.occupancy,
-
-        // Loan classification
-        loanType: loanData.loanType,
-        lenderName: loanData.lenderName,
-        loanNumber: loanData.loanNumber,
-        loanAmount: loanData.loanAmount,
-        interestRate: loanData.interestRate,
-        loanTerm: loanData.loanTerm,
-
-        // Property
-        propertyAddress: propAddress,
-        propertyType: loanData.propertyType,
-        numUnits: loanData.numUnits,
-        purchasePrice: loanData.purchasePrice,
-        estimatedValue: loanData.estimatedValue,
-
-        // Primary borrower data on loan (backward compat)
-        currentAddress: primary.currentAddress,
-        addressYears: primary.addressYears,
-        addressMonths: primary.addressMonths,
-        maritalStatus: primary.maritalStatus,
-        employmentStatus: primary.employmentStatus,
-        employerName: primary.employerName,
-        positionTitle: primary.positionTitle,
-        yearsInPosition: primary.yearsInPosition,
-        monthlyBaseIncome: primary.monthlyBaseIncome,
-        otherMonthlyIncome: primary.otherMonthlyIncome,
-        otherIncomeSource: primary.otherIncomeSource,
-        presentHousingExpense: loanData.presentHousingExpense,
-        declarations: primary.declarations,
-
-        numBorrowers: result.borrowers.length,
-        applicationStep: 6,
-        submittedAt: new Date(),
-      },
-    });
+    const loanRows = await sql`
+      INSERT INTO loans (id, borrower_id, mlo_id, status, ball_in_court, purpose, occupancy,
+        loan_type, lender_name, loan_number, loan_amount, interest_rate, loan_term,
+        property_address, property_type, num_units, purchase_price, estimated_value,
+        current_address, address_years, address_months, marital_status,
+        employment_status, employer_name, position_title, years_in_position,
+        monthly_base_income, other_monthly_income, other_income_source,
+        present_housing_expense, declarations, num_borrowers, application_step, submitted_at,
+        created_at, updated_at)
+      VALUES (gen_random_uuid(), ${borrower.id}, ${mloId}, ${statusOverride}, 'mlo',
+        ${loanData.purpose}, ${loanData.occupancy},
+        ${loanData.loanType}, ${loanData.lenderName}, ${loanData.loanNumber},
+        ${loanData.loanAmount}, ${loanData.interestRate}, ${loanData.loanTerm},
+        ${propAddress ? JSON.stringify(propAddress) : null}, ${loanData.propertyType}, ${loanData.numUnits},
+        ${loanData.purchasePrice}, ${loanData.estimatedValue},
+        ${primary.currentAddress ? JSON.stringify(primary.currentAddress) : null},
+        ${primary.addressYears}, ${primary.addressMonths}, ${primary.maritalStatus},
+        ${primary.employmentStatus}, ${primary.employerName}, ${primary.positionTitle},
+        ${primary.yearsInPosition}, ${primary.monthlyBaseIncome}, ${primary.otherMonthlyIncome},
+        ${primary.otherIncomeSource}, ${loanData.presentHousingExpense},
+        ${primary.declarations ? JSON.stringify(primary.declarations) : null},
+        ${result.borrowers.length}, 6, NOW(), NOW(), NOW())
+      RETURNING *
+    `;
+    const loan = loanRows[0];
 
     // ─── Create LoanBorrower for Primary ──────────────────
-    const primaryLB = await prisma.loanBorrower.create({
-      data: {
-        loanId: loan.id,
-        borrowerId: borrower.id,
-        borrowerType: 'primary',
-        ordinal: 0,
-        maritalStatus: primary.maritalStatus,
-        citizenship: primary.citizenship,
-        housingType: primary.housingType,
-        monthlyRent: primary.monthlyRent,
-        currentAddress: primary.currentAddress,
-        addressYears: primary.addressYears,
-        addressMonths: primary.addressMonths,
-        previousAddress: primary.previousAddress,
-        previousAddressYears: primary.previousAddressYears,
-        previousAddressMonths: primary.previousAddressMonths,
-        cellPhone: primary.cellPhone,
-        suffix: primary.suffix,
-        employmentStatus: primary.employmentStatus,
-        employerName: primary.employerName,
-        positionTitle: primary.positionTitle,
-        yearsInPosition: primary.yearsInPosition,
-        monthlyBaseIncome: primary.monthlyBaseIncome,
-        otherMonthlyIncome: primary.otherMonthlyIncome,
-        otherIncomeSource: primary.otherIncomeSource,
-        declarations: primary.declarations,
-      },
-    });
+    const primaryLBRows = await sql`
+      INSERT INTO loan_borrowers (id, loan_id, borrower_id, borrower_type, ordinal,
+        marital_status, citizenship, housing_type, monthly_rent,
+        current_address, address_years, address_months,
+        previous_address, previous_address_years, previous_address_months,
+        cell_phone, suffix, employment_status, employer_name, position_title,
+        years_in_position, monthly_base_income, other_monthly_income, other_income_source,
+        declarations, created_at, updated_at)
+      VALUES (gen_random_uuid(), ${loan.id}, ${borrower.id}, 'primary', 0,
+        ${primary.maritalStatus}, ${primary.citizenship}, ${primary.housingType}, ${primary.monthlyRent},
+        ${primary.currentAddress ? JSON.stringify(primary.currentAddress) : null},
+        ${primary.addressYears}, ${primary.addressMonths},
+        ${primary.previousAddress ? JSON.stringify(primary.previousAddress) : null},
+        ${primary.previousAddressYears}, ${primary.previousAddressMonths},
+        ${primary.cellPhone}, ${primary.suffix}, ${primary.employmentStatus},
+        ${primary.employerName}, ${primary.positionTitle}, ${primary.yearsInPosition},
+        ${primary.monthlyBaseIncome}, ${primary.otherMonthlyIncome}, ${primary.otherIncomeSource},
+        ${primary.declarations ? JSON.stringify(primary.declarations) : null}, NOW(), NOW())
+      RETURNING *
+    `;
+    const primaryLB = primaryLBRows[0];
 
     // Create 1003 sub-models for primary borrower
     await create1003BorrowerModels(primaryLB.id, primary);
@@ -185,77 +153,54 @@ export async function PUT(request) {
 
       const cbBorrower = await upsertBorrowerFromImport(cb);
 
-      const cbLB = await prisma.loanBorrower.create({
-        data: {
-          loanId: loan.id,
-          borrowerId: cbBorrower.id,
-          borrowerType: 'co_borrower',
-          ordinal: cb.ordinal,
-          maritalStatus: cb.maritalStatus,
-          citizenship: cb.citizenship,
-          housingType: cb.housingType,
-          monthlyRent: cb.monthlyRent,
-          currentAddress: cb.currentAddress,
-          addressYears: cb.addressYears,
-          addressMonths: cb.addressMonths,
-          previousAddress: cb.previousAddress,
-          previousAddressYears: cb.previousAddressYears,
-          previousAddressMonths: cb.previousAddressMonths,
-          cellPhone: cb.cellPhone,
-          suffix: cb.suffix,
-          employmentStatus: cb.employmentStatus,
-          employerName: cb.employerName,
-          positionTitle: cb.positionTitle,
-          yearsInPosition: cb.yearsInPosition,
-          monthlyBaseIncome: cb.monthlyBaseIncome,
-          otherMonthlyIncome: cb.otherMonthlyIncome,
-          otherIncomeSource: cb.otherIncomeSource,
-          declarations: cb.declarations,
-        },
-      });
+      const cbLBRows = await sql`
+        INSERT INTO loan_borrowers (id, loan_id, borrower_id, borrower_type, ordinal,
+          marital_status, citizenship, housing_type, monthly_rent,
+          current_address, address_years, address_months,
+          previous_address, previous_address_years, previous_address_months,
+          cell_phone, suffix, employment_status, employer_name, position_title,
+          years_in_position, monthly_base_income, other_monthly_income, other_income_source,
+          declarations, created_at, updated_at)
+        VALUES (gen_random_uuid(), ${loan.id}, ${cbBorrower.id}, 'co_borrower', ${cb.ordinal},
+          ${cb.maritalStatus}, ${cb.citizenship}, ${cb.housingType}, ${cb.monthlyRent},
+          ${cb.currentAddress ? JSON.stringify(cb.currentAddress) : null},
+          ${cb.addressYears}, ${cb.addressMonths},
+          ${cb.previousAddress ? JSON.stringify(cb.previousAddress) : null},
+          ${cb.previousAddressYears}, ${cb.previousAddressMonths},
+          ${cb.cellPhone}, ${cb.suffix}, ${cb.employmentStatus},
+          ${cb.employerName}, ${cb.positionTitle}, ${cb.yearsInPosition},
+          ${cb.monthlyBaseIncome}, ${cb.otherMonthlyIncome}, ${cb.otherIncomeSource},
+          ${cb.declarations ? JSON.stringify(cb.declarations) : null}, NOW(), NOW())
+        RETURNING *
+      `;
 
-      // Create 1003 sub-models for co-borrower
-      await create1003BorrowerModels(cbLB.id, cb);
+      await create1003BorrowerModels(cbLBRows[0].id, cb);
     }
 
     // ─── Create Loan-Level 1003 Models ────────────────────
     await create1003LoanModels(loan.id, result);
 
     // ─── Create Contacts for All Borrowers ─────────────────
-    // Every borrower becomes a Contact (marketable, searchable, linkable to future leads)
     await upsertContactFromBorrower(borrower, primary, 'xml_import');
 
     for (const cb of result.coBorrowers) {
       if (!cb.firstName || !cb.lastName) continue;
-      const cbBorrower = await prisma.borrower.findFirst({
-        where: {
-          firstName: cb.firstName,
-          lastName: cb.lastName,
-        },
-        orderBy: { createdAt: 'desc' },
-      });
-      if (cbBorrower) {
-        await upsertContactFromBorrower(cbBorrower, cb, 'xml_import');
+      const cbBorrowerRows = await sql`
+        SELECT * FROM borrowers WHERE first_name = ${cb.firstName} AND last_name = ${cb.lastName}
+        ORDER BY created_at DESC LIMIT 1
+      `;
+      if (cbBorrowerRows[0]) {
+        await upsertContactFromBorrower(cbBorrowerRows[0], cb, 'xml_import');
       }
     }
 
     // ─── Audit Trail ──────────────────────────────────────
-    await prisma.loanEvent.create({
-      data: {
-        loanId: loan.id,
-        eventType: 'status_change',
-        actorType: 'mlo',
-        actorId: session.user.id,
-        oldValue: null,
-        newValue: statusOverride,
-        details: {
-          source: 'mismo_xml_import',
-          numBorrowers: result.borrowers.length,
-          loanNumber: loanData.loanNumber,
-          lenderName: loanData.lenderName,
-        },
-      },
-    });
+    await sql`
+      INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, old_value, new_value, details, created_at)
+      VALUES (gen_random_uuid(), ${loan.id}, 'status_change', 'mlo', ${session.user.id}, NULL, ${statusOverride},
+              ${JSON.stringify({ source: 'mismo_xml_import', numBorrowers: result.borrowers.length, loanNumber: loanData.loanNumber, lenderName: loanData.lenderName })},
+              NOW())
+    `;
 
     // ─── WorkDrive Folder (non-blocking) ──────────────────
     try {
@@ -265,13 +210,10 @@ export async function PUT(request) {
         purpose: loanData.purpose || 'purchase',
       });
 
-      await prisma.loan.update({
-        where: { id: loan.id },
-        data: {
-          workDriveFolderId: folder.rootFolderId,
-          workDriveSubfolders: folder.subfolders,
-        },
-      });
+      await sql`
+        UPDATE loans SET work_drive_folder_id = ${folder.rootFolderId}, work_drive_subfolders = ${JSON.stringify(folder.subfolders)}, updated_at = NOW()
+        WHERE id = ${loan.id}
+      `;
 
       console.log(`WorkDrive folder created for imported loan ${loan.id}: ${folder.rootFolderId}`);
     } catch (wdError) {
@@ -280,10 +222,10 @@ export async function PUT(request) {
 
     return NextResponse.json({
       success: true,
-      loanId: loan.id,
-      borrowerId: borrower.id,
-      borrowerName: `${primary.firstName} ${primary.lastName}`,
-      loanNumber: loanData.loanNumber,
+      loan_id: loan.id,
+      borrower_id: borrower.id,
+      borrower_name: `${primary.firstName} ${primary.lastName}`,
+      loan_number: loanData.loanNumber,
       status: statusOverride,
     });
   } catch (error) {
@@ -309,22 +251,14 @@ async function extractXmlFromRequest(request) {
     return await file.text();
   }
 
-  // Fallback: raw XML body
   return await request.text();
 }
 
-/**
- * Create or update a Borrower record from imported data.
- * If no SSN, generates a placeholder email for lookup.
- * If no email, generates one from name + timestamp.
- */
 async function upsertBorrowerFromImport({ firstName, lastName, email, phone, ssn, dob }) {
-  // Generate email if missing (required for borrower record)
   const borrowerEmail = email
     ? email.toLowerCase().trim()
     : `${(firstName || 'unknown').toLowerCase()}.${(lastName || 'unknown').toLowerCase()}.import.${Date.now()}@placeholder.netrate.local`;
 
-  // Handle SSN: encrypt if present, use placeholder if not
   let ssnEncrypted;
   let lastFour;
   if (ssn && ssn.replace(/\D/g, '').length === 9) {
@@ -332,139 +266,90 @@ async function upsertBorrowerFromImport({ firstName, lastName, email, phone, ssn
     ssnEncrypted = encrypt(ssnDigits);
     lastFour = ssnLastFour(ssnDigits);
   } else {
-    // Placeholder — SSN not in file (common for exports)
     ssnEncrypted = encrypt('000000000');
     lastFour = '0000';
   }
 
-  // Handle DOB: encrypt if present, use placeholder if not
   const dobEncrypted = dob ? encrypt(String(dob)) : encrypt('1900-01-01');
 
   // Check if borrower exists by email
-  let borrower = await prisma.borrower.findUnique({
-    where: { email: borrowerEmail },
-  });
+  const existingRows = await sql`SELECT * FROM borrowers WHERE email = ${borrowerEmail} LIMIT 1`;
 
-  if (borrower) {
-    borrower = await prisma.borrower.update({
-      where: { email: borrowerEmail },
-      data: {
-        firstName: firstName || borrower.firstName,
-        lastName: lastName || borrower.lastName,
-        phone: phone || borrower.phone,
-        dobEncrypted,
-        ssnEncrypted,
-        ssnLastFour: lastFour,
-      },
-    });
+  if (existingRows.length > 0) {
+    const existing = existingRows[0];
+    const updatedRows = await sql`
+      UPDATE borrowers SET first_name = ${firstName || existing.first_name}, last_name = ${lastName || existing.last_name},
+        phone = ${phone || existing.phone}, dob_encrypted = ${dobEncrypted}, ssn_encrypted = ${ssnEncrypted}, ssn_last_four = ${lastFour}, updated_at = NOW()
+      WHERE email = ${borrowerEmail} RETURNING *
+    `;
+    return updatedRows[0];
   } else {
-    borrower = await prisma.borrower.create({
-      data: {
-        email: borrowerEmail,
-        firstName: firstName || 'Unknown',
-        lastName: lastName || 'Unknown',
-        phone: phone || null,
-        dobEncrypted,
-        ssnEncrypted,
-        ssnLastFour: lastFour,
-      },
-    });
+    const newRows = await sql`
+      INSERT INTO borrowers (id, email, first_name, last_name, phone, dob_encrypted, ssn_encrypted, ssn_last_four, created_at, updated_at)
+      VALUES (gen_random_uuid(), ${borrowerEmail}, ${firstName || 'Unknown'}, ${lastName || 'Unknown'}, ${phone || null}, ${dobEncrypted}, ${ssnEncrypted}, ${lastFour}, NOW(), NOW())
+      RETURNING *
+    `;
+    return newRows[0];
   }
-
-  return borrower;
 }
 
-/**
- * Create or update a Contact record from a Borrower.
- * Links Contact to Borrower via borrowerId.
- * If Contact already exists for this borrower, updates it.
- */
 async function upsertContactFromBorrower(borrower, rawData, source) {
   try {
     // Check if Contact already exists for this borrower
-    let contact = await prisma.contact.findUnique({
-      where: { borrowerId: borrower.id },
-    });
+    const existingRows = await sql`SELECT * FROM contacts WHERE borrower_id = ${borrower.id} LIMIT 1`;
 
-    if (contact) {
-      // Update with latest info
-      contact = await prisma.contact.update({
-        where: { id: contact.id },
-        data: {
-          firstName: rawData.firstName || contact.firstName,
-          lastName: rawData.lastName || contact.lastName,
-          email: rawData.email || contact.email,
-          phone: rawData.phone || contact.phone,
-          source: contact.source, // Don't overwrite source
-        },
-      });
-    } else {
-      // Also check by email to avoid duplicates
-      if (rawData.email) {
-        contact = await prisma.contact.findFirst({
-          where: { email: rawData.email.toLowerCase().trim() },
-        });
-      }
+    if (existingRows.length > 0) {
+      const contact = existingRows[0];
+      const updatedRows = await sql`
+        UPDATE contacts SET first_name = ${rawData.firstName || contact.first_name}, last_name = ${rawData.lastName || contact.last_name},
+          email = ${rawData.email || contact.email}, phone = ${rawData.phone || contact.phone}, updated_at = NOW()
+        WHERE id = ${contact.id} RETURNING *
+      `;
+      return updatedRows[0];
+    }
 
-      if (contact) {
-        // Link existing contact to borrower
-        contact = await prisma.contact.update({
-          where: { id: contact.id },
-          data: {
-            borrowerId: borrower.id,
-            firstName: rawData.firstName || contact.firstName,
-            lastName: rawData.lastName || contact.lastName,
-            phone: rawData.phone || contact.phone,
-          },
-        });
-      } else {
-        // Create new Contact
-        contact = await prisma.contact.create({
-          data: {
-            firstName: rawData.firstName || 'Unknown',
-            lastName: rawData.lastName || 'Unknown',
-            email: rawData.email ? rawData.email.toLowerCase().trim() : null,
-            phone: rawData.phone || null,
-            source,
-            tags: ['borrower'],
-            borrowerId: borrower.id,
-          },
-        });
+    // Check by email to avoid duplicates
+    if (rawData.email) {
+      const emailRows = await sql`SELECT * FROM contacts WHERE email = ${rawData.email.toLowerCase().trim()} LIMIT 1`;
+      if (emailRows.length > 0) {
+        const contact = emailRows[0];
+        const updatedRows = await sql`
+          UPDATE contacts SET borrower_id = ${borrower.id}, first_name = ${rawData.firstName || contact.first_name},
+            last_name = ${rawData.lastName || contact.last_name}, phone = ${rawData.phone || contact.phone}, updated_at = NOW()
+          WHERE id = ${contact.id} RETURNING *
+        `;
+        return updatedRows[0];
       }
     }
 
-    return contact;
+    // Create new Contact
+    const newRows = await sql`
+      INSERT INTO contacts (id, first_name, last_name, email, phone, source, tags, borrower_id, created_at, updated_at)
+      VALUES (gen_random_uuid(), ${rawData.firstName || 'Unknown'}, ${rawData.lastName || 'Unknown'},
+              ${rawData.email ? rawData.email.toLowerCase().trim() : null}, ${rawData.phone || null},
+              ${source}, ${['borrower']}, ${borrower.id}, NOW(), NOW())
+      RETURNING *
+    `;
+    return newRows[0];
   } catch (error) {
-    // Non-fatal — log and continue (loan import should not fail if contact creation fails)
     console.error('Contact creation failed (non-fatal):', error?.message);
     return null;
   }
 }
 
-/**
- * Create 1003 per-borrower models: LoanEmployment[], LoanIncome, LoanDeclaration
- */
 async function create1003BorrowerModels(loanBorrowerId, borrowerData) {
   try {
     // Employments
     if (borrowerData.employments?.length > 0) {
       for (const emp of borrowerData.employments) {
         if (!emp) continue;
-        await prisma.loanEmployment.create({
-          data: {
-            loanBorrowerId,
-            isPrimary: emp.isPrimary ?? true,
-            employerName: emp.employerName || null,
-            employerAddress: emp.employerAddress || null,
-            employerPhone: emp.employerPhone || null,
-            position: emp.position || null,
-            startDate: emp.startDate ? new Date(emp.startDate) : null,
-            endDate: emp.endDate ? new Date(emp.endDate) : null,
-            yearsOnJob: emp.yearsOnJob || null,
-            monthsOnJob: emp.monthsOnJob || null,
-            selfEmployed: emp.selfEmployed ?? false,
-          },
-        });
+        await sql`
+          INSERT INTO loan_employments (id, loan_borrower_id, is_primary, employer_name, employer_address, employer_phone, position, start_date, end_date, years_on_job, months_on_job, self_employed, created_at, updated_at)
+          VALUES (gen_random_uuid(), ${loanBorrowerId}, ${emp.isPrimary ?? true}, ${emp.employerName || null},
+                  ${emp.employerAddress ? JSON.stringify(emp.employerAddress) : null}, ${emp.employerPhone || null},
+                  ${emp.position || null}, ${emp.startDate ? new Date(emp.startDate) : null}, ${emp.endDate ? new Date(emp.endDate) : null},
+                  ${emp.yearsOnJob || null}, ${emp.monthsOnJob || null}, ${emp.selfEmployed ?? false}, NOW(), NOW())
+        `;
       }
     }
 
@@ -475,101 +360,63 @@ async function create1003BorrowerModels(loanBorrowerId, borrowerData) {
         || inc.commissionMonthly || inc.dividendsMonthly || inc.interestMonthly
         || inc.rentalIncomeMonthly || inc.otherMonthly;
       if (hasAnyIncome) {
-        await prisma.loanIncome.create({
-          data: {
-            loanBorrowerId,
-            baseMonthly: inc.baseMonthly || null,
-            overtimeMonthly: inc.overtimeMonthly || null,
-            bonusMonthly: inc.bonusMonthly || null,
-            commissionMonthly: inc.commissionMonthly || null,
-            dividendsMonthly: inc.dividendsMonthly || null,
-            interestMonthly: inc.interestMonthly || null,
-            rentalIncomeMonthly: inc.rentalIncomeMonthly || null,
-            otherMonthly: inc.otherMonthly || null,
-            otherIncomeSource: inc.otherIncomeSource || null,
-          },
-        });
+        await sql`
+          INSERT INTO loan_incomes (id, loan_borrower_id, base_monthly, overtime_monthly, bonus_monthly, commission_monthly, dividends_monthly, interest_monthly, rental_income_monthly, other_monthly, other_income_source, created_at, updated_at)
+          VALUES (gen_random_uuid(), ${loanBorrowerId}, ${inc.baseMonthly || null}, ${inc.overtimeMonthly || null},
+                  ${inc.bonusMonthly || null}, ${inc.commissionMonthly || null}, ${inc.dividendsMonthly || null},
+                  ${inc.interestMonthly || null}, ${inc.rentalIncomeMonthly || null}, ${inc.otherMonthly || null},
+                  ${inc.otherIncomeSource || null}, NOW(), NOW())
+        `;
       }
     }
 
     // Declarations
     const decl = borrowerData.structuredDeclaration;
     if (decl) {
-      await prisma.loanDeclaration.create({
-        data: {
-          loanBorrowerId,
-          outstandingJudgments: decl.outstandingJudgments ?? null,
-          bankruptcy: decl.bankruptcy ?? null,
-          bankruptcyType: decl.bankruptcyType || null,
-          foreclosure: decl.foreclosure ?? null,
-          partyToLawsuit: decl.partyToLawsuit ?? null,
-          loanDefault: decl.loanDefault ?? null,
-          alimonyObligation: decl.alimonyObligation ?? null,
-          delinquentFederalDebt: decl.delinquentFederalDebt ?? null,
-          coSignerOnOtherLoan: decl.coSignerOnOtherLoan ?? null,
-          intentToOccupy: decl.intentToOccupy ?? null,
-          ownershipInterestLastThreeYears: decl.ownershipInterestLastThreeYears ?? null,
-          propertyTypeOfOwnership: decl.propertyTypeOfOwnership || null,
-        },
-      });
+      await sql`
+        INSERT INTO loan_declarations (id, loan_borrower_id, outstanding_judgments, bankruptcy, bankruptcy_type, foreclosure, party_to_lawsuit, loan_default, alimony_obligation, delinquent_federal_debt, co_signer_on_other_loan, intent_to_occupy, ownership_interest_last_three_years, property_type_of_ownership, created_at, updated_at)
+        VALUES (gen_random_uuid(), ${loanBorrowerId}, ${decl.outstandingJudgments ?? null}, ${decl.bankruptcy ?? null},
+                ${decl.bankruptcyType || null}, ${decl.foreclosure ?? null}, ${decl.partyToLawsuit ?? null},
+                ${decl.loanDefault ?? null}, ${decl.alimonyObligation ?? null}, ${decl.delinquentFederalDebt ?? null},
+                ${decl.coSignerOnOtherLoan ?? null}, ${decl.intentToOccupy ?? null},
+                ${decl.ownershipInterestLastThreeYears ?? null}, ${decl.propertyTypeOfOwnership || null}, NOW(), NOW())
+      `;
     }
   } catch (error) {
     console.error('1003 borrower models creation failed (non-fatal):', error?.message);
   }
 }
 
-/**
- * Create 1003 loan-level models: LoanAsset[], LoanLiability[], LoanREO[], LoanTransaction
- */
 async function create1003LoanModels(loanId, result) {
   try {
     // Assets
     for (const asset of (result.assets || [])) {
-      await prisma.loanAsset.create({
-        data: {
-          loanId,
-          borrowerType: null, // Could map from relationship labels
-          institution: asset.institution || null,
-          accountType: asset.accountType || null,
-          accountNumber: asset.accountNumber || null,
-          balance: asset.balance || null,
-          isJoint: false,
-        },
-      });
+      await sql`
+        INSERT INTO loan_assets (id, loan_id, borrower_type, institution, account_type, account_number, balance, is_joint, created_at, updated_at)
+        VALUES (gen_random_uuid(), ${loanId}, NULL, ${asset.institution || null}, ${asset.accountType || null},
+                ${asset.accountNumber || null}, ${asset.balance || null}, false, NOW(), NOW())
+      `;
     }
 
     // Liabilities
     for (const liab of (result.liabilities || [])) {
-      await prisma.loanLiability.create({
-        data: {
-          loanId,
-          creditor: liab.creditor || null,
-          accountNumber: liab.accountNumber || null,
-          liabilityType: liab.liabilityType || null,
-          monthlyPayment: liab.monthlyPayment || null,
-          unpaidBalance: liab.unpaidBalance || null,
-          monthsRemaining: liab.monthsRemaining || null,
-          paidOffAtClosing: liab.paidOffAtClosing ?? false,
-        },
-      });
+      await sql`
+        INSERT INTO loan_liabilities (id, loan_id, creditor, account_number, liability_type, monthly_payment, unpaid_balance, months_remaining, paid_off_at_closing, created_at, updated_at)
+        VALUES (gen_random_uuid(), ${loanId}, ${liab.creditor || null}, ${liab.accountNumber || null},
+                ${liab.liabilityType || null}, ${liab.monthlyPayment || null}, ${liab.unpaidBalance || null},
+                ${liab.monthsRemaining || null}, ${liab.paidOffAtClosing ?? false}, NOW(), NOW())
+      `;
     }
 
     // REOs
     for (const reo of (result.reos || [])) {
-      await prisma.loanREO.create({
-        data: {
-          loanId,
-          address: reo.address || null,
-          propertyType: reo.propertyType || null,
-          presentMarketValue: reo.presentMarketValue || null,
-          mortgageBalance: reo.mortgageBalance || null,
-          mortgagePayment: reo.mortgagePayment || null,
-          grossRentalIncome: reo.grossRentalIncome || null,
-          netRentalIncome: reo.netRentalIncome || null,
-          insuranceTaxesMaintenance: reo.insuranceTaxesMaintenance || null,
-          status: reo.status || 'retained',
-        },
-      });
+      await sql`
+        INSERT INTO loan_reos (id, loan_id, address, property_type, present_market_value, mortgage_balance, mortgage_payment, gross_rental_income, net_rental_income, insurance_taxes_maintenance, status, created_at, updated_at)
+        VALUES (gen_random_uuid(), ${loanId}, ${reo.address ? JSON.stringify(reo.address) : null}, ${reo.propertyType || null},
+                ${reo.presentMarketValue || null}, ${reo.mortgageBalance || null}, ${reo.mortgagePayment || null},
+                ${reo.grossRentalIncome || null}, ${reo.netRentalIncome || null},
+                ${reo.insuranceTaxesMaintenance || null}, ${reo.status || 'retained'}, NOW(), NOW())
+      `;
     }
 
     // Transaction
@@ -578,25 +425,17 @@ async function create1003LoanModels(loanId, result) {
       const hasTxData = tx.purchasePrice || tx.closingCostsEstimate || tx.discountPoints
         || tx.sellerConcessions || tx.cashFromBorrower;
       if (hasTxData) {
-        await prisma.loanTransaction.create({
-          data: {
-            loanId,
-            purchasePrice: tx.purchasePrice || null,
-            closingCostsEstimate: tx.closingCostsEstimate || null,
-            discountPoints: tx.discountPoints || null,
-            sellerConcessions: tx.sellerConcessions || null,
-            cashFromBorrower: tx.cashFromBorrower || null,
-          },
-        });
+        await sql`
+          INSERT INTO loan_transactions (id, loan_id, purchase_price, closing_costs_estimate, discount_points, seller_concessions, cash_from_borrower, created_at, updated_at)
+          VALUES (gen_random_uuid(), ${loanId}, ${tx.purchasePrice || null}, ${tx.closingCostsEstimate || null},
+                  ${tx.discountPoints || null}, ${tx.sellerConcessions || null}, ${tx.cashFromBorrower || null}, NOW(), NOW())
+        `;
       }
     }
 
     // Update loan with amortization type
     if (result.loan.amortizationType) {
-      await prisma.loan.update({
-        where: { id: loanId },
-        data: { amortizationType: result.loan.amortizationType },
-      });
+      await sql`UPDATE loans SET amortization_type = ${result.loan.amortizationType}, updated_at = NOW() WHERE id = ${loanId}`;
     }
   } catch (error) {
     console.error('1003 loan models creation failed (non-fatal):', error?.message);

@@ -92,7 +92,7 @@ function getDefaultClosingDate() {
 /**
  * From a closing date, derive funding date and first payment date.
  * CO + TX purchase: same day. CA + OR purchase: +3 biz days. All refis: +3 biz days.
- * firstPaymentDate: 1st of 2nd month after closing (estimate; fee editor refines from funding day).
+ * first_payment_date: 1st of 2nd month after closing (estimate; fee editor refines from funding day).
  */
 function deriveFromClosing(closing, state, purpose) {
   if (!closing) return {};
@@ -102,7 +102,7 @@ function deriveFromClosing(closing, state, purpose) {
   const [y, m] = closing.split('-').map(Number);
   const fp = new Date(y, m + 1, 1);
   const firstPaymentDate = `${fp.getFullYear()}-${String(fp.getMonth() + 1).padStart(2, '0')}-01`;
-  return { fundingDate, firstPaymentDate };
+  return { funding_date: fundingDate, first_payment_date: firstPaymentDate };
 }
 
 export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loading }) {
@@ -114,9 +114,9 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
 
   // Auto-set default closing date if not yet set
   useEffect(() => {
-    if (!scenario.closingDate) {
+    if (!scenario.closing_date) {
       const closing = getDefaultClosingDate();
-      onChange({ ...scenario, closingDate: closing, ...deriveFromClosing(closing, scenario.state, scenario.purpose) });
+      onChange({ ...scenario, closing_date: closing, ...deriveFromClosing(closing, scenario.state, scenario.purpose) });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -172,43 +172,43 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
 
   // Purchase: interlinked property value / down payment / loan amount
   const purchaseCalc = useMemo(() => {
-    const pv = Number(scenario.propertyValue) || 0;
-    if (!pv) return { loanAmount: 0, downPct: 0, downDollars: 0, ltv: 0 };
+    const pv = Number(scenario.property_value) || 0;
+    if (!pv) return { loan_amount: 0, downPct: 0, downDollars: 0, ltv: 0 };
 
-    let loanAmount, downPct, downDollars;
+    let loan_amount, downPct, downDollars;
     if (lastEdited === 'pct') {
       downPct = Number(scenario.downPaymentPct) || 0;
-      loanAmount = Math.floor(pv * (1 - downPct / 100));
-      downDollars = pv - loanAmount;
+      loan_amount = Math.floor(pv * (1 - downPct / 100));
+      downDollars = pv - loan_amount;
     } else if (lastEdited === 'dollars') {
       downDollars = Math.floor(Number(scenario.downPaymentDollars) || 0);
-      loanAmount = pv - downDollars;
+      loan_amount = pv - downDollars;
       downPct = pv > 0 ? Math.round((downDollars / pv) * 10000) / 100 : 0;
     } else if (lastEdited === 'loan') {
-      loanAmount = Math.floor(Number(scenario.loanAmount) || 0);
-      downDollars = pv - loanAmount;
+      loan_amount = Math.floor(Number(scenario.loan_amount) || 0);
+      downDollars = pv - loan_amount;
       downPct = pv > 0 ? Math.round((downDollars / pv) * 10000) / 100 : 0;
     }
 
-    const ltv = pv > 0 ? Math.floor((loanAmount / pv) * 10000) / 100 : 0;
-    return { loanAmount, downPct, downDollars, ltv };
-  }, [scenario.propertyValue, scenario.downPaymentPct, scenario.downPaymentDollars, scenario.loanAmount, lastEdited]);
+    const ltv = pv > 0 ? Math.floor((loan_amount / pv) * 10000) / 100 : 0;
+    return { loan_amount, downPct, downDollars, ltv };
+  }, [scenario.property_value, scenario.downPaymentPct, scenario.downPaymentDollars, scenario.loan_amount, lastEdited]);
 
   // Refi: loan amount or LTV — bidirectional
   const [refiLastEdited, setRefiLastEdited] = useState('loan');
   const refiCalc = useMemo(() => {
-    const pv = Number(scenario.propertyValue) || 0;
+    const pv = Number(scenario.property_value) || 0;
     if (refiLastEdited === 'ltv') {
       const ltv = Number(scenario.refiLtv) || 0;
       const loan = Math.floor(pv * (ltv / 100));
-      return { loanAmount: loan, ltv };
+      return { loan_amount: loan, ltv };
     }
-    const loan = Math.floor(Number(scenario.loanAmount) || 0);
+    const loan = Math.floor(Number(scenario.loan_amount) || 0);
     const ltv = pv > 0 ? Math.floor((loan / pv) * 10000) / 100 : 0;
-    return { loanAmount: loan, ltv };
-  }, [scenario.propertyValue, scenario.loanAmount, scenario.refiLtv, refiLastEdited]);
+    return { loan_amount: loan, ltv };
+  }, [scenario.property_value, scenario.loan_amount, scenario.refiLtv, refiLastEdited]);
 
-  const effectiveLoan = isPurchase ? purchaseCalc.loanAmount : refiCalc.loanAmount;
+  const effectiveLoan = isPurchase ? purchaseCalc.loan_amount : refiCalc.loan_amount;
   const effectiveLtv = isPurchase ? purchaseCalc.ltv : refiCalc.ltv;
 
   const counties = useMemo(() => getCountiesByState(scenario.state || 'CO').map(c => c.name), [scenario.state]);
@@ -224,7 +224,7 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
     e.preventDefault();
     onSubmit({
       ...scenario,
-      loanAmount: effectiveLoan,
+      loan_amount: effectiveLoan,
       ltv: effectiveLtv,
     });
   }, [scenario, effectiveLoan, effectiveLtv, onSubmit]);
@@ -235,9 +235,9 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
       <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
         <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider mb-4">Borrower</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Field label="Name" value={scenario.borrowerName} onChange={v => update('borrowerName', v)} placeholder="Borrower name" />
-          <Field label="Email" value={scenario.borrowerEmail} onChange={v => update('borrowerEmail', v)} placeholder="email@example.com" type="email" />
-          <Field label="Phone" value={scenario.borrowerPhone} onChange={v => update('borrowerPhone', v)} placeholder="303-555-1234" type="tel" />
+          <Field label="Name" value={scenario.borrower_name} onChange={v => update('borrower_name', v)} placeholder="Borrower name" />
+          <Field label="Email" value={scenario.borrower_email} onChange={v => update('borrower_email', v)} placeholder="email@example.com" type="email" />
+          <Field label="Phone" value={scenario.borrower_phone} onChange={v => update('borrower_phone', v)} placeholder="303-555-1234" type="tel" />
         </div>
       </div>
 
@@ -248,10 +248,10 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
         {/* Purpose + Type + Term + Product Type */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
           <SelectField label="Purpose" value={scenario.purpose} options={PURPOSES} onChange={v => {
-            onChange({ ...scenario, purpose: v, ...deriveFromClosing(scenario.closingDate, scenario.state, v) });
+            onChange({ ...scenario, purpose: v, ...deriveFromClosing(scenario.closing_date, scenario.state, v) });
           }} />
-          <SelectField label="Loan Type" value={scenario.loanType} options={LOAN_TYPES} onChange={v => {
-            const updates = { ...scenario, loanType: v };
+          <SelectField label="Loan Type" value={scenario.loan_type} options={LOAN_TYPES} onChange={v => {
+            const updates = { ...scenario, loan_type: v };
             if (v === 'fha' && isPurchase) {
               updates.downPaymentPct = 3.5;
               setLastEdited('pct');
@@ -266,8 +266,8 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
           <DollarField
             label="Property Value"
-            value={scenario.propertyValue}
-            onChange={v => update('propertyValue', v)}
+            value={scenario.property_value}
+            onChange={v => update('property_value', v)}
           />
           {isPurchase ? (
             <>
@@ -285,16 +285,16 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
               />
               <DollarField
                 label="Loan Amount"
-                value={purchaseCalc.loanAmount}
-                onChange={v => { setLastEdited('loan'); update('loanAmount', v); }}
+                value={purchaseCalc.loan_amount}
+                onChange={v => { setLastEdited('loan'); update('loan_amount', v); }}
               />
             </>
           ) : (
             <>
               <DollarField
                 label="Loan Amount"
-                value={refiLastEdited === 'loan' ? scenario.loanAmount : refiCalc.loanAmount}
-                onChange={v => { setRefiLastEdited('loan'); update('loanAmount', v); }}
+                value={refiLastEdited === 'loan' ? scenario.loan_amount : refiCalc.loan_amount}
+                onChange={v => { setRefiLastEdited('loan'); update('loan_amount', v); }}
               />
               <Field
                 label="LTV"
@@ -325,7 +325,7 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
             {scenario.county && <div className="text-[10px] text-cyan-600 mt-0.5">{scenario.county} County, {scenario.state}</div>}
           </div>
           <SelectField label="State" value={scenario.state} options={STATES.map(s => ({ value: s, label: s }))} onChange={v => {
-            onChange({ ...scenario, state: v, county: '', ...deriveFromClosing(scenario.closingDate, v, scenario.purpose) });
+            onChange({ ...scenario, state: v, county: '', ...deriveFromClosing(scenario.closing_date, v, scenario.purpose) });
           }} />
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">County</label>
@@ -345,13 +345,13 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Field
             label="Closing Date"
-            value={scenario.closingDate || ''}
-            onChange={v => onChange({ ...scenario, closingDate: v, ...deriveFromClosing(v, scenario.state, scenario.purpose) })}
+            value={scenario.closing_date || ''}
+            onChange={v => onChange({ ...scenario, closing_date: v, ...deriveFromClosing(v, scenario.state, scenario.purpose) })}
             type="date"
           />
-          <Field label="Funding Date" value={scenario.fundingDate || ''} onChange={v => update('fundingDate', v)} type="date" />
-          <Field label="First Payment" value={scenario.firstPaymentDate || ''} onChange={v => update('firstPaymentDate', v)} type="date" />
-          <Field label="Loan Payoff (Refi)" value={scenario.currentBalance || ''} onChange={v => update('currentBalance', v)} type="number" placeholder="Existing balance" disabled={isPurchase} />
+          <Field label="Funding Date" value={scenario.funding_date || ''} onChange={v => update('funding_date', v)} type="date" />
+          <Field label="First Payment" value={scenario.first_payment_date || ''} onChange={v => update('first_payment_date', v)} type="date" />
+          <Field label="Loan Payoff (Refi)" value={scenario.current_balance || ''} onChange={v => update('current_balance', v)} type="number" placeholder="Existing balance" disabled={isPurchase} />
         </div>
 
         {/* Loan limit badge */}
@@ -373,8 +373,8 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
         <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
           <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider mb-4">Current Loan</h3>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Field label="Current Rate" value={scenario.currentRate} onChange={v => update('currentRate', v)} type="number" step="0.125" suffix="%" />
-            <DollarField label="Current Balance" value={scenario.currentBalance} onChange={v => update('currentBalance', v)} />
+            <Field label="Current Rate" value={scenario.current_rate} onChange={v => update('current_rate', v)} type="number" step="0.125" suffix="%" />
+            <DollarField label="Current Balance" value={scenario.current_balance} onChange={v => update('current_balance', v)} />
             <DollarField label="Monthly Payment" value={scenario.currentPayment} onChange={v => update('currentPayment', v)} />
             <Field label="Current Lender" value={scenario.currentLender} onChange={v => update('currentLender', v)} />
           </div>
@@ -388,7 +388,7 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
             <span className="text-gray-400 text-xs">Loan</span>
             <div className="font-mono font-bold">${fmt(effectiveLoan)}</div>
           </div>
-          {scenario.loanType === 'fha' && effectiveLoan > 0 && (
+          {scenario.loan_type === 'fha' && effectiveLoan > 0 && (
             <div>
               <span className="text-amber-400 text-xs">+ UFMIP (1.75%)</span>
               <div className="font-mono font-bold text-amber-300">${fmt(effectiveLoan + Math.round(effectiveLoan * 0.0175))}</div>
@@ -404,7 +404,7 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
           </div>
           <div>
             <span className="text-gray-400 text-xs">Type</span>
-            <div className="font-bold uppercase text-xs">{scenario.loanType}</div>
+            <div className="font-bold uppercase text-xs">{scenario.loan_type}</div>
           </div>
           <div className="border-l border-gray-700 pl-4 flex items-center gap-4">
             <label className="flex items-center gap-2 cursor-pointer">

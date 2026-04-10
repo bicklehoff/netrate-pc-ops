@@ -147,7 +147,7 @@ export default function XmlImportModal({ open, onClose }) {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('status', status);
-      if (mloId) formData.append('mloId', mloId);
+      if (mloId) formData.append('mlo_id', mloId);
 
       const res = await fetch('/api/portal/mlo/loans/import', {
         method: 'PUT',
@@ -169,8 +169,8 @@ export default function XmlImportModal({ open, onClose }) {
   };
 
   const handleViewLoan = () => {
-    if (result?.loanId) {
-      router.push(`/portal/mlo/loans/${result.loanId}`);
+    if (result?.loan_id) {
+      router.push(`/portal/mlo/loans/${result.loan_id}`);
     }
     handleClose();
   };
@@ -271,16 +271,16 @@ export default function XmlImportModal({ open, onClose }) {
               <div>
                 <h3 className="text-sm font-semibold text-gray-900 mb-2">Loan Details</h3>
                 <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
-                  <Field label="Loan #" value={preview.loan.loanNumber} />
-                  <Field label="Lender" value={preview.loan.lenderName} />
+                  <Field label="Loan #" value={preview.loan.loan_number} />
+                  <Field label="Lender" value={preview.loan.lender_name} />
                   <Field label="Purpose" value={preview.loan.purpose} />
-                  <Field label="Loan Type" value={preview.loan.loanType} />
-                  <Field label="Amount" value={preview.loan.loanAmount ? `$${Number(preview.loan.loanAmount).toLocaleString()}` : null} />
-                  <Field label="Rate" value={preview.loan.interestRate ? `${preview.loan.interestRate}%` : null} />
-                  <Field label="Term" value={preview.loan.loanTerm ? `${preview.loan.loanTerm} months` : null} />
+                  <Field label="Loan Type" value={preview.loan.loan_type} />
+                  <Field label="Amount" value={preview.loan.loan_amount ? `$${Number(preview.loan.loan_amount).toLocaleString()}` : null} />
+                  <Field label="Rate" value={preview.loan.interest_rate ? `${preview.loan.interest_rate}%` : null} />
+                  <Field label="Term" value={preview.loan.loan_term ? `${preview.loan.loan_term} months` : null} />
                   <Field label="Occupancy" value={preview.loan.occupancy} />
-                  <Field label="Property Type" value={preview.loan.propertyType} />
-                  <Field label="Purchase Price" value={preview.loan.purchasePrice ? `$${Number(preview.loan.purchasePrice).toLocaleString()}` : null} />
+                  <Field label="Property Type" value={preview.loan.property_type} />
+                  <Field label="Purchase Price" value={preview.loan.purchase_price ? `$${Number(preview.loan.purchase_price).toLocaleString()}` : null} />
                 </div>
               </div>
 
@@ -308,7 +308,7 @@ export default function XmlImportModal({ open, onClose }) {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm font-medium text-gray-900">
-                            {b.firstName} {b.lastName}
+                            {b.first_name} {b.last_name}
                             <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">
                               {b.borrowerType === 'primary' ? 'Primary' : 'Co-Borrower'}
                             </span>
@@ -318,11 +318,11 @@ export default function XmlImportModal({ open, onClose }) {
                           </p>
                         </div>
                       </div>
-                      {(b.employerName || b.monthlyBaseIncome) && (
+                      {(b.employer_name || b.monthly_base_income) && (
                         <p className="text-xs text-gray-500 mt-1">
                           {[
-                            b.employerName,
-                            b.monthlyBaseIncome ? `$${Number(b.monthlyBaseIncome).toLocaleString()}/mo` : null,
+                            b.employer_name,
+                            b.monthly_base_income ? `$${Number(b.monthly_base_income).toLocaleString()}/mo` : null,
                           ].filter(Boolean).join(' · ')}
                         </p>
                       )}
@@ -396,8 +396,8 @@ export default function XmlImportModal({ open, onClose }) {
               <div>
                 <p className="text-lg font-semibold text-gray-900">Loan Imported</p>
                 <p className="text-sm text-gray-500 mt-1">
-                  {result.borrowerName}
-                  {result.loanNumber ? ` · #${result.loanNumber}` : ''}
+                  {result.borrower_name}
+                  {result.loan_number ? ` · #${result.loan_number}` : ''}
                 </p>
               </div>
               <div className="flex justify-center gap-3 pt-2">

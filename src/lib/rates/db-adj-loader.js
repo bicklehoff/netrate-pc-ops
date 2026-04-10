@@ -7,7 +7,7 @@
  * Caches results for 5 minutes — adjustment configs change at most daily.
  */
 
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 
 // ─── Cache ──────────────────────────────────────────────────────────
 
@@ -78,12 +78,12 @@ function buildAdjObject(allRows) {
   for (const row of allRows) {
     const val = Number(row.value);
 
-    switch (row.adjustmentType) {
+    switch (row.adjustment_type) {
       case 'ficoLtv': {
-        const ficoBand = formatFicoBand(row.ficoMin, row.ficoMax);
-        const ltvKey = formatLtvBand(row.ltvMin, row.ltvMax);
+        const ficoBand = formatFicoBand(row.fico_min, row.fico_max);
+        const ltvKey = formatLtvBand(row.ltv_min, row.ltv_max);
         const tier = row.tier || 'core';
-        const termGroup = row.termGroup || '>15yr';
+        const termGroup = row.term_group || '>15yr';
 
         if (tier === 'elite') {
           // Elite: agency-specific grids
@@ -114,35 +114,35 @@ function buildAdjObject(allRows) {
       }
 
       case 'riskBased': {
-        const ficoBand = formatFicoBandRiskBased(row.ficoMin, row.ficoMax);
+        const ficoBand = formatFicoBandRiskBased(row.fico_min, row.fico_max);
         if (!adj.riskBased[ficoBand]) adj.riskBased[ficoBand] = {};
-        adj.riskBased[ficoBand][formatLtvBand(row.ltvMin, row.ltvMax)] = val;
+        adj.riskBased[ficoBand][formatLtvBand(row.ltv_min, row.ltv_max)] = val;
         break;
       }
 
       case 'loanAmount': {
-        const rangeKey = formatLoanAmountRange(row.loanAmountMin, row.loanAmountMax);
+        const rangeKey = formatLoanAmountRange(row.loan_amount_min, row.loan_amount_max);
         adj.loanAmountAdj[rangeKey] = val;
         break;
       }
 
       case 'srp': {
         const tier = row.tier || 'core';
-        const escrow = row.escrowType || 'withImpounds';
+        const escrow = row.escrow_type || 'withImpounds';
         const state = row.state;
-        const productGroup = row.productGroup;
+        const productGroup = row.product_group;
         if (!adj.srp[tier]) adj.srp[tier] = {};
         if (!adj.srp[tier][escrow]) adj.srp[tier][escrow] = {};
         if (!adj.srp[tier][escrow][state]) adj.srp[tier][escrow][state] = {};
 
-        if (tier === 'elite' && row.loanAmountMin != null) {
+        if (tier === 'elite' && row.loan_amount_min != null) {
           // Elite SRP: amount-banded — store as sorted array
           if (!Array.isArray(adj.srp[tier][escrow][state][productGroup])) {
             adj.srp[tier][escrow][state][productGroup] = [];
           }
           adj.srp[tier][escrow][state][productGroup].push({
-            min: Number(row.loanAmountMin),
-            max: Number(row.loanAmountMax),
+            min: Number(row.loan_amount_min),
+            max: Number(row.loan_amount_max),
             value: val,
           });
         } else {
@@ -154,7 +154,7 @@ function buildAdjObject(allRows) {
 
       case 'investor': {
         const agency = row.agency;
-        const termGroup = row.termGroup;
+        const termGroup = row.term_group;
         if (!adj.investorAdj[agency]) adj.investorAdj[agency] = {};
         adj.investorAdj[agency][termGroup] = val;
         break;
@@ -162,14 +162,14 @@ function buildAdjObject(allRows) {
 
       case 'fhlmcSpecial': {
         adj.fhlmcSpecial.push({
-          featureName: row.featureName,
+          featureName: row.feature_name,
           purpose: row.purpose,
           agency: row.agency,
           tier: row.tier,
-          termMin: row.termMin,
-          termMax: row.termMax,
-          loanAmountMin: row.loanAmountMin,
-          loanAmountMax: row.loanAmountMax,
+          termMin: row.term_min,
+          termMax: row.term_max,
+          loanAmountMin: row.loan_amount_min,
+          loanAmountMax: row.loan_amount_max,
           value: val,
         });
         break;
@@ -177,15 +177,15 @@ function buildAdjObject(allRows) {
 
       case 'productFeature': {
         adj.productFeatures.push({
-          featureName: row.featureName,
+          featureName: row.feature_name,
           tier: row.tier,
           purpose: row.purpose,
           state: row.state,
-          productGroup: row.productGroup,
-          ficoMin: row.ficoMin,
-          ficoMax: row.ficoMax,
-          ltvMin: row.ltvMin,
-          ltvMax: row.ltvMax,
+          productGroup: row.product_group,
+          ficoMin: row.fico_min,
+          ficoMax: row.fico_max,
+          ltvMin: row.ltv_min,
+          ltvMax: row.ltv_max,
           value: val,
         });
         break;
@@ -195,11 +195,11 @@ function buildAdjObject(allRows) {
         adj.productLoanAmount.push({
           tier: row.tier,
           agency: row.agency,
-          productType: row.productGroup, // 'fixed' or 'arm'
-          termMin: row.termMin,
-          termMax: row.termMax,
-          loanAmountMin: row.loanAmountMin,
-          loanAmountMax: row.loanAmountMax,
+          productType: row.product_group, // 'fixed' or 'arm'
+          termMin: row.term_min,
+          termMax: row.term_max,
+          loanAmountMin: row.loan_amount_min,
+          loanAmountMax: row.loan_amount_max,
           value: val,
         });
         break;
@@ -207,10 +207,10 @@ function buildAdjObject(allRows) {
 
       case 'eliteFhaFicoLoanAmt': {
         adj.eliteFhaFicoLoanAmt.push({
-          ficoMin: row.ficoMin,
-          ficoMax: row.ficoMax,
-          loanAmountMin: row.loanAmountMin,
-          loanAmountMax: row.loanAmountMax,
+          ficoMin: row.fico_min,
+          ficoMax: row.fico_max,
+          loanAmountMin: row.loan_amount_min,
+          loanAmountMax: row.loan_amount_max,
           value: val,
         });
         break;
@@ -220,10 +220,10 @@ function buildAdjObject(allRows) {
         adj.eliteFhaPurposeLtv.push({
           purpose: row.purpose,
           state: row.state,
-          ficoMin: row.ficoMin,
-          ficoMax: row.ficoMax,
-          ltvMin: Number(row.ltvMin),
-          ltvMax: Number(row.ltvMax),
+          ficoMin: row.fico_min,
+          ficoMax: row.fico_max,
+          ltvMin: Number(row.ltv_min),
+          ltvMax: Number(row.ltv_max),
           value: val,
         });
         break;
@@ -257,26 +257,22 @@ export async function getDbLenderAdj(lenderCode, loanType = 'conventional') {
   }
 
   // Find lender
-  const lender = await prisma.rateLender.findUnique({
-    where: { code: lenderCode },
-    select: { id: true },
-  });
+  const lenderRows = await sql`
+    SELECT id FROM rate_lenders WHERE code = ${lenderCode} LIMIT 1
+  `;
+  const lender = lenderRows[0];
   if (!lender) return null;
 
   // Query active rules for this lender + loan type
   const today = new Date();
-  const rules = await prisma.adjustmentRule.findMany({
-    where: {
-      lenderId: lender.id,
-      loanType,
-      status: 'active',
-      effectiveDate: { lte: today },
-      OR: [
-        { expiresDate: null },
-        { expiresDate: { gt: today } },
-      ],
-    },
-  });
+  const rules = await sql`
+    SELECT * FROM adjustment_rules
+    WHERE lender_id = ${lender.id}
+      AND loan_type = ${loanType}
+      AND status = 'active'
+      AND effective_date <= ${today}
+      AND (expires_date IS NULL OR expires_date > ${today})
+  `;
 
   if (rules.length === 0) return null;
 

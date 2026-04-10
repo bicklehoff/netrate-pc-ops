@@ -3,7 +3,7 @@
 // Token-based auth — validates borrower owns the scenario.
 
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 import { priceScenario } from '@/lib/rates/price-scenario';
 import { calcMonthlyPI } from '@/lib/rates/math';
 
@@ -15,8 +15,8 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Token and scenarioId required' }, { status: 400 });
     }
 
-    // Validate token → get email (raw SQL — Prisma client doesn't expose viewToken)
-    const leads = await prisma.$queryRaw`SELECT email FROM leads WHERE view_token::text = ${token} LIMIT 1`;
+    // Validate token → get email
+    const leads = await sql`SELECT email FROM leads WHERE view_token::text = ${token} LIMIT 1`;
     const lead = leads?.[0] || null;
 
     if (!lead?.email) {
@@ -24,18 +24,20 @@ export async function POST(request) {
     }
 
     // Fetch the scenario and verify ownership via email
-    const scenario = await prisma.savedScenario.findUnique({
-      where: { id: scenarioId },
-      include: {
-        lead: { select: { email: true } },
-      },
-    });
+    const scenarioRows = await sql`
+      SELECT s.*, l.email AS lead_email
+      FROM saved_scenarios s
+      LEFT JOIN leads l ON s.lead_id = l.id
+      WHERE s.id = ${scenarioId}
+      LIMIT 1
+    `;
 
-    if (!scenario || scenario.lead?.email !== lead.email) {
+    const scenario = scenarioRows[0];
+    if (!scenario || scenario.lead_email !== lead.email) {
       return NextResponse.json({ error: 'Scenario not found' }, { status: 404 });
     }
 
-    const sd = scenario.scenarioData;
+    const sd = scenario.scenario_data;
     if (!sd?.loanAmount) {
       return NextResponse.json({ error: 'Invalid scenario data' }, { status: 400 });
     }
@@ -71,13 +73,11 @@ export async function POST(request) {
       }));
 
     // Update scenario with fresh pricing
-    await prisma.savedScenario.update({
-      where: { id: scenarioId },
-      data: {
-        lastPricingData: topRates,
-        lastPricedAt: new Date(),
-      },
-    });
+    await sql`
+      UPDATE saved_scenarios
+      SET last_pricing_data = ${JSON.stringify(topRates)}, last_priced_at = NOW()
+      WHERE id = ${scenarioId}
+    `;
 
     return NextResponse.json({
       success: true,

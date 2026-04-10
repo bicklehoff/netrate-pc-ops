@@ -7,7 +7,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 
 // ─── QM Auto-Classification ───────────────────────────────────
 function deriveQmStatus(loanType) {
@@ -23,7 +23,7 @@ function deriveQmStatus(loanType) {
     case 'hecm':
       return 'not_subject';
     default:
-      return 'qm'; // conservative default — David can override on Tracker
+      return 'qm';
   }
 }
 
@@ -36,7 +36,7 @@ const STATE_NORMALIZE = {
 
 function normalizeState(raw) {
   if (!raw) return null;
-  const cleaned = raw.trim().split(' ')[0]; // handle "CO 80016" type entries
+  const cleaned = raw.trim().split(' ')[0];
   return STATE_NORMALIZE[cleaned.toLowerCase()] || cleaned.toUpperCase();
 }
 
@@ -46,8 +46,7 @@ function mapStatusToMcrEvent(status, actionTaken) {
   if (status === 'denied') return 'DENIED';
   if (status === 'withdrawn' || actionTaken === 'withdrawn') return 'WITHDRAWN';
   if (actionTaken === 'incomplete') return 'FILE_CLOSED';
-  if (status === 'archived') return 'FILE_CLOSED'; // archived without specific action = file closed
-  // Everything else still in the pipeline
+  if (status === 'archived') return 'FILE_CLOSED';
   return 'IN_PIPELINE';
 }
 
@@ -62,66 +61,60 @@ export async function POST() {
     const now = new Date();
 
     // Query all non-draft loans with borrower + mlo data
-    const loans = await prisma.loan.findMany({
-      where: {
-        status: { not: 'draft' },
-      },
-      include: {
-        borrower: {
-          select: { firstName: true, lastName: true },
-        },
-        mlo: {
-          select: { firstName: true, lastName: true, nmls: true },
-        },
-      },
-      orderBy: { createdAt: 'asc' },
-    });
+    const loans = await sql`
+      SELECT l.*,
+        b.first_name AS borrower_first_name, b.last_name AS borrower_last_name,
+        m.first_name AS mlo_first_name, m.last_name AS mlo_last_name, m.nmls AS mlo_nmls
+      FROM loans l
+      LEFT JOIN borrowers b ON l.borrower_id = b.id
+      LEFT JOIN mlos m ON l.mlo_id = m.id
+      WHERE l.status != 'draft'
+      ORDER BY l.created_at ASC
+    `;
 
     const pushed = [];
     const skipped = [];
 
     for (const loan of loans) {
-      // Must have property state for MCR (per-state reporting)
-      const propertyState = normalizeState(loan.propertyAddress?.state);
+      const propertyState = normalizeState(loan.property_address?.state);
       if (!propertyState) {
         skipped.push({
-          loanId: loan.loanId || loan.id,
-          borrower: loan.borrower ? `${loan.borrower.firstName} ${loan.borrower.lastName}` : 'unknown',
+          loanId: loan.ldox_loan_id || loan.id,
+          borrower: loan.borrower_first_name ? `${loan.borrower_first_name} ${loan.borrower_last_name}` : 'unknown',
           reason: 'Missing property state',
         });
         continue;
       }
 
-      // Must have a borrower
-      if (!loan.borrower) {
+      if (!loan.borrower_first_name) {
         skipped.push({
-          loanId: loan.loanId || loan.id,
+          loanId: loan.ldox_loan_id || loan.id,
           reason: 'No borrower linked',
         });
         continue;
       }
 
-      const eventType = mapStatusToMcrEvent(loan.status, loan.actionTaken);
-      const loanType = (loan.loanType || 'conventional').toLowerCase();
+      const eventType = mapStatusToMcrEvent(loan.status, loan.action_taken);
+      const loanType = (loan.loan_type || 'conventional').toLowerCase();
 
       pushed.push({
-        ldoxLoanId: loan.loanId || loan.id,
-        borrowerName: `${loan.borrower.firstName} ${loan.borrower.lastName}`,
-        loanAmount: loan.loanAmount ? Number(loan.loanAmount) : null,
+        ldoxLoanId: loan.ldox_loan_id || loan.id,
+        borrowerName: `${loan.borrower_first_name} ${loan.borrower_last_name}`,
+        loanAmount: loan.loan_amount ? Number(loan.loan_amount) : null,
         propertyState,
         loanType,
         loanPurpose: loan.purpose || null,
-        propertyType: loan.propertyType || 'one_to_four_family',
-        lienPosition: loan.lienStatus || 'first',
+        propertyType: loan.property_type || 'one_to_four_family',
+        lienPosition: loan.lien_status || 'first',
         occupancy: loan.occupancy || 'owner_occupied',
-        mloNmlsId: loan.mlo?.nmls || null,
+        mloNmlsId: loan.mlo_nmls || null,
         qmStatus: deriveQmStatus(loanType),
         eventType,
-        eventDate: (loan.actionTakenDate || loan.fundingDate || loan.updatedAt)?.toISOString()?.split('T')[0] || null,
-        applicationDate: loan.createdAt?.toISOString()?.split('T')[0] || null,
-        brokerComp: loan.brokerCompensation ? Number(loan.brokerCompensation) : null,
-        loanNumber: loan.lenderLoanNumber || loan.loanNumber || null,
-        creditScore: loan.creditScore || null,
+        eventDate: (loan.action_taken_date || loan.funding_date || loan.updated_at)?.toISOString?.()?.split('T')[0] || null,
+        applicationDate: loan.created_at?.toISOString?.()?.split('T')[0] || null,
+        brokerComp: loan.broker_compensation ? Number(loan.broker_compensation) : null,
+        loanNumber: loan.lender_loan_number || loan.loan_number || null,
+        creditScore: loan.credit_score || null,
       });
     }
 
@@ -156,21 +149,18 @@ export async function POST() {
     }
 
     // Create audit trail — one event per loan pushed
-    const auditPromises = pushed.map((payload) =>
-      prisma.loanEvent.create({
-        data: {
-          loanId: loans.find((l) => (l.loanId || l.id) === payload.ldoxLoanId)?.id,
-          eventType: 'mcr_pushed',
-          actorType: 'admin',
-          actorId: session.user.id,
-          newValue: payload.eventType,
-          details: {
-            mcrPayload: payload,
-            pushedAt: now.toISOString(),
-          },
-        },
-      })
-    );
+    const auditPromises = pushed.map((payload) => {
+      const loanId = loans.find((l) => (l.ldox_loan_id || l.id) === payload.ldoxLoanId)?.id;
+      if (!loanId) return Promise.resolve();
+      return sql`
+        INSERT INTO loan_events (loan_id, event_type, actor_type, actor_id, new_value, details, created_at)
+        VALUES (
+          ${loanId}, 'mcr_pushed', 'admin', ${session.user.id}, ${payload.eventType},
+          ${JSON.stringify({ mcrPayload: payload, pushedAt: now.toISOString() })}::jsonb,
+          NOW()
+        )
+      `;
+    });
 
     await Promise.allSettled(auditPromises);
 
@@ -196,32 +186,24 @@ export async function GET() {
       return NextResponse.json({ error: 'Admin access required' }, { status: 401 });
     }
 
-    const loans = await prisma.loan.findMany({
-      where: {
-        status: { not: 'draft' },
-      },
-      include: {
-        borrower: {
-          select: { firstName: true, lastName: true },
-        },
-        mlo: {
-          select: { firstName: true, lastName: true, nmls: true },
-        },
-      },
-      orderBy: { createdAt: 'asc' },
-    });
+    const loans = await sql`
+      SELECT l.*, b.first_name AS borrower_first_name, b.last_name AS borrower_last_name,
+        m.first_name AS mlo_first_name, m.last_name AS mlo_last_name, m.nmls AS mlo_nmls
+      FROM loans l
+      LEFT JOIN borrowers b ON l.borrower_id = b.id
+      LEFT JOIN mlos m ON l.mlo_id = m.id
+      WHERE l.status != 'draft'
+      ORDER BY l.created_at ASC
+    `;
 
     const summary = { total: loans.length, byState: {}, byStatus: {}, byType: {}, missingState: 0 };
 
     for (const loan of loans) {
-      const state = normalizeState(loan.propertyAddress?.state) || 'MISSING';
-      const eventType = mapStatusToMcrEvent(loan.status, loan.actionTaken);
-      const loanType = (loan.loanType || 'unknown').toLowerCase();
+      const state = normalizeState(loan.property_address?.state) || 'MISSING';
+      const eventType = mapStatusToMcrEvent(loan.status, loan.action_taken);
+      const loanType = (loan.loan_type || 'unknown').toLowerCase();
 
-      if (state === 'MISSING') {
-        summary.missingState++;
-      }
-
+      if (state === 'MISSING') summary.missingState++;
       summary.byState[state] = (summary.byState[state] || 0) + 1;
       summary.byStatus[eventType] = (summary.byStatus[eventType] || 0) + 1;
       summary.byType[loanType] = (summary.byType[loanType] || 0) + 1;

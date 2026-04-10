@@ -8,7 +8,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 import { priceScenario } from '@/lib/rates/price-scenario';
 import { checkEligibility } from '@/lib/quotes/eligibility';
 import { buildFeeBreakdown } from '@/lib/quotes/fee-builder';
@@ -26,39 +26,21 @@ export async function GET(request) {
     const loanId = searchParams.get('loanId');
     const search = searchParams.get('search');
     const limit = Math.min(Number(searchParams.get('limit')) || 50, 200);
+    const searchPattern = search ? `%${search}%` : null;
 
-    const where = { mloId: session.user.id };
-    if (status) where.status = status;
-    if (contactId) where.contactId = contactId;
-    if (loanId) where.loanId = loanId;
-    if (search) {
-      where.borrowerName = { contains: search, mode: 'insensitive' };
-    }
-
-    const quotes = await prisma.borrowerQuote.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      take: limit,
-      select: {
-        id: true,
-        borrowerName: true,
-        borrowerEmail: true,
-        purpose: true,
-        loanAmount: true,
-        loanType: true,
-        state: true,
-        fico: true,
-        ltv: true,
-        term: true,
-        status: true,
-        monthlyPayment: true,
-        version: true,
-        sentAt: true,
-        viewedAt: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
+    const quotes = await sql`
+      SELECT id, borrower_name, borrower_email, purpose, loan_amount, loan_type,
+        state, fico, ltv, term, status, monthly_payment, version,
+        sent_at, viewed_at, created_at, updated_at
+      FROM borrower_quotes
+      WHERE mlo_id = ${session.user.id}
+        AND (${status}::text IS NULL OR status = ${status})
+        AND (${contactId}::uuid IS NULL OR contact_id = ${contactId})
+        AND (${loanId}::uuid IS NULL OR loan_id = ${loanId})
+        AND (${searchPattern}::text IS NULL OR borrower_name ILIKE ${searchPattern})
+      ORDER BY created_at DESC
+      LIMIT ${limit}
+    `;
 
     return NextResponse.json({ quotes });
   } catch (err) {
@@ -183,58 +165,49 @@ export async function POST(request) {
     };
 
     // Lead auto-create / link ──────────────────────────────────────────────
-    // If leadId provided → verify it belongs to this MLO and use it.
-    // Else if borrower email provided → upsert a Lead (email + mloId unique).
     let resolvedLeadId = body.leadId || null;
 
     if (resolvedLeadId) {
-      // Verify ownership
-      const existingLead = await prisma.lead.findFirst({
-        where: { id: resolvedLeadId, mloId: session.user.id },
-        select: { id: true },
-      });
-      if (!existingLead) resolvedLeadId = null; // Don't link to someone else's lead
+      const existingLead = await sql`
+        SELECT id FROM leads WHERE id = ${resolvedLeadId} AND mlo_id = ${session.user.id} LIMIT 1
+      `;
+      if (!existingLead[0]) resolvedLeadId = null;
     }
 
     if (!resolvedLeadId && body.borrowerEmail) {
-      // Upsert lead — email + mloId as natural key
-      // Prisma doesn't have a compound unique on email+mloId, so use findFirst + create
-      const existingByEmail = await prisma.lead.findFirst({
-        where: { email: body.borrowerEmail, mloId: session.user.id },
-        select: { id: true },
-      });
-      if (existingByEmail) {
-        resolvedLeadId = existingByEmail.id;
+      const existingByEmail = await sql`
+        SELECT id FROM leads WHERE email = ${body.borrowerEmail} AND mlo_id = ${session.user.id} LIMIT 1
+      `;
+      if (existingByEmail[0]) {
+        resolvedLeadId = existingByEmail[0].id;
       } else {
-        const newLead = await prisma.lead.create({
-          data: {
-            email: body.borrowerEmail,
-            phone: body.borrowerPhone || null,
-            name: body.borrowerName || body.borrowerEmail,
-            first_name: body.borrowerName ? body.borrowerName.split(' ')[0] : null,
-            last_name: body.borrowerName ? body.borrowerName.split(' ').slice(1).join(' ') || null : null,
-            source: 'quote_generator',
-            status: 'quoted',
-            loanPurpose: body.purpose,
-            loanAmount: loanAmount,
-            propertyValue: safePropertyValue,
-            propertyState: pricingInput.state,
-            propertyCounty: pricingInput.county || null,
-            creditScore: body.fico,
-            mloId: session.user.id,
-          },
-        });
-        resolvedLeadId = newLead.id;
+        const newLead = await sql`
+          INSERT INTO leads (
+            email, phone, name, first_name, last_name, source, status,
+            loan_purpose, loan_amount, property_value, property_state, property_county,
+            credit_score, mlo_id, created_at, updated_at
+          ) VALUES (
+            ${body.borrowerEmail}, ${body.borrowerPhone || null},
+            ${body.borrowerName || body.borrowerEmail},
+            ${body.borrowerName ? body.borrowerName.split(' ')[0] : null},
+            ${body.borrowerName ? body.borrowerName.split(' ').slice(1).join(' ') || null : null},
+            'quote_generator', 'quoted',
+            ${body.purpose}, ${loanAmount}, ${safePropertyValue},
+            ${pricingInput.state}, ${pricingInput.county || null},
+            ${body.fico}, ${session.user.id},
+            NOW(), NOW()
+          )
+          RETURNING id
+        `;
+        resolvedLeadId = newLead[0].id;
       }
     }
 
     // Update lead status → quoted (if we have one)
     if (resolvedLeadId) {
-      await prisma.lead.update({
-        where: { id: resolvedLeadId },
-        data: {
-          status: 'quoted',
-          scenarioData: {
+      await sql`
+        UPDATE leads SET status = 'quoted',
+          scenario_data = ${JSON.stringify({
             purpose: body.purpose,
             loanAmount,
             propertyValue: safePropertyValue,
@@ -243,45 +216,38 @@ export async function POST(request) {
             fico: body.fico,
             loanType: pricingInput.loanType,
             lastQuotedAt: new Date().toISOString(),
-          },
-        },
-      });
+          })}::jsonb,
+          updated_at = NOW()
+        WHERE id = ${resolvedLeadId}
+      `;
     }
-    // ─────────────────────────────────────────────────────────────────────────
 
     // Create quote record
-    const quote = await prisma.borrowerQuote.create({
-      data: {
-        mloId: session.user.id,
-        contactId: body.contactId || null,
-        leadId: resolvedLeadId,
-        loanId: body.loanId || null,
-        borrowerName: body.borrowerName || null,
-        borrowerEmail: body.borrowerEmail || null,
-        borrowerPhone: body.borrowerPhone || null,
-        purpose: body.purpose,
-        propertyValue: safePropertyValue,
-        loanAmount,
-        ltv,
-        fico: body.fico,
-        state: pricingInput.state,
-        county: pricingInput.county,
-        propertyType: body.propertyType || null,
-        occupancy: body.occupancy || 'primary',
-        loanType: pricingInput.loanType,
-        term: pricingInput.term,
-        closingDate: body.closingDate ? new Date(body.closingDate) : null,
-        currentRate: toDecimalOrNull(body.currentRate),
-        currentBalance: toDecimalOrNull(body.currentBalance),
-        currentPayment: toDecimalOrNull(body.currentPayment),
-        currentLender: body.currentLender || null,
-        scenarios: topScenarios,
-        feeBreakdown: fees,
-        monthlyPayment,
-        status: 'draft',
-        version: 1,
-      },
-    });
+    const quoteRows = await sql`
+      INSERT INTO borrower_quotes (
+        id, mlo_id, contact_id, lead_id, loan_id,
+        borrower_name, borrower_email, borrower_phone,
+        purpose, property_value, loan_amount, ltv, fico,
+        state, county, property_type, occupancy, loan_type, term,
+        closing_date, current_rate, current_balance, current_payment, current_lender,
+        scenarios, fee_breakdown, monthly_payment,
+        status, version, created_at, updated_at
+      ) VALUES (
+        gen_random_uuid(), ${session.user.id},
+        ${body.contactId || null}, ${resolvedLeadId}, ${body.loanId || null},
+        ${body.borrowerName || null}, ${body.borrowerEmail || null}, ${body.borrowerPhone || null},
+        ${body.purpose}, ${safePropertyValue}, ${loanAmount}, ${ltv}, ${body.fico},
+        ${pricingInput.state}, ${pricingInput.county}, ${body.propertyType || null},
+        ${body.occupancy || 'primary'}, ${pricingInput.loanType}, ${pricingInput.term},
+        ${body.closingDate ? new Date(body.closingDate) : null},
+        ${toDecimalOrNull(body.currentRate)}, ${toDecimalOrNull(body.currentBalance)},
+        ${toDecimalOrNull(body.currentPayment)}, ${body.currentLender || null},
+        ${JSON.stringify(topScenarios)}::jsonb, ${JSON.stringify(fees)}::jsonb, ${monthlyPayment},
+        'draft', 1, NOW(), NOW()
+      )
+      RETURNING *
+    `;
+    const quote = quoteRows[0];
 
     return NextResponse.json({
       quote,
@@ -307,7 +273,6 @@ export async function POST(request) {
 function pickTopScenarios(results, n) {
   if (!results || results.length === 0) return [];
 
-  // Group by lender, pick best price per lender
   const byLender = new Map();
   for (const r of results) {
     const key = r.lender;
@@ -316,7 +281,6 @@ function pickTopScenarios(results, n) {
     }
   }
 
-  // Sort by rate ascending, take top N
   return Array.from(byLender.values())
     .sort((a, b) => a.rate - b.rate)
     .slice(0, n)

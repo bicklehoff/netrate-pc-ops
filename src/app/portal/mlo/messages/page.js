@@ -101,10 +101,10 @@ function SmsInbox() {
           ) : (
             threads.map((thread) => (
               <button
-                key={thread.contactId || thread.phone}
+                key={thread.contact_id || thread.phone}
                 onClick={() => setSelectedThread(thread)}
                 className={`w-full text-left px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors ${
-                  selectedThread?.contactId === thread.contactId &&
+                  selectedThread?.contact_id === thread.contact_id &&
                   selectedThread?.phone === thread.phone
                     ? 'bg-brand/5 border-l-2 border-l-brand'
                     : ''
@@ -113,22 +113,22 @@ function SmsInbox() {
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">
-                      {thread.contactName || thread.phone || 'Unknown'}
+                      {thread.contact_name || thread.phone || 'Unknown'}
                     </p>
                     <p className="text-xs text-gray-500 truncate mt-0.5">
-                      {thread.lastDirection === 'outbound' && (
+                      {thread.last_direction === 'outbound' && (
                         <span className="text-gray-400">You: </span>
                       )}
-                      {thread.lastMessage}
+                      {thread.last_message}
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-1 flex-shrink-0">
                     <span className="text-[11px] text-gray-400">
-                      {formatRelativeTime(thread.lastMessageAt)}
+                      {formatRelativeTime(thread.last_message_at)}
                     </span>
-                    {thread.messageCount > 0 && (
+                    {thread.message_count > 0 && (
                       <span className="text-[10px] text-gray-400">
-                        {thread.messageCount}
+                        {thread.message_count}
                       </span>
                     )}
                   </div>
@@ -147,18 +147,18 @@ function SmsInbox() {
             <div className="px-4 py-3 border-b border-gray-200 flex items-center gap-3">
               <div className="w-9 h-9 rounded-full bg-brand/10 flex items-center justify-center flex-shrink-0">
                 <span className="text-sm font-semibold text-brand">
-                  {(selectedThread.contactName || selectedThread.phone || '?')[0].toUpperCase()}
+                  {(selectedThread.contact_name || selectedThread.phone || '?')[0].toUpperCase()}
                 </span>
               </div>
               <div>
                 <p className="text-sm font-semibold text-gray-900">
-                  {selectedThread.contactName || 'Unknown Contact'}
+                  {selectedThread.contact_name || 'Unknown Contact'}
                 </p>
                 <p className="text-xs text-gray-500">{selectedThread.phone}</p>
               </div>
-              {selectedThread.contactId && (
+              {selectedThread.contact_id && (
                 <a
-                  href={`/portal/mlo/contacts/${selectedThread.contactId}`}
+                  href={`/portal/mlo/contacts/${selectedThread.contact_id}`}
                   className="ml-auto text-xs text-brand hover:underline"
                 >
                   View contact
@@ -168,7 +168,7 @@ function SmsInbox() {
             {/* Reuse SmsThread component */}
             <div className="flex-1 min-h-0">
               <SmsThread
-                contactId={selectedThread.contactId}
+                contactId={selectedThread.contact_id}
                 contactPhone={selectedThread.phone}
                 messages={[]}
               />
@@ -271,7 +271,7 @@ function CallHistory() {
                         href={`/portal/mlo/contacts/${call.contact.id}`}
                         className="text-sm font-medium text-brand hover:underline"
                       >
-                        {call.contact.firstName} {call.contact.lastName}
+                        {call.contact.first_name} {call.contact.last_name}
                       </a>
                     ) : (
                       <span className="text-sm text-gray-400">Unknown</span>
@@ -296,7 +296,7 @@ function CallHistory() {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600 font-mono">
-                    {call.direction === 'inbound' ? call.fromNumber : call.toNumber}
+                    {call.direction === 'inbound' ? call.from_number : call.to_number}
                   </td>
                   <td className="px-4 py-3">
                     <span className={`text-xs px-2 py-0.5 rounded-full ${
@@ -312,7 +312,7 @@ function CallHistory() {
                     {formatDuration(call.duration)}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-500">
-                    {formatDateTime(call.startedAt)}
+                    {formatDateTime(call.started_at)}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-500 max-w-[200px] truncate">
                     {call.notes?.[0]?.content || '—'}

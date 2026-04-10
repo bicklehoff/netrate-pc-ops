@@ -36,8 +36,8 @@ export default function ContactCard({ contact, onUpdate }) {
   const handleEdit = () => {
     setIsEditing(true);
     setEditData({
-      firstName: detail?.firstName || '',
-      lastName: detail?.lastName || '',
+      first_name: detail?.first_name || '',
+      last_name: detail?.last_name || '',
       email: detail?.email || '',
       phone: detail?.phone || '',
       company: detail?.company || '',
@@ -125,19 +125,19 @@ export default function ContactCard({ contact, onUpdate }) {
       type: 'call',
       title: `${c.direction === 'inbound' ? 'Inbound' : 'Outbound'} call${c.duration ? ` · ${Math.floor(c.duration / 60)}:${String(c.duration % 60).padStart(2, '0')}` : ''}`,
       desc: c.notes?.[0]?.content || '',
-      time: c.startedAt,
+      time: c.started_at,
     })),
     ...(detail.smsMessages || []).slice(0, 5).map(m => ({
       type: 'sms',
       title: m.direction === 'inbound' ? 'SMS Received' : 'SMS Sent',
       desc: m.body?.slice(0, 80) || '',
-      time: m.sentAt,
+      time: m.sent_at,
     })),
     ...(detail.contactNotes || []).slice(0, 5).map(n => ({
       type: 'note',
       title: 'Note',
       desc: n.content?.slice(0, 80) || '',
-      time: n.createdAt,
+      time: n.created_at,
     })),
   ].sort((a, b) => new Date(b.time) - new Date(a.time)).slice(0, 8);
 
@@ -171,14 +171,14 @@ export default function ContactCard({ contact, onUpdate }) {
             <div className="flex gap-2">
               <input
                 className="flex-1 px-2 py-1.5 text-xs border border-gray-200 rounded-md focus:border-brand focus:outline-none"
-                value={editData.firstName}
-                onChange={e => setEditData(d => ({ ...d, firstName: e.target.value }))}
+                value={editData.first_name}
+                onChange={e => setEditData(d => ({ ...d, first_name: e.target.value }))}
                 placeholder="First name"
               />
               <input
                 className="flex-1 px-2 py-1.5 text-xs border border-gray-200 rounded-md focus:border-brand focus:outline-none"
-                value={editData.lastName}
-                onChange={e => setEditData(d => ({ ...d, lastName: e.target.value }))}
+                value={editData.last_name}
+                onChange={e => setEditData(d => ({ ...d, last_name: e.target.value }))}
                 placeholder="Last name"
               />
             </div>
@@ -247,11 +247,11 @@ export default function ContactCard({ contact, onUpdate }) {
               <div key={loan.id} className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-semibold truncate">
-                    {loan.loanType || 'Loan'} · {loan.status}
+                    {loan.loan_type || 'Loan'} · {loan.status}
                   </div>
                   <div className="text-[10px] text-gray-500">
-                    {loan.loanAmount ? `$${Number(loan.loanAmount).toLocaleString()}` : ''}
-                    {loan.lenderName ? ` · ${loan.lenderName}` : ''}
+                    {loan.loan_amount ? `$${Number(loan.loan_amount).toLocaleString()}` : ''}
+                    {loan.lender_name ? ` · ${loan.lender_name}` : ''}
                   </div>
                 </div>
                 <a

@@ -4,7 +4,7 @@
 
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 
 export async function GET(req) {
   const session = await getServerSession(authOptions);
@@ -17,42 +17,107 @@ export async function GET(req) {
   const limit = parseInt(searchParams.get('limit') || '30', 10);
   const contactId = searchParams.get('contactId');
   const direction = searchParams.get('direction'); // 'inbound' | 'outbound'
-  const skip = (page - 1) * limit;
+  const offset = (page - 1) * limit;
 
-  const where = {};
-
-  // Admins see all calls, MLOs see only their own
-  if (session.user.role !== 'admin') {
-    where.mloId = session.user.id;
-  }
-
-  if (contactId) where.contactId = contactId;
-  if (direction) where.direction = direction;
+  const isAdmin = session.user.role === 'admin';
+  const mloId = session.user.id;
 
   try {
-    const [calls, total] = await Promise.all([
-      prisma.callLog.findMany({
-        where,
-        orderBy: { startedAt: 'desc' },
-        skip,
-        take: limit,
-        include: {
-          contact: {
-            select: { id: true, firstName: true, lastName: true, phone: true },
-          },
-          notes: {
-            orderBy: { createdAt: 'desc' },
-            take: 1,
-          },
-          mlo: {
-            select: { firstName: true, lastName: true },
-          },
-        },
-      }),
-      prisma.callLog.count({ where }),
-    ]);
+    let calls, countRows;
 
-    return Response.json({ calls, total, page, limit });
+    if (contactId && direction) {
+      [calls, countRows] = await Promise.all([
+        sql`
+          SELECT cl.*,
+            c.id AS contact_id_ref, c.first_name AS contact_first_name, c.last_name AS contact_last_name, c.phone AS contact_phone,
+            m.first_name AS mlo_first_name, m.last_name AS mlo_last_name
+          FROM call_logs cl
+          LEFT JOIN contacts c ON cl.contact_id = c.id
+          LEFT JOIN mlos m ON cl.mlo_id = m.id
+          WHERE cl.contact_id = ${contactId} AND cl.direction = ${direction}
+            ${isAdmin ? sql`` : sql`AND cl.mlo_id = ${mloId}`}
+          ORDER BY cl.started_at DESC
+          LIMIT ${limit} OFFSET ${offset}
+        `,
+        sql`SELECT COUNT(*)::int AS total FROM call_logs WHERE contact_id = ${contactId} AND direction = ${direction} ${isAdmin ? sql`` : sql`AND mlo_id = ${mloId}`}`,
+      ]);
+    } else if (contactId) {
+      [calls, countRows] = await Promise.all([
+        sql`
+          SELECT cl.*,
+            c.id AS contact_id_ref, c.first_name AS contact_first_name, c.last_name AS contact_last_name, c.phone AS contact_phone,
+            m.first_name AS mlo_first_name, m.last_name AS mlo_last_name
+          FROM call_logs cl
+          LEFT JOIN contacts c ON cl.contact_id = c.id
+          LEFT JOIN mlos m ON cl.mlo_id = m.id
+          WHERE cl.contact_id = ${contactId}
+            ${isAdmin ? sql`` : sql`AND cl.mlo_id = ${mloId}`}
+          ORDER BY cl.started_at DESC
+          LIMIT ${limit} OFFSET ${offset}
+        `,
+        sql`SELECT COUNT(*)::int AS total FROM call_logs WHERE contact_id = ${contactId} ${isAdmin ? sql`` : sql`AND mlo_id = ${mloId}`}`,
+      ]);
+    } else if (direction) {
+      [calls, countRows] = await Promise.all([
+        sql`
+          SELECT cl.*,
+            c.id AS contact_id_ref, c.first_name AS contact_first_name, c.last_name AS contact_last_name, c.phone AS contact_phone,
+            m.first_name AS mlo_first_name, m.last_name AS mlo_last_name
+          FROM call_logs cl
+          LEFT JOIN contacts c ON cl.contact_id = c.id
+          LEFT JOIN mlos m ON cl.mlo_id = m.id
+          WHERE cl.direction = ${direction}
+            ${isAdmin ? sql`` : sql`AND cl.mlo_id = ${mloId}`}
+          ORDER BY cl.started_at DESC
+          LIMIT ${limit} OFFSET ${offset}
+        `,
+        sql`SELECT COUNT(*)::int AS total FROM call_logs WHERE direction = ${direction} ${isAdmin ? sql`` : sql`AND mlo_id = ${mloId}`}`,
+      ]);
+    } else {
+      [calls, countRows] = await Promise.all([
+        sql`
+          SELECT cl.*,
+            c.id AS contact_id_ref, c.first_name AS contact_first_name, c.last_name AS contact_last_name, c.phone AS contact_phone,
+            m.first_name AS mlo_first_name, m.last_name AS mlo_last_name
+          FROM call_logs cl
+          LEFT JOIN contacts c ON cl.contact_id = c.id
+          LEFT JOIN mlos m ON cl.mlo_id = m.id
+          ${isAdmin ? sql`` : sql`WHERE cl.mlo_id = ${mloId}`}
+          ORDER BY cl.started_at DESC
+          LIMIT ${limit} OFFSET ${offset}
+        `,
+        isAdmin
+          ? sql`SELECT COUNT(*)::int AS total FROM call_logs`
+          : sql`SELECT COUNT(*)::int AS total FROM call_logs WHERE mlo_id = ${mloId}`,
+      ]);
+    }
+
+    // Fetch latest note for each call
+    const callIds = calls.map(c => c.id);
+    const notes = callIds.length
+      ? await sql`
+          SELECT DISTINCT ON (call_log_id) * FROM call_notes
+          WHERE call_log_id = ANY(${callIds})
+          ORDER BY call_log_id, created_at DESC
+        `
+      : [];
+
+    // Nest contact/mlo/notes into each call
+    for (const call of calls) {
+      call.contact = call.contact_id ? {
+        id: call.contact_id,
+        first_name: call.contact_first_name,
+        last_name: call.contact_last_name,
+        phone: call.contact_phone,
+      } : null;
+      call.mlo = { first_name: call.mlo_first_name, last_name: call.mlo_last_name };
+      call.notes = notes.filter(n => n.call_log_id === call.id);
+      // Clean up flat join fields
+      delete call.contact_id_ref; delete call.contact_first_name; delete call.contact_last_name;
+      delete call.contact_phone; delete call.mlo_first_name; delete call.mlo_last_name;
+    }
+
+    return Response.json({ calls, total: countRows[0].total, page, limit });
   } catch (e) {
     console.error('Call logs fetch failed:', e);
     return Response.json({ error: 'Failed to fetch call logs' }, { status: 500 });

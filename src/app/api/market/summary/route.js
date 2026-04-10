@@ -12,8 +12,7 @@
 
 import { NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
-import { neon } from '@neondatabase/serverless';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
@@ -25,13 +24,13 @@ function formatCommentary(record) {
     headline: record.headline,
     commentary: record.commentary,
     sentiment: record.sentiment,
-    treasury10yr: record.treasury10yr != null ? Number(record.treasury10yr) : null,
-    treasury10yrChg: record.treasury10yrChg != null ? Number(record.treasury10yrChg) : null,
-    mbs6Coupon: record.mbs6Coupon ?? record.mbs_6_coupon ?? null,
-    mbs6Change: record.mbs6Change != null ? Number(record.mbs6Change) : (record.mbs_6_change != null ? Number(record.mbs_6_change) : null),
+    treasury_10yr: record.treasury_10yr != null ? Number(record.treasury_10yr) : null,
+    treasury_10yr_chg: record.treasury_10yr_chg != null ? Number(record.treasury_10yr_chg) : null,
+    mbs_6_coupon: record.mbs_6_coupon ?? null,
+    mbs_6_change: record.mbs_6_change != null ? Number(record.mbs_6_change) : null,
     author: record.author,
     source: record.source,
-    publishedAt: record.publishedAt ?? record.published_at ?? null,
+    published_at: record.published_at ?? null,
   };
 }
 
@@ -43,13 +42,13 @@ function formatLegacy(legacy) {
     headline: legacy.headline,
     commentary: legacy.commentary,
     sentiment: legacy.sentiment,
-    treasury10yr: legacy.treasury10yr != null ? Number(legacy.treasury10yr) : (legacy.treasury_10yr != null ? Number(legacy.treasury_10yr) : null),
-    treasury10yrChg: legacy.treasury10yrChg != null ? Number(legacy.treasury10yrChg) : (legacy.treasury_10yr_chg != null ? Number(legacy.treasury_10yr_chg) : null),
-    mbs6Coupon: legacy.mbs6Coupon ?? legacy.mbs_6_coupon ?? null,
-    mbs6Change: legacy.mbs6Change != null ? Number(legacy.mbs6Change) : (legacy.mbs_6_change != null ? Number(legacy.mbs_6_change) : null),
-    upcomingEvents: legacy.upcomingEvents ?? legacy.upcoming_events ?? null,
-    createdBy: legacy.createdBy ?? legacy.created_by ?? null,
-    updatedAt: legacy.updatedAt ?? legacy.updated_at ?? null,
+    treasury_10yr: legacy.treasury_10yr != null ? Number(legacy.treasury_10yr) : null,
+    treasury_10yr_chg: legacy.treasury_10yr_chg != null ? Number(legacy.treasury_10yr_chg) : null,
+    mbs_6_coupon: legacy.mbs_6_coupon ?? null,
+    mbs_6_change: legacy.mbs_6_change != null ? Number(legacy.mbs_6_change) : null,
+    upcoming_events: legacy.upcoming_events ?? null,
+    created_by: legacy.created_by ?? null,
+    updated_at: legacy.updated_at ?? null,
   };
 }
 
@@ -68,47 +67,39 @@ export async function GET(request) {
     const dateParam = searchParams.get('date');
 
     // Try RateWatchCommentary first
-    let record;
+    let rows;
     if (dateParam) {
-      record = await prisma.rateWatchCommentary.findUnique({
-        where: { date: new Date(dateParam) },
-      });
+      rows = await sql`SELECT * FROM rate_watch_commentaries WHERE date = ${new Date(dateParam)} LIMIT 1`;
     }
     // If no record for specific date, or no date requested → get most recent
-    if (!record) {
-      record = await prisma.rateWatchCommentary.findFirst({
-        orderBy: { date: 'desc' },
-      });
+    if (!rows?.length) {
+      rows = await sql`SELECT * FROM rate_watch_commentaries ORDER BY date DESC LIMIT 1`;
     }
 
-    if (record) {
+    if (rows.length) {
+      const record = rows[0];
       const stale = dateParam && record.date.toISOString().split('T')[0] !== dateParam;
       return cached200({ summary: formatCommentary(record), source: stale ? 'db_fallback' : 'db' });
     }
 
     // Fallback to legacy MarketSummary
-    let legacy;
+    let legacyRows;
     if (dateParam) {
-      legacy = await prisma.marketSummary.findUnique({
-        where: { date: new Date(dateParam) },
-      });
+      legacyRows = await sql`SELECT * FROM market_summaries WHERE date = ${new Date(dateParam)} LIMIT 1`;
     }
-    if (!legacy) {
-      legacy = await prisma.marketSummary.findFirst({
-        orderBy: { date: 'desc' },
-      });
+    if (!legacyRows?.length) {
+      legacyRows = await sql`SELECT * FROM market_summaries ORDER BY date DESC LIMIT 1`;
     }
 
-    if (legacy) {
-      return cached200({ summary: formatLegacy(legacy), source: 'legacy_db' });
+    if (legacyRows?.length) {
+      return cached200({ summary: formatLegacy(legacyRows[0]), source: 'legacy_db' });
     }
 
     return NextResponse.json({ summary: null, source: 'none' });
   } catch (error) {
     console.error('Market summary GET error:', error);
-    // Graceful degradation: try raw SQL via neon to bypass Prisma issues
+    // Graceful degradation: try one more time
     try {
-      const sql = neon(process.env.PC_DATABASE_URL || process.env.DATABASE_URL);
       const rows = await sql`SELECT * FROM rate_watch_commentaries ORDER BY date DESC LIMIT 1`;
       if (rows.length) {
         return cached200({ summary: formatCommentary(rows[0]), source: 'fallback' });
@@ -151,35 +142,25 @@ export async function POST(request) {
       );
     }
 
-    // Upsert into RateWatchCommentary
-    const record = await prisma.rateWatchCommentary.upsert({
-      where: { date: new Date(date) },
-      create: {
-        date: new Date(date),
-        headline,
-        commentary,
-        sentiment: sentiment || 'neutral',
-        treasury10yr: treasury10yr ?? null,
-        treasury10yrChg: treasury10yrChg ?? null,
-        mbs6Coupon: mbs6Coupon ?? null,
-        mbs6Change: mbs6Change ?? null,
-        author: author || 'David Burson',
-        source: inputSource || 'manual',
-        publishedAt: new Date(),
-      },
-      update: {
-        headline,
-        commentary,
-        sentiment: sentiment || 'neutral',
-        treasury10yr: treasury10yr ?? null,
-        treasury10yrChg: treasury10yrChg ?? null,
-        mbs6Coupon: mbs6Coupon ?? null,
-        mbs6Change: mbs6Change ?? null,
-        author: author || 'David Burson',
-        source: inputSource || 'manual',
-        publishedAt: new Date(),
-      },
-    });
+    // Upsert into rate_watch_commentaries
+    const rows = await sql`
+      INSERT INTO rate_watch_commentaries (date, headline, commentary, sentiment, treasury_10yr, treasury_10yr_chg, mbs_6_coupon, mbs_6_change, author, source, published_at)
+      VALUES (${new Date(date)}, ${headline}, ${commentary}, ${sentiment || 'neutral'}, ${treasury10yr ?? null}, ${treasury10yrChg ?? null}, ${mbs6Coupon ?? null}, ${mbs6Change ?? null}, ${author || 'David Burson'}, ${inputSource || 'manual'}, ${new Date()})
+      ON CONFLICT (date) DO UPDATE SET
+        headline = EXCLUDED.headline,
+        commentary = EXCLUDED.commentary,
+        sentiment = EXCLUDED.sentiment,
+        treasury_10yr = EXCLUDED.treasury_10yr,
+        treasury_10yr_chg = EXCLUDED.treasury_10yr_chg,
+        mbs_6_coupon = EXCLUDED.mbs_6_coupon,
+        mbs_6_change = EXCLUDED.mbs_6_change,
+        author = EXCLUDED.author,
+        source = EXCLUDED.source,
+        published_at = EXCLUDED.published_at
+      RETURNING *
+    `;
+
+    const record = rows[0];
 
     // Bust ISR cache so pages show new commentary immediately
     revalidatePath('/rate-watch');

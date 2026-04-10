@@ -31,40 +31,40 @@ export default function ScenarioForm({ scenario, onChange, onSubmit, loading }) 
   const [lastEdited, setLastEdited] = useState('pct');
 
   const purchaseCalc = useMemo(() => {
-    const pv = scenario.propertyValue || 0;
-    if (!pv) return { loanAmount: 0, downPct: 0, downDollars: 0, ltv: 0 };
+    const pv = scenario.property_value || 0;
+    if (!pv) return { loan_amount: 0, downPct: 0, downDollars: 0, ltv: 0 };
 
-    let loanAmount, downPct, downDollars;
+    let loan_amount, downPct, downDollars;
 
     if (lastEdited === 'pct') {
       downPct = scenario.downPaymentPct || 0;
-      loanAmount = Math.floor(pv * (1 - downPct / 100));
-      downDollars = pv - loanAmount;
+      loan_amount = Math.floor(pv * (1 - downPct / 100));
+      downDollars = pv - loan_amount;
     } else if (lastEdited === 'dollars') {
       downDollars = scenario.downPaymentDollars || 0;
       downPct = pv > 0 ? Math.round((downDollars / pv) * 10000) / 100 : 0;
-      loanAmount = Math.floor(pv - downDollars);
+      loan_amount = Math.floor(pv - downDollars);
     } else if (lastEdited === 'loan') {
-      loanAmount = Math.floor(scenario.manualLoanAmount || 0);
-      downDollars = pv - loanAmount;
+      loan_amount = Math.floor(scenario.manualLoanAmount || 0);
+      downDollars = pv - loan_amount;
       downPct = pv > 0 ? Math.round((downDollars / pv) * 10000) / 100 : 0;
     }
 
-    const ltv = pv > 0 ? Math.floor((loanAmount / pv) * 10000) / 100 : 0;
-    return { loanAmount, downPct, downDollars, ltv };
-  }, [scenario.propertyValue, scenario.downPaymentPct, scenario.downPaymentDollars, scenario.manualLoanAmount, lastEdited]);
+    const ltv = pv > 0 ? Math.floor((loan_amount / pv) * 10000) / 100 : 0;
+    return { loan_amount, downPct, downDollars, ltv };
+  }, [scenario.property_value, scenario.downPaymentPct, scenario.downPaymentDollars, scenario.manualLoanAmount, lastEdited]);
 
   const refiCalc = useMemo(() => {
-    const pv = scenario.propertyValue || 0;
+    const pv = scenario.property_value || 0;
     const loan = Math.floor(scenario.newLoanAmount || scenario.currentPayoff || 0);
     const ltv = pv > 0 ? Math.floor((loan / pv) * 10000) / 100 : 0;
-    return { loanAmount: loan, ltv };
-  }, [scenario.propertyValue, scenario.newLoanAmount, scenario.currentPayoff]);
+    return { loan_amount: loan, ltv };
+  }, [scenario.property_value, scenario.newLoanAmount, scenario.currentPayoff]);
 
   const isPurchase = scenario.purpose === 'purchase';
-  const isFha = scenario.loanType === 'fha';
-  const isVa = scenario.loanType === 'va';
-  const loanAmount = isPurchase ? purchaseCalc.loanAmount : refiCalc.loanAmount;
+  const isFha = scenario.loan_type === 'fha';
+  const isVa = scenario.loan_type === 'va';
+  const loanAmount = isPurchase ? purchaseCalc.loan_amount : refiCalc.loan_amount;
   const ltv = isPurchase ? purchaseCalc.ltv : refiCalc.ltv;
 
   const counties = useMemo(() => getCountiesByState(scenario.state || 'CO'), [scenario.state]);
@@ -78,8 +78,8 @@ export default function ScenarioForm({ scenario, onChange, onSubmit, loading }) 
   }, [scenario.state, scenario.county, loanAmount]);
 
   useMemo(() => {
-    if (scenario.loanAmount !== loanAmount || scenario.ltv !== ltv) {
-      onChange({ ...scenario, loanAmount, ltv });
+    if (scenario.loan_amount !== loanAmount || scenario.ltv !== ltv) {
+      onChange({ ...scenario, loan_amount: loanAmount, ltv });
     }
   }, [loanAmount, ltv]);
 
@@ -184,12 +184,12 @@ export default function ScenarioForm({ scenario, onChange, onSubmit, loading }) 
           </div>
           <div>
             <label className={labelCls}>Loan Type</label>
-            <select value={scenario.loanType || 'conventional'} onChange={e => {
+            <select value={scenario.loan_type || 'conventional'} onChange={e => {
               const lt = e.target.value;
               const newDown = lt === 'fha' ? 3.5 : lt === 'va' ? 0 : 25;
               const newFico = lt === 'fha' ? 680 : lt === 'va' ? 720 : 780;
               const newPV = lt === 'fha' ? 400000 : lt === 'va' ? 400000 : 533334;
-              onChange({ ...scenario, loanType: lt, downPaymentPct: newDown, fico: newFico, propertyValue: newPV, vaFundingFeeExempt: false, vaSubsequentUse: false });
+              onChange({ ...scenario, loan_type: lt, downPaymentPct: newDown, fico: newFico, property_value: newPV, vaFundingFeeExempt: false, vaSubsequentUse: false });
               setLastEdited('pct');
             }} className={selectCls}>
               <option value="conventional">Conventional</option>
@@ -213,7 +213,7 @@ export default function ScenarioForm({ scenario, onChange, onSubmit, loading }) 
           </div>
 
           {/* VA-specific */}
-          {scenario.loanType === 'va' && (
+          {scenario.loan_type === 'va' && (
             <>
               <div className="flex items-center gap-3 py-1 sm:col-span-2">
                 <label className="flex items-center gap-2 cursor-pointer">
@@ -277,9 +277,9 @@ export default function ScenarioForm({ scenario, onChange, onSubmit, loading }) 
             <label className={labelCls}>Property Type</label>
             <div className="flex gap-2 flex-wrap">
               {[['sfr', 'Single Family'], ['condo', 'Condo'], ['townhome', 'Townhome']].map(([val, label]) => (
-                <button key={val} type="button" onClick={() => update('propertyType', val)}
+                <button key={val} type="button" onClick={() => update('property_type', val)}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
-                    scenario.propertyType === val
+                    scenario.property_type === val
                       ? 'bg-brand text-[#fff000] border-brand'
                       : 'bg-white text-gray-600 border-gray-200 hover:border-brand/40 hover:text-brand'
                   }`}>
@@ -322,8 +322,8 @@ export default function ScenarioForm({ scenario, onChange, onSubmit, loading }) 
 
           <div>
             <label className={labelCls}>{isPurchase ? 'Purchase Price' : 'Property Value'}</label>
-            <input type="number" value={scenario.propertyValue || ''} placeholder="$"
-              onChange={e => update('propertyValue', Number(e.target.value))}
+            <input type="number" value={scenario.property_value || ''} placeholder="$"
+              onChange={e => update('property_value', Number(e.target.value))}
               className={inputCls} />
           </div>
 
@@ -347,7 +347,7 @@ export default function ScenarioForm({ scenario, onChange, onSubmit, loading }) 
               <div>
                 <label className={labelCls}>Loan Amount</label>
                 <input type="number" step="1000"
-                  value={lastEdited === 'loan' ? (scenario.manualLoanAmount || '') : (purchaseCalc.loanAmount || '')}
+                  value={lastEdited === 'loan' ? (scenario.manualLoanAmount || '') : (purchaseCalc.loan_amount || '')}
                   placeholder="$" onChange={e => handleLoanAmount(Number(e.target.value))}
                   className={inputCls} />
               </div>
@@ -366,8 +366,8 @@ export default function ScenarioForm({ scenario, onChange, onSubmit, loading }) 
               </div>
               <div>
                 <label className={labelCls}>Current Rate</label>
-                <input type="number" step="0.125" value={scenario.currentRate || ''} placeholder="%"
-                  onChange={e => update('currentRate', Number(e.target.value))}
+                <input type="number" step="0.125" value={scenario.current_rate || ''} placeholder="%"
+                  onChange={e => update('current_rate', Number(e.target.value))}
                   className={inputCls} />
                 <p className="text-xs text-gray-400 mt-1">Used to calculate savings</p>
               </div>

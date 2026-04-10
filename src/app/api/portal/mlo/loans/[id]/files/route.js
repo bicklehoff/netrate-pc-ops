@@ -12,7 +12,7 @@ export const maxDuration = 30;
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 import { listFolder, uploadFile, downloadFile, deleteResource, createLoanFolder } from '@/lib/zoho-workdrive';
 import { put } from '@vercel/blob';
 import { PDFDocument } from 'pdf-lib';
@@ -20,10 +20,11 @@ import { sendSms } from '@/lib/twilio-voice';
 
 async function verifyMloAccess(loanId, session) {
   if (!session || session.user.userType !== 'mlo') return null;
-  const loan = await prisma.loan.findUnique({ where: { id: loanId } });
+  const rows = await sql`SELECT * FROM loans WHERE id = ${loanId} LIMIT 1`;
+  const loan = rows[0];
   if (!loan) return null;
   const isAdmin = session.user.role === 'admin';
-  if (!isAdmin && loan.mloId !== session.user.id) return null;
+  if (!isAdmin && loan.mlo_id !== session.user.id) return null;
   return loan;
 }
 
@@ -41,7 +42,7 @@ export async function GET(request, { params }) {
     const downloadFileId = searchParams.get('download');
     const folderName = searchParams.get('folder');
 
-    // ─── Download (proxy stream) ───────────────────────────
+    // Download (proxy stream)
     if (downloadFileId) {
       const { stream, contentType, contentDisposition, contentLength } = await downloadFile(downloadFileId);
       const headers = new Headers();
@@ -51,8 +52,8 @@ export async function GET(request, { params }) {
       return new Response(stream, { headers });
     }
 
-    // ─── List folder contents ──────────────────────────────
-    if (!loan.workDriveFolderId || !loan.workDriveSubfolders) {
+    // List folder contents
+    if (!loan.work_drive_folder_id || !loan.work_drive_subfolders) {
       return NextResponse.json({
         files: [],
         folders: { SUBMITTED: null, EXTRA: null, CLOSING: null },
@@ -60,9 +61,8 @@ export async function GET(request, { params }) {
       });
     }
 
-    const subfolders = loan.workDriveSubfolders;
+    const subfolders = loan.work_drive_subfolders;
 
-    // If specific subfolder requested, list that one
     if (folderName && subfolders[folderName]) {
       const files = await listFolder(subfolders[folderName]);
       return NextResponse.json({
@@ -73,19 +73,15 @@ export async function GET(request, { params }) {
       });
     }
 
-    // List all folders' contents including FLOOR (root folder files)
     const allFiles = {};
-
-    // FLOOR = files in root loan folder (excluding subfolder directories)
     const subfolderIds = new Set(Object.values(subfolders));
     try {
-      const rootContents = await listFolder(loan.workDriveFolderId);
+      const rootContents = await listFolder(loan.work_drive_folder_id);
       allFiles['FLOOR'] = rootContents.filter(item => !item.isFolder && !subfolderIds.has(item.id));
     } catch {
       allFiles['FLOOR'] = [];
     }
 
-    // Subfolders (SUBMITTED, EXTRA, CLOSING)
     for (const [name, folderId] of Object.entries(subfolders)) {
       try {
         allFiles[name] = await listFolder(folderId);
@@ -97,7 +93,7 @@ export async function GET(request, { params }) {
     return NextResponse.json({
       files: allFiles,
       folders: subfolders,
-      rootFolderId: loan.workDriveFolderId,
+      rootFolderId: loan.work_drive_folder_id,
       hasWorkDrive: true,
     });
   } catch (error) {
@@ -121,7 +117,6 @@ export async function PUT(request, { params }) {
     let targetFolder = formData.get('folder') || 'FLOOR';
     const docType = formData.get('docType') || 'other';
 
-    // Auto-route CDs to CLOSING folder
     if (targetFolder === 'FLOOR' && (docType === 'closing_disclosure' || docType === 'cd' || /closing.?disclosure|\.cd\b/i.test(file.name))) {
       targetFolder = 'CLOSING';
     }
@@ -130,7 +125,6 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    // File validation
     const ALLOWED_EXTENSIONS = ['.pdf', '.png', '.jpg', '.jpeg'];
     const fileExt = '.' + file.name.split('.').pop().toLowerCase();
     if (!ALLOWED_EXTENSIONS.includes(fileExt)) {
@@ -140,7 +134,7 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ error: 'File size exceeds 25 MB limit.' }, { status: 400 });
     }
 
-    // Convert images to PDF for lender-ready storage
+    // Convert images to PDF
     let uploadBlob = file;
     let uploadFileName = file.name;
     const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg'];
@@ -163,51 +157,44 @@ export async function PUT(request, { params }) {
       }
     }
 
-    let subfolders = loan.workDriveSubfolders;
+    let subfolders = loan.work_drive_subfolders;
     let fileUrl;
     let storageType = 'blob';
 
     // Auto-create WorkDrive folder if it doesn't exist
-    if (!loan.workDriveFolderId) {
+    if (!loan.work_drive_folder_id) {
       try {
-        const borrower = await prisma.borrower.findUnique({
-          where: { id: loan.borrowerId },
-          select: { firstName: true, lastName: true },
-        });
-        const mlo = loan.mloId
-          ? await prisma.mlo.findUnique({ where: { id: loan.mloId }, select: { firstName: true, lastName: true } })
-          : null;
-        const loName = mlo ? `${mlo.firstName} ${mlo.lastName}` : 'David Burson';
+        const borrowerRows = await sql`SELECT first_name, last_name FROM borrowers WHERE id = ${loan.borrower_id} LIMIT 1`;
+        const borrower = borrowerRows[0];
+        const mloRows = loan.mlo_id
+          ? await sql`SELECT first_name, last_name FROM mlos WHERE id = ${loan.mlo_id} LIMIT 1`
+          : [];
+        const mlo = mloRows[0];
+        const loName = mlo ? `${mlo.first_name} ${mlo.last_name}` : 'David Burson';
 
         const folder = await createLoanFolder({
-          borrowerFirstName: borrower.firstName,
-          borrowerLastName: borrower.lastName,
+          borrowerFirstName: borrower.first_name,
+          borrowerLastName: borrower.last_name,
           purpose: loan.purpose || 'purchase',
           loName,
         });
 
-        // Save folder info on the loan
-        await prisma.loan.update({
-          where: { id: loan.id },
-          data: {
-            workDriveFolderId: folder.rootFolderId,
-            workDriveSubfolders: folder.subfolders,
-          },
-        });
+        await sql`
+          UPDATE loans SET work_drive_folder_id = ${folder.rootFolderId}, work_drive_subfolders = ${JSON.stringify(folder.subfolders)}, updated_at = NOW()
+          WHERE id = ${loan.id}
+        `;
 
-        loan.workDriveFolderId = folder.rootFolderId;
+        loan.work_drive_folder_id = folder.rootFolderId;
         subfolders = folder.subfolders;
-        console.log(`Auto-created WorkDrive folder for loan ${loan.loanNumber}: ${loName}/${borrower.lastName}`);
+        console.log(`Auto-created WorkDrive folder for loan ${loan.loan_number}: ${loName}/${borrower.last_name}`);
       } catch (folderErr) {
         console.error('Auto-create WorkDrive folder failed:', folderErr?.message);
-        // Fall through to Blob storage
       }
     }
 
-    // Determine target folder ID: FLOOR = root folder, others = subfolder
     let targetFolderId = null;
-    if (targetFolder === 'FLOOR' && loan.workDriveFolderId) {
-      targetFolderId = loan.workDriveFolderId;
+    if (targetFolder === 'FLOOR' && loan.work_drive_folder_id) {
+      targetFolderId = loan.work_drive_folder_id;
     } else if (subfolders && subfolders[targetFolder]) {
       targetFolderId = subfolders[targetFolder];
     }
@@ -228,31 +215,20 @@ export async function PUT(request, { params }) {
     }
 
     // Create document record
-    const doc = await prisma.document.create({
-      data: {
-        loanId: id,
-        docType,
-        label: uploadFileName,
-        status: 'uploaded',
-        requestedById: session.user.id,
-        fileUrl,
-        fileName: uploadFileName,
-        fileSize: file.size,
-        uploadedAt: new Date(),
-      },
-    });
+    const docRows = await sql`
+      INSERT INTO documents (id, loan_id, doc_type, label, status, requested_by, file_url, file_name, file_size, uploaded_at, created_at)
+      VALUES (gen_random_uuid(), ${id}, ${docType}, ${uploadFileName}, 'uploaded', ${session.user.id}, ${fileUrl}, ${uploadFileName}, ${file.size}, NOW(), NOW())
+      RETURNING *
+    `;
+    const doc = docRows[0];
 
     // Audit
-    await prisma.loanEvent.create({
-      data: {
-        loanId: id,
-        eventType: 'doc_uploaded',
-        actorType: 'mlo',
-        actorId: session.user.id,
-        newValue: uploadFileName,
-        details: { documentId: doc.id, fileName: uploadFileName, originalName: file.name, folder: targetFolder, storageType },
-      },
-    });
+    await sql`
+      INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, new_value, details, created_at)
+      VALUES (gen_random_uuid(), ${id}, 'doc_uploaded', 'mlo', ${session.user.id}, ${uploadFileName},
+              ${JSON.stringify({ documentId: doc.id, fileName: uploadFileName, originalName: file.name, folder: targetFolder, storageType })},
+              NOW())
+    `;
 
     // Notify David when a CD or closing doc is uploaded
     const isClosingDoc = docType === 'closing_disclosure' || docType === 'cd' ||
@@ -260,12 +236,13 @@ export async function PUT(request, { params }) {
       targetFolder === 'CLOSING';
     if (isClosingDoc || loan.status === 'funded') {
       const uploaderName = session.user.name || session.user.email;
-      const borrower = await prisma.borrower.findUnique({ where: { id: loan.borrowerId }, select: { firstName: true, lastName: true } });
-      const borrowerName = borrower ? `${borrower.firstName} ${borrower.lastName}` : `Loan #${loan.loanNumber}`;
+      const borrowerRows = await sql`SELECT first_name, last_name FROM borrowers WHERE id = ${loan.borrower_id} LIMIT 1`;
+      const borrower = borrowerRows[0];
+      const borrowerName = borrower ? `${borrower.first_name} ${borrower.last_name}` : `Loan #${loan.loan_number}`;
       try {
         await sendSms(
           process.env.DAVID_PHONE || '+13034445251',
-          `CD uploaded for ${borrowerName} (Loan #${loan.loanNumber}) by ${uploaderName}. File: ${uploadFileName}`
+          `CD uploaded for ${borrowerName} (Loan #${loan.loan_number}) by ${uploaderName}. File: ${uploadFileName}`
         );
       } catch (smsErr) {
         console.error('CD notification SMS failed:', smsErr?.message);
@@ -300,16 +277,11 @@ export async function DELETE(request, { params }) {
     await deleteResource(fileId);
 
     // Audit
-    await prisma.loanEvent.create({
-      data: {
-        loanId: id,
-        eventType: 'doc_deleted',
-        actorType: 'mlo',
-        actorId: session.user.id,
-        newValue: `Deleted: ${fileName || fileId}`,
-        details: { action: 'delete', workDriveFileId: fileId },
-      },
-    });
+    await sql`
+      INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, new_value, details, created_at)
+      VALUES (gen_random_uuid(), ${id}, 'doc_deleted', 'mlo', ${session.user.id}, ${`Deleted: ${fileName || fileId}`},
+              ${JSON.stringify({ action: 'delete', workDriveFileId: fileId })}, NOW())
+    `;
 
     return NextResponse.json({ success: true });
   } catch (error) {

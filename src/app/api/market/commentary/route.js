@@ -9,36 +9,27 @@
 //   limit  — items per page (default: 10, max: 50)
 
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
     const limit = Math.min(50, Math.max(1, parseInt(searchParams.get('limit') || '10', 10)));
-    const skip = (page - 1) * limit;
+    const offset = (page - 1) * limit;
 
-    const [commentaries, total] = await Promise.all([
-      prisma.rateWatchCommentary.findMany({
-        orderBy: { date: 'desc' },
-        skip,
-        take: limit,
-        select: {
-          id: true,
-          date: true,
-          headline: true,
-          commentary: true,
-          sentiment: true,
-          treasury10yr: true,
-          treasury10yrChg: true,
-          mbs6Coupon: true,
-          mbs6Change: true,
-          author: true,
-          publishedAt: true,
-        },
-      }),
-      prisma.rateWatchCommentary.count(),
+    const [commentaries, countRows] = await Promise.all([
+      sql`
+        SELECT id, date, headline, commentary, sentiment, treasury_10yr, treasury_10yr_chg,
+               mbs_6_coupon, mbs_6_change, author, published_at
+        FROM rate_watch_commentaries
+        ORDER BY date DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `,
+      sql`SELECT COUNT(*)::int AS total FROM rate_watch_commentaries`,
     ]);
+
+    const total = countRows[0].total;
 
     const items = commentaries.map((c) => ({
       id: c.id,
@@ -48,12 +39,12 @@ export async function GET(request) {
       headline: c.headline,
       commentary: c.commentary,
       sentiment: c.sentiment,
-      treasury10yr: c.treasury10yr,
-      treasury10yrChg: c.treasury10yrChg,
-      mbs6Coupon: c.mbs6Coupon,
-      mbs6Change: c.mbs6Change,
+      treasury_10yr: c.treasury_10yr,
+      treasury_10yr_chg: c.treasury_10yr_chg,
+      mbs_6_coupon: c.mbs_6_coupon,
+      mbs_6_change: c.mbs_6_change,
       author: c.author,
-      publishedAt: c.publishedAt,
+      published_at: c.published_at,
     }));
 
     const response = NextResponse.json({

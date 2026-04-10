@@ -151,9 +151,9 @@ export default function LeadsTable({ leads, onStatusChange }) {
                   onClick={() => setExpandedId(expandedId === lead.id ? null : lead.id)}
                 >
                   <a href={`/portal/mlo/leads/${lead.id}`} className="font-medium text-gray-900 hover:text-brand" onClick={e => e.stopPropagation()}>{lead.name}</a>
-                  {lead.sourceDetail && (
+                  {lead.source_detail && (
                     <span className="block text-xs text-gray-400 mt-0.5 truncate max-w-[200px]">
-                      {lead.sourceDetail}
+                      {lead.source_detail}
                     </span>
                   )}
                 </td>
@@ -169,7 +169,7 @@ export default function LeadsTable({ leads, onStatusChange }) {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-1.5">
-                    {lead.isWarm && (
+                    {lead.is_warm && (
                       <span className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700">Warm</span>
                     )}
                     <span className="text-gray-600 text-sm">
@@ -182,7 +182,7 @@ export default function LeadsTable({ leads, onStatusChange }) {
                       className="text-[11px] text-brand hover:underline mt-0.5 block"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      {lead.contact.firstName} {lead.contact.lastName}
+                      {lead.contact.first_name} {lead.contact.last_name}
                       {lead.contact.status === 'past_client' && ' (returning)'}
                     </a>
                   )}
@@ -197,7 +197,7 @@ export default function LeadsTable({ leads, onStatusChange }) {
                   </span>
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <span className="text-xs text-gray-400">{timeAgo(lead.createdAt)}</span>
+                  <span className="text-xs text-gray-400">{timeAgo(lead.created_at)}</span>
                 </td>
                 <td className="px-4 py-3 text-right">
                   <div className="flex items-center justify-end gap-1.5">
@@ -250,10 +250,10 @@ export default function LeadsTable({ leads, onStatusChange }) {
                 <p className="text-sm text-gray-700"><strong>Email:</strong> {lead.email}</p>
                 {lead.phone && <p className="text-sm text-gray-700"><strong>Phone:</strong> {lead.phone}</p>}
                 <p className="text-sm text-gray-700"><strong>Source:</strong> {SOURCE_LABELS[lead.source] || lead.source}</p>
-                {lead.sourceDetail && <p className="text-sm text-gray-700"><strong>Rate:</strong> {lead.sourceDetail}</p>}
-                {lead.utmSource && (
+                {lead.source_detail && <p className="text-sm text-gray-700"><strong>Rate:</strong> {lead.source_detail}</p>}
+                {lead.utm_source && (
                   <p className="text-sm text-gray-500 mt-1">
-                    UTM: {lead.utmSource}/{lead.utmMedium}/{lead.utmCampaign}
+                    UTM: {lead.utm_source}/{lead.utm_medium}/{lead.utm_campaign}
                   </p>
                 )}
               </div>

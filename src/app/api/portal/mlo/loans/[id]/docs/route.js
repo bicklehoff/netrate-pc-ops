@@ -6,7 +6,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 import { put } from '@vercel/blob';
 import { getBallInCourt } from '@/lib/loan-states';
 import { uploadFile, getSubfolderForDocType } from '@/lib/zoho-workdrive';
@@ -24,65 +24,54 @@ export async function POST(request, { params }) {
     const { docType, label, notes } = await request.json();
 
     if (!docType || !label) {
-      return NextResponse.json(
-        { error: 'docType and label are required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'docType and label are required' }, { status: 400 });
     }
 
-    const loan = await prisma.loan.findUnique({ where: { id } });
+    const loanRows = await sql`SELECT * FROM loans WHERE id = ${id} LIMIT 1`;
+    const loan = loanRows[0];
     if (!loan) {
       return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
     }
 
     const isAdmin = session.user.role === 'admin';
-    if (!isAdmin && loan.mloId !== session.user.id) {
+    if (!isAdmin && loan.mlo_id !== session.user.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
     // Create the document request
-    const document = await prisma.document.create({
-      data: {
-        loanId: id,
-        docType,
-        label,
-        status: 'requested',
-        requestedById: session.user.id,
-        notes: notes || null,
-      },
-    });
+    const docRows = await sql`
+      INSERT INTO documents (id, loan_id, doc_type, label, status, requested_by, notes, created_at)
+      VALUES (gen_random_uuid(), ${id}, ${docType}, ${label}, 'requested', ${session.user.id}, ${notes || null}, NOW())
+      RETURNING *
+    `;
+    const document = docRows[0];
 
-    // Update ball-in-court (requesting a doc may shift ball to borrower)
-    await prisma.loan.update({
-      where: { id },
-      data: {
-        ballInCourt: getBallInCourt(loan.status, true),
-      },
-    });
+    // Update ball-in-court
+    await sql`
+      UPDATE loans SET ball_in_court = ${getBallInCourt(loan.status, true)}, updated_at = NOW() WHERE id = ${id}
+    `;
 
     // Create audit event
-    await prisma.loanEvent.create({
-      data: {
-        loanId: id,
-        eventType: 'doc_requested',
-        actorType: 'mlo',
-        actorId: session.user.id,
-        newValue: label,
-        details: { docType, documentId: document.id },
-      },
-    });
+    await sql`
+      INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, new_value, details, created_at)
+      VALUES (gen_random_uuid(), ${id}, 'doc_requested', 'mlo', ${session.user.id}, ${label},
+              ${JSON.stringify({ docType, documentId: document.id })}, NOW())
+    `;
 
     // Send doc request email to borrower (non-blocking)
-    const borrower = await prisma.borrower.findUnique({ where: { id: loan.borrowerId } });
-    if (borrower?.email) {
-      const template = docRequestTemplate({
-        firstName: borrower.firstName,
-        documents: [{ label, notes: notes || null }],
-        loanId: id,
-      });
-      sendEmail({ to: borrower.email, ...template }).catch((err) => {
-        console.error('Doc request email failed:', err.message);
-      });
+    if (loan.borrower_id) {
+      const borrowerRows = await sql`SELECT * FROM borrowers WHERE id = ${loan.borrower_id} LIMIT 1`;
+      const borrower = borrowerRows[0];
+      if (borrower?.email) {
+        const template = docRequestTemplate({
+          firstName: borrower.first_name,
+          documents: [{ label, notes: notes || null }],
+          loanId: id,
+        });
+        sendEmail({ to: borrower.email, ...template }).catch((err) => {
+          console.error('Doc request email failed:', err.message);
+        });
+      }
     }
 
     return NextResponse.json({ document }, { status: 201 });
@@ -102,13 +91,14 @@ export async function PUT(request, { params }) {
 
     const { id } = await params;
 
-    const loan = await prisma.loan.findUnique({ where: { id } });
+    const loanRows = await sql`SELECT * FROM loans WHERE id = ${id} LIMIT 1`;
+    const loan = loanRows[0];
     if (!loan) {
       return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
     }
 
     const isAdmin = session.user.role === 'admin';
-    if (!isAdmin && loan.mloId !== session.user.id) {
+    if (!isAdmin && loan.mlo_id !== session.user.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
@@ -121,36 +111,26 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    // ─── File Type Validation ────────────────────────────────
     const ALLOWED_TYPES = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
     const ALLOWED_EXTENSIONS = ['.pdf', '.png', '.jpg', '.jpeg'];
     const fileExt = '.' + file.name.split('.').pop().toLowerCase();
 
     if (!ALLOWED_TYPES.includes(file.type) && !ALLOWED_EXTENSIONS.includes(fileExt)) {
-      return NextResponse.json(
-        { error: 'Only PDF, PNG, and JPG files are accepted.' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Only PDF, PNG, and JPG files are accepted.' }, { status: 400 });
     }
 
-    // ─── File Size Validation (25 MB for MLO — larger than borrower) ─
     const MAX_FILE_SIZE = 25 * 1024 * 1024;
     if (file.size > MAX_FILE_SIZE) {
-      return NextResponse.json(
-        { error: 'File size exceeds 25 MB limit.' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'File size exceeds 25 MB limit.' }, { status: 400 });
     }
 
-    // ─── Upload to Storage ───────────────────────────────────
     let fileUrl;
     let storageType = 'blob';
+    const subfolders = loan.work_drive_subfolders;
 
-    const subfolders = loan.workDriveSubfolders;
-
-    if (loan.workDriveFolderId && subfolders) {
+    if (loan.work_drive_folder_id && subfolders) {
       const subfolderName = getSubfolderForDocType(docType);
-      const targetFolderId = subfolders[subfolderName] || loan.workDriveFolderId;
+      const targetFolderId = subfolders[subfolderName] || loan.work_drive_folder_id;
 
       try {
         const uploaded = await uploadFile(file, file.name, targetFolderId, true);
@@ -158,46 +138,28 @@ export async function PUT(request, { params }) {
         storageType = 'workdrive';
       } catch (wdError) {
         console.error('WorkDrive upload failed, falling back to Blob:', wdError?.message);
-        const blob = await put(`loans/${id}/${file.name}`, file, {
-          access: 'public',
-          addRandomSuffix: true,
-        });
+        const blob = await put(`loans/${id}/${file.name}`, file, { access: 'public', addRandomSuffix: true });
         fileUrl = blob.url;
       }
     } else {
-      const blob = await put(`loans/${id}/${file.name}`, file, {
-        access: 'public',
-        addRandomSuffix: true,
-      });
+      const blob = await put(`loans/${id}/${file.name}`, file, { access: 'public', addRandomSuffix: true });
       fileUrl = blob.url;
     }
 
     // Create document record
-    const doc = await prisma.document.create({
-      data: {
-        loanId: id,
-        docType,
-        label,
-        status: 'uploaded',
-        requestedById: session.user.id,
-        fileUrl,
-        fileName: file.name,
-        fileSize: file.size,
-        uploadedAt: new Date(),
-      },
-    });
+    const docRows = await sql`
+      INSERT INTO documents (id, loan_id, doc_type, label, status, requested_by, file_url, file_name, file_size, uploaded_at, created_at)
+      VALUES (gen_random_uuid(), ${id}, ${docType}, ${label}, 'uploaded', ${session.user.id}, ${fileUrl}, ${file.name}, ${file.size}, NOW(), NOW())
+      RETURNING *
+    `;
+    const doc = docRows[0];
 
     // Audit trail
-    await prisma.loanEvent.create({
-      data: {
-        loanId: id,
-        eventType: 'doc_uploaded',
-        actorType: 'mlo',
-        actorId: session.user.id,
-        newValue: label,
-        details: { documentId: doc.id, fileName: file.name, storageType },
-      },
-    });
+    await sql`
+      INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, new_value, details, created_at)
+      VALUES (gen_random_uuid(), ${id}, 'doc_uploaded', 'mlo', ${session.user.id}, ${label},
+              ${JSON.stringify({ documentId: doc.id, fileName: file.name, storageType })}, NOW())
+    `;
 
     return NextResponse.json({ document: doc });
   } catch (error) {
@@ -217,56 +179,41 @@ export async function PATCH(request, { params }) {
     const { documentId, status, notes } = await request.json();
 
     if (!documentId || !status) {
-      return NextResponse.json(
-        { error: 'documentId and status are required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'documentId and status are required' }, { status: 400 });
     }
 
     const validStatuses = ['reviewed', 'accepted', 'rejected'];
     if (!validStatuses.includes(status)) {
-      return NextResponse.json(
-        { error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` }, { status: 400 });
     }
 
-    const document = await prisma.document.findUnique({
-      where: { id: documentId },
-      include: { loan: true },
-    });
+    // Get document with loan info
+    const docRows = await sql`SELECT d.*, l.mlo_id, l.status AS loan_status FROM documents d JOIN loans l ON l.id = d.loan_id WHERE d.id = ${documentId} AND d.loan_id = ${id} LIMIT 1`;
+    const document = docRows[0];
 
-    if (!document || document.loanId !== id) {
+    if (!document) {
       return NextResponse.json({ error: 'Document not found' }, { status: 404 });
     }
 
     const isAdmin = session.user.role === 'admin';
-    if (!isAdmin && document.loan.mloId !== session.user.id) {
+    if (!isAdmin && document.mlo_id !== session.user.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
-    const updated = await prisma.document.update({
-      where: { id: documentId },
-      data: {
-        status,
-        notes: notes || document.notes,
-        reviewedAt: new Date(),
-      },
-    });
+    const updatedRows = await sql`
+      UPDATE documents SET status = ${status}, notes = ${notes || document.notes}, reviewed_at = NOW()
+      WHERE id = ${documentId} RETURNING *
+    `;
 
     // Re-check pending docs to update ball-in-court
-    const pendingDocs = await prisma.document.count({
-      where: { loanId: id, status: 'requested' },
-    });
+    const pendingRows = await sql`SELECT COUNT(*)::int AS total FROM documents WHERE loan_id = ${id} AND status = 'requested'`;
+    const pendingDocs = pendingRows[0].total;
 
-    await prisma.loan.update({
-      where: { id },
-      data: {
-        ballInCourt: getBallInCourt(document.loan.status, pendingDocs > 0),
-      },
-    });
+    await sql`
+      UPDATE loans SET ball_in_court = ${getBallInCourt(document.loan_status, pendingDocs > 0)}, updated_at = NOW() WHERE id = ${id}
+    `;
 
-    return NextResponse.json({ document: updated });
+    return NextResponse.json({ document: updatedRows[0] });
   } catch (error) {
     console.error('Doc review error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

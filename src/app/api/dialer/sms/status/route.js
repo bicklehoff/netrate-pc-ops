@@ -1,7 +1,7 @@
 // Dialer SMS Status Callback — Receives SMS delivery status updates
 // Twilio POSTs here as messages progress: queued → sent → delivered (or failed/undelivered)
 
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 
 export async function POST(req) {
   const formData = await req.formData();
@@ -10,10 +10,10 @@ export async function POST(req) {
 
   if (messageSid && messageStatus) {
     try {
-      await prisma.smsMessage.updateMany({
-        where: { twilioMessageSid: messageSid },
-        data: { status: messageStatus },
-      });
+      await sql`
+        UPDATE sms_messages SET status = ${messageStatus}
+        WHERE twilio_message_sid = ${messageSid}
+      `;
     } catch (e) {
       console.error('Failed to update SMS status:', e);
     }

@@ -8,7 +8,7 @@ import { listFolder, downloadFile, renameFile } from '@/lib/zoho-workdrive';
 import { isNamedDoc, buildDocName } from '@/lib/constants/doc-types';
 import { getSubmissionChecklist, getProcessingPhase } from '@/lib/constants/submission-checklists';
 import { SYSTEM_PROMPT, buildIdentifyPrompt } from './prompts';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 
 // Max time per file (leave headroom for Vercel's 60s limit)
 const PER_FILE_TIMEOUT_MS = 15000;
@@ -21,20 +21,20 @@ const MAX_TOTAL_MS = 50000;
  */
 async function buildLoanContext(loan) {
   const context = {
-    borrowerFirstName: loan.borrower?.firstName,
-    borrowerLastName: loan.borrower?.lastName,
-    propertyAddress: loan.propertyStreet || null,
-    loanType: loan.loanType || null,
+    borrowerFirstName: loan.borrower_first_name || null,
+    borrowerLastName: loan.borrower_last_name || null,
+    propertyAddress: loan.property_street || null,
+    loanType: loan.loan_type || null,
     purpose: loan.purpose || null,
-    lenderName: loan.lenderName || null,
+    lenderName: loan.lender_name || null,
   };
 
   // Get co-borrower if exists
-  if (loan.loanBorrowers?.length > 1) {
-    const coBorrower = loan.loanBorrowers.find((lb) => lb.borrowerType === 'co_borrower');
-    if (coBorrower?.borrower) {
-      context.coBorrowerFirstName = coBorrower.borrower.firstName;
-      context.coBorrowerLastName = coBorrower.borrower.lastName;
+  if (loan._loanBorrowers?.length > 1) {
+    const coBorrower = loan._loanBorrowers.find((lb) => lb.borrower_type === 'co_borrower');
+    if (coBorrower) {
+      context.coBorrowerFirstName = coBorrower.b_first_name;
+      context.coBorrowerLastName = coBorrower.b_last_name;
     }
   }
 
@@ -219,23 +219,40 @@ export async function identifyFile(fileId, fileName, loanContext) {
 export async function processLoanDocuments(loanId, mloId) {
   const startTime = Date.now();
 
-  // Load loan with all context
-  const loan = await prisma.loan.findUnique({
-    where: { id: loanId },
-    include: {
-      borrower: { select: { id: true, firstName: true, lastName: true } },
-      loanBorrowers: {
-        include: { borrower: { select: { firstName: true, lastName: true } } },
-      },
-      conditions: true,
-    },
-  });
+  // Load loan with borrower info and loan_borrowers
+  const loanRows = await sql`
+    SELECT l.*,
+           b.first_name AS borrower_first_name,
+           b.last_name AS borrower_last_name
+    FROM loans l
+    LEFT JOIN borrowers b ON l.borrower_id = b.id
+    WHERE l.id = ${loanId}
+    LIMIT 1
+  `;
+  const loan = loanRows[0];
 
   if (!loan) throw new Error('Loan not found');
-  if (!loan.workDriveFolderId) throw new Error('No WorkDrive folder for this loan');
+  if (!loan.work_drive_folder_id) throw new Error('No WorkDrive folder for this loan');
 
-  const subfolders = loan.workDriveSubfolders || {};
-  const floorFolderId = subfolders.FLOOR || loan.workDriveFolderId;
+  // Load loan_borrowers with borrower names
+  const loanBorrowers = await sql`
+    SELECT lb.borrower_type,
+           b.first_name AS b_first_name,
+           b.last_name AS b_last_name
+    FROM loan_borrowers lb
+    JOIN borrowers b ON lb.borrower_id = b.id
+    WHERE lb.loan_id = ${loanId}
+  `;
+  loan._loanBorrowers = loanBorrowers;
+
+  // Load conditions
+  const conditions = await sql`
+    SELECT * FROM conditions WHERE loan_id = ${loanId}
+  `;
+  loan._conditions = conditions;
+
+  const subfolders = loan.work_drive_subfolders || {};
+  const floorFolderId = subfolders.FLOOR || loan.work_drive_folder_id;
 
   // List FLOOR files
   const floorFiles = await listFolder(floorFolderId);
@@ -327,22 +344,24 @@ export async function processLoanDocuments(loanId, mloId) {
     .filter((d) => d.action === 'renamed' && d.newFileName)
     .map((d) => ({ from: d.originalName, to: d.newFileName, prefix: d.prefix }));
 
-  await prisma.loanEvent.create({
-    data: {
-      loanId,
-      eventType: 'corebot_process',
-      actorType: 'system',
-      actorId: mloId,
-      details: {
+  await sql`
+    INSERT INTO loan_events (loan_id, event_type, actor_type, actor_id, details, created_at)
+    VALUES (
+      ${loanId},
+      'corebot_process',
+      'system',
+      ${mloId},
+      ${JSON.stringify({
         processed: report.processed,
         renamed: report.renamed,
         conditionsUpdated: report.conditionsUpdated,
         errors: report.errors.length,
         durationMs: Date.now() - startTime,
         renames,
-      },
-    },
-  });
+      })},
+      NOW()
+    )
+  `;
 
   return report;
 }
@@ -367,27 +386,30 @@ async function matchCondition(loan, docResult) {
   if (!condType) return false;
 
   // Find matching open condition
-  const condition = await prisma.condition.findFirst({
-    where: {
-      loanId: loan.id,
-      category: condType,
-      status: { in: ['open', 'requested'] },
-    },
-    orderBy: { createdAt: 'asc' },
-  });
+  const condRows = await sql`
+    SELECT * FROM conditions
+    WHERE loan_id = ${loan.id}
+      AND category = ${condType}
+      AND status IN ('open', 'requested')
+    ORDER BY created_at ASC
+    LIMIT 1
+  `;
+  const condition = condRows[0];
 
   if (!condition) return false;
 
-  await prisma.condition.update({
-    where: { id: condition.id },
-    data: {
-      status: 'received',
-      receivedAt: new Date(),
-      notes: condition.notes
-        ? `${condition.notes}\nCoreBot: matched ${docResult.newFileName || docResult.originalName}`
-        : `CoreBot: matched ${docResult.newFileName || docResult.originalName}`,
-    },
-  });
+  const updatedNotes = condition.notes
+    ? `${condition.notes}\nCoreBot: matched ${docResult.newFileName || docResult.originalName}`
+    : `CoreBot: matched ${docResult.newFileName || docResult.originalName}`;
+
+  await sql`
+    UPDATE conditions
+    SET status = 'received',
+        received_at = NOW(),
+        notes = ${updatedNotes},
+        updated_at = NOW()
+    WHERE id = ${condition.id}
+  `;
 
   return true;
 }
@@ -400,10 +422,10 @@ async function matchCondition(loan, docResult) {
  */
 async function getChecklistStatus(loan) {
   const phase = getProcessingPhase(loan.status);
-  const checklist = getSubmissionChecklist(loan.loanType, loan.purpose);
+  const checklist = getSubmissionChecklist(loan.loan_type, loan.purpose);
 
   // Count received conditions
-  const conditions = loan.conditions || [];
+  const conditions = loan._conditions || [];
   const receivedCategories = new Set(
     conditions
       .filter((c) => ['received', 'cleared', 'waived'].includes(c.status))

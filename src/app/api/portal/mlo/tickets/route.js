@@ -4,7 +4,7 @@
 
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 
 export async function GET(request) {
   const session = await getServerSession(authOptions);
@@ -16,30 +16,35 @@ export async function GET(request) {
   const ticketType = searchParams.get('type');
   const priority = searchParams.get('priority');
 
-  const where = {};
-  if (product && product !== 'all') where.product = product;
-  if (status && status !== 'all') where.status = status;
-  if (ticketType && ticketType !== 'all') where.ticketType = ticketType;
-  if (priority && priority !== 'all') where.priority = priority;
+  const effectiveProduct = (product && product !== 'all') ? product : null;
+  const effectiveStatus = (status && status !== 'all') ? status : null;
+  const effectiveType = (ticketType && ticketType !== 'all') ? ticketType : null;
+  const effectivePriority = (priority && priority !== 'all') ? priority : null;
 
   try {
-    const tickets = await prisma.ticket.findMany({
-      where,
-      include: {
-        entries: {
-          orderBy: { createdAt: 'desc' },
-          take: 1, // Latest entry for preview
-        },
-        _count: { select: { entries: true } },
-      },
-      orderBy: [
-        { status: 'asc' },
-        { priority: 'asc' },
-        { createdAt: 'desc' },
-      ],
-    });
+    const tickets = await sql`
+      SELECT t.*,
+        (SELECT COUNT(*)::int FROM ticket_entries WHERE ticket_id = t.id) AS entry_count,
+        (SELECT json_build_object(
+          'id', te.id, 'content', te.content, 'author_label', te.author_label,
+          'entry_type', te.entry_type, 'created_at', te.created_at
+        ) FROM ticket_entries te WHERE te.ticket_id = t.id ORDER BY te.created_at DESC LIMIT 1) AS latest_entry
+      FROM tickets t
+      WHERE (${effectiveProduct}::text IS NULL OR t.product = ${effectiveProduct})
+        AND (${effectiveStatus}::text IS NULL OR t.status = ${effectiveStatus})
+        AND (${effectiveType}::text IS NULL OR t.ticket_type = ${effectiveType})
+        AND (${effectivePriority}::text IS NULL OR t.priority = ${effectivePriority})
+      ORDER BY t.status ASC, t.priority ASC, t.created_at DESC
+    `;
 
-    return Response.json({ tickets });
+    // Shape to match expected format
+    const result = tickets.map(t => ({
+      ...t,
+      entries: t.latest_entry ? [t.latest_entry] : [],
+      _count: { entries: t.entry_count },
+    }));
+
+    return Response.json({ tickets: result });
   } catch (error) {
     console.error('Tickets API error:', error);
     return Response.json({ error: error.message, tickets: [] }, { status: 500 });
@@ -65,18 +70,15 @@ export async function POST(request) {
   if (!validTypes.includes(ticketType)) return Response.json({ error: 'Invalid type' }, { status: 400 });
   if (priority && !validPriorities.includes(priority)) return Response.json({ error: 'Invalid priority' }, { status: 400 });
 
-  const ticket = await prisma.ticket.create({
-    data: {
-      title: title.trim(),
-      description: description?.trim() || null,
-      product,
-      ticketType,
-      priority: priority || 'medium',
-      status: 'open',
-      createdBy: session.user.id,
-      assignedTo: assignedTo || null,
-    },
-  });
+  const ticketRows = await sql`
+    INSERT INTO tickets (title, description, product, ticket_type, priority, status, created_by, assigned_to, created_at, updated_at)
+    VALUES (
+      ${title.trim()}, ${description?.trim() || null}, ${product}, ${ticketType},
+      ${priority || 'medium'}, 'open', ${session.user.id}, ${assignedTo || null},
+      NOW(), NOW()
+    )
+    RETURNING *
+  `;
 
-  return Response.json({ ticket }, { status: 201 });
+  return Response.json({ ticket: ticketRows[0] }, { status: 201 });
 }

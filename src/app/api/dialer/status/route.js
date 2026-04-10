@@ -1,9 +1,9 @@
 // Dialer Status Callback — Receives call status updates from Twilio
 // Twilio POSTs here as calls progress through states:
 // initiated → ringing → in-progress → completed (or failed/busy/no-answer)
-// Updates the CallLog record with the current status and duration.
+// Updates the call_logs record with the current status and duration.
 
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 
 export async function POST(req) {
   const formData = await req.formData();
@@ -17,25 +17,35 @@ export async function POST(req) {
   }
 
   try {
-    const updateData = { status: callStatus };
-
-    if (duration) {
-      updateData.duration = parseInt(duration, 10);
-    }
-
-    if (recordingUrl) {
-      updateData.recordingUrl = recordingUrl;
-    }
-
     // Mark end time for terminal statuses
-    if (['completed', 'failed', 'busy', 'no-answer', 'canceled'].includes(callStatus)) {
-      updateData.endedAt = new Date();
-    }
+    const isTerminal = ['completed', 'failed', 'busy', 'no-answer', 'canceled'].includes(callStatus);
 
-    await prisma.callLog.updateMany({
-      where: { twilioCallSid: callSid },
-      data: updateData,
-    });
+    if (duration && recordingUrl && isTerminal) {
+      await sql`
+        UPDATE call_logs SET status = ${callStatus}, duration = ${parseInt(duration, 10)}, recording_url = ${recordingUrl}, ended_at = NOW()
+        WHERE twilio_call_sid = ${callSid}
+      `;
+    } else if (duration && isTerminal) {
+      await sql`
+        UPDATE call_logs SET status = ${callStatus}, duration = ${parseInt(duration, 10)}, ended_at = NOW()
+        WHERE twilio_call_sid = ${callSid}
+      `;
+    } else if (recordingUrl) {
+      await sql`
+        UPDATE call_logs SET status = ${callStatus}, recording_url = ${recordingUrl}
+        WHERE twilio_call_sid = ${callSid}
+      `;
+    } else if (isTerminal) {
+      await sql`
+        UPDATE call_logs SET status = ${callStatus}, ended_at = NOW()
+        WHERE twilio_call_sid = ${callSid}
+      `;
+    } else {
+      await sql`
+        UPDATE call_logs SET status = ${callStatus}
+        WHERE twilio_call_sid = ${callSid}
+      `;
+    }
   } catch (e) {
     console.error('Failed to update call status:', e);
   }

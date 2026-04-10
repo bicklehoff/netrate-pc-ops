@@ -8,7 +8,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 
 export async function GET(request, { params }) {
   try {
@@ -19,14 +19,13 @@ export async function GET(request, { params }) {
 
     const { id } = await params;
 
-    const quote = await prisma.borrowerQuote.findUnique({
-      where: { id },
-    });
+    const rows = await sql`SELECT * FROM borrower_quotes WHERE id = ${id} LIMIT 1`;
+    const quote = rows[0];
 
     if (!quote) {
       return NextResponse.json({ error: 'Quote not found' }, { status: 404 });
     }
-    if (quote.mloId !== session.user.id) {
+    if (quote.mlo_id !== session.user.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
@@ -48,65 +47,90 @@ export async function PATCH(request, { params }) {
     const body = await request.json();
 
     // Verify ownership
-    const existing = await prisma.borrowerQuote.findUnique({
-      where: { id },
-      select: { mloId: true, status: true },
-    });
-    if (!existing) {
+    const existing = await sql`SELECT mlo_id, status FROM borrower_quotes WHERE id = ${id} LIMIT 1`;
+    if (!existing[0]) {
       return NextResponse.json({ error: 'Quote not found' }, { status: 404 });
     }
-    if (existing.mloId !== session.user.id) {
+    if (existing[0].mlo_id !== session.user.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
-    // Build update data from allowed fields
-    const data = {};
-    const allowedScalar = [
-      'borrowerName', 'borrowerEmail', 'borrowerPhone',
-      'purpose', 'propertyType', 'occupancy', 'loanType',
-      'state', 'county', 'currentLender',
-    ];
-    for (const field of allowedScalar) {
-      if (body[field] !== undefined) data[field] = body[field];
+    // Build update data from allowed fields using parameterized queries
+    const setClauses = [];
+    const values = [];
+
+    // Scalar fields
+    const scalarMap = {
+      borrowerName: 'borrower_name', borrowerEmail: 'borrower_email', borrowerPhone: 'borrower_phone',
+      purpose: 'purpose', propertyType: 'property_type', occupancy: 'occupancy', loanType: 'loan_type',
+      state: 'state', county: 'county', currentLender: 'current_lender',
+    };
+    for (const [bodyKey, dbCol] of Object.entries(scalarMap)) {
+      if (body[bodyKey] !== undefined) {
+        values.push(body[bodyKey]);
+        setClauses.push(`${dbCol} = $${values.length}`);
+      }
     }
 
-    const allowedDecimal = [
-      'propertyValue', 'loanAmount', 'ltv', 'currentRate',
-      'currentBalance', 'currentPayment', 'annualTaxes',
-      'annualInsurance', 'pmiRate', 'monthlyPmi',
-      'cashToClose', 'monthlyPayment', 'monthlySavings',
-    ];
-    for (const field of allowedDecimal) {
-      if (body[field] !== undefined) data[field] = Number(body[field]);
+    // Decimal fields
+    const decimalMap = {
+      propertyValue: 'property_value', loanAmount: 'loan_amount', ltv: 'ltv', currentRate: 'current_rate',
+      currentBalance: 'current_balance', currentPayment: 'current_payment', annualTaxes: 'annual_taxes',
+      annualInsurance: 'annual_insurance', pmiRate: 'pmi_rate', monthlyPmi: 'monthly_pmi',
+      cashToClose: 'cash_to_close', monthlyPayment: 'monthly_payment', monthlySavings: 'monthly_savings',
+    };
+    for (const [bodyKey, dbCol] of Object.entries(decimalMap)) {
+      if (body[bodyKey] !== undefined) {
+        values.push(Number(body[bodyKey]));
+        setClauses.push(`${dbCol} = $${values.length}`);
+      }
     }
 
-    const allowedInt = ['fico', 'term', 'paybackMonths'];
-    for (const field of allowedInt) {
-      if (body[field] !== undefined) data[field] = Number(body[field]);
+    // Int fields
+    const intMap = { fico: 'fico', term: 'term', paybackMonths: 'payback_months' };
+    for (const [bodyKey, dbCol] of Object.entries(intMap)) {
+      if (body[bodyKey] !== undefined) {
+        values.push(Number(body[bodyKey]));
+        setClauses.push(`${dbCol} = $${values.length}`);
+      }
     }
 
+    // Date fields
     if (body.closingDate !== undefined) {
-      data.closingDate = body.closingDate ? new Date(body.closingDate) : null;
+      values.push(body.closingDate ? new Date(body.closingDate) : null);
+      setClauses.push(`closing_date = $${values.length}`);
     }
     if (body.firstPaymentDate !== undefined) {
-      data.firstPaymentDate = body.firstPaymentDate ? new Date(body.firstPaymentDate) : null;
+      values.push(body.firstPaymentDate ? new Date(body.firstPaymentDate) : null);
+      setClauses.push(`first_payment_date = $${values.length}`);
     }
 
     // JSON fields
-    if (body.scenarios !== undefined) data.scenarios = body.scenarios;
-    if (body.feeBreakdown !== undefined) data.feeBreakdown = body.feeBreakdown;
+    if (body.scenarios !== undefined) {
+      values.push(JSON.stringify(body.scenarios));
+      setClauses.push(`scenarios = $${values.length}::jsonb`);
+    }
+    if (body.feeBreakdown !== undefined) {
+      values.push(JSON.stringify(body.feeBreakdown));
+      setClauses.push(`fee_breakdown = $${values.length}::jsonb`);
+    }
 
     // Contact/loan links
-    if (body.contactId !== undefined) data.contactId = body.contactId;
-    if (body.leadId !== undefined) data.leadId = body.leadId;
-    if (body.loanId !== undefined) data.loanId = body.loanId;
+    if (body.contactId !== undefined) { values.push(body.contactId || null); setClauses.push(`contact_id = $${values.length}`); }
+    if (body.leadId !== undefined) { values.push(body.leadId || null); setClauses.push(`lead_id = $${values.length}`); }
+    if (body.loanId !== undefined) { values.push(body.loanId || null); setClauses.push(`loan_id = $${values.length}`); }
 
-    const quote = await prisma.borrowerQuote.update({
-      where: { id },
-      data,
-    });
+    if (setClauses.length === 0) {
+      return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });
+    }
 
-    return NextResponse.json({ quote });
+    setClauses.push('updated_at = NOW()');
+    values.push(id);
+
+    const query = `UPDATE borrower_quotes SET ${setClauses.join(', ')} WHERE id = $${values.length} RETURNING *`;
+    const quoteRows = await sql(query, values);
+
+    return NextResponse.json({ quote: quoteRows[0] });
   } catch (err) {
     console.error('Quote PATCH error:', err);
     return NextResponse.json({ error: 'Internal error', detail: err.message }, { status: 500 });

@@ -65,7 +65,7 @@ export default function ResultsPanel({ active, loading, escrow, effectiveDate })
           value={(savingsPositive ? '+' : '') + dollar(active.monthlySavings)}
           className={savingsPositive ? 'text-emerald-700' : 'text-red-600'}
         />
-        <Metric label="New Loan Amount" value={dollar(active.loanAmount)} />
+        <Metric label="New Loan Amount" value={dollar(active.loan_amount)} />
         <Metric label="Cash to Close" value={active.cashToClose === 0 ? '$0' : dollar(active.cashToClose)} />
       </div>
 

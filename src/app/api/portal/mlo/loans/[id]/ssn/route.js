@@ -6,7 +6,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 import { decrypt } from '@/lib/encryption';
 
 export async function POST(request, { params }) {
@@ -18,45 +18,37 @@ export async function POST(request, { params }) {
 
     const { id } = await params;
 
-    const loan = await prisma.loan.findUnique({
-      where: { id },
-      include: {
-        borrower: {
-          select: { id: true, ssnEncrypted: true },
-        },
-      },
-    });
+    const loanRows = await sql`
+      SELECT l.*, b.id AS b_id, b.ssn_encrypted AS b_ssn_encrypted
+      FROM loans l
+      LEFT JOIN borrowers b ON b.id = l.borrower_id
+      WHERE l.id = ${id} LIMIT 1
+    `;
+    const loan = loanRows[0];
 
     if (!loan) {
       return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
     }
 
     const isAdmin = session.user.role === 'admin';
-    if (!isAdmin && loan.mloId !== session.user.id) {
+    if (!isAdmin && loan.mlo_id !== session.user.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
-    if (!loan.borrower?.ssnEncrypted) {
+    if (!loan.b_ssn_encrypted) {
       return NextResponse.json({ error: 'SSN not on file' }, { status: 404 });
     }
 
     // Decrypt the SSN
-    const ssn = decrypt(loan.borrower.ssnEncrypted);
+    const ssn = decrypt(loan.b_ssn_encrypted);
 
     // Create audit trail — this is a sensitive operation
-    await prisma.loanEvent.create({
-      data: {
-        loanId: id,
-        eventType: 'ssn_revealed',
-        actorType: 'mlo',
-        actorId: session.user.id,
-        details: {
-          borrowerId: loan.borrower.id,
-          ip: request.headers.get('x-forwarded-for') || 'unknown',
-          userAgent: request.headers.get('user-agent') || 'unknown',
-        },
-      },
-    });
+    await sql`
+      INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, details, created_at)
+      VALUES (gen_random_uuid(), ${id}, 'ssn_revealed', 'mlo', ${session.user.id},
+              ${JSON.stringify({ borrowerId: loan.b_id, ip: request.headers.get('x-forwarded-for') || 'unknown', userAgent: request.headers.get('user-agent') || 'unknown' })},
+              NOW())
+    `;
 
     return NextResponse.json({ ssn });
   } catch (error) {

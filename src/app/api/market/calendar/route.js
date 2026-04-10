@@ -13,7 +13,7 @@
 
 import { NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 
 export async function GET(request) {
   try {
@@ -30,17 +30,25 @@ export async function GET(request) {
     const from = searchParams.get('from') ? new Date(searchParams.get('from')) : defaultFrom;
     const to = searchParams.get('to') ? new Date(searchParams.get('to')) : defaultTo;
 
-    const where = {
-      date: upcoming
-        ? { gte: new Date(now.toISOString().split('T')[0]) }
-        : { gte: from, lte: to },
-    };
-
-    const events = await prisma.economicCalendarEvent.findMany({
-      where,
-      orderBy: { date: 'asc' },
-      take: limit,
-    });
+    let events;
+    if (upcoming) {
+      const todayStr = now.toISOString().split('T')[0];
+      events = await sql`
+        SELECT id, date, time, name, forecast, actual, prior, impact, result, big
+        FROM economic_calendar_events
+        WHERE date >= ${todayStr}::date
+        ORDER BY date ASC
+        LIMIT ${limit}
+      `;
+    } else {
+      events = await sql`
+        SELECT id, date, time, name, forecast, actual, prior, impact, result, big
+        FROM economic_calendar_events
+        WHERE date >= ${from} AND date <= ${to}
+        ORDER BY date ASC
+        LIMIT ${limit}
+      `;
+    }
 
     const formatted = events.map(ev => ({
       id: ev.id,
@@ -95,38 +103,23 @@ export async function POST(request) {
         continue;
       }
 
-      const record = await prisma.economicCalendarEvent.upsert({
-        where: {
-          date_name: {
-            date: new Date(ev.date),
-            name: ev.name,
-          },
-        },
-        create: {
-          date: new Date(ev.date),
-          time: ev.time ?? null,
-          name: ev.name,
-          forecast: ev.forecast ?? null,
-          actual: ev.actual ?? null,
-          prior: ev.prior ?? null,
-          impact: ev.impact ?? null,
-          result: ev.result ?? null,
-          big: ev.big ?? false,
-          source: ev.source ?? 'claw',
-        },
-        update: {
-          time: ev.time ?? undefined,
-          forecast: ev.forecast ?? undefined,
-          actual: ev.actual ?? undefined,
-          prior: ev.prior ?? undefined,
-          impact: ev.impact ?? undefined,
-          result: ev.result ?? undefined,
-          big: ev.big ?? undefined,
-          source: ev.source ?? undefined,
-        },
-      });
+      const rows = await sql`
+        INSERT INTO economic_calendar_events (date, time, name, forecast, actual, prior, impact, result, big, source, updated_at)
+        VALUES (${new Date(ev.date)}, ${ev.time ?? null}, ${ev.name}, ${ev.forecast ?? null}, ${ev.actual ?? null}, ${ev.prior ?? null}, ${ev.impact ?? null}, ${ev.result ?? null}, ${ev.big ?? false}, ${ev.source ?? 'claw'}, NOW())
+        ON CONFLICT (date, name) DO UPDATE SET
+          time = COALESCE(EXCLUDED.time, economic_calendar_events.time),
+          forecast = COALESCE(EXCLUDED.forecast, economic_calendar_events.forecast),
+          actual = COALESCE(EXCLUDED.actual, economic_calendar_events.actual),
+          prior = COALESCE(EXCLUDED.prior, economic_calendar_events.prior),
+          impact = COALESCE(EXCLUDED.impact, economic_calendar_events.impact),
+          result = COALESCE(EXCLUDED.result, economic_calendar_events.result),
+          big = COALESCE(EXCLUDED.big, economic_calendar_events.big),
+          source = COALESCE(EXCLUDED.source, economic_calendar_events.source),
+          updated_at = NOW()
+        RETURNING id, name, date
+      `;
 
-      results.push({ id: record.id, name: record.name, date: record.date });
+      results.push({ id: rows[0].id, name: rows[0].name, date: rows[0].date });
     }
 
     // Bust ISR cache so Rate Watch shows new events immediately

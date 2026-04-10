@@ -5,7 +5,7 @@
 
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 import { normalizePhone } from '@/lib/normalize-phone';
 
 export async function GET(req) {
@@ -24,70 +24,101 @@ export async function GET(req) {
     const order = searchParams.get('order') || 'desc';
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limit = parseInt(searchParams.get('limit') || '50', 10);
-    const skip = (page - 1) * limit;
+    const offset = (page - 1) * limit;
 
-    const where = {};
+    // Map sort fields to DB columns
+    const sortMap = {
+      name: 'last_name',
+      updatedAt: 'updated_at',
+      createdAt: 'created_at',
+      lastContactedAt: 'last_contacted_at',
+      fundedDate: 'funded_date',
+      status: 'status',
+    };
+    const sortCol = sortMap[sort] || 'updated_at';
+    const orderDir = order === 'asc' ? 'ASC' : 'DESC';
 
-    if (q) {
-      where.OR = [
-        { firstName: { contains: q, mode: 'insensitive' } },
-        { lastName: { contains: q, mode: 'insensitive' } },
-        { email: { contains: q, mode: 'insensitive' } },
-        { phone: { contains: q } },
-      ];
+    const pattern = q ? `%${q}%` : null;
+
+    // Main query with includes
+    // Using sql() call syntax for dynamic ORDER BY
+    const contactQuery = `
+      SELECT c.*,
+        json_build_object('id', m.id, 'first_name', m.first_name, 'last_name', m.last_name) AS assigned_mlo,
+        (SELECT COUNT(*)::int FROM contact_notes WHERE contact_id = c.id) AS contact_notes_count,
+        (SELECT COUNT(*)::int FROM leads WHERE contact_id = c.id) AS leads_count
+      FROM contacts c
+      LEFT JOIN mlos m ON m.id = c.assigned_mlo_id
+      WHERE ($1::text IS NULL OR c.first_name ILIKE $1 OR c.last_name ILIKE $1 OR c.email ILIKE $1 OR c.phone LIKE $1)
+        AND ($2::text IS NULL OR $2 = ANY(c.tags))
+        AND ($3::text IS NULL OR c.status = $3)
+        AND ($4::uuid IS NULL OR c.assigned_mlo_id = $4)
+      ORDER BY ${sortCol} ${orderDir}
+      LIMIT $5 OFFSET $6
+    `;
+    const contacts = await sql(contactQuery, [pattern, tag, status, mloId, limit, offset]);
+
+    // Get borrower + loans for each contact that has a borrower_id
+    const borrowerIds = contacts.filter(c => c.borrower_id).map(c => c.borrower_id);
+    let borrowerLoans = [];
+    if (borrowerIds.length > 0) {
+      borrowerLoans = await sql`
+        SELECT b.id AS borrower_id, l.id AS loan_id, l.status, l.purpose, l.loan_amount, l.lender_name
+        FROM borrowers b
+        LEFT JOIN loans l ON l.borrower_id = b.id
+        WHERE b.id = ANY(${borrowerIds})
+        ORDER BY l.created_at DESC
+      `;
     }
 
-    if (tag) where.tags = { has: tag };
-    if (status) where.status = status;
-    if (mloId) where.assignedMloId = mloId;
+    // Group loans by borrower_id
+    const borrowerLoanMap = new Map();
+    for (const row of borrowerLoans) {
+      if (!borrowerLoanMap.has(row.borrower_id)) {
+        borrowerLoanMap.set(row.borrower_id, []);
+      }
+      if (row.loan_id) {
+        const arr = borrowerLoanMap.get(row.borrower_id);
+        if (arr.length < 3) {
+          arr.push({ id: row.loan_id, status: row.status, purpose: row.purpose, loan_amount: row.loan_amount, lender_name: row.lender_name });
+        }
+      }
+    }
 
-    // Valid sort fields
-    const sortMap = {
-      name: { lastName: order },
-      updatedAt: { updatedAt: order },
-      createdAt: { createdAt: order },
-      lastContactedAt: { lastContactedAt: order },
-      fundedDate: { fundedDate: order },
-      status: { status: order },
-    };
-    const orderBy = sortMap[sort] || { updatedAt: 'desc' };
+    // Enrich contacts with borrower data
+    const enriched = contacts.map(c => ({
+      ...c,
+      assigned_mlo: c.assigned_mlo?.id ? c.assigned_mlo : null,
+      borrower: c.borrower_id ? {
+        id: c.borrower_id,
+        loans: borrowerLoanMap.get(c.borrower_id) || [],
+      } : null,
+      _count: { contactNotes: c.contact_notes_count, leads: c.leads_count },
+    }));
 
-    const [contacts, total, statusCounts] = await Promise.all([
-      prisma.contact.findMany({
-        where,
-        orderBy,
-        skip,
-        take: limit,
-        include: {
-          assignedMlo: {
-            select: { id: true, firstName: true, lastName: true },
-          },
-          borrower: {
-            select: {
-              id: true,
-              loans: {
-                select: { id: true, status: true, purpose: true, loanAmount: true, lenderName: true },
-                orderBy: { createdAt: 'desc' },
-                take: 3,
-              },
-            },
-          },
-          _count: { select: { contactNotes: true, leads: true } },
-        },
-      }),
-      prisma.contact.count({ where }),
-      // Status counts for filter badges (unfiltered by status)
-      prisma.contact.groupBy({
-        by: ['status'],
-        _count: true,
-        where: { ...where, status: undefined },
-      }),
-    ]);
+    // Total count
+    const countRows = await sql`
+      SELECT COUNT(*)::int AS total FROM contacts c
+      WHERE (${pattern}::text IS NULL OR c.first_name ILIKE ${pattern} OR c.last_name ILIKE ${pattern} OR c.email ILIKE ${pattern} OR c.phone LIKE ${pattern})
+        AND (${tag}::text IS NULL OR ${tag} = ANY(c.tags))
+        AND (${status}::text IS NULL OR c.status = ${status})
+        AND (${mloId}::uuid IS NULL OR c.assigned_mlo_id = ${mloId})
+    `;
+    const total = countRows[0]?.total || 0;
+
+    // Status counts for filter badges (unfiltered by status)
+    const statusCountRows = await sql`
+      SELECT status, COUNT(*)::int AS count FROM contacts
+      WHERE (${pattern}::text IS NULL OR first_name ILIKE ${pattern} OR last_name ILIKE ${pattern} OR email ILIKE ${pattern} OR phone LIKE ${pattern})
+        AND (${tag}::text IS NULL OR ${tag} = ANY(tags))
+        AND (${mloId}::uuid IS NULL OR assigned_mlo_id = ${mloId})
+      GROUP BY status
+    `;
 
     return Response.json({
-      contacts,
+      contacts: enriched,
       pagination: { page, limit, total, pages: Math.ceil(total / limit) },
-      statusCounts: statusCounts.reduce((acc, s) => ({ ...acc, [s.status]: s._count }), {}),
+      statusCounts: statusCountRows.reduce((acc, s) => ({ ...acc, [s.status]: s.count }), {}),
     });
   } catch (error) {
     console.error('Contacts list error:', error?.message);
@@ -111,31 +142,29 @@ export async function POST(req) {
 
     // Check for duplicate by email
     if (email) {
-      const existing = await prisma.contact.findFirst({
-        where: { email: email.toLowerCase().trim() },
-      });
-      if (existing) {
+      const existing = await sql`SELECT id FROM contacts WHERE email = ${email.toLowerCase().trim()} LIMIT 1`;
+      if (existing[0]) {
         return Response.json({
           error: 'A contact with this email already exists',
-          existingId: existing.id,
+          existingId: existing[0].id,
         }, { status: 409 });
       }
     }
 
-    const contact = await prisma.contact.create({
-      data: {
-        firstName,
-        lastName,
-        email: email ? email.toLowerCase().trim() : null,
-        phone: normalizePhone(phone) || phone || null,
-        company: company || null,
-        source: source || 'manual',
-        tags: tags || [],
-        notes: notes || null,
-      },
-    });
+    const contactRows = await sql`
+      INSERT INTO contacts (first_name, last_name, email, phone, company, source, tags, notes, created_at, updated_at)
+      VALUES (
+        ${firstName}, ${lastName},
+        ${email ? email.toLowerCase().trim() : null},
+        ${normalizePhone(phone) || phone || null},
+        ${company || null}, ${source || 'manual'},
+        ${tags || []}, ${notes || null},
+        NOW(), NOW()
+      )
+      RETURNING *
+    `;
 
-    return Response.json({ success: true, contact }, { status: 201 });
+    return Response.json({ success: true, contact: contactRows[0] }, { status: 201 });
   } catch (error) {
     console.error('Contact create error:', error?.message);
     return Response.json({ error: 'Failed to create contact' }, { status: 500 });

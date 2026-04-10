@@ -3,7 +3,7 @@
 // Looks up lead by email, gets viewToken, sends magic link email.
 
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 import { sendEmail } from '@/lib/resend';
 import { brpAccessTemplate } from '@/lib/email-templates/borrower';
 
@@ -18,22 +18,24 @@ export async function POST(request) {
     const normalizedEmail = email.trim().toLowerCase();
 
     // Find a lead with this email that has a saved scenario
-    const lead = await prisma.lead.findFirst({
-      where: {
-        email: normalizedEmail,
-        savedScenarios: { some: {} },
-      },
-      select: { id: true, name: true },
-    });
+    const leadRows = await sql`
+      SELECT l.id, l.name
+      FROM leads l
+      WHERE l.email = ${normalizedEmail}
+        AND EXISTS (SELECT 1 FROM saved_scenarios ss WHERE ss.lead_id = l.id)
+      LIMIT 1
+    `;
 
     // Always return success — don't reveal whether the email exists
-    if (!lead) {
+    if (!leadRows.length) {
       console.log('BRP access requested for unknown email:', normalizedEmail);
       return NextResponse.json({ success: true });
     }
 
-    // Get viewToken via raw SQL (Prisma client doesn't expose this field)
-    const tokenRows = await prisma.$queryRaw`
+    const lead = leadRows[0];
+
+    // Get view_token
+    const tokenRows = await sql`
       SELECT view_token::text FROM leads WHERE id::text = ${lead.id} LIMIT 1
     `;
     const viewToken = tokenRows?.[0]?.view_token;

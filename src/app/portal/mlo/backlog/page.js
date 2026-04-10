@@ -367,7 +367,7 @@ export default function BacklogPage() {
 
                 {/* Updated */}
                 <td className="px-4 py-3 text-xs text-gray-400">
-                  {new Date(ticket.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  {new Date(ticket.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                 </td>
               </tr>
             ))}

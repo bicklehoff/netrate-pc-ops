@@ -5,7 +5,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 
 export async function GET() {
   try {
@@ -14,21 +14,16 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const mlos = await prisma.mlo.findMany({
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        email: true,
-        role: true,
-      },
-      orderBy: { firstName: 'asc' },
-    });
+    const mlos = await sql`
+      SELECT id, first_name, last_name, email, role
+      FROM mlos
+      ORDER BY first_name ASC
+    `;
 
     return NextResponse.json({
       mlos: mlos.map((m) => ({
         id: m.id,
-        name: `${m.firstName} ${m.lastName}`,
+        name: `${m.first_name} ${m.last_name}`,
         email: m.email,
         role: m.role,
       })),

@@ -38,7 +38,7 @@ export default function ComparisonReport({ compareRates, scenario, rateData, onC
   const rates = priceRates(scenario, rateData);
 
   const llpa = calculateLLPA(scenario, rateData);
-  const currentPI = scenario.currentRate ? calculatePI(scenario.currentRate, scenario.loanAmount) : null;
+  const currentPI = scenario.current_rate ? calculatePI(scenario.current_rate, scenario.loan_amount) : null;
   const isRefi = scenario.purpose !== 'purchase';
   const stateLabel = STATE_DEFAULTS[scenario.state]?.label || scenario.state || '';
   const lenderFees = rateData.lender.lenderFees;
@@ -47,7 +47,7 @@ export default function ComparisonReport({ compareRates, scenario, rateData, onC
   // Sort rates low→high for display
   const ratesToShow = (compareRates.length > 0 ? compareRates : getAutoPickRates(rates, lenderFees, thirdPartyCosts))
     .slice().sort((a, b) => a.rate - b.rate);
-  if (ratesToShow.length === 0 || !scenario.loanAmount || scenario.loanAmount <= 0) return null;
+  if (ratesToShow.length === 0 || !scenario.loan_amount || scenario.loan_amount <= 0) return null;
   const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
   // --- Lead capture ---
@@ -61,8 +61,8 @@ export default function ComparisonReport({ compareRates, scenario, rateData, onC
       const rateList = ratesToShow.map(r => `${r.rate.toFixed(3)}%`).join(', ');
       const description = [
         `Rate Tool - Comparison Report: ${rateList}`,
-        `Scenario: ${PURPOSE_LABELS[scenario.purpose]}, ${scenario.fico} FICO, ${Math.round(scenario.ltv)}% LTV, ${fmtDollar(scenario.loanAmount)} loan`,
-        currentPI ? `Current Rate: ${scenario.currentRate}%` : null,
+        `Scenario: ${PURPOSE_LABELS[scenario.purpose]}, ${scenario.fico} FICO, ${Math.round(scenario.ltv)}% LTV, ${fmtDollar(scenario.loan_amount)} loan`,
+        currentPI ? `Current Rate: ${scenario.current_rate}%` : null,
         utmString || null,
       ].filter(Boolean).join('\n');
 
@@ -74,7 +74,7 @@ export default function ComparisonReport({ compareRates, scenario, rateData, onC
           email: form.email,
           phone: form.phone,
           message: description,
-          leadSource: 'Rate Tool - Get My Rate',
+          lead_source: 'Rate Tool - Get My Rate',
         }),
       });
       if (!res.ok) throw new Error('Something went wrong. Please try again or call us directly.');
@@ -177,12 +177,12 @@ export default function ComparisonReport({ compareRates, scenario, rateData, onC
             <h3 className="text-sm font-semibold text-gray-700 mb-2">Your Scenario</h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-1 text-sm">
               <div><span className="text-gray-500">Purpose:</span> {PURPOSE_LABELS[scenario.purpose]}</div>
-              <div><span className="text-gray-500">Property:</span> {fmtDollar(scenario.propertyValue)} | {PROP_LABELS[scenario.propertyType]}</div>
-              <div><span className="text-gray-500">Loan Amount:</span> <strong>{fmtDollar(scenario.loanAmount)}</strong></div>
+              <div><span className="text-gray-500">Property:</span> {fmtDollar(scenario.property_value)} | {PROP_LABELS[scenario.property_type]}</div>
+              <div><span className="text-gray-500">Loan Amount:</span> <strong>{fmtDollar(scenario.loan_amount)}</strong></div>
               <div><span className="text-gray-500">LTV:</span> {scenario.ltv?.toFixed(1)}%</div>
               <div><span className="text-gray-500">Credit Score:</span> {scenario.fico}+</div>
               <div><span className="text-gray-500">State:</span> {stateLabel}</div>
-              {currentPI && <div><span className="text-gray-500">Current Rate:</span> <strong>{scenario.currentRate}%</strong></div>}
+              {currentPI && <div><span className="text-gray-500">Current Rate:</span> <strong>{scenario.current_rate}%</strong></div>}
               {currentPI && <div><span className="text-gray-500">Current P&I:</span> {fmtPI(currentPI)}</div>}
             </div>
           </div>
@@ -358,7 +358,7 @@ export default function ComparisonReport({ compareRates, scenario, rateData, onC
                 <tr className="border-b border-gray-100">
                   <td className="px-4 py-1 text-gray-400 text-xs">Loan Amount</td>
                   {ratesToShow.map(r => (
-                    <td key={r.rate} className="px-4 py-1 text-right font-mono text-gray-600 font-semibold">{fmtDollar(scenario.loanAmount)}</td>
+                    <td key={r.rate} className="px-4 py-1 text-right font-mono text-gray-600 font-semibold">{fmtDollar(scenario.loan_amount)}</td>
                   ))}
                 </tr>
                 <tr className="border-b border-gray-200">

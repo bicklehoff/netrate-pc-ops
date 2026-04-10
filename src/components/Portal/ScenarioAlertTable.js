@@ -94,7 +94,7 @@ export default function ScenarioAlertTable({ items, selectedIds, onSelectionChan
           <tbody className="divide-y divide-gray-100">
             {items.map((item) => {
               const lead = item.scenario?.lead;
-              const sd = item.scenario?.scenarioData || {};
+              const sd = item.scenario?.scenario_data || {};
               const isExpanded = expandedId === item.id;
               const isPending = item.status === 'pending';
 
@@ -117,7 +117,7 @@ export default function ScenarioAlertTable({ items, selectedIds, onSelectionChan
                   </td>
                   <td className="px-4 py-3">
                     <div className="text-xs text-gray-600">
-                      {PURPOSE_LABELS[sd.purpose] || sd.purpose || '—'} | {fmtDollar(sd.loanAmount)} | {sd.fico || '—'} FICO | {sd.state || '—'}
+                      {PURPOSE_LABELS[sd.purpose] || sd.purpose || '—'} | {fmtDollar(sd.loan_amount)} | {sd.fico || '—'} FICO | {sd.state || '—'}
                     </div>
                   </td>
                   <td className="px-4 py-3 text-right font-mono font-semibold">
@@ -127,13 +127,13 @@ export default function ScenarioAlertTable({ items, selectedIds, onSelectionChan
                     <RateChangeBadge rateChange={item.rateChange} />
                   </td>
                   <td className="px-4 py-3 text-center text-xs text-gray-500">
-                    {item.scenario?.alertFrequency?.replace('_', 'x/') || '—'}
+                    {item.scenario?.alert_frequency?.replace('_', 'x/') || '—'}
                   </td>
                   <td className="px-4 py-3 text-center">
                     <StatusBadge status={item.status} />
                   </td>
                   <td className="px-4 py-3 text-xs text-gray-500">
-                    {fmtDate(item.createdAt)}
+                    {fmtDate(item.created_at)}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-1">
@@ -176,7 +176,7 @@ export default function ScenarioAlertTable({ items, selectedIds, onSelectionChan
         if (!item) return null;
         const current = Array.isArray(item.pricingData) ? item.pricingData : [];
         const previous = Array.isArray(item.previousData) ? item.previousData : [];
-        const sd = item.scenario?.scenarioData || {};
+        const sd = item.scenario?.scenario_data || {};
 
         return (
           <div className="border-t border-gray-200 bg-gray-50 px-6 py-4">
@@ -188,9 +188,9 @@ export default function ScenarioAlertTable({ items, selectedIds, onSelectionChan
                   <span className="text-gray-500">Purpose:</span>
                   <span className="text-gray-900">{PURPOSE_LABELS[sd.purpose] || sd.purpose}</span>
                   <span className="text-gray-500">Loan Amount:</span>
-                  <span className="text-gray-900">{fmtDollar(sd.loanAmount)}</span>
+                  <span className="text-gray-900">{fmtDollar(sd.loan_amount)}</span>
                   <span className="text-gray-500">Property Value:</span>
-                  <span className="text-gray-900">{sd.propertyValue ? fmtDollar(sd.propertyValue) : '—'}</span>
+                  <span className="text-gray-900">{sd.property_value ? fmtDollar(sd.property_value) : '—'}</span>
                   <span className="text-gray-500">FICO:</span>
                   <span className="text-gray-900">{sd.fico || '—'}</span>
                   <span className="text-gray-500">LTV:</span>
@@ -198,7 +198,7 @@ export default function ScenarioAlertTable({ items, selectedIds, onSelectionChan
                   <span className="text-gray-500">State:</span>
                   <span className="text-gray-900">{sd.state || '—'}{sd.county ? ` / ${sd.county}` : ''}</span>
                   <span className="text-gray-500">Loan Type:</span>
-                  <span className="text-gray-900">{sd.loanType || '—'}</span>
+                  <span className="text-gray-900">{sd.loan_type || '—'}</span>
                   <span className="text-gray-500">Term:</span>
                   <span className="text-gray-900">{sd.term ? `${sd.term}yr` : '—'}</span>
                 </div>
@@ -235,11 +235,11 @@ export default function ScenarioAlertTable({ items, selectedIds, onSelectionChan
 
             {/* Alert History */}
             <div className="mt-3 flex items-center gap-4 text-xs text-gray-500">
-              <span>Created: {fmtDate(item.scenario?.createdAt)}</span>
-              <span>Last Sent: {fmtDate(item.scenario?.lastSentAt) || 'Never'}</span>
-              <span>Sends: {item.scenario?.sendCount || 0}</span>
-              <span>Alert Status: {item.scenario?.alertStatus}</span>
-              {item.scenario?.alertStatus === 'active' && (
+              <span>Created: {fmtDate(item.scenario?.created_at)}</span>
+              <span>Last Sent: {fmtDate(item.scenario?.last_sent_at) || 'Never'}</span>
+              <span>Sends: {item.scenario?.send_count || 0}</span>
+              <span>Alert Status: {item.scenario?.alert_status}</span>
+              {item.scenario?.alert_status === 'active' && (
                 <button
                   onClick={() => onAction('pause', [item.scenario.id])}
                   className="text-amber-600 hover:text-amber-800 font-medium"
@@ -247,7 +247,7 @@ export default function ScenarioAlertTable({ items, selectedIds, onSelectionChan
                   Pause Alerts
                 </button>
               )}
-              {item.scenario?.alertStatus === 'paused' && (
+              {item.scenario?.alert_status === 'paused' && (
                 <button
                   onClick={() => onAction('resume', [item.scenario.id])}
                   className="text-green-600 hover:text-green-800 font-medium"

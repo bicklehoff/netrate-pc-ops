@@ -14,7 +14,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import sql from '@/lib/db';
 import { sendEmail } from '@/lib/resend';
 import { quoteTemplate } from '@/lib/email-templates/borrower';
 import { put } from '@vercel/blob';
@@ -32,21 +32,22 @@ export async function POST(request, { params }) {
     const { id } = await params;
 
     // Load quote
-    const quote = await prisma.borrowerQuote.findUnique({ where: { id } });
+    const quoteRows = await sql`SELECT * FROM borrower_quotes WHERE id = ${id} LIMIT 1`;
+    const quote = quoteRows[0];
     if (!quote) {
       return NextResponse.json({ error: 'Quote not found' }, { status: 404 });
     }
-    if (quote.mloId !== session.user.id) {
+    if (quote.mlo_id !== session.user.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
     // Require borrower email
-    const borrowerEmail = quote.borrowerEmail;
+    const borrowerEmail = quote.borrower_email;
     if (!borrowerEmail) {
       return NextResponse.json({ error: 'Borrower email is required to send a quote' }, { status: 400 });
     }
 
-    const borrowerName = quote.borrowerName || 'Valued Client';
+    const borrowerName = quote.borrower_name || 'Valued Client';
     const firstName = borrowerName.split(' ')[0];
 
     // Generate PDF server-side
@@ -62,17 +63,17 @@ export async function POST(request, { params }) {
           quote: {
             borrowerName,
             purpose: quote.purpose,
-            loanAmount: Number(quote.loanAmount),
-            propertyValue: Number(quote.propertyValue),
+            loanAmount: Number(quote.loan_amount),
+            propertyValue: Number(quote.property_value),
             ltv: Number(quote.ltv),
             fico: quote.fico,
-            loanType: quote.loanType,
+            loanType: quote.loan_type,
             state: quote.state,
             county: quote.county,
             term: quote.term,
           },
           scenarios: quote.scenarios,
-          fees: quote.feeBreakdown,
+          fees: quote.fee_breakdown,
         })
       );
 
@@ -89,33 +90,35 @@ export async function POST(request, { params }) {
     }
 
     // Ensure borrower exists for portal access
-    let borrower = await prisma.borrower.findUnique({
-      where: { email: borrowerEmail.toLowerCase().trim() },
-    });
+    const borrowerRows = await sql`
+      SELECT * FROM borrowers WHERE email = ${borrowerEmail.toLowerCase().trim()} LIMIT 1
+    `;
+    let borrower = borrowerRows[0];
 
     if (!borrower) {
       const { encrypt } = await import('@/lib/encryption');
-      borrower = await prisma.borrower.create({
-        data: {
-          email: borrowerEmail.toLowerCase().trim(),
-          firstName: firstName,
-          lastName: borrowerName.split(' ').slice(1).join(' ') || 'Unknown',
-          phone: quote.borrowerPhone || null,
-          ssnEncrypted: encrypt('000000000'),
-          dobEncrypted: encrypt('1900-01-01'),
-          ssnLastFour: '0000',
-        },
-      });
+      const created = await sql`
+        INSERT INTO borrowers (email, first_name, last_name, phone, ssn_encrypted, dob_encrypted, ssn_last_four, created_at, updated_at)
+        VALUES (
+          ${borrowerEmail.toLowerCase().trim()}, ${firstName},
+          ${borrowerName.split(' ').slice(1).join(' ') || 'Unknown'},
+          ${quote.borrower_phone || null},
+          ${encrypt('000000000')}, ${encrypt('1900-01-01')}, '0000',
+          NOW(), NOW()
+        )
+        RETURNING *
+      `;
+      borrower = created[0];
     }
 
     // Generate magic link (24 hours)
     const magicToken = crypto.randomBytes(32).toString('hex');
     const magicExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-    await prisma.borrower.update({
-      where: { id: borrower.id },
-      data: { magicToken, magicExpires },
-    });
+    await sql`
+      UPDATE borrowers SET magic_token = ${magicToken}, magic_expires = ${magicExpires}, updated_at = NOW()
+      WHERE id = ${borrower.id}
+    `;
 
     const portalUrl = process.env.NEXTAUTH_URL || 'https://www.netratemortgage.com';
     const quoteLink = `${portalUrl}/portal/quote/${id}?token=${magicToken}`;
@@ -126,7 +129,7 @@ export async function POST(request, { params }) {
       firstName,
       quoteLink,
       scenarios,
-      loanAmount: `$${Number(quote.loanAmount).toLocaleString()}`,
+      loanAmount: `$${Number(quote.loan_amount).toLocaleString()}`,
       purpose: quote.purpose,
     });
 
@@ -147,20 +150,19 @@ export async function POST(request, { params }) {
 
     // Update quote status
     const now = new Date();
-    const updatedQuote = await prisma.borrowerQuote.update({
-      where: { id },
-      data: {
-        status: 'sent',
-        sentAt: now,
-        pdfUrl,
-        pdfGeneratedAt: pdfUrl ? now : undefined,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-      },
-    });
+    const updatedRows = await sql`
+      UPDATE borrower_quotes
+      SET status = 'sent', sent_at = ${now}, pdf_url = ${pdfUrl},
+        pdf_generated_at = ${pdfUrl ? now : null},
+        expires_at = ${new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)},
+        updated_at = NOW()
+      WHERE id = ${id}
+      RETURNING *
+    `;
 
     return NextResponse.json({
       success: true,
-      quote: updatedQuote,
+      quote: updatedRows[0],
       pdfUrl,
       quoteLink,
     });
