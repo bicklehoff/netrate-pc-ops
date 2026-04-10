@@ -46,11 +46,11 @@ export default function RateQuoteModal({ rate, scenario, onClose }) {
     ? `Credit ${Math.abs(rate.adjPrice).toFixed(2)}%`
     : `Charge ${Math.abs(rate.adjPrice).toFixed(2)}%`;
   // Calculate current P&I properly
-  const currentPI = scenario.current_rate && scenario.current_rate > 0
+  const currentPI = scenario.currentRate && scenario.currentRate > 0
     ? (() => {
-        const r = scenario.current_rate / 100 / 12;
+        const r = scenario.currentRate / 100 / 12;
         const n = 360;
-        return scenario.loan_amount * (r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+        return scenario.loanAmount * (r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
       })()
     : null;
   const monthlySavings = currentPI ? Math.round(currentPI - rate.monthlyPI) : 0;
@@ -70,7 +70,7 @@ export default function RateQuoteModal({ rate, scenario, onClose }) {
         `P&I: $${rate.monthlyPI.toFixed(2)}/mo`,
         monthlySavings > 0 ? `Monthly Savings: $${monthlySavings}/mo` : null,
         `${creditLabel}`,
-        `Scenario: ${purposeLabel}, ${scenario.fico} FICO, ${Math.round(scenario.ltv)}% LTV, $${Math.round(scenario.loan_amount).toLocaleString()} loan`,
+        `Scenario: ${purposeLabel}, ${scenario.fico} FICO, ${Math.round(scenario.ltv)}% LTV, $${Math.round(scenario.loanAmount).toLocaleString()} loan`,
         utmString || null,
       ].filter(Boolean).join('\n');
 

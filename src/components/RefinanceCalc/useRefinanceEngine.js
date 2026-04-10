@@ -11,7 +11,7 @@ import { STATE_DEFAULTS, computeEscrowSetup, dollar } from './shared';
  */
 export function useRefinanceEngine(inputs) {
   const {
-    current_balance, current_rate, currentPayment, property_value,
+    currentBalance, currentRate, currentPayment, propertyValue,
     fico, state, doesEscrow, escrowBalance,
     annualTax, annualInsurance, insuranceRenewal,
     activePreset, customSelectedRate,
@@ -25,10 +25,10 @@ export function useRefinanceEngine(inputs) {
 
   // --- Derived values ---
   const stateInfo = STATE_DEFAULTS[state] || STATE_DEFAULTS.CO;
-  const bal = parseFloat(current_balance) || 0;
-  const curRate = parseFloat(current_rate) || 0;
+  const bal = parseFloat(currentBalance) || 0;
+  const curRate = parseFloat(currentRate) || 0;
   const curPmt = parseFloat(currentPayment) || 0;
-  const propVal = parseFloat(property_value) || 0;
+  const propVal = parseFloat(propertyValue) || 0;
   const ficoVal = parseInt(fico) || 780;
   const escBal = parseFloat(escrowBalance) || 0;
   const ins = parseFloat(annualInsurance) || 0;
@@ -73,11 +73,11 @@ export function useRefinanceEngine(inputs) {
         headers: { 'Content-Type': 'application/json' },
         signal: controller.signal,
         body: JSON.stringify({
-          loan_amount: estimatedPayoff,
-          loan_purpose: 'refinance',
-          loan_type: 'conventional',
-          credit_score: ficoVal,
-          property_value: propVal,
+          loanAmount: estimatedPayoff,
+          loanPurpose: 'refinance',
+          loanType: 'conventional',
+          creditScore: ficoVal,
+          propertyValue: propVal,
           term: 30,
           productType: 'fixed',
           lockDays: 30,
@@ -129,10 +129,10 @@ export function useRefinanceEngine(inputs) {
     const softCosts = escrow.total;
 
     // Helper: compute a strategy result for a given rate entry and loan structure
-    function buildResult(rateEntry, loan_amount, cashToClose) {
-      const payment = calculatePI(rateEntry.rate, loan_amount);
+    function buildResult(rateEntry, loanAmount, cashToClose) {
+      const payment = calculatePI(rateEntry.rate, loanAmount);
       const monthlySavings = curPmt - payment;
-      const ltv = (loan_amount / propVal) * 100;
+      const ltv = (loanAmount / propVal) * 100;
       const netCashFlow = cashToClose - totalCashBack;
       const netSpend = Math.max(0, netCashFlow);
       let breakeven = null;
@@ -149,7 +149,7 @@ export function useRefinanceEngine(inputs) {
         lenderFee: rateEntry.lenderFee || 0,
         lender: rateEntry.lender,
         program: rateEntry.program,
-        loan_amount,
+        loanAmount,
         payment,
         monthlySavings,
         cashToClose,

@@ -71,10 +71,10 @@ export default function RateQuotePrintView({ scenario, rateData, compareRates, s
       ? [selectedRate]
       : getAutoPickRates(visibleRates);
 
-  if (ratesToShow.length === 0 || !scenario.loan_amount || scenario.loan_amount <= 0) return null;
+  if (ratesToShow.length === 0 || !scenario.loanAmount || scenario.loanAmount <= 0) return null;
 
   const llpa = calculateLLPA(scenario, rateData);
-  const currentPI = scenario.current_rate ? calculatePI(scenario.current_rate, scenario.loan_amount) : null;
+  const currentPI = scenario.currentRate ? calculatePI(scenario.currentRate, scenario.loanAmount) : null;
   const stateLabel = STATE_DEFAULTS[scenario.state]?.label || scenario.state || '';
   const lenderFees = rateData.lender.lenderFees;
   const thirdPartyCosts = scenario.thirdPartyCosts || 0;
@@ -102,12 +102,12 @@ export default function RateQuotePrintView({ scenario, rateData, compareRates, s
           <h3 className="text-sm font-semibold text-gray-700 mb-2">Your Scenario</h3>
           <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
             <div><span className="text-gray-500">Purpose:</span> {PURPOSE_LABELS[scenario.purpose] || scenario.purpose}</div>
-            <div><span className="text-gray-500">Property:</span> {fmtDollar(scenario.property_value)} | {PROP_LABELS[scenario.property_type] || scenario.property_type}</div>
-            <div><span className="text-gray-500">Loan Amount:</span> {fmtDollar(scenario.loan_amount)}</div>
+            <div><span className="text-gray-500">Property:</span> {fmtDollar(scenario.propertyValue)} | {PROP_LABELS[scenario.propertyType] || scenario.propertyType}</div>
+            <div><span className="text-gray-500">Loan Amount:</span> {fmtDollar(scenario.loanAmount)}</div>
             <div><span className="text-gray-500">LTV:</span> {scenario.ltv?.toFixed(1)}%</div>
             <div><span className="text-gray-500">Credit Score:</span> {scenario.fico}+</div>
             <div><span className="text-gray-500">State:</span> {stateLabel}</div>
-            {currentPI && <div><span className="text-gray-500">Current Rate:</span> {scenario.current_rate}%</div>}
+            {currentPI && <div><span className="text-gray-500">Current Rate:</span> {scenario.currentRate}%</div>}
           </div>
         </div>
 

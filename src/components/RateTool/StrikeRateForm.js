@@ -49,7 +49,7 @@ export default function StrikeRateForm({
       };
 
       if (mode === 'strike') {
-        payload.loan_type = loanType;
+        payload.loanType = loanType;
         payload.targetRate = parseFloat(targetRate);
       }
 
