@@ -6,10 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "rates:parse": "node scripts/parse-amwest-xlsx.js",
-    "rates:upload": "node scripts/upload-to-gcs.js src/data/rates/amwest.json live/amwest.json",
-    "rates:update": "node scripts/parse-amwest-xlsx.js && node scripts/upload-to-gcs.js src/data/rates/amwest.json live/amwest.json"
+    "lint": "next lint"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",

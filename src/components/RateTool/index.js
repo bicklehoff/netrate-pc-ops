@@ -1,12 +1,10 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import staticSunwestData from '@/data/rates/sunwest.json';
 import ScenarioForm from './ScenarioForm';
 import RateResults from './RateResults';
 import RateEducation from './RateEducation';
 import LeadCapture from './LeadCapture';
-import ComparisonReport from './ComparisonReport';
 import SaveScenarioModal from './SaveScenarioModal';
 import { LO_CONFIG } from '@/lib/rates/config';
 import { DEFAULT_SCENARIO } from '@/lib/rates/defaults';
@@ -14,10 +12,7 @@ import { useApiPricing } from './useApiPricing';
 import { trackRateToolInteraction, startEngagementTimer } from '@/lib/analytics';
 import { getThirdPartyCosts } from '@/lib/rates/closing-costs';
 
-export default function RateTool({ initialRateData, defaultState, prefill, brpToken }) {
-  // Use GCS data if available, fall back to static bundled data
-  const rateData = initialRateData?.lenders?.[0] || staticSunwestData;
-
+export default function RateTool({ defaultState, prefill, brpToken }) {
   const initialState = prefill?.state || defaultState || 'CO';
 
   // 30-second engagement timer
@@ -59,26 +54,14 @@ export default function RateTool({ initialRateData, defaultState, prefill, brpTo
 
   const { results: apiResults, loading: apiLoading, fetchRates, effectiveDate: apiDate } = useApiPricing(scenario);
 
-  const [compareRates, setCompareRates] = useState([]);
-  const [showReport, setShowReport] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
-  const [leadFormData, setLeadFormData] = useState(null);
-
-  const handleToggleCompare = (rate) => {
-    setCompareRates(prev => {
-      const exists = prev.find(r => r.rate === rate.rate);
-      if (exists) return prev.filter(r => r.rate !== rate.rate);
-      if (prev.length >= 3) return prev;
-      return [...prev, rate];
-    });
-  };
 
   return (
     <div>
       {/* Rate Tool Header */}
       <div className="bg-brand text-white px-5 py-2 rounded-t-lg flex justify-between items-center flex-wrap gap-2">
         <p className="text-cyan-100 text-sm">{LO_CONFIG.name} | NMLS {LO_CONFIG.nmls} | {LO_CONFIG.phone}</p>
-        <p className="text-sm text-cyan-100">Rates effective {apiDate || rateData?.lender?.effectiveDate || 'today'}</p>
+        <p className="text-sm text-cyan-100">Rates effective {apiDate || 'today'}</p>
       </div>
 
       {/* Rate Tool Body */}
@@ -86,12 +69,8 @@ export default function RateTool({ initialRateData, defaultState, prefill, brpTo
         <ScenarioForm scenario={scenario} onChange={handleScenarioChange} onSubmit={fetchRates} loading={apiLoading} />
         <RateResults
           scenario={scenario}
-          rateData={rateData}
           apiResults={apiResults}
           loading={apiLoading}
-          compareRates={compareRates}
-          onToggleCompare={handleToggleCompare}
-          onViewReport={() => setShowReport(true)}
           onSaveScenario={() => setShowSaveModal(true)}
           brpToken={brpToken}
         />
@@ -99,28 +78,12 @@ export default function RateTool({ initialRateData, defaultState, prefill, brpTo
         <LeadCapture scenario={scenario} />
       </div>
 
-      {/* Comparison Report Modal */}
-      {showReport && (
-        <ComparisonReport
-          compareRates={compareRates}
-          scenario={scenario}
-          rateData={rateData}
-          onClose={() => setShowReport(false)}
-          onLeadSubmitted={(data) => setLeadFormData(data)}
-          onSaveScenario={() => { setShowReport(false); setShowSaveModal(true); }}
-        />
-      )}
-
       {/* Save Scenario Modal */}
       {showSaveModal && (
         <SaveScenarioModal
           scenario={scenario}
           onClose={() => setShowSaveModal(false)}
-          prefillName={leadFormData?.name}
-          prefillEmail={leadFormData?.email}
-          prefillPhone={leadFormData?.phone}
           brpToken={brpToken}
-          compareRates={compareRates}
           allRates={apiResults}
         />
       )}

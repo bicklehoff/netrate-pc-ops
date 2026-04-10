@@ -6,8 +6,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import sql from '@/lib/db';
-import { priceScenario } from '@/lib/rates/pricing';
-import { fetchGCSFile, isGCSConfigured } from '@/lib/gcs';
+import { priceScenario } from '@/lib/rates/price-scenario';
 
 export async function POST(request, { params }) {
   try {
@@ -24,7 +23,7 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: 'Lead not found' }, { status: 404 });
     }
 
-    // Build scenario from lead data
+    // Build scenario from lead data (camelCase — matches price-scenario.js input schema)
     const scenario = {
       loanAmount: lead.loan_amount ? Number(lead.loan_amount) : null,
       propertyValue: lead.property_value ? Number(lead.property_value) : null,
@@ -32,10 +31,10 @@ export async function POST(request, { params }) {
       state: lead.property_state || null,
       county: lead.property_county || null,
       propertyType: lead.property_type || 'sfr',
-      occupancy: lead.occupancy || 'primary',
       loanPurpose: lead.loan_purpose || 'purchase',
-      employmentType: lead.employment_type || 'w2',
-      loanTerm: 30,
+      loanType: lead.loan_type || 'conventional',
+      term: 30,
+      lockDays: 30,
     };
 
     // Validate minimum required fields
@@ -46,66 +45,31 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: 'Credit score is required to run a quote' }, { status: 400 });
     }
 
-    // Calculate LTV if we have property value
-    if (scenario.propertyValue && scenario.loanAmount) {
-      scenario.ltv = (scenario.loanAmount / scenario.propertyValue) * 100;
-    }
-
-    // Load rate data — try GCS first, fall back to local parsed JSON
-    let ratePrograms = [];
-    try {
-      if (isGCSConfigured()) {
-        const manifest = await fetchGCSFile('rate-data/manifest.json');
-        if (manifest?.lenders) {
-          for (const lenderFile of manifest.lenders) {
-            const lenderData = await fetchGCSFile(`rate-data/${lenderFile}`);
-            if (lenderData?.products) {
-              ratePrograms.push(...lenderData.products);
-            }
-          }
-        }
-      }
-    } catch (gcsError) {
-      console.error('GCS rate data load error:', gcsError?.message);
-    }
-
-    // Fallback: load from local parsed rates file
-    if (ratePrograms.length === 0) {
-      try {
-        const { readFileSync } = await import('fs');
-        const { join } = await import('path');
-        const filePath = join(process.cwd(), 'src/data/parsed-rates.json');
-        const data = JSON.parse(readFileSync(filePath, 'utf8'));
-        ratePrograms = data.products || [];
-      } catch (localError) {
-        console.error('Local rate data load error:', localError?.message);
-      }
-    }
-
-    if (ratePrograms.length === 0) {
-      return NextResponse.json({
-        error: 'No rate data available. Rate sheets have not been uploaded yet.',
-      }, { status: 503 });
-    }
-
-    // Run pricing engine
+    // Run pricing engine — DB-driven, async
     let results;
     try {
-      results = priceScenario(scenario, ratePrograms);
+      results = await priceScenario(scenario);
     } catch (priceError) {
       return NextResponse.json({
         error: 'Pricing engine error: ' + priceError.message,
       }, { status: 500 });
     }
 
-    // Find best result
-    const best = results?.results?.[0] || null;
+    if (!results?.results?.length) {
+      return NextResponse.json({
+        error: 'No rates available for this scenario',
+        configWarnings: results?.configWarnings || [],
+      }, { status: 503 });
+    }
 
-    // Calculate monthly payment
+    // Best result is the first entry — price-scenario.js returns results sorted by rate ascending
+    const best = results.results[0];
+
+    // Calculate monthly payment from the best rate
     let monthlyPayment = null;
     if (best?.rate && scenario.loanAmount) {
       const r = best.rate / 100 / 12;
-      const n = scenario.loanTerm * 12;
+      const n = scenario.term * 12;
       monthlyPayment = Math.round(scenario.loanAmount * (r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1));
     }
 
@@ -114,8 +78,8 @@ export async function POST(request, { params }) {
       INSERT INTO lead_quotes (lead_id, scenario, results, best_rate, best_lender, best_price, monthly_payment, comp_amount, lender_fee, created_at)
       VALUES (
         ${id}, ${JSON.stringify(scenario)}::jsonb, ${JSON.stringify(results || {})}::jsonb,
-        ${best?.rate || null}, ${best?.lender || null}, ${best?.adjustedPrice || null},
-        ${monthlyPayment}, ${results?.comp?.amount || null}, ${best?.lenderFee || null},
+        ${best?.rate || null}, ${best?.lender || null}, ${best?.finalPrice ?? best?.price ?? null},
+        ${monthlyPayment}, ${best?.compDollars ?? null}, ${best?.lenderFee ?? null},
         NOW()
       )
       RETURNING *
@@ -131,7 +95,8 @@ export async function POST(request, { params }) {
       success: true,
       quote,
       scenario,
-      resultCount: results?.results?.length || 0,
+      resultCount: results.results.length,
+      effectiveDate: results.effectiveDate,
     });
   } catch (error) {
     console.error('Run quote error:', error);

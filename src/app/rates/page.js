@@ -2,7 +2,6 @@ import Link from 'next/link';
 import RateTool from '@/components/RateTool';
 import StrikeRateForm from '@/components/RateTool/StrikeRateForm';
 import TrustBar from '@/components/TrustBar';
-import { fetchGCSFile, isGCSConfigured } from '@/lib/gcs';
 
 export const metadata = {
   title: "Today's Mortgage Rates | NetRate Mortgage",
@@ -15,40 +14,7 @@ export const metadata = {
 // Revalidate every 30 min — rates change once/day when new sheet is parsed
 export const revalidate = 1800;
 
-const GCS_BUCKET = process.env.GCS_BUCKET_NAME || 'netrate-rates';
-
-async function getRateData() {
-  if (!isGCSConfigured()) return null;
-
-  try {
-    const manifest = await fetchGCSFile(GCS_BUCKET, 'live/manifest.json');
-
-    const lenders = await Promise.all(
-      manifest.lenders.map((entry) =>
-        fetchGCSFile(GCS_BUCKET, `live/${entry.file}`)
-      )
-    );
-
-    // Strip proprietary lender names from consumer-facing page
-    const cleanLenders = lenders.map((data) => {
-      if (data?.lender) {
-        const clean = Object.fromEntries(
-          Object.entries(data.lender).filter(([k]) => k !== 'name')
-        );
-        return { ...data, lender: clean };
-      }
-      return data;
-    });
-
-    return { lenders: cleanLenders, manifest, source: 'gcs' };
-  } catch (err) {
-    console.error('GCS fetch failed in rates page, using static fallback:', err.message);
-    return null; // RateTool will use its bundled static data
-  }
-}
-
 export default async function RatesPage({ searchParams }) {
-  const rateData = await getRateData();
   const sp = await searchParams;
   const defaultState = sp?.state || null;
 
@@ -79,7 +45,7 @@ export default async function RatesPage({ searchParams }) {
       </div>
       <div className="bg-[#F5F7FA] min-h-screen">
       <div className="max-w-3xl mx-auto px-4 py-8">
-      <RateTool initialRateData={rateData} defaultState={defaultState} prefill={Object.keys(prefill).length ? prefill : null} brpToken={brpToken} />
+      <RateTool defaultState={defaultState} prefill={Object.keys(prefill).length ? prefill : null} brpToken={brpToken} />
 
       {/* Strike Rate / Rate Alert signup */}
       <div className="mt-10">
