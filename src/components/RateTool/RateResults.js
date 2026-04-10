@@ -2,7 +2,7 @@
 
 import { calculatePI } from '@/lib/rates/engine';
 
-export default function RateResults({ scenario, rateData, apiResults, loading, compareRates = [], onToggleCompare, onViewReport, onSaveScenario, brpToken }) {
+export default function RateResults({ scenario, apiResults, loading, onSaveScenario, brpToken }) {
 
   if (!scenario.loanAmount || scenario.loanAmount <= 0 || !scenario.propertyValue) {
     return (
@@ -12,8 +12,6 @@ export default function RateResults({ scenario, rateData, apiResults, loading, c
     );
   }
 
-  // Use API results only — no old engine fallback
-  const useApi = true;
   const llpa = { total: 0, breakdown: apiResults?.[0]?.breakdown || [] };
   const rates = apiResults || [];
   const currentPI = scenario.currentRate ? calculatePI(scenario.currentRate, scenario.loanAmount) : null;
@@ -51,11 +49,9 @@ export default function RateResults({ scenario, rateData, apiResults, loading, c
   const showEnd = Math.min(rates.length, parIdx + 6);
   // Display lowest rate first (ascending)
   const sliced = rates.slice(showStart, showEnd);
-  // API results are already ascending; old engine results were descending
+  // API results are already ascending
   const isAscending = sliced.length >= 2 && sliced[0].rate <= sliced[sliced.length - 1].rate;
   const visibleRates = isAscending ? sliced : sliced.reverse();
-
-  // Compute badge thresholds
 
   // Find sweet spots in both directions from par.
   // CHARGE SIDE (below par): cheapest cost per 1/8th of rate drop from par.
@@ -117,58 +113,27 @@ export default function RateResults({ scenario, rateData, apiResults, loading, c
         </div>
       </div>
 
-      {/* Save Scenario Bar — visible when no rates selected for comparison */}
-      {compareRates.length === 0 && (
-        <div className={`px-5 py-3 ${brpToken ? 'bg-brand/5 border-b border-brand/20' : 'bg-amber-50 border-b border-amber-200'} flex items-center justify-between print:hidden`}>
-          <p className={`text-sm ${brpToken ? 'text-brand-dark' : 'text-amber-800'} hidden sm:block`}>
-            {brpToken
-              ? 'Like these rates? Update your saved scenario with these new inputs.'
-              : 'Want to track these rates? Save now and we\u2019ll alert you when they change.'}
-          </p>
-          <button
-            onClick={() => onSaveScenario?.()}
-            className={`${brpToken ? 'bg-brand hover:bg-brand-dark' : 'bg-amber-500 hover:bg-amber-600'} text-white px-5 py-2.5 rounded-lg font-semibold text-sm transition-colors whitespace-nowrap flex items-center gap-2 ml-auto shadow-sm`}
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              {brpToken ? (
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-              )}
-            </svg>
-            {brpToken ? 'Update My Rate Scenario' : 'Save & Get Rate Alerts'}
-          </button>
-        </div>
-      )}
-
-      {/* Sticky Compare Bar — always visible when rates selected */}
-      {compareRates.length > 0 && (
-        <div className="sticky top-0 z-10 px-5 py-3 bg-brand/5 border-b border-brand/20 flex items-center justify-between print:hidden">
-          <div className="flex items-center gap-2 text-sm text-gray-700">
-            <span className="font-semibold text-brand">{compareRates.length}</span>
-            <span>rate{compareRates.length > 1 ? 's' : ''} selected:</span>
-            {[...compareRates].sort((a, b) => a.rate - b.rate).map(r => (
-              <span key={r.rate} className="bg-white border border-brand/30 text-brand-dark font-mono font-semibold rounded px-2 py-0.5 text-xs">
-                {r.rate.toFixed(3)}%
-              </span>
-            ))}
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => onSaveScenario?.()}
-              className="border border-brand text-brand px-4 py-2 rounded-lg font-medium text-sm hover:bg-brand/5 transition-colors whitespace-nowrap"
-            >
-              {brpToken ? 'Update Scenario' : 'Save Scenario'}
-            </button>
-            <button
-              onClick={() => onViewReport?.()}
-              className="bg-brand text-white px-5 py-2 rounded-lg font-semibold text-sm hover:bg-brand-dark transition-colors whitespace-nowrap"
-            >
-              View Comparison Report
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Save Scenario Bar */}
+      <div className={`px-5 py-3 ${brpToken ? 'bg-brand/5 border-b border-brand/20' : 'bg-amber-50 border-b border-amber-200'} flex items-center justify-between print:hidden`}>
+        <p className={`text-sm ${brpToken ? 'text-brand-dark' : 'text-amber-800'} hidden sm:block`}>
+          {brpToken
+            ? 'Like these rates? Update your saved scenario with these new inputs.'
+            : 'Want to track these rates? Save now and we\u2019ll alert you when they change.'}
+        </p>
+        <button
+          onClick={() => onSaveScenario?.()}
+          className={`${brpToken ? 'bg-brand hover:bg-brand-dark' : 'bg-amber-500 hover:bg-amber-600'} text-white px-5 py-2.5 rounded-lg font-semibold text-sm transition-colors whitespace-nowrap flex items-center gap-2 ml-auto shadow-sm`}
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            {brpToken ? (
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            ) : (
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            )}
+          </svg>
+          {brpToken ? 'Update My Rate Scenario' : 'Save & Get Rate Alerts'}
+        </button>
+      </div>
 
       {/* Rate Table */}
       <div className="overflow-x-auto">
@@ -176,13 +141,11 @@ export default function RateResults({ scenario, rateData, apiResults, loading, c
           <thead>
             <tr className="border-b border-gray-200 text-xs text-gray-500 uppercase tracking-wider">
               <th className="text-left px-3 py-3">Rate</th>
-              {/* Lender column hidden — only EverStream for now */}
               <th className="text-right px-2 py-3">APR</th>
               <th className="text-right px-2 py-3">Monthly P&I</th>
               {currentPI && <th className="text-right px-2 py-3">Savings</th>}
               <th className="text-right px-3 py-3">Cost / Credit</th>
               <th className="px-2 py-3"></th>
-              <th className="px-1 py-3 print:hidden"></th>
             </tr>
           </thead>
           <tbody>
@@ -201,7 +164,6 @@ export default function RateResults({ scenario, rateData, apiResults, loading, c
                     <span className="font-semibold text-gray-800">{r.rate.toFixed(3)}%</span>
                     {r.program && <div className="text-[10px] text-gray-400 truncate max-w-[180px]">{r.program}</div>}
                   </td>
-                  {/* Lender column hidden — only EverStream for now */}
                   <td className="text-right px-2 py-3 font-mono text-gray-500">{r.apr ? r.apr.toFixed(3) + '%' : '—'}</td>
                   <td className="text-right px-2 py-3 font-mono text-gray-700">
                     ${r.monthlyPI.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -224,24 +186,6 @@ export default function RateResults({ scenario, rateData, apiResults, loading, c
                       {isNoCost && !isPar && <span className="text-xs bg-green-100 text-green-800 rounded px-2 py-1 whitespace-nowrap">NO COST</span>}
                     </div>
                   </td>
-                  <td className="px-1 py-3 print:hidden">
-                    {(() => {
-                      const isCompared = compareRates.some(c => c.rate === r.rate);
-                      return (
-                        <button
-                          onClick={() => onToggleCompare?.(r)}
-                          className={`whitespace-nowrap text-xs font-medium rounded-md px-3 py-1.5 border transition-all ${
-                            isCompared
-                              ? 'bg-brand text-white border-brand shadow-sm'
-                              : 'border-brand/40 text-brand hover:bg-brand hover:text-white hover:border-brand hover:shadow-sm'
-                          } ${!isCompared && compareRates.length >= 3 ? 'opacity-30 cursor-not-allowed' : ''}`}
-                          disabled={!isCompared && compareRates.length >= 3}
-                        >
-                          {isCompared ? '✓ Selected' : '+ Compare'}
-                        </button>
-                      );
-                    })()}
-                  </td>
                 </tr>
               );
             })}
@@ -257,33 +201,28 @@ export default function RateResults({ scenario, rateData, apiResults, loading, c
       )}
 
       {/* Save Scenario CTA — shown when results are loaded */}
-      {compareRates.length === 0 && (
-        <div className="px-5 py-4 border-t border-gray-100 print:hidden bg-gradient-to-b from-white to-cyan-50/30">
-          <button
-            onClick={() => onSaveScenario?.()}
-            className="w-full bg-brand text-white rounded-lg py-3 font-semibold text-sm hover:bg-brand-dark transition-colors flex items-center justify-center gap-2"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              {brpToken ? (
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-              )}
-            </svg>
-            {brpToken ? 'Update My Rate Scenario' : 'Save This Scenario & Get Rate Alerts'}
-          </button>
-          <p className="text-xs text-gray-400 text-center mt-2">
-            We&apos;ll re-price this exact scenario on your schedule and email you when rates move. Reviewed by a human, not a bot.
-          </p>
-        </div>
-      )}
+      <div className="px-5 py-4 border-t border-gray-100 print:hidden bg-gradient-to-b from-white to-cyan-50/30">
+        <button
+          onClick={() => onSaveScenario?.()}
+          className="w-full bg-brand text-white rounded-lg py-3 font-semibold text-sm hover:bg-brand-dark transition-colors flex items-center justify-center gap-2"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            {brpToken ? (
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            ) : (
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            )}
+          </svg>
+          {brpToken ? 'Update My Rate Scenario' : 'Save This Scenario & Get Rate Alerts'}
+        </button>
+        <p className="text-xs text-gray-400 text-center mt-2">
+          We&apos;ll re-price this exact scenario on your schedule and email you when rates move. Reviewed by a human, not a bot.
+        </p>
+      </div>
 
       <div className="px-5 py-2 text-xs text-gray-400 border-t border-gray-100">
         Rates approximate based on today&apos;s pricing.{' '}
-        {useApi
-          ? `Showing best rate across ${new Set(apiResults.map(r => r.lender)).size} lenders.`
-          : `Lender fees: $${(rateData.lender?.lenderFees || 0).toLocaleString()}.`
-        }{' '}
+        Showing best rate across {new Set(apiResults.map(r => r.lender)).size} lenders.{' '}
         Est. third-party costs: ${(scenario.thirdPartyCosts || 0).toLocaleString()}. Contact for exact quote with full cost breakdown.
       </div>
     </div>
