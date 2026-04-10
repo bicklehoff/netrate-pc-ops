@@ -16,7 +16,7 @@ export function useApiPricing(scenario) {
   const abortRef = useRef(null);
 
   const fetchRates = useCallback(async () => {
-    if (!scenario.loan_amount || scenario.loan_amount <= 0) {
+    if (!scenario.loanAmount || scenario.loanAmount <= 0) {
       setResults(null);
       return;
     }
@@ -37,12 +37,12 @@ export function useApiPricing(scenario) {
         headers: { 'Content-Type': 'application/json' },
         signal: controller.signal,
         body: JSON.stringify({
-          loan_amount: scenario.loan_amount,
-          loan_purpose: purposeMap[scenario.purpose] || scenario.purpose,
-          loan_type: scenario.loan_type || 'conventional',
-          credit_score: scenario.fico,
-          property_value: scenario.property_value,
-          property_type: scenario.property_type,
+          loanAmount: scenario.loanAmount,
+          loanPurpose: purposeMap[scenario.purpose] || scenario.purpose,
+          loanType: scenario.loanType || 'conventional',
+          creditScore: scenario.fico,
+          propertyValue: scenario.propertyValue,
+          propertyType: scenario.propertyType,
           term: scenario.term || 30,
           productType: scenario.productType || 'fixed',
           lockDays: 30,
@@ -73,13 +73,13 @@ export function useApiPricing(scenario) {
       }
 
       // Convert to array sorted by rate, compute monthly PI and savings
-      const currentPI = scenario.current_rate
-        ? calculatePI(scenario.current_rate, scenario.loan_amount)
+      const currentPI = scenario.currentRate
+        ? calculatePI(scenario.currentRate, scenario.loanAmount)
         : null;
 
       const rates = Object.values(byRate)
         .map(r => {
-          const monthlyPI = calculatePI(r.rate, scenario.loan_amount);
+          const monthlyPI = calculatePI(r.rate, scenario.loanAmount);
           const savings = currentPI ? currentPI - monthlyPI : 0;
           const costDollars = r.isDiscount ? r.discountDollars : -r.rebateDollars;
 
@@ -118,7 +118,7 @@ export function useApiPricing(scenario) {
       if (err.name !== 'AbortError') setResults(null);
     }
     setLoading(false);
-  }, [scenario.loan_amount, scenario.fico, scenario.property_value, scenario.purpose, scenario.loan_type, scenario.property_type, scenario.productType, scenario.term, scenario.state, scenario.county, scenario.current_rate, scenario.vaFundingFeeExempt, scenario.vaSubsequentUse, scenario.firstTimeBuyer]);
+  }, [scenario.loanAmount, scenario.fico, scenario.propertyValue, scenario.purpose, scenario.loanType, scenario.propertyType, scenario.productType, scenario.term, scenario.state, scenario.county, scenario.currentRate, scenario.vaFundingFeeExempt, scenario.vaSubsequentUse, scenario.firstTimeBuyer]);
 
   return { results, loading, fetchRates, effectiveDate };
 }

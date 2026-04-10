@@ -12,8 +12,8 @@ import {
 import { calculatePI } from '@/lib/rates/engine';
 import { CHART_COLORS, CHART_FONTS, TOOLTIP_STYLE, formatDollarFull, formatRate } from './chartHelpers';
 
-function computeBreakEven(rate, current_rate, loan_amount, lenderFees, thirdPartyCosts) {
-  const currentPI = calculatePI(current_rate, loan_amount);
+function computeBreakEven(rate, currentRate, loanAmount, lenderFees, thirdPartyCosts) {
+  const currentPI = calculatePI(currentRate, loanAmount);
   const monthlySavings = currentPI - rate.monthlyPI;
 
   if (monthlySavings <= 0) return null;
@@ -75,14 +75,14 @@ function BreakEvenTooltip({ active, payload }) {
   );
 }
 
-export default function BreakEvenChart({ candidateRates, current_rate, loan_amount, lenderFees, thirdPartyCosts }) {
+export default function BreakEvenChart({ candidateRates, currentRate, loanAmount, lenderFees, thirdPartyCosts }) {
   const [activeIdx, setActiveIdx] = useState(0);
 
   const results = useMemo(() => {
     return candidateRates.map(r =>
-      computeBreakEven(r, current_rate, loan_amount, lenderFees, thirdPartyCosts)
+      computeBreakEven(r, currentRate, loanAmount, lenderFees, thirdPartyCosts)
     );
-  }, [candidateRates, current_rate, loan_amount, lenderFees, thirdPartyCosts]);
+  }, [candidateRates, currentRate, loanAmount, lenderFees, thirdPartyCosts]);
 
   const activeResult = results[activeIdx];
   const activeRate = candidateRates[activeIdx];
