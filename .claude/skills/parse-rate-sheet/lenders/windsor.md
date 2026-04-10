@@ -65,7 +65,57 @@ Next step: Create `src/data/lender-adjustments/windsor/` JSON files. Note: lende
 
 ## Rate Prices (DB)
 
-42 products in DB. Last parse date: check `rate_sheets` table.
+After parser fix (2026-04-10): 100+ products with proper loan amount tier
+differentiation. Last parse date: check `rate_sheets` table.
+
+## Known Issues / Fixes
+
+### Parser collapsing all loan amount tiers + jumbo bleed (fixed 2026-04-10)
+
+**Symptom:** Windsor pricing on the rate tool was wildly off — par showing
+6.625% when other lenders showed 5.875-5.990. Parser was producing 20+
+identical "Conventional 30yr Fixed" programs that all collided in the DB,
+with prices from totally different products (loan amount tiers, Florida,
+Investment, even Prime Jumbo) merged into one.
+
+**Root causes — four separate bugs:**
+
+1. **Unicode `≤` (U+2264) not matching ASCII `<=` regex.** Section labels
+   use `≤$275K` format. Parser regex `(>|<=?)\s*\$?(\d+)K?` only matches
+   ASCII `<=`. So `≤$275K` → no loan amount label → collides with the base
+   product.
+
+2. **No `loanAmountRange` set on programs.** Even when the loan amount
+   label parsed, the parser didn't convert it into the `{min, max}` shape
+   that db-writer expects. So products had loan_amount_min/max NULL,
+   meaning the engine couldn't filter by loan amount.
+
+3. **No Jumbo detection.** Windsor has multiple "Prime Jumbo 1/2/3/4"
+   sheets. Parser saw "Prime Jumbo 1 30 Year Fixed" → loanType=conventional
+   (default) → name "Conventional 30yr Fixed" → collided with the conv base.
+
+4. **No Investment occupancy or state-specific row detection.** Sections
+   like "30/25 Year Fixed >$350K Investment" or "30/25 Year Fixed Florida
+   >$350K" → all collapsed into base "Conventional 30yr Fixed >350K".
+
+**Fixes:**
+- Normalize Unicode `≤`/`≥` to `<=`/`>=` at the top of `parseProductHeader`
+- Added `parseLoanAmountRange()` helper that converts labels like ">350K"
+  or "<=275K" or "> 250K <= 275K" into `{min, max}` dollar amounts
+- Pass `loanAmountRange` through to the program object
+- Added Jumbo detection: `Prime Jumbo (\d+)` → `isJumbo`, `jumboTier`,
+  category='jumbo', name = "Prime Jumbo X 30yr Fixed"
+- Added Investment occupancy detection
+- Added Florida/state detection — but state-specific rows are SKIPPED
+  during parsing because the engine doesn't currently support per-product
+  state filtering. TODO: revisit when engine supports state filtering.
+
+**Verification:** After fix, base "Conventional 30yr Fixed >350K" curve
+is monotonic with par around 5.750-5.875% raw, 6.125% after broker comp.
+Aligns with cluster of other lenders within 1/4 point.
+
+Cleaned up 12 stale orphan products from previous parses (db-writer doesn't
+delete products that aren't in the new write — they stay with 0 prices).
 
 ## parse-gcs-rates.mjs
 

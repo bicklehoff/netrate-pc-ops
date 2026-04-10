@@ -122,7 +122,13 @@ function extractRates(ws, dataStartRow, rateCol, lockCols, maxRows = 25) {
 
 function parseProductHeader(header) {
   if (!header || typeof header !== 'string') return null;
-  let s = header.trim().replace(/[\^*]+/g, '').trim();
+  // Normalize Unicode comparison operators to ASCII so the loan-amount regex
+  // can match sections like "30/25 Year Fixed ≤$275K" (Windsor uses ≤ U+2264).
+  let s = header.trim()
+    .replace(/[\^*]+/g, '')
+    .replace(/≤/g, '<=')
+    .replace(/≥/g, '>=')
+    .trim();
 
   let loanType = 'conventional';
   let isStreamline = false;
@@ -132,6 +138,15 @@ function parseProductHeader(header) {
   let productType = 'fixed';
   let armStructure = null;
   let term = null;
+  let isJumbo = false;
+  let jumboTier = null;
+
+  // Jumbo detection — Windsor has "Prime Jumbo 1/2/3/4" sheets, each a different product tier
+  const jumboMatch = s.match(/\bPrime\s*Jumbo\s*(\d+)\b/i);
+  if (jumboMatch) {
+    isJumbo = true;
+    jumboTier = jumboMatch[1];
+  }
 
   if (/\bVA\b/i.test(s)) {
     loanType = 'va';
@@ -169,17 +184,52 @@ function parseProductHeader(header) {
 
   let occupancy = 'primary';
   if (/\bSecond\s*Home\b/i.test(s)) occupancy = 'secondary';
+  if (/\bInvestment\b/i.test(s)) occupancy = 'investment';
 
-  return { loanType, term, productType, armStructure, isHighBalance, isStreamline, isHomeReady, variant, occupancy, loanAmountLabel };
+  // Detect state-specific rows (e.g., "30/25 Year Fixed Florida >$350K")
+  // Windsor has special pricing for FL — store as a state filter so the
+  // engine can match it only when state === 'FL'.
+  let state = null;
+  if (/\bFlorida\b/i.test(s) || /\bFL\b/.test(s)) state = 'FL';
+  // Add other states as Windsor adds them.
+
+  return { loanType, term, productType, armStructure, isHighBalance, isStreamline, isHomeReady, variant, occupancy, loanAmountLabel, state, isJumbo, jumboTier };
+}
+
+/**
+ * Convert a loan amount label like ">350K", "<=275K", "> 250K <= 275K"
+ * into a {min, max} range in dollars. Returns null if no parseable info.
+ */
+function parseLoanAmountRange(label) {
+  if (!label) return null;
+  // Find all numeric tokens with K suffix and their preceding operator
+  const matches = [...label.matchAll(/(>=?|<=?)\s*\$?(\d+)K?/gi)];
+  if (matches.length === 0) return null;
+  let min = null;
+  let max = null;
+  for (const m of matches) {
+    const op = m[1];
+    const dollars = parseInt(m[2], 10) * 1000;
+    if (op === '>') min = dollars + 1;
+    else if (op === '>=') min = dollars;
+    else if (op === '<=') max = dollars;
+    else if (op === '<') max = dollars - 1;
+  }
+  return { min, max };
 }
 
 function makeId(parsed) {
-  const parts = [parsed.loanType, `${parsed.term}yr`, parsed.productType];
+  const parts = [];
+  if (parsed.isJumbo) parts.push(`jumbo${parsed.jumboTier || ''}`);
+  else parts.push(parsed.loanType);
+  parts.push(`${parsed.term}yr`, parsed.productType);
   if (parsed.armStructure) parts.push(parsed.armStructure.replace('/', '-'));
   if (parsed.isHighBalance) parts.push('highbal');
   if (parsed.isStreamline) parts.push('streamline');
   if (parsed.isHomeReady) parts.push('homeready');
   if (parsed.occupancy === 'secondary') parts.push('2ndhome');
+  if (parsed.occupancy === 'investment') parts.push('investment');
+  if (parsed.state) parts.push(parsed.state.toLowerCase());
   if (parsed.loanAmountLabel) {
     const amt = parsed.loanAmountLabel.replace(/[><=\s]/g, '').replace(/K/gi, 'k');
     parts.push(amt);
@@ -189,12 +239,16 @@ function makeId(parsed) {
 
 function makeProgramName(parsed) {
   const parts = [];
-  switch (parsed.loanType) {
-    case 'conventional': parts.push('Conventional'); break;
-    case 'fha': parts.push('FHA'); break;
-    case 'va': parts.push('VA'); break;
-    case 'usda': parts.push('USDA'); break;
-    default: parts.push(parsed.loanType);
+  if (parsed.isJumbo) {
+    parts.push(`Prime Jumbo ${parsed.jumboTier || ''}`.trim());
+  } else {
+    switch (parsed.loanType) {
+      case 'conventional': parts.push('Conventional'); break;
+      case 'fha': parts.push('FHA'); break;
+      case 'va': parts.push('VA'); break;
+      case 'usda': parts.push('USDA'); break;
+      default: parts.push(parsed.loanType);
+    }
   }
   if (parsed.isStreamline) parts.push(parsed.variant === 'irrrl' ? 'IRRRL' : 'Streamline');
   parts.push(`${parsed.term}yr`);
@@ -206,6 +260,9 @@ function makeProgramName(parsed) {
   if (parsed.isHighBalance) parts.push('High Balance');
   if (parsed.isHomeReady) parts.push('HomeReady');
   if (parsed.occupancy === 'secondary') parts.push('Second Home');
+  if (parsed.occupancy === 'investment') parts.push('Investment');
+  if (parsed.state) parts.push(parsed.state);
+  if (parsed.loanAmountLabel) parts.push(parsed.loanAmountLabel);
   return parts.join(' ');
 }
 
@@ -235,14 +292,21 @@ function parseSheet(ws, sheetLabel) {
       const parsed = parseProductHeader(productName);
       if (!parsed) continue;
 
+      // Skip state-specific rows — engine doesn't filter by state at the
+      // product level, and these would shadow the base product for non-matching
+      // borrowers. TODO: revisit when engine supports state filtering on products.
+      if (parsed.state) continue;
+
       const rates = extractRates(ws, r + 1, group.rateCol, group.lockCols);
       if (rates.length === 0) continue;
 
       const id = makeId(parsed);
       const lockDays = [...new Set(rates.map(x => x.lockDays))].sort((a, b) => a - b);
       let subcategory = parsed.loanType;
-      if (parsed.loanType === 'conventional' && parsed.isHighBalance) subcategory = 'conventional';
+      if (parsed.isJumbo) subcategory = 'jumbo';
+      else if (parsed.loanType === 'conventional' && parsed.isHighBalance) subcategory = 'conventional';
 
+      const loanAmountRange = parseLoanAmountRange(parsed.loanAmountLabel);
       programs.push({
         id,
         name: makeProgramName(parsed),
@@ -259,6 +323,7 @@ function parseSheet(ws, sheetLabel) {
         priceFormat: '100-based',
         rates,
         lockDays,
+        loanAmountRange,
         sheetSource: sheetLabel || null,
       });
     }
