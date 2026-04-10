@@ -180,6 +180,18 @@ export async function priceScenario(body) {
       // Filter FastTrack products — requires eligibility fields not in scenario model
       if (program.tier === 'fasttrack') continue;
 
+      // Filter Buydown products — these require a separate buydown agreement
+      // (typically seller-paid) and have different pricing that doesn't apply to
+      // standard purchase/refi scenarios
+      if (program.isBuydown) continue;
+
+      // Filter by loan purpose if the product is purpose-specific (e.g. TLS CONF30R = refinance)
+      // Programs with no purpose set are eligible for any purpose.
+      if (program.loanPurpose) {
+        const scenarioPurpose = scenario.loanPurpose === 'cashout' ? 'refinance' : scenario.loanPurpose;
+        if (program.loanPurpose !== scenarioPurpose) continue;
+      }
+
       if (loanClassification) {
         if (loanClassification === 'conforming' && program.isHighBalance) continue;
         if (loanClassification === 'jumbo') continue;

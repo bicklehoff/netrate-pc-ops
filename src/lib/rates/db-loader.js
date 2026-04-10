@@ -27,6 +27,7 @@ export async function loadRateDataFromDB() {
     FROM rate_sheets rs
     JOIN rate_lenders rl ON rs.lender_id = rl.id
     WHERE rs.status = 'active'
+      AND (rl.status IS NULL OR rl.status <> 'excluded')
   `;
 
   if (activeSheets.length === 0) return [];
@@ -45,7 +46,8 @@ export async function loadRateDataFromDB() {
         rprod.loan_type, rprod.agency, rprod.term, rprod.product_type,
         rprod.arm_structure, rprod.tier, rprod.occupancy,
         rprod.is_high_balance, rprod.is_streamline, rprod.is_buydown,
-        rprod.is_interest_only, rprod.loan_amount_min, rprod.loan_amount_max
+        rprod.is_interest_only, rprod.loan_amount_min, rprod.loan_amount_max,
+        rprod.loan_purpose
       FROM rate_prices rp
       JOIN rate_products rprod ON rp.product_id = rprod.id
       WHERE rp.rate_sheet_id = ${sheet.id}
@@ -76,6 +78,7 @@ export async function loadRateDataFromDB() {
           isStreamline: price.is_streamline,
           isBuydown: price.is_buydown,
           isInterestOnly: price.is_interest_only,
+          loanPurpose: price.loan_purpose,
           loanAmountRange: {
             min: price.loan_amount_min || 0,
             max: price.loan_amount_max || null,

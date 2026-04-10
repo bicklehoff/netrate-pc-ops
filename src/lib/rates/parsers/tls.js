@@ -63,6 +63,7 @@ function decodeProductCode(code) {
   let docType = null;
   let tier = null;
   let variant = null;
+  let loanPurpose = null;  // 'purchase' | 'refinance' | null (any)
 
   // --- HELOC ---
   if (/^H\d+M.*HELOC$/i.test(code)) {
@@ -176,15 +177,24 @@ function decodeProductCode(code) {
   // Conventional
   if (/^CONF/i.test(code)) {
     loanType = 'conventional'; category = 'agency'; subcategory = 'conventional';
-    const termMatch = code.match(/^CONF(\d+)/i);
+    // Restrict term capture to known conv terms so buydown digits don't bleed in.
+    // e.g. CONF301/0BD → term=30, buydown=1/0 (not term=301)
+    const termMatch = code.match(/^CONF(10|15|20|25|30)/i);
     term = termMatch ? parseInt(termMatch[1], 10) : 30;
     isHighBalance = /HB/i.test(code);
     isStreamline = false;
+    // Refinance variant: CONF30R, CONF15R, etc — bare R suffix after term digits
+    // Note: "R" inside HR (HomeReady) or IRRRL is NOT this pattern
+    const isRefiVariant = /^CONF(10|15|20|25|30)R$/i.test(code);
+    if (isRefiVariant) loanPurpose = 'refinance';
 
-    // Buydowns
+    // Buydowns — extract structure from the code AFTER the term portion so the
+    // term digits don't get included in the buydown match.
+    // e.g. CONF301/0BD → afterTerm="1/0BD" → buydown=1/0
     if (/BD$/i.test(code)) {
       isBuydown = true;
-      const bdMatch = code.match(/(\d+(?:\/\d+)*)BD/i);
+      const afterTerm = termMatch ? code.slice(termMatch[0].length) : code;
+      const bdMatch = afterTerm.match(/(\d+(?:\/\d+)*)BD$/i);
       buydownStructure = bdMatch ? bdMatch[1] : null;
     }
 
@@ -197,20 +207,23 @@ function decodeProductCode(code) {
       term, productType, occupancy,
       isHighBalance, isStreamline, isBuydown, buydownStructure,
       armStructure, isInterestOnly: false, docType: null, tier: null, variant,
+      loanPurpose,
     };
   }
 
   // FHA
   if (/^FHA/i.test(code)) {
     loanType = 'fha'; category = 'agency'; subcategory = 'fha';
-    const termMatch = code.match(/^FHA(\d+)/i);
+    // Restrict to known FHA terms so buydown digits don't bleed in
+    const termMatch = code.match(/^FHA(15|20|25|30)/i);
     term = termMatch ? parseInt(termMatch[1], 10) : 30;
     isHighBalance = /HB/i.test(code);
     isStreamline = /STR/i.test(code);
 
     if (/BD$/i.test(code)) {
       isBuydown = true;
-      const bdMatch = code.match(/(\d+(?:\/\d+)*)BD/i);
+      const afterTerm = termMatch ? code.slice(termMatch[0].length) : code;
+      const bdMatch = afterTerm.match(/(\d+(?:\/\d+)*)BD$/i);
       buydownStructure = bdMatch ? bdMatch[1] : null;
     }
 
@@ -228,14 +241,16 @@ function decodeProductCode(code) {
   // VA
   if (/^VA/i.test(code)) {
     loanType = 'va'; category = 'agency'; subcategory = 'va';
-    const termMatch = code.match(/^VA(\d+)/i);
+    // Restrict to known VA terms so buydown digits don't bleed in
+    const termMatch = code.match(/^VA(15|20|25|30)/i);
     term = termMatch ? parseInt(termMatch[1], 10) : 30;
     isHighBalance = /HB/i.test(code);
     isStreamline = /IRRRL/i.test(code);
 
     if (/BD$/i.test(code)) {
       isBuydown = true;
-      const bdMatch = code.match(/(\d+(?:\/\d+)*)BD/i);
+      const afterTerm = termMatch ? code.slice(termMatch[0].length) : code;
+      const bdMatch = afterTerm.match(/(\d+(?:\/\d+)*)BD$/i);
       buydownStructure = bdMatch ? bdMatch[1] : null;
     }
 
@@ -289,6 +304,7 @@ function makeProgramId(p) {
   if (p.docType) parts.push(p.docType);
   if (p.tier) parts.push(p.tier.toLowerCase());
   if (p.variant) parts.push(p.variant);
+  if (p.loanPurpose) parts.push(p.loanPurpose);
   return parts.join('_');
 }
 
@@ -327,6 +343,9 @@ function makeProgramName(p) {
   if (p.variant === 'homeready') parts.push('HomeReady');
   if (p.variant === 'homepossible') parts.push('HomePossible');
   if (p.variant === 'calhfa') parts.push('CalHFA');
+
+  // Loan purpose suffix (TLS uses CONF30R for refinance vs CONF30 for purchase)
+  if (p.loanPurpose === 'refinance') parts.push('Refinance');
 
   // Doc type for Non-QM
   if (p.docType === 'investor-bankstatement') parts.push('(Investor)');
@@ -431,6 +450,7 @@ function parseRates(csvContent) {
       docType: decoded.docType || null,
       tier: decoded.tier || null,
       variant: decoded.variant || null,
+      loanPurpose: decoded.loanPurpose || null,
       priceFormat: 'discount',  // TLS uses discount/rebate, not 100-based
       rates: entries,
       lockDays,
