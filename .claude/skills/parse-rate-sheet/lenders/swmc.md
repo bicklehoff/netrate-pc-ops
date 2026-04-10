@@ -35,16 +35,26 @@ Excluded (David's decision): NonQM, DSCR, HECM, ITIN, DPA, HELOC.
 
 ## Adjustment Rules (DB)
 
-Status: **233 rows** in `adjustment_rules` (seeded 2026-04-02).
+**Two sources coexist:**
+
+### 1. Parsed from rate sheet (preferred — auto-updated on each parse)
+Writer: `src/lib/rates/adj-writer.js` — `writeAdjustmentsToDB('swmc', parsedResult)`
+Source tag: `swmc/parsed-sheet`
+Status: **488 rows** written 2026-04-08. Covers conv FICO/LTV grids, additional adj (ARM, condo, investment, etc.), state adj, allterms adj, gov FICO/state/property/loanAmt adj, monthly promos.
+Cleared and re-written on each parse run.
+
+### 2. Manual from JSON (legacy — still works, preserved on re-parse)
 Source files: `src/data/lender-adjustments/swmc/`
+Source tag: `swmc/conv-llpa.json`, `swmc/lender-config.json`
+Re-seed: `node scripts/seed-adjustment-rules.mjs --lender swmc --force`
 
 | File | Content | Rows |
 |------|---------|------|
-| `conv-llpa.json` | Conv FICO/LTV grids (purchase/refi/cashout), 9×9 bands | 207 ficoLtv rows |
-| `gov-adj.json` | Raw gov adj values (reference only — seed uses lender-config) | — |
+| `conv-llpa.json` | Conv FICO/LTV grids (purchase/refi/cashout), 9x9 bands | 207 ficoLtv rows |
+| `gov-adj.json` | Raw gov adj values (reference only — seed uses lender-config) | - |
 | `lender-config.json` | Gov FICO adj (pre-negated), state adj (pre-negated), property adj (pre-negated), loan amt adj, monthly promos | 26 productFeature rows |
 
-Re-seed: `node scripts/seed-adjustment-rules.mjs --lender swmc --force`
+**Note:** Manual seeds are NOT cleared when adj-writer runs (it only deletes `source LIKE '%/parsed-sheet'`). Both sources load into the pricing engine. Eventually the manual seeds can be retired once the parsed path is fully validated.
 
 ### Not yet seeded (phase 2)
 
@@ -93,7 +103,22 @@ Update `lender-config.json` promos array each month and re-seed with `--force`. 
 | Comp cap (purchase) | $4,595 |
 | Comp cap (refi) | $3,595 |
 
+## Price Format
+
+**100-based** — parser converts from discount format (`100 - priceNum`).
+`rate_lenders.price_format = '100-based'`.
+
 ## Rate Prices (DB)
 
-1,368 price rows for 21 agency products. Last updated 2026-04-02.
+41 programs, 2,433 prices. Last parse: 2026-04-08.
+488 adjustment rules (parsed). Last seed: 2026-04-08.
 Products with 0 prices: DSCR 30yr Fixed, NonQM 30yr Fixed full/alt (excluded by design).
+
+## Known Issues / Fixes
+
+| Date | Issue | Fix |
+|------|-------|-----|
+| 2026-04-08 | Pattern ordering: `CONFORMING 30 YR FIXED INVESTMENT PROPERTY` matched generic `CONFORMING 30 YR FIXED` before specific `CONFORMING.*INVESTMENT` | Reordered SECTION_PATTERNS: specific (HB, investment) before generic conforming |
+| 2026-04-08 | Hardcoded row ranges broke on different sheet dates | Replaced 8 hardcoded ranges with anchor-relative dynamic searching |
+| 2026-04-08 | Step 2 patterns reverted by Step 3 edits (Edit tool matched old content) | Re-applied all patterns in single large Edit after Step 3 |
+| 2026-04-08 | Context-dependent sections (Medical Professional 30yr/ARM) misidentified | Added CONTEXT_SECTIONS tracking in main scanner |

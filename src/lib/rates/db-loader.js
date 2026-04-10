@@ -27,6 +27,7 @@ export async function loadRateDataFromDB() {
     FROM rate_sheets rs
     JOIN rate_lenders rl ON rs.lender_id = rl.id
     WHERE rs.status = 'active'
+      AND (rl.status IS NULL OR rl.status <> 'excluded')
   `;
 
   if (activeSheets.length === 0) return [];
