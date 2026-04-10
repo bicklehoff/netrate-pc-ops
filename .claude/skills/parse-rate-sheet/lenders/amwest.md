@@ -80,7 +80,45 @@ Next step: Create `src/data/lender-adjustments/amwest/` JSON files and add seed 
 
 ## Rate Prices (DB)
 
-13 products in DB. Last parse date: check `rate_sheets` table.
+18 products in DB after parser fix (was 13 with merged products before).
+Last parse date: check `rate_sheets` table.
+
+## Known Issues / Fixes
+
+### Parser misclassification of FHA/Jumbo as Conventional (fixed 2026-04-10)
+
+**Symptom:** Rate tool showing rates "too low for the pricing" for AmWest. The
+Conv 30yr Fixed (fannie) curve had wild discontinuities (e.g. 5.875% → +1.08
+when 5.750% was -1.67) and outlier rows at 4.750-5.125% that should never
+have been there.
+
+**Cause:** `parseAmwestCode` in `src/lib/rates/parsers/amwest.js` had a loose
+regex `/30\s*YR|30\)/.test(rawCode)` for the conventional 30yr branch.
+AmWest product codes have trailing "30 YR" / "30 YEAR" descriptors:
+- `FCF30 30 YEAR` — real Fannie 30yr Fixed
+- `FHA30  30 YR` — FHA 30yr (matched conv 30 due to "30 YR")
+- `JEA30 30 YEAR` — Jumbo 30yr (matched conv 30 due to "30 YEAR")
+- `VA30 30 YR` — VA 30yr (would have matched too)
+
+The strict `/^FHA30$/` and `/^VA30$/` regexes failed to match the codes
+because of the trailing text. So FHA, VA, and Jumbo products fell through
+to the loose conventional branch and got merged into the same DB product
+as the real Fannie row.
+
+**Fix:** Restructured `parseAmwestCode` to dispatch on the FIRST whitespace-
+delimited token. Each lender family (Jumbo JE, FHA, VA, USDA, Conv F*) is
+checked against the first token only. Conv check requires the first token
+to start with `F` (so FHA/FCF/FF/FM/FMFT all match conv except FHA which
+is caught earlier). Order matters: Jumbo (JE) must come before Conv (F)
+since neither is a substring of the other but JE codes don't start with F.
+
+**Variant detection added:** RN (RefiNow), HO (HomeOne), HP (HomePossible)
+in addition to existing RP (RefiPossible). These check both the first token
+and the second token (e.g. `FCF30 RN 30 YEAR` → second token "RN").
+
+**Verification:** After fix, parser produces 18 unique products (was 16
+with collisions). Production `/api/pricing` for AmWest shows par at 6.375%
+finalPrice 100.003 (was incorrectly showing par around 5.5-5.875%).
 
 ## parse-gcs-rates.mjs
 

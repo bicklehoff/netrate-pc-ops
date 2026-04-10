@@ -171,43 +171,89 @@ function parseAmwestCode(rawCode, isFastTrack) {
   const code = rawCode.replace(/[()]/g, '').trim().toUpperCase();
   const tier = isFastTrack ? 'fast-track' : 'standard';
 
-  // FHA
-  if (/^FHA30$/.test(code)) return { id: `fha_30yr_fixed_${tier}`, name: `FHA 30yr Fixed${isFastTrack ? ' Fast Track' : ''}`, loanType: 'fha', term: 30, category: 'agency', subcategory: 'fha' };
-  if (/^FHA30HB/.test(code)) return { id: `fha_30yr_fixed_highbal_${tier}`, name: `FHA 30yr Fixed HB${isFastTrack ? ' Fast Track' : ''}`, loanType: 'fha', term: 30, category: 'agency', subcategory: 'fha', isHighBalance: true };
-  if (/^FHA15/.test(code)) return { id: `fha_15yr_fixed_${tier}`, name: `FHA 15yr Fixed${isFastTrack ? ' Fast Track' : ''}`, loanType: 'fha', term: 15, category: 'agency', subcategory: 'fha' };
-  if (/^FHA30SL/.test(code)) return { id: `fha_30yr_fixed_streamline_${tier}`, name: `FHA Streamline 30yr Fixed${isFastTrack ? ' Fast Track' : ''}`, loanType: 'fha', term: 30, category: 'agency', subcategory: 'fha', isStreamline: true };
-  if (/^FHA.*ARM/.test(code)) return { id: `fha_30yr_arm_${tier}`, name: `FHA ARM${isFastTrack ? ' Fast Track' : ''}`, loanType: 'fha', term: 30, category: 'agency', subcategory: 'fha', productType: 'arm' };
+  // Dispatch on the first whitespace-delimited token. AmWest product codes
+  // often have trailing descriptors like "30 YR" / "30 YEAR" appended after
+  // the actual code (e.g. "FCF30 30 YEAR", "FHA30  30 YR", "JEA30 30 YEAR").
+  // The first token is the real product identifier.
+  const firstToken = code.split(/\s+/)[0];
 
-  // VA
-  if (/^VA30$/.test(code)) return { id: `va_30yr_fixed_${tier}`, name: `VA 30yr Fixed${isFastTrack ? ' Fast Track' : ''}`, loanType: 'va', term: 30, category: 'agency', subcategory: 'va' };
-  if (/^VA30HB/.test(code)) return { id: `va_30yr_fixed_highbal_${tier}`, name: `VA 30yr Fixed HB${isFastTrack ? ' Fast Track' : ''}`, loanType: 'va', term: 30, category: 'agency', subcategory: 'va', isHighBalance: true };
-  if (/^VA15/.test(code)) return { id: `va_15yr_fixed_${tier}`, name: `VA 15yr Fixed${isFastTrack ? ' Fast Track' : ''}`, loanType: 'va', term: 15, category: 'agency', subcategory: 'va' };
-  if (/^VA30IRRRL/.test(code)) return { id: `va_30yr_fixed_irrrl_${tier}`, name: `VA IRRRL 30yr Fixed${isFastTrack ? ' Fast Track' : ''}`, loanType: 'va', term: 30, category: 'agency', subcategory: 'va', isStreamline: true };
-  if (/^VA.*ARM/.test(code)) return { id: `va_30yr_arm_${tier}`, name: `VA ARM${isFastTrack ? ' Fast Track' : ''}`, loanType: 'va', term: 30, category: 'agency', subcategory: 'va', productType: 'arm' };
-
-  // USDA
-  if (/^USDA30/.test(code)) return { id: `usda_30yr_fixed_${tier}`, name: `USDA 30yr Fixed${isFastTrack ? ' Fast Track' : ''}`, loanType: 'usda', term: 30, category: 'agency', subcategory: 'usda' };
-
-  // Conventional (Fannie = FF/FCF, Freddie = FM/FMFT)
-  const isFreddie = /^FM/.test(code);
-  const investor = isFreddie ? 'freddie' : 'fannie';
-
-  if (/30/.test(code) && /RP/.test(code)) return { id: `conventional_30yr_fixed_refipossible_${tier}`, name: `Conv 30yr Fixed RefiPossible${isFastTrack ? ' FT' : ''}`, loanType: 'conventional', term: 30, category: 'agency', subcategory: 'conventional', variant: 'refipossible' };
-  if (/30\s*YR|30\)/.test(rawCode) || /30$/.test(code)) {
-    const isHB = /HB/.test(code);
-    return { id: `conventional_30yr_fixed${isHB ? '_highbal' : ''}_${investor}_${tier}`, name: `Conv 30yr Fixed${isHB ? ' HB' : ''} (${investor})${isFastTrack ? ' FT' : ''}`, loanType: 'conventional', term: 30, category: 'agency', subcategory: 'conventional', isHighBalance: isHB };
-  }
-  if (/20/.test(code)) return { id: `conventional_20yr_fixed_${investor}_${tier}`, name: `Conv 20yr Fixed (${investor})${isFastTrack ? ' FT' : ''}`, loanType: 'conventional', term: 20, category: 'agency', subcategory: 'conventional' };
-  if (/15/.test(code)) {
-    const isHB = /HB/.test(code);
-    return { id: `conventional_15yr_fixed${isHB ? '_highbal' : ''}_${investor}_${tier}`, name: `Conv 15yr Fixed${isHB ? ' HB' : ''} (${investor})${isFastTrack ? ' FT' : ''}`, loanType: 'conventional', term: 15, category: 'agency', subcategory: 'conventional', isHighBalance: isHB };
-  }
-  if (/10/.test(code)) return { id: `conventional_10yr_fixed_${investor}_${tier}`, name: `Conv 10yr Fixed (${investor})${isFastTrack ? ' FT' : ''}`, loanType: 'conventional', term: 10, category: 'agency', subcategory: 'conventional' };
-
-  // Jumbo
-  if (/^JE/.test(code)) {
-    const term = /15/.test(code) ? 15 : 30;
+  // ─── Jumbo (JE prefix) ─────────────────────────────────────────────
+  // Check FIRST so JE codes don't fall into conv 30 by accident
+  if (/^JE/.test(firstToken)) {
+    const term = /15/.test(firstToken) ? 15 : 30;
     return { id: `jumbo_${term}yr_fixed`, name: `Jumbo ${term}yr Fixed`, loanType: 'conventional', term, category: 'agency', subcategory: 'jumbo' };
+  }
+
+  // ─── FHA ────────────────────────────────────────────────────────────
+  if (/^FHA/.test(firstToken)) {
+    const isHB = /HB/.test(firstToken);
+    const isSL = /SL/.test(firstToken);
+    const isARM = /ARM/.test(firstToken);
+    if (isARM) return { id: `fha_30yr_arm_${tier}`, name: `FHA ARM${isFastTrack ? ' Fast Track' : ''}`, loanType: 'fha', term: 30, category: 'agency', subcategory: 'fha', productType: 'arm' };
+    if (/15/.test(firstToken)) return { id: `fha_15yr_fixed_${tier}`, name: `FHA 15yr Fixed${isFastTrack ? ' Fast Track' : ''}`, loanType: 'fha', term: 15, category: 'agency', subcategory: 'fha' };
+    if (isSL) return { id: `fha_30yr_fixed_streamline_${tier}`, name: `FHA Streamline 30yr Fixed${isFastTrack ? ' Fast Track' : ''}`, loanType: 'fha', term: 30, category: 'agency', subcategory: 'fha', isStreamline: true };
+    if (isHB) return { id: `fha_30yr_fixed_highbal_${tier}`, name: `FHA 30yr Fixed HB${isFastTrack ? ' Fast Track' : ''}`, loanType: 'fha', term: 30, category: 'agency', subcategory: 'fha', isHighBalance: true };
+    return { id: `fha_30yr_fixed_${tier}`, name: `FHA 30yr Fixed${isFastTrack ? ' Fast Track' : ''}`, loanType: 'fha', term: 30, category: 'agency', subcategory: 'fha' };
+  }
+
+  // ─── VA ─────────────────────────────────────────────────────────────
+  if (/^VA/.test(firstToken)) {
+    const isHB = /HB/.test(firstToken);
+    const isIRRRL = /IRRRL/.test(firstToken);
+    const isARM = /ARM/.test(firstToken);
+    if (isARM) return { id: `va_30yr_arm_${tier}`, name: `VA ARM${isFastTrack ? ' Fast Track' : ''}`, loanType: 'va', term: 30, category: 'agency', subcategory: 'va', productType: 'arm' };
+    if (/15/.test(firstToken)) return { id: `va_15yr_fixed_${tier}`, name: `VA 15yr Fixed${isFastTrack ? ' Fast Track' : ''}`, loanType: 'va', term: 15, category: 'agency', subcategory: 'va' };
+    if (isIRRRL) return { id: `va_30yr_fixed_irrrl_${tier}`, name: `VA IRRRL 30yr Fixed${isFastTrack ? ' Fast Track' : ''}`, loanType: 'va', term: 30, category: 'agency', subcategory: 'va', isStreamline: true };
+    if (isHB) return { id: `va_30yr_fixed_highbal_${tier}`, name: `VA 30yr Fixed HB${isFastTrack ? ' Fast Track' : ''}`, loanType: 'va', term: 30, category: 'agency', subcategory: 'va', isHighBalance: true };
+    return { id: `va_30yr_fixed_${tier}`, name: `VA 30yr Fixed${isFastTrack ? ' Fast Track' : ''}`, loanType: 'va', term: 30, category: 'agency', subcategory: 'va' };
+  }
+
+  // ─── USDA ───────────────────────────────────────────────────────────
+  if (/^USDA/.test(firstToken)) {
+    return { id: `usda_30yr_fixed_${tier}`, name: `USDA 30yr Fixed${isFastTrack ? ' Fast Track' : ''}`, loanType: 'usda', term: 30, category: 'agency', subcategory: 'usda' };
+  }
+
+  // ─── Conventional ───────────────────────────────────────────────────
+  // Fannie = FF/FCF/FFT, Freddie = FM/FMFT. All start with F (but not FHA).
+  // Some codes carry the variant suffix as a separate token (e.g. "FCF30 RN 30 YEAR")
+  // so check the full pre-trailing-junk code, not just firstToken, for variant detection.
+  if (/^F/.test(firstToken)) {
+    const isFreddie = /^FM/.test(firstToken);
+    const investor = isFreddie ? 'freddie' : 'fannie';
+    const isHB = /HB/.test(firstToken);
+
+    // Variant detection — RN (RefiNow), RP (RefiPossible), HO (HomeOne), HP (HomePossible)
+    // Look at firstToken AND the second token (e.g. "FCF30 RN 30 YEAR" → second token "RN")
+    const tokens = code.split(/\s+/);
+    const variantToken = tokens[1] || '';
+    const hasRN = /RN/.test(firstToken) || /^RN$/.test(variantToken);
+    const hasRP = /RP/.test(firstToken) || /^RP$/.test(variantToken);
+    const hasHO = /HO/.test(firstToken) || /^HO$/.test(variantToken);
+    const hasHP = /HP/.test(firstToken) || /^HP$/.test(variantToken);
+
+    let variant = null;
+    let variantSuffix = '';
+    let variantNameSuffix = '';
+    if (hasRN) { variant = 'refinow'; variantSuffix = '_refinow'; variantNameSuffix = ' RefiNow'; }
+    else if (hasRP) { variant = 'refipossible'; variantSuffix = '_refipossible'; variantNameSuffix = ' RefiPossible'; }
+    else if (hasHO) { variant = 'homeone'; variantSuffix = '_homeone'; variantNameSuffix = ' HomeOne'; }
+    else if (hasHP) { variant = 'homepossible'; variantSuffix = '_homepossible'; variantNameSuffix = ' HomePossible'; }
+
+    const buildResult = (term) => ({
+      id: `conventional_${term}yr_fixed${isHB ? '_highbal' : ''}_${investor}${variantSuffix}_${tier}`,
+      name: `Conv ${term}yr Fixed${isHB ? ' HB' : ''}${variantNameSuffix} (${investor})${isFastTrack ? ' FT' : ''}`,
+      loanType: 'conventional',
+      term,
+      category: 'agency',
+      subcategory: 'conventional',
+      isHighBalance: isHB,
+      variant,
+    });
+
+    if (/30/.test(firstToken)) return buildResult(30);
+    if (/20/.test(firstToken)) return buildResult(20);
+    if (/15/.test(firstToken)) return buildResult(15);
+    if (/10/.test(firstToken)) return buildResult(10);
   }
 
   return null;
