@@ -51,18 +51,18 @@ export default function ContactsPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [statusCounts, setStatusCounts] = useState({});
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
-  const [sort, setSort] = useState('updatedAt');
+  const [sort, setSort] = useState('updated_at');
   const [order, setOrder] = useState('desc');
   const [error, setError] = useState('');
 
   // Create contact modal
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [newContact, setNewContact] = useState({ firstName: '', lastName: '', email: '', phone: '', notes: '' });
+  const [newContact, setNewContact] = useState({ first_name: '', last_name: '', email: '', phone: '', notes: '' });
 
   // Create lead modal
   const [leadModal, setLeadModal] = useState(null);
-  const [leadForm, setLeadForm] = useState({ loanPurpose: '', propertyState: '', notes: '' });
+  const [leadForm, setLeadForm] = useState({ loan_purpose: '', property_state: '', notes: '' });
   const [creatingLead, setCreatingLead] = useState(false);
 
   useEffect(() => {
@@ -121,7 +121,7 @@ export default function ContactsPage() {
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'Failed'); return; }
       setShowCreate(false);
-      setNewContact({ firstName: '', lastName: '', email: '', phone: '', notes: '' });
+      setNewContact({ first_name: '', last_name: '', email: '', phone: '', notes: '' });
       fetchContacts();
     } catch { setError('Failed to create contact'); }
     finally { setCreating(false); }
@@ -140,7 +140,7 @@ export default function ContactsPage() {
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'Failed'); return; }
       setLeadModal(null);
-      setLeadForm({ loanPurpose: '', propertyState: '', notes: '' });
+      setLeadForm({ loan_purpose: '', property_state: '', notes: '' });
       router.push('/portal/mlo/leads');
     } catch { setError('Failed to create lead'); }
     finally { setCreatingLead(false); }
@@ -175,12 +175,12 @@ export default function ContactsPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">First Name *</label>
-              <input required value={newContact.firstName} onChange={(e) => setNewContact({ ...newContact, firstName: e.target.value })}
+              <input required value={newContact.first_name} onChange={(e) => setNewContact({ ...newContact, first_name: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none" />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Last Name *</label>
-              <input required value={newContact.lastName} onChange={(e) => setNewContact({ ...newContact, lastName: e.target.value })}
+              <input required value={newContact.last_name} onChange={(e) => setNewContact({ ...newContact, last_name: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none" />
             </div>
             <div>
@@ -267,8 +267,8 @@ export default function ContactsPage() {
                   Status <SortIcon field="status" />
                 </th>
                 <th className="text-left px-4 py-3">MLO</th>
-                <th className="text-left px-4 py-3 cursor-pointer hover:text-gray-700" onClick={() => handleSort('lastContactedAt')}>
-                  Last Contact <SortIcon field="lastContactedAt" />
+                <th className="text-left px-4 py-3 cursor-pointer hover:text-gray-700" onClick={() => handleSort('last_contacted_at')}>
+                  Last Contact <SortIcon field="last_contacted_at" />
                 </th>
                 <th className="text-left px-4 py-3">Loans</th>
                 <th className="text-right px-4 py-3 w-20"></th>
@@ -284,9 +284,9 @@ export default function ContactsPage() {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 rounded-full bg-brand/10 text-brand font-semibold text-xs flex items-center justify-center flex-shrink-0">
-                        {c.firstName?.[0]}{c.lastName?.[0]}
+                        {c.first_name?.[0]}{c.last_name?.[0]}
                       </div>
-                      <span className="font-medium text-gray-900">{c.firstName} {c.lastName}</span>
+                      <span className="font-medium text-gray-900">{c.first_name} {c.last_name}</span>
                     </div>
                   </td>
                   <td className="px-4 py-3 text-gray-600 truncate max-w-[200px]">{c.email || '—'}</td>
@@ -297,9 +297,9 @@ export default function ContactsPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-gray-600 text-xs">
-                    {c.assignedMlo ? `${c.assignedMlo.firstName} ${c.assignedMlo.lastName?.[0]}.` : '—'}
+                    {c.assignedMlo ? `${c.assignedMlo.first_name} ${c.assignedMlo.last_name?.[0]}.` : '—'}
                   </td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">{timeAgo(c.lastContactedAt)}</td>
+                  <td className="px-4 py-3 text-gray-500 text-xs">{timeAgo(c.last_contacted_at)}</td>
                   <td className="px-4 py-3">
                     {c.borrower?.loans?.length > 0 && (
                       <span className="text-xs text-gray-500">{c.borrower.loans.length}</span>
@@ -351,7 +351,7 @@ export default function ContactsPage() {
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
             <h3 className="font-bold text-gray-900 text-lg mb-1">Create Lead</h3>
             <p className="text-sm text-gray-500 mb-4">
-              {leadModal.firstName} {leadModal.lastName}
+              {leadModal.first_name} {leadModal.last_name}
               {leadModal.status === 'past_client' && (
                 <span className="ml-2 inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Returning Client</span>
               )}
@@ -360,7 +360,7 @@ export default function ContactsPage() {
               <div className="space-y-3 mb-4">
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Loan Purpose</label>
-                  <select value={leadForm.loanPurpose} onChange={(e) => setLeadForm({ ...leadForm, loanPurpose: e.target.value })}
+                  <select value={leadForm.loan_purpose} onChange={(e) => setLeadForm({ ...leadForm, loan_purpose: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none">
                     <option value="">Select...</option>
                     <option value="purchase">Purchase</option>
@@ -372,7 +372,7 @@ export default function ContactsPage() {
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">State</label>
-                  <select value={leadForm.propertyState} onChange={(e) => setLeadForm({ ...leadForm, propertyState: e.target.value })}
+                  <select value={leadForm.property_state} onChange={(e) => setLeadForm({ ...leadForm, property_state: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none">
                     <option value="">Select...</option>
                     <option value="CO">Colorado</option>

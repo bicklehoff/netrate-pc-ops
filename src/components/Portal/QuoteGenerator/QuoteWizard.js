@@ -73,20 +73,20 @@ function firstPaymentFromClosing(closingStr) {
 export default function QuoteWizard({ prefill }) {
   const [step, setStep] = useState(0);
 
-  const initClosing = prefill?.closingDate || defaultClosingDate();
+  const initClosing = prefill?.closing_date || defaultClosingDate();
   const initState   = prefill?.state    || 'CO';
   const initPurpose = prefill?.purpose  || 'purchase';
   const [scenario, setScenario] = useState({
-    borrowerName: prefill?.borrowerName || '',
-    borrowerEmail: prefill?.borrowerEmail || '',
-    borrowerPhone: prefill?.borrowerPhone || '',
-    contactId: prefill?.contactId || null,
+    borrower_name: prefill?.borrower_name || '',
+    borrower_email: prefill?.borrower_email || '',
+    borrower_phone: prefill?.borrower_phone || '',
+    contact_id: prefill?.contact_id || null,
     leadId: prefill?.leadId || null,
-    loanId: prefill?.loanId || null,
+    loan_id: prefill?.loan_id || null,
     purpose: initPurpose,
-    loanType: prefill?.loanType || 'conventional',
-    propertyValue: prefill?.propertyValue || '',
-    loanAmount: prefill?.loanAmount || '',
+    loan_type: prefill?.loan_type || 'conventional',
+    property_value: prefill?.property_value || '',
+    loan_amount: prefill?.loan_amount || '',
     downPaymentPct: prefill?.downPaymentPct || 25,
     fico: prefill?.fico || 780,
     state: initState,
@@ -97,15 +97,15 @@ export default function QuoteWizard({ prefill }) {
     productType: prefill?.productType || 'fixed',
     ltv: prefill?.ltv || 75,
     // Date defaults
-    closingDate: initClosing,
-    firstPaymentDate: prefill?.firstPaymentDate || firstPaymentFromClosing(initClosing),
-    fundingDate: prefill?.fundingDate || defaultFundingDate(initClosing, initState, initPurpose),
+    closing_date: initClosing,
+    first_payment_date: prefill?.first_payment_date || firstPaymentFromClosing(initClosing),
+    funding_date: prefill?.funding_date || defaultFundingDate(initClosing, initState, initPurpose),
     // Escrow
     escrowsWaived: prefill?.escrowsWaived || false,
     borrowerPaid: prefill?.borrowerPaid || false,
     // Refi fields
-    currentRate: prefill?.currentRate || '',
-    currentBalance: prefill?.currentBalance || '',
+    current_rate: prefill?.current_rate || '',
+    current_balance: prefill?.current_balance || '',
     currentPayment: prefill?.currentPayment || '',
     currentLender: prefill?.currentLender || '',
   });
@@ -193,11 +193,11 @@ export default function QuoteWizard({ prefill }) {
 
   const handleSendToBorrower = useCallback(async () => {
     if (!quoteId) return;
-    if (!scenario.borrowerEmail) {
+    if (!scenario.borrower_email) {
       setError('Add borrower email before sending');
       return;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(scenario.borrowerEmail)) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(scenario.borrower_email)) {
       setError('Enter a valid email address');
       return;
     }
@@ -230,7 +230,7 @@ export default function QuoteWizard({ prefill }) {
     } finally {
       setLoading(false);
     }
-  }, [quoteId, scenario.borrowerEmail, handleSaveDraft]);
+  }, [quoteId, scenario.borrower_email, handleSaveDraft]);
 
   const handlePreviewPDF = useCallback(async () => {
     if (selectedRates.length === 0) return;
@@ -243,23 +243,23 @@ export default function QuoteWizard({ prefill }) {
       const blob = await pdf(
         QuotePDF({
           quote: {
-            borrowerName: scenario.borrowerName || 'Borrower',
+            borrower_name: scenario.borrower_name || 'Borrower',
             purpose: scenario.purpose,
-            loanAmount: scenario.loanAmount,
-            propertyValue: scenario.propertyValue,
+            loan_amount: scenario.loan_amount,
+            property_value: scenario.property_value,
             ltv: scenario.ltv,
             fico: scenario.fico,
-            loanType: scenario.loanType,
+            loan_type: scenario.loan_type,
             state: scenario.state,
             county: scenario.county,
             term: scenario.term,
-            currentBalance: scenario.currentBalance,
+            current_balance: scenario.current_balance,
           },
           scenarios: selectedRates,
           fees,
-          closingDate: scenario.closingDate || null,
-          fundingDate: scenario.fundingDate || null,
-          firstPaymentDate: scenario.firstPaymentDate || null,
+          closing_date: scenario.closing_date || null,
+          funding_date: scenario.funding_date || null,
+          first_payment_date: scenario.first_payment_date || null,
         })
       ).toBlob();
 
@@ -303,7 +303,7 @@ export default function QuoteWizard({ prefill }) {
 
       {sendResult?.success && (
         <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-          <div className="text-green-800 font-medium text-sm">Quote sent to {scenario.borrowerEmail}</div>
+          <div className="text-green-800 font-medium text-sm">Quote sent to {scenario.borrower_email}</div>
           <div className="text-green-600 text-xs mt-1">
             PDF attached + portal link included. Borrower can view at the link in their email.
           </div>

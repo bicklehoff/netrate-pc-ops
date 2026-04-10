@@ -134,7 +134,7 @@ function BulkActionBar({ count, mloList, onBulkUpdate, onBulkDelete, onClear }) 
           {activeAction === 'mlo' && (
             <div className="absolute bottom-full mb-2 left-0 bg-white text-gray-900 rounded-lg shadow-xl border border-gray-200 py-1 min-w-[180px] max-h-64 overflow-y-auto">
               <button
-                onClick={() => applyUpdate({ mloId: null })}
+                onClick={() => applyUpdate({ mlo_id: null })}
                 className="block w-full text-left px-3 py-1.5 text-sm text-gray-400 hover:bg-gray-100 transition-colors"
               >
                 Unassigned
@@ -142,7 +142,7 @@ function BulkActionBar({ count, mloList, onBulkUpdate, onBulkDelete, onClear }) 
               {mloList.map((m) => (
                 <button
                   key={m.id}
-                  onClick={() => applyUpdate({ mloId: m.id })}
+                  onClick={() => applyUpdate({ mlo_id: m.id })}
                   className="block w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 transition-colors"
                 >
                   {m.name}
@@ -329,13 +329,13 @@ export default function MloDashboardPage() {
     if (tier2 && loan.status !== tier2) return false;
 
     // LO filter
-    if (mloFilter === 'unassigned' && loan.mloId) return false;
-    if (mloFilter !== 'all' && mloFilter !== 'unassigned' && loan.mloId !== mloFilter) return false;
+    if (mloFilter === 'unassigned' && loan.mlo_id) return false;
+    if (mloFilter !== 'all' && mloFilter !== 'unassigned' && loan.mlo_id !== mloFilter) return false;
 
     // Search filter
     if (search) {
       const q = search.toLowerCase();
-      const fields = [loan.borrowerName, loan.loanNumber, loan.lenderName, loan.propertyStreet, loan.borrowerEmail, loan.mloName, loan.purpose, loan.loanType].filter(Boolean);
+      const fields = [loan.borrower_name, loan.loan_number, loan.lender_name, loan.property_street, loan.borrower_email, loan.mlo_name, loan.purpose, loan.loan_type].filter(Boolean);
       return fields.some(f => f.toLowerCase().includes(q));
     }
     return true;

@@ -69,47 +69,47 @@ export default function LoanInfoSection({ loan, updateLoanField, updateDates }) 
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           <EditableField
             label="Loan Type"
-            value={loan.loanType}
+            value={loan.loan_type}
             type="select"
             options={LOAN_TYPE_OPTIONS}
-            onSave={save('loanType')}
+            onSave={save('loan_type')}
           />
           <EditableField
             label="Loan Amount"
-            value={loan.loanAmount}
+            value={loan.loan_amount}
             type="currency"
-            onSave={save('loanAmount')}
+            onSave={save('loan_amount')}
           />
           <EditableField
             label="Interest Rate"
-            value={loan.interestRate}
+            value={loan.interest_rate}
             type="text"
             placeholder="—"
-            onSave={save('interestRate')}
+            onSave={save('interest_rate')}
           />
           <EditableField
             label="Loan Term (years)"
-            value={loan.loanTerm}
+            value={loan.loan_term}
             type="text"
             placeholder="—"
-            onSave={save('loanTerm')}
+            onSave={save('loan_term')}
           />
           <EditableField
             label="Credit Score"
-            value={loan.creditScore}
+            value={loan.credit_score}
             type="text"
-            onSave={save('creditScore')}
+            onSave={save('credit_score')}
           />
           <EditableField
             label="Lien Status"
-            value={loan.lienStatus}
+            value={loan.lien_status}
             type="select"
             options={lienStatusOptions}
-            onSave={save('lienStatus')}
+            onSave={save('lien_status')}
           />
           <EditableField
             label="# Borrowers"
-            value={loan.numBorrowers}
+            value={loan.num_borrowers}
             type="text"
             readOnly
           />
@@ -121,21 +121,21 @@ export default function LoanInfoSection({ loan, updateLoanField, updateDates }) 
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           <EditableField
             label="Lock Date"
-            value={loan.dates?.lockedDate}
+            value={loan.dates?.locked_date}
             type="date"
-            onSave={async (v) => updateDates({ lockedDate: v })}
+            onSave={async (v) => updateDates({ locked_date: v })}
           />
           <EditableField
             label="Lock Expiration"
-            value={loan.dates?.lockExpiration}
+            value={loan.dates?.lock_expiration}
             type="date"
-            onSave={async (v) => updateDates({ lockExpiration: v })}
+            onSave={async (v) => updateDates({ lock_expiration: v })}
           />
           <EditableField
             label="Lock Term (days)"
-            value={loan.dates?.lockTerm}
+            value={loan.dates?.lock_term}
             type="text"
-            onSave={async (v) => updateDates({ lockTerm: parseInt(v) || null })}
+            onSave={async (v) => updateDates({ lock_term: parseInt(v) || null })}
           />
         </div>
       </SectionCard>
@@ -145,24 +145,24 @@ export default function LoanInfoSection({ loan, updateLoanField, updateDates }) 
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           <EditableField
             label="Property Address"
-            value={formatAddress(loan.propertyAddress)}
+            value={formatAddress(loan.property_address)}
             type="text"
             placeholder="Street, City, State, Zip"
-            onSave={save('propertyAddress')}
+            onSave={save('property_address')}
             className="col-span-2"
           />
           <EditableField
             label="County"
-            value={loan.propertyAddress?.county}
+            value={loan.property_address?.county}
             type="text"
             readOnly
           />
           <EditableField
             label="Property Type"
-            value={loan.propertyType}
+            value={loan.property_type}
             type="select"
             options={PROPERTY_TYPE_OPTIONS}
-            onSave={save('propertyType')}
+            onSave={save('property_type')}
           />
           <EditableField
             label="Occupancy"
@@ -173,33 +173,33 @@ export default function LoanInfoSection({ loan, updateLoanField, updateDates }) 
           />
           <EditableField
             label="# Units"
-            value={loan.numUnits}
+            value={loan.num_units}
             type="text"
-            onSave={save('numUnits')}
+            onSave={save('num_units')}
           />
           <EditableField
             label="Purchase Price"
-            value={loan.purchasePrice}
+            value={loan.purchase_price}
             type="currency"
-            onSave={save('purchasePrice')}
+            onSave={save('purchase_price')}
           />
           <EditableField
             label="Down Payment"
-            value={loan.downPayment}
+            value={loan.down_payment}
             type="currency"
-            onSave={save('downPayment')}
+            onSave={save('down_payment')}
           />
           <EditableField
             label="Appraised Value"
-            value={loan.estimatedValue}
+            value={loan.estimated_value}
             type="currency"
-            onSave={save('estimatedValue')}
+            onSave={save('estimated_value')}
           />
           <EditableField
             label="Current Balance"
-            value={loan.currentBalance}
+            value={loan.current_balance}
             type="currency"
-            onSave={save('currentBalance')}
+            onSave={save('current_balance')}
           />
         </div>
       </SectionCard>
@@ -216,15 +216,15 @@ export default function LoanInfoSection({ loan, updateLoanField, updateDates }) 
           />
           <EditableField
             label="Refi Purpose"
-            value={loan.refiPurpose}
+            value={loan.refi_purpose}
             type="text"
-            onSave={save('refiPurpose')}
+            onSave={save('refi_purpose')}
           />
           <EditableField
             label="Cash Out Amount"
-            value={loan.cashOutAmount}
+            value={loan.cash_out_amount}
             type="currency"
-            onSave={save('cashOutAmount')}
+            onSave={save('cash_out_amount')}
           />
         </div>
       </SectionCard>
@@ -234,15 +234,15 @@ export default function LoanInfoSection({ loan, updateLoanField, updateDates }) 
         <div className="grid grid-cols-2 gap-4">
           <EditableField
             label="Lender Name"
-            value={loan.lenderName}
+            value={loan.lender_name}
             type="text"
-            onSave={save('lenderName')}
+            onSave={save('lender_name')}
           />
           <EditableField
             label="Loan Number"
-            value={loan.loanNumber}
+            value={loan.loan_number}
             type="text"
-            onSave={save('loanNumber')}
+            onSave={save('loan_number')}
           />
         </div>
       </SectionCard>
@@ -252,23 +252,23 @@ export default function LoanInfoSection({ loan, updateLoanField, updateDates }) 
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           <EditableField
             label="Action Taken"
-            value={loan.actionTaken}
+            value={loan.action_taken}
             type="select"
             options={actionTakenOptions}
-            onSave={save('actionTaken')}
+            onSave={save('action_taken')}
           />
           <EditableField
             label="Action Taken Date"
-            value={loan.actionTakenDate}
+            value={loan.action_taken_date}
             type="date"
-            onSave={save('actionTakenDate')}
+            onSave={save('action_taken_date')}
           />
           <EditableField
             label="Application Method"
-            value={loan.applicationMethod}
+            value={loan.application_method}
             type="select"
             options={appMethodOptions}
-            onSave={save('applicationMethod')}
+            onSave={save('application_method')}
           />
         </div>
         <p className="text-xs text-gray-400 mt-3">
@@ -281,40 +281,40 @@ export default function LoanInfoSection({ loan, updateLoanField, updateDates }) 
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           <EditableField
             label="Lead Source"
-            value={loan.leadSource}
+            value={loan.lead_source}
             type="select"
             options={leadSourceOptions}
-            onSave={save('leadSource')}
+            onSave={save('lead_source')}
           />
           <EditableField
             label="Application Channel"
-            value={loan.applicationChannel}
+            value={loan.application_channel}
             type="select"
             options={appChannelOptions}
-            onSave={save('applicationChannel')}
+            onSave={save('application_channel')}
           />
           <EditableField
             label="Referral Source"
-            value={loan.referralSource}
+            value={loan.referral_source}
             type="text"
             placeholder="Free text..."
-            onSave={save('referralSource')}
+            onSave={save('referral_source')}
           />
           <EditableField
             label="LDox Loan ID"
-            value={loan.ldoxLoanId}
+            value={loan.ldox_loan_id}
             type="text"
             readOnly
           />
           <EditableField
             label="Submitted At"
-            value={loan.submittedAt}
+            value={loan.submitted_at}
             type="date"
             readOnly
           />
           <EditableField
             label="Created"
-            value={loan.createdAt}
+            value={loan.created_at}
             type="date"
             readOnly
           />

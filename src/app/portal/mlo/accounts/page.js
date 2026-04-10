@@ -148,7 +148,7 @@ export default function AccountsPage() {
                       <div className="mt-2 space-y-1.5 pl-2 border-l-2 border-brand/20">
                         {account.accountContacts.map(c => (
                           <div key={c.id} className="text-xs text-gray-600">
-                            <span className="font-medium">{c.firstName} {c.lastName}</span>
+                            <span className="font-medium">{c.first_name} {c.last_name}</span>
                             {c.role && <span className="text-gray-400 ml-1">({c.role})</span>}
                             {c.isPrimary && <span className="ml-1 text-brand text-[10px]">PRIMARY</span>}
                             <div className="flex gap-3 mt-0.5">

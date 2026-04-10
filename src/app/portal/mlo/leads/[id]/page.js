@@ -53,12 +53,12 @@ export default function LeadDetailPage() {
     if (lead.name) params.set('name', lead.name);
     if (lead.email) params.set('email', lead.email);
     if (lead.phone) params.set('phone', lead.phone);
-    if (lead.propertyState) params.set('state', lead.propertyState);
-    if (lead.propertyCounty) params.set('county', lead.propertyCounty);
-    if (lead.loanAmount) params.set('loanAmount', String(lead.loanAmount));
-    if (lead.creditScore) params.set('fico', String(lead.creditScore));
-    if (lead.loanPurpose) params.set('purpose', lead.loanPurpose);
-    if (lead.propertyValue) params.set('propertyValue', String(lead.propertyValue));
+    if (lead.property_state) params.set('state', lead.property_state);
+    if (lead.property_county) params.set('county', lead.property_county);
+    if (lead.loan_amount) params.set('loan_amount', String(lead.loan_amount));
+    if (lead.credit_score) params.set('fico', String(lead.credit_score));
+    if (lead.loan_purpose) params.set('purpose', lead.loan_purpose);
+    if (lead.property_value) params.set('property_value', String(lead.property_value));
     return `/portal/mlo/tools/quote-generator?${params.toString()}`;
   }, [lead, id]);
 
@@ -70,7 +70,7 @@ export default function LeadDetailPage() {
       const res = await fetch(`/api/portal/mlo/leads/${id}/convert`, { method: 'POST' });
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'Conversion failed'); return; }
-      router.push(`/portal/mlo/loans/${data.loanId}`);
+      router.push(`/portal/mlo/loans/${data.loan_id}`);
     } catch { setError('Failed to convert lead'); }
     finally { setConverting(false); }
   };
@@ -140,7 +140,7 @@ export default function LeadDetailPage() {
   };
 
   const runContactAction = async (action, payload = {}) => {
-    const cid = lead?.contactId || lead?.contact?.id;
+    const cid = lead?.contact_id || lead?.contact?.id;
     if (!cid) { setError('No contact linked — convert lead or link a contact first'); return; }
     setActionLoading(true);
     setError('');
@@ -164,8 +164,8 @@ export default function LeadDetailPage() {
   if (loading) return <div className="w-full py-12 text-center text-gray-400">Loading...</div>;
   if (!lead) return <div className="w-full py-12 text-center text-red-500">Lead not found</div>;
 
-  const isPurchase = lead.loanPurpose === 'purchase';
-  const isRefi = ['refinance', 'cashout'].includes(lead.loanPurpose);
+  const isPurchase = lead.loan_purpose === 'purchase';
+  const isRefi = ['refinance', 'cashout'].includes(lead.loan_purpose);
 
   return (
     <div className="w-full">
@@ -179,7 +179,7 @@ export default function LeadDetailPage() {
             {lead.phone && <span>{lead.phone}</span>}
             <span className="text-xs bg-gray-100 px-2 py-0.5 rounded">{lead.status}</span>
             {lead.contact && (
-              <Link href={`/portal/mlo/contacts/${lead.contact?.id || lead.contactId}`} className="text-xs text-brand hover:underline">
+              <Link href={`/portal/mlo/contacts/${lead.contact?.id || lead.contact_id}`} className="text-xs text-brand hover:underline">
                 View Contact
               </Link>
             )}
@@ -219,7 +219,7 @@ export default function LeadDetailPage() {
       </div>
 
       {/* Actions Bar */}
-      {lead.email && (lead.contactId || lead.contact?.id) && (
+      {lead.email && (lead.contact_id || lead.contact?.id) && (
         <div className="flex items-center gap-2 mb-4 pb-4 border-b border-gray-100">
           <button
             onClick={() => runContactAction('send_portal_invite')}
@@ -260,7 +260,7 @@ export default function LeadDetailPage() {
 
             <div className="space-y-3">
               <Field label="Loan Purpose">
-                <select value={lead.loanPurpose || ''} onChange={e => updateField('loanPurpose', e.target.value)} className="input-field">
+                <select value={lead.loan_purpose || ''} onChange={e => updateField('loan_purpose', e.target.value)} className="input-field">
                   <option value="">Select...</option>
                   {PURPOSES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
                 </select>
@@ -269,20 +269,20 @@ export default function LeadDetailPage() {
               {isPurchase && (
                 <>
                   <Field label="Purchase Price">
-                    <input type="number" value={lead.purchasePrice || ''} onChange={e => {
+                    <input type="number" value={lead.purchase_price || ''} onChange={e => {
                       const price = parseFloat(e.target.value) || 0;
-                      const dp = parseFloat(lead.downPayment) || 0;
-                      updateField('purchasePrice', e.target.value);
-                      updateField('propertyValue', e.target.value);
-                      if (price && dp) updateField('loanAmount', String(price - dp));
+                      const dp = parseFloat(lead.down_payment) || 0;
+                      updateField('purchase_price', e.target.value);
+                      updateField('property_value', e.target.value);
+                      if (price && dp) updateField('loan_amount', String(price - dp));
                     }} className="input-field" placeholder="500000" />
                   </Field>
                   <Field label="Down Payment">
-                    <input type="number" value={lead.downPayment || ''} onChange={e => {
+                    <input type="number" value={lead.down_payment || ''} onChange={e => {
                       const dp = parseFloat(e.target.value) || 0;
-                      const price = parseFloat(lead.purchasePrice) || 0;
-                      updateField('downPayment', e.target.value);
-                      if (price && dp) updateField('loanAmount', String(price - dp));
+                      const price = parseFloat(lead.purchase_price) || 0;
+                      updateField('down_payment', e.target.value);
+                      if (price && dp) updateField('loan_amount', String(price - dp));
                     }} className="input-field" placeholder="100000" />
                   </Field>
                 </>
@@ -291,10 +291,10 @@ export default function LeadDetailPage() {
               {isRefi && (
                 <>
                   <Field label="Current Rate">
-                    <input type="number" step="0.125" value={lead.currentRate || ''} onChange={e => updateField('currentRate', e.target.value)} className="input-field" placeholder="6.875" />
+                    <input type="number" step="0.125" value={lead.current_rate || ''} onChange={e => updateField('current_rate', e.target.value)} className="input-field" placeholder="6.875" />
                   </Field>
                   <Field label="Current Balance">
-                    <input type="number" value={lead.currentBalance || ''} onChange={e => updateField('currentBalance', e.target.value)} className="input-field" placeholder="400000" />
+                    <input type="number" value={lead.current_balance || ''} onChange={e => updateField('current_balance', e.target.value)} className="input-field" placeholder="400000" />
                   </Field>
                   <Field label="Current Lender">
                     <input value={lead.currentLender || ''} onChange={e => updateField('currentLender', e.target.value)} className="input-field" placeholder="Wells Fargo" />
@@ -303,26 +303,26 @@ export default function LeadDetailPage() {
               )}
 
               <Field label="Loan Amount">
-                <input type="number" value={lead.loanAmount || ''} onChange={e => updateField('loanAmount', e.target.value)} className="input-field" placeholder="400000" />
+                <input type="number" value={lead.loan_amount || ''} onChange={e => updateField('loan_amount', e.target.value)} className="input-field" placeholder="400000" />
               </Field>
 
               <Field label="Property Value">
-                <input type="number" value={lead.propertyValue || ''} onChange={e => updateField('propertyValue', e.target.value)} className="input-field" placeholder="500000" />
+                <input type="number" value={lead.property_value || ''} onChange={e => updateField('property_value', e.target.value)} className="input-field" placeholder="500000" />
               </Field>
 
               <Field label="Credit Score">
-                <input type="number" value={lead.creditScore || ''} onChange={e => updateField('creditScore', parseInt(e.target.value) || '')} className="input-field" placeholder="780" />
+                <input type="number" value={lead.credit_score || ''} onChange={e => updateField('credit_score', parseInt(e.target.value) || '')} className="input-field" placeholder="780" />
               </Field>
 
               <div className="grid grid-cols-2 gap-3">
                 <Field label="State">
-                  <select value={lead.propertyState || ''} onChange={e => updateField('propertyState', e.target.value)} className="input-field">
+                  <select value={lead.property_state || ''} onChange={e => updateField('property_state', e.target.value)} className="input-field">
                     <option value="">Select...</option>
                     {STATES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                   </select>
                 </Field>
                 <Field label="Property Type">
-                  <select value={lead.propertyType || ''} onChange={e => updateField('propertyType', e.target.value)} className="input-field">
+                  <select value={lead.property_type || ''} onChange={e => updateField('property_type', e.target.value)} className="input-field">
                     <option value="">Select...</option>
                     {PROPERTY_TYPES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
                   </select>
@@ -389,11 +389,11 @@ export default function LeadDetailPage() {
                   >
                     <div>
                       <div className="text-sm font-medium text-gray-900">
-                        {q.purpose} · {q.loanType} · ${Number(q.loanAmount).toLocaleString()}
+                        {q.purpose} · {q.loan_type} · ${Number(q.loan_amount).toLocaleString()}
                       </div>
                       <div className="text-xs text-gray-500 mt-0.5">
-                        {new Date(q.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                        {q.sentAt && <span className="ml-2 text-green-600">Sent</span>}
+                        {new Date(q.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        {q.sent_at && <span className="ml-2 text-green-600">Sent</span>}
                         {q.viewedAt && <span className="ml-1 text-blue-500">Viewed</span>}
                       </div>
                     </div>
@@ -422,9 +422,9 @@ export default function LeadDetailPage() {
                   <div key={quote.id} className="border border-gray-100 rounded-lg p-3">
                     <div className="flex items-center justify-between">
                       <div className="text-xs text-gray-500">
-                        {new Date(quote.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        {new Date(quote.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                       </div>
-                      {quote.sentAt && <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded">Sent</span>}
+                      {quote.sent_at && <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded">Sent</span>}
                     </div>
                     <div className="flex gap-4 mt-1 text-sm">
                       <span className="font-mono font-bold">{quote.bestRate ? `${Number(quote.bestRate).toFixed(3)}%` : '—'}</span>

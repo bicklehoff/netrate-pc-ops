@@ -180,10 +180,10 @@ export default function LoanDetailShell({ loan, onRefresh }) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
           <span className="text-gray-700 font-medium">
-            {loan.borrower ? `${loan.borrower.lastName}, ${loan.borrower.firstName}` : 'Loan'}
+            {loan.borrower ? `${loan.borrower.last_name}, ${loan.borrower.first_name}` : 'Loan'}
           </span>
-          {loan.loanNumber && (
-            <span className="text-gray-400 text-xs">#{loan.loanNumber}</span>
+          {loan.loan_number && (
+            <span className="text-gray-400 text-xs">#{loan.loan_number}</span>
           )}
         </div>
 

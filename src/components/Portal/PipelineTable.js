@@ -43,22 +43,22 @@ const VIEWS_KEY = 'netrate_pipeline_views';
 // ─── Column Definitions ─────────────────────────────────────
 
 const COLUMNS = [
-  { key: 'borrowerName', label: 'Borrower', align: 'left', sortable: true, filterable: 'select', defaultVisible: true, minW: 'min-w-[160px]' },
-  { key: 'loanNumber', label: 'Loan #', align: 'left', sortable: true, filterable: 'select', defaultVisible: true, editable: true },
-  { key: 'lenderName', label: 'Lender', align: 'left', sortable: true, filterable: 'select', defaultVisible: true, editable: true },
+  { key: 'borrower_name', label: 'Borrower', align: 'left', sortable: true, filterable: 'select', defaultVisible: true, minW: 'min-w-[160px]' },
+  { key: 'loan_number', label: 'Loan #', align: 'left', sortable: true, filterable: 'select', defaultVisible: true, editable: true },
+  { key: 'lender_name', label: 'Lender', align: 'left', sortable: true, filterable: 'select', defaultVisible: true, editable: true },
   { key: 'purpose', label: 'Purpose', align: 'center', sortable: true, filterable: 'select', defaultVisible: true },
-  { key: 'loanType', label: 'Type', align: 'center', sortable: true, filterable: 'select', defaultVisible: false },
-  { key: 'interestRate', label: 'Rate', align: 'right', sortable: true, filterable: false, defaultVisible: true },
-  { key: 'loanTerm', label: 'Term', align: 'center', sortable: true, filterable: false, defaultVisible: false },
-  { key: 'mloName', label: 'LO', align: 'left', sortable: true, filterable: 'select', defaultVisible: true, editable: 'select' },
+  { key: 'loan_type', label: 'Type', align: 'center', sortable: true, filterable: 'select', defaultVisible: false },
+  { key: 'interest_rate', label: 'Rate', align: 'right', sortable: true, filterable: false, defaultVisible: true },
+  { key: 'loan_term', label: 'Term', align: 'center', sortable: true, filterable: false, defaultVisible: false },
+  { key: 'mlo_name', label: 'LO', align: 'left', sortable: true, filterable: 'select', defaultVisible: true, editable: 'select' },
   { key: 'status', label: 'Status', align: 'left', sortable: true, filterable: 'select', defaultVisible: true, editable: 'select' },
-  { key: 'loanAmount', label: 'Amount', align: 'right', sortable: true, filterable: false, defaultVisible: true },
-  { key: 'lockExpiration', label: 'Lock Exp', align: 'center', sortable: true, filterable: false, defaultVisible: false },
-  { key: 'closingDate', label: 'Closing', align: 'center', sortable: true, filterable: false, defaultVisible: true },
-  { key: 'pendingDocs', label: 'Docs', align: 'center', sortable: true, filterable: false, defaultVisible: false },
-  { key: 'creditScore', label: 'FICO', align: 'right', sortable: true, filterable: false, defaultVisible: false },
-  { key: 'propertyState', label: 'State', align: 'center', sortable: true, filterable: 'select', defaultVisible: false },
-  { key: 'updatedAt', label: 'Updated', align: 'center', sortable: true, filterable: false, defaultVisible: false },
+  { key: 'loan_amount', label: 'Amount', align: 'right', sortable: true, filterable: false, defaultVisible: true },
+  { key: 'lock_expiration', label: 'Lock Exp', align: 'center', sortable: true, filterable: false, defaultVisible: false },
+  { key: 'closing_date', label: 'Closing', align: 'center', sortable: true, filterable: false, defaultVisible: true },
+  { key: 'pending_docs', label: 'Docs', align: 'center', sortable: true, filterable: false, defaultVisible: false },
+  { key: 'credit_score', label: 'FICO', align: 'right', sortable: true, filterable: false, defaultVisible: false },
+  { key: 'property_state', label: 'State', align: 'center', sortable: true, filterable: 'select', defaultVisible: false },
+  { key: 'updated_at', label: 'Updated', align: 'center', sortable: true, filterable: false, defaultVisible: false },
 ];
 
 const DEFAULT_VISIBLE = new Set(COLUMNS.filter(c => c.defaultVisible).map(c => c.key));
@@ -89,14 +89,14 @@ function isExpired(dateStr) {
 
 function getSortValue(loan, key) {
   switch (key) {
-    case 'loanAmount': return Number(loan.loanAmount || loan.purchasePrice || loan.estimatedValue || 0);
-    case 'interestRate': return Number(loan.interestRate || 0);
-    case 'creditScore': return Number(loan.creditScore || 0);
-    case 'loanTerm': return Number(loan.loanTerm || 0);
-    case 'pendingDocs': return Number(loan.pendingDocs || 0);
-    case 'closingDate': return new Date(loan.closingDate || loan.estimatedClosing || '2099-01-01').getTime();
-    case 'lockExpiration': return new Date(loan.lockExpiration || '2099-01-01').getTime();
-    case 'updatedAt': return new Date(loan.updatedAt || 0).getTime();
+    case 'loan_amount': return Number(loan.loan_amount || loan.purchase_price || loan.estimated_value || 0);
+    case 'interest_rate': return Number(loan.interest_rate || 0);
+    case 'credit_score': return Number(loan.credit_score || 0);
+    case 'loan_term': return Number(loan.loan_term || 0);
+    case 'pending_docs': return Number(loan.pending_docs || 0);
+    case 'closing_date': return new Date(loan.closing_date || loan.estimated_closing || '2099-01-01').getTime();
+    case 'lock_expiration': return new Date(loan.lock_expiration || '2099-01-01').getTime();
+    case 'updated_at': return new Date(loan.updated_at || 0).getTime();
     default: return (loan[key] || '').toString().toLowerCase();
   }
 }
@@ -214,7 +214,7 @@ function ColumnFilterDropdown({ column, allLoans, filter, onFilterChange, onClos
     const selected = new Set(Array.isArray(filter) ? filter : []);
     const labelMap = column.key === 'status' ? STATUS_LABELS
       : column.key === 'purpose' ? PURPOSE_LABELS
-      : column.key === 'loanType' ? TYPE_LABELS
+      : column.key === 'loan_type' ? TYPE_LABELS
       : null;
 
     const toggle = (val) => {
@@ -347,7 +347,7 @@ function DetailField({ label, value }) {
 }
 
 function ExpandedDetail({ loan }) {
-  const addr = loan.propertyAddress;
+  const addr = loan.property_address;
   const addrStr = addr ? [addr.street, addr.city, addr.state, addr.zip].filter(Boolean).join(', ') : null;
   const d = loan.dates || {};
 
@@ -355,10 +355,10 @@ function ExpandedDetail({ loan }) {
     <div className="grid grid-cols-4 gap-x-6 gap-y-3 p-4 text-sm">
       <div className="space-y-2">
         <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100 pb-1">Borrower</div>
-        <DetailField label="Name" value={loan.borrowerName} />
-        <DetailField label="Email" value={loan.borrowerEmail} />
-        <DetailField label="Phone" value={loan.borrowerPhone} />
-        <DetailField label="FICO" value={loan.creditScore} />
+        <DetailField label="Name" value={loan.borrower_name} />
+        <DetailField label="Email" value={loan.borrower_email} />
+        <DetailField label="Phone" value={loan.borrower_phone} />
+        <DetailField label="FICO" value={loan.credit_score} />
         {loan.coBorrowers?.length > 0 && (
           <div className="pt-1">
             <span className="text-[10px] uppercase tracking-wider text-gray-400 block mb-1">Co-Borrowers</span>
@@ -371,28 +371,28 @@ function ExpandedDetail({ loan }) {
       <div className="space-y-2">
         <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100 pb-1">Property</div>
         <DetailField label="Address" value={addrStr} />
-        <DetailField label="Type" value={loan.propertyType} />
+        <DetailField label="Type" value={loan.property_type} />
         <DetailField label="Occupancy" value={loan.occupancy} />
         <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100 pb-1 mt-3">Financials</div>
-        <DetailField label="Amount" value={formatCurrency(loan.loanAmount)} />
-        <DetailField label="Purchase Price" value={formatCurrency(loan.purchasePrice)} />
-        <DetailField label="Down Payment" value={formatCurrency(loan.downPayment)} />
+        <DetailField label="Amount" value={formatCurrency(loan.loan_amount)} />
+        <DetailField label="Purchase Price" value={formatCurrency(loan.purchase_price)} />
+        <DetailField label="Down Payment" value={formatCurrency(loan.down_payment)} />
       </div>
       <div className="space-y-2">
         <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100 pb-1">Key Dates</div>
-        <DetailField label="Application" value={formatShortDate(d.applicationDate)} />
-        <DetailField label="Lock Exp" value={formatShortDate(loan.lockExpiration)} />
-        <DetailField label="Appraisal" value={formatShortDate(d.appraisalReceived)} />
-        <DetailField label="Est. Closing" value={formatShortDate(d.estimatedClosing)} />
-        <DetailField label="Closing" value={formatShortDate(loan.closingDate)} />
-        <DetailField label="Funding" value={formatShortDate(d.fundingDate)} />
+        <DetailField label="Application" value={formatShortDate(d.application_date)} />
+        <DetailField label="Lock Exp" value={formatShortDate(loan.lock_expiration)} />
+        <DetailField label="Appraisal" value={formatShortDate(d.appraisal_received)} />
+        <DetailField label="Est. Closing" value={formatShortDate(d.estimated_closing)} />
+        <DetailField label="Closing" value={formatShortDate(loan.closing_date)} />
+        <DetailField label="Funding" value={formatShortDate(d.funding_date)} />
       </div>
       <div className="space-y-2">
         <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100 pb-1">Source</div>
-        <DetailField label="Lead Source" value={loan.leadSource} />
-        <DetailField label="Referral" value={loan.referralSource} />
-        <DetailField label="Channel" value={loan.applicationChannel} />
-        <DetailField label="LDox ID" value={loan.ldoxLoanId} />
+        <DetailField label="Lead Source" value={loan.lead_source} />
+        <DetailField label="Referral" value={loan.referral_source} />
+        <DetailField label="Channel" value={loan.application_channel} />
+        <DetailField label="LDox ID" value={loan.ldox_loan_id} />
       </div>
     </div>
   );
@@ -557,45 +557,45 @@ export default function PipelineTable({ loans, allLoans, mloList, selectedIds, o
   // ─── Render cell value ────────────────────────────────────
   const renderCell = (loan, col) => {
     switch (col.key) {
-      case 'borrowerName':
+      case 'borrower_name':
         return (
           <Link href={`/portal/mlo/loans/${loan.id}`} className="flex items-center gap-2">
             <img
-              src={`https://ui-avatars.com/api/?name=${encodeURIComponent((loan.borrowerName || '?').split(' ').map(n => n[0]).join(''))}&size=32&background=0891b2&color=fff&bold=true&format=svg`}
+              src={`https://ui-avatars.com/api/?name=${encodeURIComponent((loan.borrower_name || '?').split(' ').map(n => n[0]).join(''))}&size=32&background=0891b2&color=fff&bold=true&format=svg`}
               alt="" className="w-7 h-7 rounded-full shrink-0"
             />
             <div className="min-w-0">
-              <span className="block font-bold text-slate-900 truncate">{loan.borrowerName}</span>
-              {loan.borrowerEmail && (
-                <span className="block text-[10px] text-slate-400 truncate">{loan.borrowerEmail}</span>
+              <span className="block font-bold text-slate-900 truncate">{loan.borrower_name}</span>
+              {loan.borrower_email && (
+                <span className="block text-[10px] text-slate-400 truncate">{loan.borrower_email}</span>
               )}
             </div>
           </Link>
         );
-      case 'loanNumber':
-        return <EditableText value={loan.loanNumber} placeholder="—" onSave={val => onLoanUpdate(loan.id, { loanNumber: val })} />;
-      case 'lenderName':
-        return <EditableText value={loan.lenderName} placeholder="—" onSave={val => onLoanUpdate(loan.id, { lenderName: val })} />;
+      case 'loan_number':
+        return <EditableText value={loan.loan_number} placeholder="—" onSave={val => onLoanUpdate(loan.id, { loan_number: val })} />;
+      case 'lender_name':
+        return <EditableText value={loan.lender_name} placeholder="—" onSave={val => onLoanUpdate(loan.id, { lender_name: val })} />;
       case 'purpose':
         return loan.purpose ? (
           <span className={`inline-flex px-1.5 py-0.5 rounded text-xs font-medium ${PURPOSE_COLORS[loan.purpose] || 'bg-gray-50 text-gray-600'}`}>
             {PURPOSE_LABELS[loan.purpose] || loan.purpose}
           </span>
         ) : <span className="text-xs text-gray-300">—</span>;
-      case 'loanType':
-        return loan.loanType ? (
+      case 'loan_type':
+        return loan.loan_type ? (
           <span className="inline-flex px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">
-            {TYPE_LABELS[loan.loanType] || loan.loanType}
+            {TYPE_LABELS[loan.loan_type] || loan.loan_type}
           </span>
         ) : <span className="text-xs text-gray-300">—</span>;
-      case 'interestRate':
-        return <span className="text-sm font-semibold text-slate-800 tabular-nums">{loan.interestRate ? `${loan.interestRate}%` : '—'}</span>;
-      case 'loanTerm':
-        return <span className="text-xs text-gray-600">{loan.loanTerm ? `${loan.loanTerm}yr` : '—'}</span>;
-      case 'mloName':
+      case 'interest_rate':
+        return <span className="text-sm font-semibold text-slate-800 tabular-nums">{loan.interest_rate ? `${loan.interest_rate}%` : '—'}</span>;
+      case 'loan_term':
+        return <span className="text-xs text-gray-600">{loan.loan_term ? `${loan.loan_term}yr` : '—'}</span>;
+      case 'mlo_name':
         return (
-          <EditableSelect value={loan.mloId || ''} options={mloOptions}
-            onSave={val => onLoanUpdate(loan.id, { mloId: val || null })}
+          <EditableSelect value={loan.mlo_id || ''} options={mloOptions}
+            onSave={val => onLoanUpdate(loan.id, { mlo_id: val || null })}
             renderValue={val => {
               if (!val) return <span className="text-slate-300 text-sm">Unassigned</span>;
               const mlo = mloList.find(m => m.id === val);
@@ -622,28 +622,28 @@ export default function PipelineTable({ loans, allLoans, mloList, selectedIds, o
             )}
           />
         );
-      case 'loanAmount':
-        return <span className="text-slate-900 font-semibold tabular-nums">{formatCurrency(loan.loanAmount || loan.purchasePrice || loan.estimatedValue)}</span>;
-      case 'lockExpiration':
-        return loan.lockExpiration ? (
-          <span className={`text-xs ${isExpired(loan.lockExpiration) ? 'text-red-600 font-medium' : isExpiringSoon(loan.lockExpiration) ? 'text-amber-600 font-medium' : 'text-gray-600'}`}>
-            {formatShortDate(loan.lockExpiration)}
+      case 'loan_amount':
+        return <span className="text-slate-900 font-semibold tabular-nums">{formatCurrency(loan.loan_amount || loan.purchase_price || loan.estimated_value)}</span>;
+      case 'lock_expiration':
+        return loan.lock_expiration ? (
+          <span className={`text-xs ${isExpired(loan.lock_expiration) ? 'text-red-600 font-medium' : isExpiringSoon(loan.lock_expiration) ? 'text-amber-600 font-medium' : 'text-gray-600'}`}>
+            {formatShortDate(loan.lock_expiration)}
           </span>
         ) : <span className="text-xs text-gray-300">—</span>;
-      case 'closingDate':
-        return <span className="text-xs text-gray-600">{formatShortDate(loan.closingDate || loan.estimatedClosing)}</span>;
-      case 'pendingDocs':
-        return loan.pendingDocs > 0 ? (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">{loan.pendingDocs} pending</span>
-        ) : loan.totalDocs > 0 ? (
-          <span className="text-xs text-gray-400">{loan.totalDocs} docs</span>
+      case 'closing_date':
+        return <span className="text-xs text-gray-600">{formatShortDate(loan.closing_date || loan.estimated_closing)}</span>;
+      case 'pending_docs':
+        return loan.pending_docs > 0 ? (
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">{loan.pending_docs} pending</span>
+        ) : loan.total_docs > 0 ? (
+          <span className="text-xs text-gray-400">{loan.total_docs} docs</span>
         ) : <span className="text-xs text-gray-300">—</span>;
-      case 'creditScore':
-        return <span className="text-xs text-gray-700">{loan.creditScore || '—'}</span>;
-      case 'propertyState':
-        return <span className="text-xs text-gray-600">{loan.propertyState || '—'}</span>;
-      case 'updatedAt':
-        return <span className="text-xs text-gray-500">{formatShortDate(loan.updatedAt)}</span>;
+      case 'credit_score':
+        return <span className="text-xs text-gray-700">{loan.credit_score || '—'}</span>;
+      case 'property_state':
+        return <span className="text-xs text-gray-600">{loan.property_state || '—'}</span>;
+      case 'updated_at':
+        return <span className="text-xs text-gray-500">{formatShortDate(loan.updated_at)}</span>;
       default:
         return <span className="text-xs text-gray-500">{loan[col.key] || '—'}</span>;
     }
@@ -775,7 +775,7 @@ export default function PipelineTable({ loans, allLoans, mloList, selectedIds, o
                       }} className="rounded border-gray-300 text-brand focus:ring-brand/30" />
                     </td>
                     {visibleCols.map(col => (
-                      <td key={col.key} className={`px-3 py-3.5 ${col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : ''} ${col.key === 'borrowerName' ? 'max-w-[200px]' : ''}`}>
+                      <td key={col.key} className={`px-3 py-3.5 ${col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : ''} ${col.key === 'borrower_name' ? 'max-w-[200px]' : ''}`}>
                         {renderCell(loan, col)}
                       </td>
                     ))}

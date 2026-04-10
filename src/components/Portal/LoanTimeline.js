@@ -13,17 +13,17 @@ const EVENT_ICONS = {
 };
 
 function formatEventMessage(event) {
-  switch (event.eventType) {
+  switch (event.event_type) {
     case 'status_change':
-      return `Status changed from ${STATUS_LABELS[event.oldValue] || event.oldValue} to ${STATUS_LABELS[event.newValue] || event.newValue}`;
+      return `Status changed from ${STATUS_LABELS[event.old_value] || event.old_value} to ${STATUS_LABELS[event.new_value] || event.new_value}`;
     case 'doc_requested':
-      return `Document requested: ${event.newValue || 'Unknown'}`;
+      return `Document requested: ${event.new_value || 'Unknown'}`;
     case 'doc_uploaded':
-      return `Document uploaded: ${event.newValue || 'Unknown'}`;
+      return `Document uploaded: ${event.new_value || 'Unknown'}`;
     case 'note_added':
-      return `Note: ${event.newValue || ''}`;
+      return `Note: ${event.new_value || ''}`;
     default:
-      return event.eventType.replace(/_/g, ' ');
+      return event.event_type.replace(/_/g, ' ');
   }
 }
 
@@ -75,13 +75,13 @@ export default function LoanTimeline({ events }) {
             {/* Event content */}
             <div className="pb-4">
               <p className="text-sm text-gray-800">
-                <span className="mr-1">{EVENT_ICONS[event.eventType] || '•'}</span>
+                <span className="mr-1">{EVENT_ICONS[event.event_type] || '•'}</span>
                 {formatEventMessage(event)}
               </p>
               <p className="text-xs text-gray-400 mt-0.5">
-                {formatDate(event.createdAt)}
-                {event.actorType && event.actorType !== 'system' && (
-                  <span> · by {event.actorType}</span>
+                {formatDate(event.created_at)}
+                {event.actor_type && event.actor_type !== 'system' && (
+                  <span> · by {event.actor_type}</span>
                 )}
               </p>
             </div>

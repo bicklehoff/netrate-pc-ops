@@ -34,9 +34,9 @@ const DEFAULT_FEES = [
 const DEFAULT_STATE = {
   // Prospect
   todayDate: new Date().toISOString().slice(0, 10),
-  referenceNumber: '',
-  borrowerName: '',
-  coBorrowerName: '',
+  reference_number: '',
+  borrower_name: '',
+  co_borrower_name: '',
   borrowerDOB: '',
   coBorrowerDOB: '',
   cellPhone: '',
@@ -48,7 +48,7 @@ const DEFAULT_STATE = {
   state: '',
   zip: '',
   county: '',
-  homeValue: 0,
+  home_value: 0,
   previousAppraisal: 0,
   altContact: '',
   // Employment (for application section)
@@ -81,14 +81,14 @@ const DEFAULT_STATE = {
   // Refi
   isRefi: false,
   currentLender: '',
-  loanNumber: '',
+  loan_number: '',
   origMCA: 0,
   origMargin: 0,
   origMIP: 0,
   origExpectedRate: 0,
   origDate: '',
   currentPL: 0,
-  currentBalance: 0,
+  current_balance: 0,
   currentPayoff: 0,
   origUFMIP: 0,
   // Rates & Costs
@@ -203,8 +203,8 @@ export function ScenarioProvider({ children }) {
   // Auto-calculate origination fee when home value changes (unless overridden)
   const origFeeCalc = useMemo(() => {
     if (state.origFeeOverride) return state.origFee;
-    return state.homeValue > 0 ? calcOriginationFee(state.homeValue) : 0;
-  }, [state.homeValue, state.origFee, state.origFeeOverride]);
+    return state.home_value > 0 ? calcOriginationFee(state.home_value) : 0;
+  }, [state.home_value, state.origFee, state.origFeeOverride]);
 
   // Auto-sum borrower-paid fees into thirdPartyCosts
   const feesTotal = useMemo(() => {

@@ -86,8 +86,8 @@ export default function CallHistory({ onSelectContact }) {
         const isInbound = call.direction === 'inbound';
         const isMissed = ['missed', 'no-answer', 'busy'].includes(call.status);
         const contactName = call.contact
-          ? `${call.contact.firstName} ${call.contact.lastName}`
-          : (isInbound ? call.fromNumber : call.toNumber);
+          ? `${call.contact.first_name} ${call.contact.last_name}`
+          : (isInbound ? call.from_number : call.to_number);
 
         return (
           <button
@@ -118,7 +118,7 @@ export default function CallHistory({ onSelectContact }) {
                 {contactName}
               </p>
               <p className="text-xs text-gray-400">
-                {timeAgo(call.startedAt)}
+                {timeAgo(call.started_at)}
                 {call.duration ? ` · ${formatDuration(call.duration)}` : ''}
                 {call.notes?.[0]?.disposition && (
                   <span className="ml-1 text-gray-500">· {call.notes[0].disposition.replace('_', ' ')}</span>

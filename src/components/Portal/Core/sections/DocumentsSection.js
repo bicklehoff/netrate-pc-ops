@@ -191,12 +191,12 @@ export default function DocumentsSection({ loan, onRefresh }) {
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${DOC_STATUS_COLORS[doc.status]}`}>
                       {DOC_STATUS_LABELS[doc.status] || doc.status}
                     </span>
-                    {doc.fileName && (
-                      <span className="text-xs text-gray-400">{doc.fileName}</span>
+                    {doc.file_name && (
+                      <span className="text-xs text-gray-400">{doc.file_name}</span>
                     )}
                     {doc.requestedBy && (
                       <span className="text-xs text-gray-400">
-                        by {doc.requestedBy.firstName} {doc.requestedBy.lastName}
+                        by {doc.requestedBy.first_name} {doc.requestedBy.last_name}
                       </span>
                     )}
                   </div>

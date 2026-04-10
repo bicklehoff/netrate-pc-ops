@@ -65,13 +65,13 @@ export default function PostCloseSection({ loan }) {
   const getTaskStatus = (taskKey) => {
     const task = tasks.find(t => t.title === `post-close:${taskKey}`);
     if (!task) return 'pending';
-    if (task.completedAt) return 'done';
+    if (task.completed_at) return 'done';
     return 'in_progress';
   };
 
   const getTaskDate = (taskKey) => {
     const task = tasks.find(t => t.title === `post-close:${taskKey}`);
-    return task?.completedAt;
+    return task?.completed_at;
   };
 
   const toggleTask = async (taskKey) => {
@@ -80,19 +80,19 @@ export default function PostCloseSection({ loan }) {
     try {
       const existing = tasks.find(t => t.title === `post-close:${taskKey}`);
 
-      if (existing?.completedAt) {
+      if (existing?.completed_at) {
         // Uncheck — clear completedAt
         await fetch(`/api/portal/mlo/loans/${loan.id}/tasks/${existing.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ completedAt: null }),
+          body: JSON.stringify({ completed_at: null }),
         });
       } else if (existing) {
         // Mark complete
         await fetch(`/api/portal/mlo/loans/${loan.id}/tasks/${existing.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ completedAt: new Date().toISOString() }),
+          body: JSON.stringify({ completed_at: new Date().toISOString() }),
         });
       } else {
         // Create as completed
@@ -103,7 +103,7 @@ export default function PostCloseSection({ loan }) {
             title: `post-close:${taskKey}`,
             category: 'post-close',
             priority: 'normal',
-            completedAt: new Date().toISOString(),
+            completed_at: new Date().toISOString(),
           }),
         });
       }
@@ -126,7 +126,7 @@ export default function PostCloseSection({ loan }) {
       let contactId = null;
       if (contactRes.ok) {
         const contactData = await contactRes.json();
-        contactId = contactData.contactId;
+        contactId = contactData.contact_id;
       }
 
       if (taskKey === 'congrats_email' && contactId) {
@@ -157,7 +157,7 @@ export default function PostCloseSection({ loan }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             status: 'past_client',
-            fundedDate: loan.dates?.fundingDate || new Date().toISOString(),
+            funded_date: loan.dates?.funding_date || new Date().toISOString(),
           }),
         });
         setSuccess('Contact updated to past client');
@@ -288,32 +288,32 @@ export default function PostCloseSection({ loan }) {
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
             <span className="text-gray-500 text-xs">Borrower</span>
-            <div className="font-medium">{loan.borrower?.firstName} {loan.borrower?.lastName}</div>
+            <div className="font-medium">{loan.borrower?.first_name} {loan.borrower?.last_name}</div>
           </div>
           <div>
             <span className="text-gray-500 text-xs">Loan Amount</span>
-            <div className="font-medium">{loan.loanAmount ? `$${Number(loan.loanAmount).toLocaleString()}` : '—'}</div>
+            <div className="font-medium">{loan.loan_amount ? `$${Number(loan.loan_amount).toLocaleString()}` : '—'}</div>
           </div>
           <div>
             <span className="text-gray-500 text-xs">Rate</span>
-            <div className="font-medium">{loan.interestRate ? `${loan.interestRate}%` : '—'}</div>
+            <div className="font-medium">{loan.interest_rate ? `${loan.interest_rate}%` : '—'}</div>
           </div>
           <div>
             <span className="text-gray-500 text-xs">Lender</span>
-            <div className="font-medium">{loan.lenderName || '—'}</div>
+            <div className="font-medium">{loan.lender_name || '—'}</div>
           </div>
           <div>
             <span className="text-gray-500 text-xs">Loan Type</span>
-            <div className="font-medium capitalize">{loan.loanType || '—'}</div>
+            <div className="font-medium capitalize">{loan.loan_type || '—'}</div>
           </div>
           <div>
             <span className="text-gray-500 text-xs">Funding Date</span>
-            <div className="font-medium">{formatDate(loan.dates?.fundingDate) || '—'}</div>
+            <div className="font-medium">{formatDate(loan.dates?.funding_date) || '—'}</div>
           </div>
-          {loan.loanNumber && (
+          {loan.loan_number && (
             <div>
               <span className="text-gray-500 text-xs">Loan #</span>
-              <div className="font-medium">{loan.loanNumber}</div>
+              <div className="font-medium">{loan.loan_number}</div>
             </div>
           )}
         </div>

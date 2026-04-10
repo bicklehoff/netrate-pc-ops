@@ -53,17 +53,17 @@ function QuoteGeneratorContent() {
 
   // Pre-fill from URL params (e.g., linked from contact or loan page)
   const prefill = {
-    contactId: params.get('contactId'),
+    contact_id: params.get('contact_id'),
     leadId: params.get('leadId'),
-    loanId: params.get('loanId'),
-    borrowerName: params.get('name'),
-    borrowerEmail: params.get('email'),
-    borrowerPhone: params.get('phone'),
+    loan_id: params.get('loan_id'),
+    borrower_name: params.get('name'),
+    borrower_email: params.get('email'),
+    borrower_phone: params.get('phone'),
     state: params.get('state'),
     county: params.get('county'),
-    loanAmount: params.get('loanAmount') ? Number(params.get('loanAmount')) : null,
+    loan_amount: params.get('loan_amount') ? Number(params.get('loan_amount')) : null,
     fico: params.get('fico') ? Number(params.get('fico')) : null,
-    loanType: params.get('loanType'),
+    loan_type: params.get('loan_type'),
     purpose: params.get('purpose'),
   };
 

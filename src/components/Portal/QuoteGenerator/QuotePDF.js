@@ -188,16 +188,16 @@ function buildAmortization(loanAmount, annualRate, termYears) {
 /* ══════════════════════════════════════════════════
    QuotePDF Component
    ══════════════════════════════════════════════════ */
-export default function QuotePDF({ quote, scenarios, fees, closingDate, fundingDate, firstPaymentDate }) {
-  const borrowerName = quote.borrowerName || 'Valued Client';
+export default function QuotePDF({ quote, scenarios, fees, closing_date, funding_date, first_payment_date }) {
+  const borrowerName = quote.borrower_name || 'Valued Client';
   const date = new Date().toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' });
   const rates = (scenarios || []).slice(0, 3).sort((a, b) => b.rate - a.rate);
-  const loanAmount = Number(quote.loanAmount);
-  const propertyValue = Number(quote.propertyValue);
+  const loanAmount = Number(quote.loan_amount);
+  const propertyValue = Number(quote.property_value);
   const ltv = Number(quote.ltv);
   const term = quote.term || 30;
 
-  const closingDay = closingDate ? new Date(closingDate) : null;
+  const closingDay = closing_date ? new Date(closing_date) : null;
   const daysInterest = closingDay ? (new Date(closingDay.getFullYear(), closingDay.getMonth() + 1, 0).getDate() - closingDay.getDate() + 1) : 7;
 
   const monthlyTax = fees?.monthlyTax || 0;
@@ -326,8 +326,8 @@ export default function QuotePDF({ quote, scenarios, fees, closingDate, fundingD
           <Text style={s.sectionTitle}>Key Dates</Text>
           <View style={{ backgroundColor: SURFACE_LOW, borderRadius: 8, padding: 12 }}>
             <DateRow label="Closing Date" value={closingDate || 'TBD'} />
-            <DateRow label="Funding Date" value={fundingDate || 'TBD'} />
-            <DateRow label="First Payment Date" value={firstPaymentDate || 'TBD'} />
+            <DateRow label="Funding Date" value={funding_date || 'TBD'} />
+            <DateRow label="First Payment Date" value={first_payment_date || 'TBD'} />
             <DateRow label="Days Interest" value={String(daysInterest)} />
           </View>
         </View>
@@ -633,7 +633,7 @@ function CashToClose({ rates, fees, loanAmount, propertyValue, quote, daysIntere
           <View style={r}>
             <Text style={lbl}>Loan Payoff (Estimate)</Text>
             {rates.map((_, i) => (
-              <Text key={i} style={v}>{$(quote.currentBalance || 0)}</Text>
+              <Text key={i} style={v}>{$(quote.current_balance || 0)}</Text>
             ))}
           </View>
           <View style={rAlt}>
@@ -721,7 +721,7 @@ function CashToClose({ rates, fees, loanAmount, propertyValue, quote, daysIntere
           if (quote.purpose === 'purchase') {
             cashToClose = totalFees + credit - creditTotal + (propertyValue - loanAmount);
           } else {
-            cashToClose = totalFees + credit - creditTotal + Number(quote.currentBalance || 0) - loanAmount;
+            cashToClose = totalFees + credit - creditTotal + Number(quote.current_balance || 0) - loanAmount;
           }
           return <Text key={i} style={vBold}>{$(cashToClose)}</Text>;
         })}

@@ -58,8 +58,8 @@ export default function ApplicationSection({ loan }) {
   const grossTotal = primTotal + coTotal;
 
   // Borrower names
-  const primName = primary?.borrower ? `${primary.borrower.lastName?.toUpperCase()}, ${primary.borrower.firstName?.toUpperCase()}` : '—';
-  const coName = coBorrower?.borrower ? ` & ${coBorrower.borrower.firstName?.toUpperCase()}` : '';
+  const primName = primary?.borrower ? `${primary.borrower.last_name?.toUpperCase()}, ${primary.borrower.first_name?.toUpperCase()}` : '—';
+  const coName = coBorrower?.borrower ? ` & ${coBorrower.borrower.first_name?.toUpperCase()}` : '';
 
   // Labels
   const purposeMap = { purchase: 'Purchase', refinance: 'Rate/Term Refi', cash_out: 'Cash-Out Refi' };
@@ -70,11 +70,11 @@ export default function ApplicationSection({ loan }) {
   const housingMap = { own: 'Own', rent: 'Rent', free: 'Living Rent Free' };
   const citizenMap = { us_citizen: 'U.S. Citizen', permanent_resident: 'Perm. Resident', non_permanent_resident: 'Non-Perm. Resident' };
 
-  const loanDesc = `${typeMap[loan.loanType] || loan.loanType || '—'}. ${loan.loanTerm || 360/12}Y ${amortMap[app.amortizationType] || 'Fixed'} / ${purposeMap[loan.purpose] || loan.purpose || '—'}`;
+  const loanDesc = `${typeMap[loan.loan_type] || loan.loan_type || '—'}. ${loan.loan_term || 360/12}Y ${amortMap[app.amortizationType] || 'Fixed'} / ${purposeMap[loan.purpose] || loan.purpose || '—'}`;
 
   // LTV calc
-  const loanAmt = Number(loan.loanAmount) || 0;
-  const propVal = Number(loan.purchasePrice) || Number(loan.estimatedValue) || Number(loan.appraisedValue) || 0;
+  const loanAmt = Number(loan.loan_amount) || 0;
+  const propVal = Number(loan.purchase_price) || Number(loan.estimated_value) || Number(loan.appraisedValue) || 0;
   const ltv = propVal > 0 ? ((loanAmt / propVal) * 100).toFixed(1) : '—';
 
   // Ratios
@@ -128,39 +128,39 @@ export default function ApplicationSection({ loan }) {
             {/* Subject Property */}
             <Panel icon="home" title="SUBJECT PROPERTY">
               <div className="space-y-1.5">
-                <div><DL>Address</DL><DV bold>{fmtAddr(loan.propertyAddress)}</DV></div>
+                <div><DL>Address</DL><DV bold>{fmtAddr(loan.property_address)}</DV></div>
                 <div className="grid grid-cols-2 gap-2">
-                  <div><DL>Type / Units</DL><DV>{propMap[loan.propertyType] || '—'} / {loan.numUnits || 1}</DV></div>
+                  <div><DL>Type / Units</DL><DV>{propMap[loan.property_type] || '—'} / {loan.num_units || 1}</DV></div>
                   <div><DL>Occupancy</DL><DV>{occMap[loan.occupancy] || '—'}</DV></div>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
-                  <div><DL>Price</DL><DV>{fmt$0(loan.purchasePrice)}</DV></div>
+                  <div><DL>Price</DL><DV>{fmt$0(loan.purchase_price)}</DV></div>
                   <div><DL>Appraised</DL><DV>{fmt$0(loan.appraisedValue)}</DV></div>
-                  <div><DL>Down Pmt</DL><DV className="text-[#006a62] font-bold">{loan.downPayment ? fmt$0(loan.downPayment) : '—'}</DV></div>
+                  <div><DL>Down Pmt</DL><DV className="text-[#006a62] font-bold">{loan.down_payment ? fmt$0(loan.down_payment) : '—'}</DV></div>
                 </div>
               </div>
             </Panel>
 
             {/* Loan Terms */}
-            <Panel icon="payments" title="LOAN TERMS" badge={`ID: ${loan.loanNumber || '—'}`}>
+            <Panel icon="payments" title="LOAN TERMS" badge={`ID: ${loan.loan_number || '—'}`}>
               <div className="space-y-2.5">
                 {/* Base Loan Amount */}
                 <div className="bg-[#f2f4f5] rounded p-2 border-l-[3px] border-[#005ac0]">
                   <DL className="text-[#005ac0]">Base Loan Amount</DL>
-                  <p className="text-lg font-extrabold text-[#191c1d] font-['Manrope']">{fmt$(loan.loanAmount)}</p>
+                  <p className="text-lg font-extrabold text-[#191c1d] font-['Manrope']">{fmt$(loan.loan_amount)}</p>
                 </div>
                 {/* Note Rate */}
                 <div className="bg-[#f2f4f5] rounded p-2 border-l-[3px] border-[#006a62]">
                   <DL className="text-[#006a62]">Note Rate</DL>
-                  <p className="text-lg font-extrabold text-[#191c1d] font-['Manrope']">{loan.interestRate ? fmtPct(loan.interestRate) : '—'}</p>
+                  <p className="text-lg font-extrabold text-[#191c1d] font-['Manrope']">{loan.interest_rate ? fmtPct(loan.interest_rate) : '—'}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div><DL>LTV / CLTV</DL><DV>{ltv} / {ltv}</DV></div>
-                  <div><DL>Term / Amort</DL><DV>{loan.loanTerm || 360} / {amortMap[app.amortizationType] || 'Fixed'}</DV></div>
+                  <div><DL>Term / Amort</DL><DV>{loan.loan_term || 360} / {amortMap[app.amortizationType] || 'Fixed'}</DV></div>
                 </div>
                 <div className="bg-[#eceeef] p-2 rounded text-[10px]">
                   <p className="font-bold text-[#191c1d]">{loan.loanProgram || loanDesc}</p>
-                  <p className="text-slate-500">Lender: {loan.lenderName || '—'}</p>
+                  <p className="text-slate-500">Lender: {loan.lender_name || '—'}</p>
                 </div>
               </div>
             </Panel>
@@ -235,13 +235,13 @@ export default function ApplicationSection({ loan }) {
             </Panel>
 
             {/* Credit Scores */}
-            {loan.creditScore && (
+            {loan.credit_score && (
               <Panel title="CREDIT PROFILES">
                 <div className="grid grid-cols-2 gap-3">
                   {borrowers.map((lb) => (
                     <div key={lb.id} className="bg-[#f2f4f5] p-2 rounded">
-                      <p className="text-[9px] font-bold text-slate-400 uppercase">{lb.borrower?.firstName} {lb.borrower?.lastName}</p>
-                      <p className="text-sm font-bold text-[#191c1d] mt-0.5">{loan.creditScore || '—'}</p>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase">{lb.borrower?.first_name} {lb.borrower?.last_name}</p>
+                      <p className="text-sm font-bold text-[#191c1d] mt-0.5">{loan.credit_score || '—'}</p>
                     </div>
                   ))}
                 </div>
@@ -253,7 +253,7 @@ export default function ApplicationSection({ loan }) {
               {borrowers.map((lb) => (lb.employments || []).map((emp) => (
                 <div key={emp.id} className="border-l-2 border-slate-200 pl-2 mb-2.5 last:mb-0">
                   <div className="flex justify-between items-start">
-                    <p className="text-[11px] font-bold text-[#191c1d]">{emp.employerName || '—'}</p>
+                    <p className="text-[11px] font-bold text-[#191c1d]">{emp.employer_name || '—'}</p>
                     {emp.selfEmployed && <span className="bg-[#e6e8e9] px-1.5 py-0.5 rounded text-[8px] font-black uppercase text-slate-600">Self-Emp</span>}
                   </div>
                   <p className="text-[10px] text-slate-500">{emp.position || '—'} &middot; {fmtShortDate(emp.startDate)} - {emp.endDate ? fmtShortDate(emp.endDate) : 'Present'}</p>
@@ -354,7 +354,7 @@ export default function ApplicationSection({ loan }) {
             {/* Closing / Transaction */}
             <Panel title="CLOSING / TRANSACTION">
               <div className="space-y-1 text-[10px]">
-                <TxRow label="Purchase Price" value={fmt$(tx.purchasePrice || loan.purchasePrice)} />
+                <TxRow label="Purchase Price" value={fmt$(tx.purchase_price || loan.purchase_price)} />
                 <TxRow label="Est. Closing Costs" value={fmt$(tx.closingCostsEstimate)} />
                 <TxRow label="Discount Points" value={fmt$(tx.discountPoints)} />
                 {tx.sellerConcessions && <TxRow label="Seller Concessions" value={`(${fmt$(tx.sellerConcessions)})`} red />}
@@ -438,8 +438,8 @@ export default function ApplicationSection({ loan }) {
       {/* ═══ FOOTER BAR ═══ */}
       <footer className="flex justify-between items-center px-6 h-7 bg-slate-900">
         <div className="flex gap-3">
-          <span className="text-teal-400 text-[10px] uppercase tracking-tight">Lender: {loan.lenderName || '—'}</span>
-          <span className="text-slate-400 text-[10px]">| LO: {loan.mlo ? `${loan.mlo.firstName} ${loan.mlo.lastName}` : '—'} | Loan #{loan.loanNumber || '—'}</span>
+          <span className="text-teal-400 text-[10px] uppercase tracking-tight">Lender: {loan.lender_name || '—'}</span>
+          <span className="text-slate-400 text-[10px]">| LO: {loan.mlo ? `${loan.mlo.first_name} ${loan.mlo.last_name}` : '—'} | Loan #{loan.loan_number || '—'}</span>
         </div>
         <div className="flex items-center gap-4">
           <span className="text-teal-400 text-[10px]">AUS: —</span>

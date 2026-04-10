@@ -67,7 +67,7 @@ export default function BorrowerSection({ loan, updateLoanField }) {
           <div>
             <span className="block text-xs text-gray-400">Name</span>
             <span className="text-sm font-medium text-gray-800">
-              {borrower.firstName} {borrower.lastName}
+              {borrower.first_name} {borrower.last_name}
             </span>
           </div>
           <div>
@@ -78,7 +78,7 @@ export default function BorrowerSection({ loan, updateLoanField }) {
             <span className="block text-xs text-gray-400">Phone</span>
             <span className="text-sm text-gray-800">
               {borrower.phone || '—'}
-              {borrower.phoneVerified && (
+              {borrower.phone_verified && (
                 <span className="ml-1 text-green-500 text-xs">✓ verified</span>
               )}
             </span>
@@ -95,7 +95,7 @@ export default function BorrowerSection({ loan, updateLoanField }) {
               ) : (
                 <>
                   <span className="text-sm text-gray-700 font-mono">
-                    ···-··-{borrower.ssnLastFour}
+                    ···-··-{borrower.ssn_last_four}
                   </span>
                   <button
                     onClick={handleSsnReveal}
@@ -112,7 +112,7 @@ export default function BorrowerSection({ loan, updateLoanField }) {
           <div>
             <span className="block text-xs text-gray-400">Member Since</span>
             <span className="text-sm text-gray-800">
-              {new Date(borrower.createdAt).toLocaleDateString('en-US', {
+              {new Date(borrower.created_at).toLocaleDateString('en-US', {
                 month: 'short', day: 'numeric', year: 'numeric',
               })}
             </span>
@@ -156,19 +156,19 @@ export default function BorrowerSection({ loan, updateLoanField }) {
                 </div>
                 <div>
                   <span className="block text-xs text-gray-400">Employment</span>
-                  <span className="text-gray-800 capitalize">{lb.employmentStatus || '—'}</span>
+                  <span className="text-gray-800 capitalize">{lb.employment_status || '—'}</span>
                 </div>
-                {lb.employerName && (
+                {lb.employer_name && (
                   <div>
                     <span className="block text-xs text-gray-400">Employer</span>
-                    <span className="text-gray-800">{lb.employerName}</span>
+                    <span className="text-gray-800">{lb.employer_name}</span>
                   </div>
                 )}
-                {lb.monthlyBaseIncome && (
+                {lb.monthly_base_income && (
                   <div>
                     <span className="block text-xs text-gray-400">Monthly Income</span>
                     <span className="text-gray-800">
-                      ${Number(lb.monthlyBaseIncome).toLocaleString()}
+                      ${Number(lb.monthly_base_income).toLocaleString()}
                     </span>
                   </div>
                 )}
@@ -187,46 +187,46 @@ export default function BorrowerSection({ loan, updateLoanField }) {
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           <EditableField
             label="Employment Status"
-            value={loan.employmentStatus}
+            value={loan.employment_status}
             type="select"
             options={EMPLOYMENT_OPTIONS}
-            onSave={save('employmentStatus')}
+            onSave={save('employment_status')}
           />
           <EditableField
             label="Employer"
-            value={loan.employerName}
+            value={loan.employer_name}
             type="text"
-            onSave={save('employerName')}
+            onSave={save('employer_name')}
           />
           <EditableField
             label="Position / Title"
-            value={loan.positionTitle}
+            value={loan.position_title}
             type="text"
-            onSave={save('positionTitle')}
+            onSave={save('position_title')}
           />
           <EditableField
             label="Years in Position"
-            value={loan.yearsInPosition}
+            value={loan.years_in_position}
             type="text"
-            onSave={save('yearsInPosition')}
+            onSave={save('years_in_position')}
           />
           <EditableField
             label="Monthly Base Income"
-            value={loan.monthlyBaseIncome}
+            value={loan.monthly_base_income}
             type="currency"
-            onSave={save('monthlyBaseIncome')}
+            onSave={save('monthly_base_income')}
           />
           <EditableField
             label="Other Monthly Income"
-            value={loan.otherMonthlyIncome}
+            value={loan.other_monthly_income}
             type="currency"
-            onSave={save('otherMonthlyIncome')}
+            onSave={save('other_monthly_income')}
           />
           <EditableField
             label="Other Income Source"
-            value={loan.otherIncomeSource}
+            value={loan.other_income_source}
             type="text"
-            onSave={save('otherIncomeSource')}
+            onSave={save('other_income_source')}
           />
           <EditableField
             label="Marital Status"
@@ -237,9 +237,9 @@ export default function BorrowerSection({ loan, updateLoanField }) {
           />
           <EditableField
             label="Housing Expense"
-            value={loan.presentHousingExpense}
+            value={loan.present_housing_expense}
             type="currency"
-            onSave={save('presentHousingExpense')}
+            onSave={save('present_housing_expense')}
           />
           <EditableField
             label="# Dependents"

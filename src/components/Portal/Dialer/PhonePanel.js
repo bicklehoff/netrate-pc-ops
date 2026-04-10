@@ -75,7 +75,7 @@ function SmsStartPanel({ onSelectContact }) {
     // Normalize to E.164-ish
     const digits = smsTo.replace(/\D/g, '');
     const phone = digits.length === 10 ? `+1${digits}` : `+${digits}`;
-    onSelectContact({ phone, firstName: phone, lastName: '', id: null, smsMessages: [] });
+    onSelectContact({ phone, first_name: phone, last_name: '', id: null, smsMessages: [] });
   };
 
   return (
@@ -129,12 +129,12 @@ function SmsStartPanel({ onSelectContact }) {
               >
                 <div className="w-8 h-8 bg-brand/10 rounded-full flex items-center justify-center flex-shrink-0">
                   <span className="text-xs font-semibold text-brand">
-                    {contact.firstName?.[0]}{contact.lastName?.[0]}
+                    {contact.first_name?.[0]}{contact.last_name?.[0]}
                   </span>
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 truncate">
-                    {contact.firstName} {contact.lastName}
+                    {contact.first_name} {contact.last_name}
                   </p>
                   <p className="text-xs text-gray-500 truncate">{contact.phone || ''}</p>
                 </div>
@@ -456,12 +456,12 @@ export default function PhonePanel() {
         <div className="px-4 py-2 bg-brand/5 border-b border-brand/10 flex items-center gap-2">
           <div className="w-8 h-8 bg-brand/10 rounded-lg flex items-center justify-center flex-shrink-0">
             <span className="text-[11px] font-bold text-brand">
-              {selectedContact.firstName?.[0]}{selectedContact.lastName?.[0]}
+              {selectedContact.first_name?.[0]}{selectedContact.last_name?.[0]}
             </span>
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs font-semibold text-gray-900 truncate">
-              {selectedContact.firstName} {selectedContact.lastName}
+              {selectedContact.first_name} {selectedContact.last_name}
             </p>
             <p className="text-[10px] text-gray-500 truncate">{selectedContact.phone}</p>
           </div>
@@ -545,9 +545,9 @@ export default function PhonePanel() {
           <div className="p-4">
             <DialPad onDial={(phoneNumber) => {
               dial(phoneNumber, selectedContact ? {
-                name: `${selectedContact.firstName} ${selectedContact.lastName}`,
+                name: `${selectedContact.first_name} ${selectedContact.last_name}`,
                 phone: phoneNumber,
-                contactId: selectedContact.id,
+                contact_id: selectedContact.id,
               } : { phone: phoneNumber });
             }} />
             {lastCallId && callState === IDLE && (

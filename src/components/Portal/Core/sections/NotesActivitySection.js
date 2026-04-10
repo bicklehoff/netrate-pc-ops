@@ -45,21 +45,21 @@ function formatDate(dateStr) {
 }
 
 function formatEventMessage(event) {
-  switch (event.eventType) {
+  switch (event.event_type) {
     case 'status_change':
-      return `Status: ${STATUS_LABELS[event.oldValue] || event.oldValue} → ${STATUS_LABELS[event.newValue] || event.newValue}`;
+      return `Status: ${STATUS_LABELS[event.old_value] || event.old_value} → ${STATUS_LABELS[event.new_value] || event.new_value}`;
     case 'doc_requested':
-      return `Document requested: ${event.newValue || 'Unknown'}`;
+      return `Document requested: ${event.new_value || 'Unknown'}`;
     case 'doc_uploaded':
-      return `Document uploaded: ${event.newValue || 'Unknown'}`;
+      return `Document uploaded: ${event.new_value || 'Unknown'}`;
     case 'doc_deleted':
-      return `Document deleted: ${event.newValue || 'Unknown'}`;
+      return `Document deleted: ${event.new_value || 'Unknown'}`;
     case 'cd_uploaded':
-      return `Closing Disclosure uploaded: ${event.newValue || 'Unknown'}`;
+      return `Closing Disclosure uploaded: ${event.new_value || 'Unknown'}`;
     case 'payroll_sent':
       return 'Sent to payroll for commission processing';
     case 'note_added':
-      return `Note: ${event.newValue || ''}`;
+      return `Note: ${event.new_value || ''}`;
     case 'ssn_revealed':
       return 'SSN was revealed (audited)';
     case 'xml_export':
@@ -71,7 +71,7 @@ function formatEventMessage(event) {
       return 'Field updated';
     }
     default:
-      return event.eventType?.replace(/_/g, ' ') || 'Activity';
+      return event.event_type?.replace(/_/g, ' ') || 'Activity';
   }
 }
 
@@ -144,13 +144,13 @@ export default function NotesActivitySection({ loan, updateLoanField }) {
                 </div>
                 <div className="pb-4">
                   <p className="text-sm text-gray-800">
-                    <span className="mr-1">{EVENT_ICONS[event.eventType] || '•'}</span>
+                    <span className="mr-1">{EVENT_ICONS[event.event_type] || '•'}</span>
                     {formatEventMessage(event)}
                   </p>
                   <p className="text-xs text-gray-400 mt-0.5">
-                    {formatDate(event.createdAt)}
-                    {event.actorType && (
-                      <span> · {event.actorType}</span>
+                    {formatDate(event.created_at)}
+                    {event.actor_type && (
+                      <span> · {event.actor_type}</span>
                     )}
                   </p>
                 </div>

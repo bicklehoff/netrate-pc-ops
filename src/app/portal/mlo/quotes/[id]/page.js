@@ -33,23 +33,23 @@ export default function QuoteDetailPage() {
 
   // Re-open the wizard with quote data as prefill
   const prefill = {
-    contactId: quote.contactId,
+    contact_id: quote.contact_id,
     leadId: quote.leadId,
-    loanId: quote.loanId,
-    borrowerName: quote.borrowerName,
-    borrowerEmail: quote.borrowerEmail,
-    borrowerPhone: quote.borrowerPhone,
+    loan_id: quote.loan_id,
+    borrower_name: quote.borrower_name,
+    borrower_email: quote.borrower_email,
+    borrower_phone: quote.borrower_phone,
     purpose: quote.purpose,
-    loanType: quote.loanType,
-    propertyValue: Number(quote.propertyValue),
-    loanAmount: Number(quote.loanAmount),
+    loan_type: quote.loan_type,
+    property_value: Number(quote.property_value),
+    loan_amount: Number(quote.loan_amount),
     ltv: Number(quote.ltv),
     fico: quote.fico,
     state: quote.state,
     county: quote.county,
     term: quote.term,
-    currentRate: quote.currentRate ? Number(quote.currentRate) : '',
-    currentBalance: quote.currentBalance ? Number(quote.currentBalance) : '',
+    current_rate: quote.current_rate ? Number(quote.current_rate) : '',
+    current_balance: quote.current_balance ? Number(quote.current_balance) : '',
     currentPayment: quote.currentPayment ? Number(quote.currentPayment) : '',
     currentLender: quote.currentLender || '',
   };
@@ -60,7 +60,7 @@ export default function QuoteDetailPage() {
         <Link href="/portal/mlo/quotes" className="text-sm text-gray-500 hover:text-gray-700">&larr; Quotes</Link>
         <span className="text-gray-300">|</span>
         <h1 className="text-lg font-bold text-gray-900">
-          {quote.borrowerName || 'Unnamed Quote'}
+          {quote.borrower_name || 'Unnamed Quote'}
         </h1>
         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
           quote.status === 'sent' ? 'bg-blue-100 text-blue-700' :

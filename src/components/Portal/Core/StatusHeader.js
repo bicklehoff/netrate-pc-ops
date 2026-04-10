@@ -53,10 +53,10 @@ export default function StatusHeader({ loan, onStatusChange, onPrequalLetter }) 
   if (!loan) return null;
 
   const borrowerName = loan.borrower
-    ? `${loan.borrower.firstName} ${loan.borrower.lastName}`
+    ? `${loan.borrower.first_name} ${loan.borrower.last_name}`
     : 'Unknown Borrower';
 
-  const bic = BIC_LABELS[loan.ballInCourt] || BIC_LABELS.none;
+  const bic = BIC_LABELS[loan.ball_in_court] || BIC_LABELS.none;
 
   const handleStatusChange = async (newStatus) => {
     if (newStatus === loan.status) {
@@ -85,15 +85,15 @@ export default function StatusHeader({ loan, onStatusChange, onPrequalLetter }) 
         <div>
           <h1 className="text-lg font-bold text-gray-900 leading-tight">{borrowerName}</h1>
           <div className="flex items-center gap-2 mt-0.5">
-            {loan.loanNumber && (
-              <span className="text-xs text-gray-400">#{loan.loanNumber}</span>
+            {loan.loan_number && (
+              <span className="text-xs text-gray-400">#{loan.loan_number}</span>
             )}
-            {loan.lenderName && (
-              <span className="text-xs text-gray-400">· {loan.lenderName}</span>
+            {loan.lender_name && (
+              <span className="text-xs text-gray-400">· {loan.lender_name}</span>
             )}
             {loan.mlo && (
               <span className="text-xs text-gray-400">
-                · LO: {loan.mlo.firstName} {loan.mlo.lastName}
+                · LO: {loan.mlo.first_name} {loan.mlo.last_name}
               </span>
             )}
           </div>

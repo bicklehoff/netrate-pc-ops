@@ -115,8 +115,8 @@ function QuoteViewContent() {
 
   const scenarios = (quote.scenarios || []).sort((a, b) => b.rate - a.rate);
   const fees = quote.feeBreakdown;
-  const loanAmount = Number(quote.loanAmount);
-  const propertyValue = Number(quote.propertyValue);
+  const loanAmount = Number(quote.loan_amount);
+  const propertyValue = Number(quote.property_value);
   const ltv = Number(quote.ltv);
   const term = quote.term || 30;
   const monthlyTax = fees?.monthlyTax || 0;
@@ -268,7 +268,7 @@ function QuoteViewContent() {
    TAB 1: Loan Summary
    ═══════════════════════════════════════════════ */
 function LoanSummaryTab({ quote, scenarios, fees, loanAmount, propertyValue, ltv, monthlyTax, monthlyIns }) {
-  const date = new Date(quote.createdAt || Date.now()).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' });
+  const date = new Date(quote.created_at || Date.now()).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' });
   const rates = scenarios.slice(0, 3);
 
   return (
@@ -294,7 +294,7 @@ function LoanSummaryTab({ quote, scenarios, fees, loanAmount, propertyValue, ltv
           <div className="inline-block px-4 py-1 bg-[#f2f4f6] rounded-full mb-2">
             <p className="text-xs font-semibold text-[#737783]">OFFICIAL QUOTE REPORT</p>
           </div>
-          <h2 className="text-lg font-bold text-[#191c1e]">Borrower: {quote.borrowerName || 'Valued Client'}</h2>
+          <h2 className="text-lg font-bold text-[#191c1e]">Borrower: {quote.borrower_name || 'Valued Client'}</h2>
           <p className="text-sm text-[#737783]">Date Prepared: {date}</p>
         </div>
       </div>
@@ -716,7 +716,7 @@ function PaymentLineItem({ color, label, amount }) {
 }
 
 function CashToCloseSection({ rates, fees, loanAmount, propertyValue, quote }) {
-  const closingDate = fees?.closingDate ? new Date(fees.closingDate) : null;
+  const closingDate = fees?.closing_date ? new Date(fees.closing_date) : null;
   const daysInterest = closingDate
     ? (new Date(closingDate.getFullYear(), closingDate.getMonth() + 1, 0).getDate() - closingDate.getDate() + 1)
     : 7;
@@ -771,7 +771,7 @@ function CashToCloseSection({ rates, fees, loanAmount, propertyValue, quote }) {
           <CtcRow cols={cols}>
             <p className="text-[#434652]">Loan Payoff (Estimate)</p>
             {rates.map((_, i) => (
-              <p key={i} className="text-center font-semibold tabular-nums">{fmt(quote.currentBalance || 0)}</p>
+              <p key={i} className="text-center font-semibold tabular-nums">{fmt(quote.current_balance || 0)}</p>
             ))}
           </CtcRow>
           <CtcRow cols={cols} alt>
@@ -865,7 +865,7 @@ function CashToCloseSection({ rates, fees, loanAmount, propertyValue, quote }) {
           if (quote.purpose === 'purchase') {
             cashToClose = totalFees + credit - creditTotal + (propertyValue - loanAmount);
           } else {
-            cashToClose = totalFees + credit - creditTotal + Number(quote.currentBalance || 0) - loanAmount;
+            cashToClose = totalFees + credit - creditTotal + Number(quote.current_balance || 0) - loanAmount;
           }
           return <p key={i} className="text-center text-xl font-extrabold tabular-nums">{fmt(cashToClose)}</p>;
         })}

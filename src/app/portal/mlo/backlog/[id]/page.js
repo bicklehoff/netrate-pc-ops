@@ -277,7 +277,7 @@ export default function TicketDetailPage() {
               <div className="flex-1" />
 
               <span className="text-xs text-gray-400">
-                Created {new Date(ticket.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                Created {new Date(ticket.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
               </span>
             </div>
           </>
@@ -309,9 +309,9 @@ export default function TicketDetailPage() {
                   {entry.authorLabel || entry.authorId}
                 </span>
                 <span className="text-[11px] text-gray-400">
-                  {new Date(entry.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  {new Date(entry.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                   {' '}
-                  {new Date(entry.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                  {new Date(entry.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
                 </span>
               </div>
               {entry.content && entry.content !== '(screenshot)' && (

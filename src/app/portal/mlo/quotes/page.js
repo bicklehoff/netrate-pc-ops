@@ -88,15 +88,15 @@ export default function QuotesListPage() {
                 <tr key={q.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-4 py-3">
                     <Link href={`/portal/mlo/quotes/${q.id}`} className="text-cyan-600 hover:underline font-medium">
-                      {q.borrowerName || 'Unnamed'}
+                      {q.borrower_name || 'Unnamed'}
                     </Link>
-                    {q.borrowerEmail && <div className="text-xs text-gray-400">{q.borrowerEmail}</div>}
+                    {q.borrower_email && <div className="text-xs text-gray-400">{q.borrower_email}</div>}
                   </td>
                   <td className="px-4 py-3 text-xs text-gray-600">
-                    {q.loanType?.toUpperCase()} | {q.purpose} | {q.state} | {q.fico} FICO | {q.term}yr
+                    {q.loan_type?.toUpperCase()} | {q.purpose} | {q.state} | {q.fico} FICO | {q.term}yr
                   </td>
                   <td className="px-4 py-3 text-right font-mono">
-                    ${Number(q.loanAmount)?.toLocaleString()}
+                    ${Number(q.loan_amount)?.toLocaleString()}
                   </td>
                   <td className="px-4 py-3 text-center">
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_BADGES[q.status] || STATUS_BADGES.draft}`}>
@@ -105,7 +105,7 @@ export default function QuotesListPage() {
                     {q.version > 1 && <span className="ml-1 text-xs text-gray-400">v{q.version}</span>}
                   </td>
                   <td className="px-4 py-3 text-right text-xs text-gray-500">
-                    {new Date(q.createdAt).toLocaleDateString()}
+                    {new Date(q.created_at).toLocaleDateString()}
                   </td>
                 </tr>
               ))}

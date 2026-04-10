@@ -352,18 +352,18 @@ const LOAN_TERM_DISPLAY = {
 export default function PrequalLetterPDF({ data }) {
   const {
     borrowerNames,
-    propertyAddress,
-    purchasePrice,
-    loanAmount,
+    property_address,
+    purchase_price,
+    loan_amount,
     ltv,
-    loanType,
-    loanTerm,
-    interestRate,
+    loan_type,
+    loan_term,
+    interest_rate,
     letterDate,
     expirationDate,
-    referenceNumber,
+    reference_number,
     verifications,
-    mloName,
+    mlo_name,
     mloNmls,
     mloPhone,
     mloEmail,
@@ -374,7 +374,7 @@ export default function PrequalLetterPDF({ data }) {
     { key: 'incomeDocumented', label: 'Income Documented' },
     { key: 'assetsVerified', label: 'Assets Verified' },
     { key: 'ausApproval', label: 'AUS Approval Obtained' },
-    { key: 'appraisalWaiver', label: 'Appraisal Waiver Accepted' },
+    { key: 'appraisal_waiver', label: 'Appraisal Waiver Accepted' },
   ];
 
   return (
@@ -419,10 +419,10 @@ export default function PrequalLetterPDF({ data }) {
           <View style={s.infoCol}>
             <Text style={s.infoLabel}>Borrower(s)</Text>
             <Text style={s.infoValue}>{borrowerNames}</Text>
-            {referenceNumber ? (
+            {reference_number ? (
               <>
                 <Text style={s.infoLabel}>Reference</Text>
-                <Text style={s.infoValue}>{referenceNumber}</Text>
+                <Text style={s.infoValue}>{reference_number}</Text>
               </>
             ) : null}
           </View>
@@ -443,9 +443,9 @@ export default function PrequalLetterPDF({ data }) {
         </Text>
 
         {/* Property address callout */}
-        {propertyAddress ? (
+        {property_address ? (
           <View style={s.propertyCallout}>
-            <Text style={s.propertyText}>{propertyAddress}</Text>
+            <Text style={s.propertyText}>{property_address}</Text>
           </View>
         ) : null}
 
@@ -453,11 +453,11 @@ export default function PrequalLetterPDF({ data }) {
         <View style={s.heroRow}>
           <View style={s.heroBox}>
             <Text style={s.heroLabel}>Purchase Price</Text>
-            <Text style={s.heroValue}>{fmtDollar(purchasePrice)}</Text>
+            <Text style={s.heroValue}>{fmtDollar(purchase_price)}</Text>
           </View>
           <View style={s.heroBox}>
             <Text style={s.heroLabel}>Max Loan Amount</Text>
-            <Text style={s.heroValue}>{fmtDollar(loanAmount)}</Text>
+            <Text style={s.heroValue}>{fmtDollar(loan_amount)}</Text>
           </View>
         </View>
 
@@ -469,23 +469,23 @@ export default function PrequalLetterPDF({ data }) {
             <View style={s.detailRow}>
               <Text style={s.detailLabel}>Loan Type</Text>
               <Text style={s.detailValue}>
-                {LOAN_TYPE_DISPLAY[loanType] || loanType || '—'}
+                {LOAN_TYPE_DISPLAY[loan_type] || loan_type || '—'}
               </Text>
             </View>
             <View style={s.detailRow}>
               <Text style={s.detailLabel}>Loan Term</Text>
               <Text style={s.detailValue}>
-                {LOAN_TERM_DISPLAY[loanTerm] || `${loanTerm} months`}
+                {LOAN_TERM_DISPLAY[loan_term] || `${loan_term} months`}
               </Text>
             </View>
             <View style={s.detailRow}>
               <Text style={s.detailLabel}>Loan-to-Value</Text>
               <Text style={s.detailValue}>{ltv ? `${Number(ltv).toFixed(1)}%` : '—'}</Text>
             </View>
-            {interestRate ? (
+            {interest_rate ? (
               <View style={s.detailRow}>
                 <Text style={s.detailLabel}>Interest Rate</Text>
-                <Text style={s.detailValue}>{interestRate}%</Text>
+                <Text style={s.detailValue}>{interest_rate}%</Text>
               </View>
             ) : null}
           </View>
@@ -521,7 +521,7 @@ export default function PrequalLetterPDF({ data }) {
           <View>
             <Text style={s.sincerely}>Sincerely,</Text>
             <View style={s.signatureLine} />
-            <Text style={s.signatureName}>{mloName}</Text>
+            <Text style={s.signatureName}>{mlo_name}</Text>
             <Text style={s.signatureDetail}>NMLS #{mloNmls}</Text>
             <Text style={s.signatureDetail}>{mloPhone} | {mloEmail}</Text>
           </View>

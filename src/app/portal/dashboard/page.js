@@ -18,7 +18,7 @@ export default async function BorrowerDashboardPage() {
 
   const borrowerRows = await sql`
     SELECT first_name, last_name, email FROM borrowers
-    WHERE id = ${session.borrowerId}
+    WHERE id = ${session.borrower_id}
     LIMIT 1
   `;
   const borrower = borrowerRows[0];
@@ -28,7 +28,7 @@ export default async function BorrowerDashboardPage() {
     SELECT lb.loan_id, lb.borrower_type
     FROM loan_borrowers lb
     JOIN loans l ON lb.loan_id = l.id
-    WHERE lb.borrower_id = ${session.borrowerId}
+    WHERE lb.borrower_id = ${session.borrower_id}
     ORDER BY l.created_at DESC
   `;
   const loanIds = loanBorrowers.map((lb) => lb.loan_id);
@@ -83,7 +83,7 @@ export default async function BorrowerDashboardPage() {
 
     const mloById = {};
     for (const m of allMlos) {
-      mloById[m.id] = { firstName: m.first_name, lastName: m.last_name, email: m.email };
+      mloById[m.id] = { first_name: m.first_name, last_name: m.last_name, email: m.email };
     }
 
     const primaryByLoan = {};
@@ -97,7 +97,7 @@ export default async function BorrowerDashboardPage() {
       loan.events = (eventsByLoan[loan.id] || []).slice(0, 15);
       loan.mlo = loan.mlo_id ? mloById[loan.mlo_id] || null : null;
       loan.loanBorrowers = primaryByLoan[loan.id]
-        ? [{ borrower: { firstName: primaryByLoan[loan.id].first_name } }]
+        ? [{ borrower: { first_name: primaryByLoan[loan.id].first_name } }]
         : [];
     }
   }
@@ -107,7 +107,7 @@ export default async function BorrowerDashboardPage() {
 
   // Use the primary borrower's name for the greeting, not the session borrower
   // (handles shared-email cases where co-borrower's name overwrites the record)
-  const primaryName = loan?.loanBorrowers?.[0]?.borrower?.firstName || borrower?.first_name;
+  const primaryName = loan?.loanBorrowers?.[0]?.borrower?.first_name || borrower?.first_name;
 
   return (
     <div className="max-w-3xl mx-auto">

@@ -33,7 +33,7 @@ export default function SaveLoadModal({ open, onClose }) {
     setSaving(true);
     setError('');
     try {
-      const payload = { inputState: rawState, results };
+      const payload = { input_state: rawState, results };
       if (activeId) {
         await fetch(`/api/portal/mlo/hecm-scenarios/${activeId}`, {
           method: 'PUT',
@@ -60,7 +60,7 @@ export default function SaveLoadModal({ open, onClose }) {
     setSaving(true);
     setError('');
     try {
-      const payload = { inputState: rawState, results };
+      const payload = { input_state: rawState, results };
       const res = await fetch('/api/portal/mlo/hecm-scenarios', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -82,8 +82,8 @@ export default function SaveLoadModal({ open, onClose }) {
       const res = await fetch(`/api/portal/mlo/hecm-scenarios/${id}`);
       if (!res.ok) throw new Error('Failed to load');
       const data = await res.json();
-      if (data.scenario?.inputState) {
-        loadState(data.scenario.inputState);
+      if (data.scenario?.input_state) {
+        loadState(data.scenario.input_state);
         setActiveId(id);
         onClose();
       }
@@ -140,7 +140,7 @@ export default function SaveLoadModal({ open, onClose }) {
             </button>
           )}
           <span className="text-xs text-gray-400 ml-auto">
-            {state.borrowerName || 'Untitled'} {state.homeValue > 0 ? `— ${fmtDollar(state.homeValue)}` : ''}
+            {state.borrower_name || 'Untitled'} {state.home_value > 0 ? `— ${fmtDollar(state.home_value)}` : ''}
           </span>
         </div>
 
@@ -167,9 +167,9 @@ export default function SaveLoadModal({ open, onClose }) {
                     key={s.id}
                     className={`border-b hover:bg-gray-50 ${s.id === activeId ? 'bg-cyan-50' : ''}`}
                   >
-                    <td className="px-4 py-2 font-medium">{s.borrowerName || 'Untitled'}</td>
-                    <td className="px-2 py-2 text-gray-600">{fmtDollar(s.homeValue)}</td>
-                    <td className="px-2 py-2 text-gray-400">{fmtDate(s.updatedAt)}</td>
+                    <td className="px-4 py-2 font-medium">{s.borrower_name || 'Untitled'}</td>
+                    <td className="px-2 py-2 text-gray-600">{fmtDollar(s.home_value)}</td>
+                    <td className="px-2 py-2 text-gray-400">{fmtDate(s.updated_at)}</td>
                     <td className="px-2 py-2 text-right space-x-2">
                       <button
                         onClick={() => handleLoad(s.id)}

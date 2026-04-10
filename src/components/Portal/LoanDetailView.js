@@ -257,7 +257,7 @@ export default function LoanDetailView({ loan, onRefresh }) {
         <div className="flex items-start justify-between mb-4">
           <div>
             <h1 className="text-xl font-bold text-gray-900">
-              {loan.borrower.firstName} {loan.borrower.lastName}
+              {loan.borrower.first_name} {loan.borrower.last_name}
             </h1>
             <p className="text-sm text-gray-500 mt-0.5">{loan.borrower.email}</p>
             {loan.borrower.phone && (
@@ -298,7 +298,7 @@ export default function LoanDetailView({ loan, onRefresh }) {
             </span>
           ) : (
             <>
-              <span className="text-gray-700">···-··-{loan.borrower.ssnLastFour}</span>
+              <span className="text-gray-700">···-··-{loan.borrower.ssn_last_four}</span>
               <button
                 onClick={handleSsnReveal}
                 disabled={ssnLoading}
@@ -355,55 +355,55 @@ export default function LoanDetailView({ loan, onRefresh }) {
               <div>
                 <span className="text-gray-400 block">Property Type</span>
                 <span className="text-gray-800 font-medium capitalize">
-                  {loan.propertyType?.replace('_', ' ') || '—'}
+                  {loan.property_type?.replace('_', ' ') || '—'}
                 </span>
               </div>
               <div>
                 <span className="text-gray-400 block">Property Address</span>
-                <span className="text-gray-800 font-medium">{formatAddress(loan.propertyAddress)}</span>
+                <span className="text-gray-800 font-medium">{formatAddress(loan.property_address)}</span>
               </div>
               {loan.purpose === 'purchase' ? (
                 <>
                   <div>
                     <span className="text-gray-400 block">Purchase Price</span>
-                    <span className="text-gray-800 font-medium">{formatCurrency(loan.purchasePrice)}</span>
+                    <span className="text-gray-800 font-medium">{formatCurrency(loan.purchase_price)}</span>
                   </div>
                   <div>
                     <span className="text-gray-400 block">Down Payment</span>
-                    <span className="text-gray-800 font-medium">{formatCurrency(loan.downPayment)}</span>
+                    <span className="text-gray-800 font-medium">{formatCurrency(loan.down_payment)}</span>
                   </div>
                 </>
               ) : (
                 <>
                   <div>
                     <span className="text-gray-400 block">Estimated Value</span>
-                    <span className="text-gray-800 font-medium">{formatCurrency(loan.estimatedValue)}</span>
+                    <span className="text-gray-800 font-medium">{formatCurrency(loan.estimated_value)}</span>
                   </div>
                   <div>
                     <span className="text-gray-400 block">Current Balance</span>
-                    <span className="text-gray-800 font-medium">{formatCurrency(loan.currentBalance)}</span>
+                    <span className="text-gray-800 font-medium">{formatCurrency(loan.current_balance)}</span>
                   </div>
                 </>
               )}
               <div>
                 <span className="text-gray-400 block">Employment</span>
                 <span className="text-gray-800 font-medium capitalize">
-                  {loan.employmentStatus?.replace('_', ' ') || '—'}
+                  {loan.employment_status?.replace('_', ' ') || '—'}
                 </span>
               </div>
-              {loan.employerName && (
+              {loan.employer_name && (
                 <div>
                   <span className="text-gray-400 block">Employer</span>
-                  <span className="text-gray-800 font-medium">{loan.employerName}</span>
+                  <span className="text-gray-800 font-medium">{loan.employer_name}</span>
                 </div>
               )}
               <div>
                 <span className="text-gray-400 block">Monthly Income</span>
-                <span className="text-gray-800 font-medium">{formatCurrency(loan.monthlyBaseIncome)}</span>
+                <span className="text-gray-800 font-medium">{formatCurrency(loan.monthly_base_income)}</span>
               </div>
               <div>
                 <span className="text-gray-400 block">Housing Expense</span>
-                <span className="text-gray-800 font-medium">{formatCurrency(loan.presentHousingExpense)}</span>
+                <span className="text-gray-800 font-medium">{formatCurrency(loan.present_housing_expense)}</span>
               </div>
               <div>
                 <span className="text-gray-400 block">Marital Status</span>
@@ -411,7 +411,7 @@ export default function LoanDetailView({ loan, onRefresh }) {
               </div>
               <div>
                 <span className="text-gray-400 block">Submitted</span>
-                <span className="text-gray-800 font-medium">{formatDate(loan.submittedAt)}</span>
+                <span className="text-gray-800 font-medium">{formatDate(loan.submitted_at)}</span>
               </div>
             </div>
           </div>
@@ -499,12 +499,12 @@ export default function LoanDetailView({ loan, onRefresh }) {
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${DOC_STATUS_COLORS[doc.status]}`}>
                           {DOC_STATUS_LABELS[doc.status] || doc.status}
                         </span>
-                        {doc.fileName && (
-                          <span className="text-xs text-gray-400">{doc.fileName}</span>
+                        {doc.file_name && (
+                          <span className="text-xs text-gray-400">{doc.file_name}</span>
                         )}
                         {doc.requestedBy && (
                           <span className="text-xs text-gray-400">
-                            by {doc.requestedBy.firstName} {doc.requestedBy.lastName}
+                            by {doc.requestedBy.first_name} {doc.requestedBy.last_name}
                           </span>
                         )}
                       </div>
@@ -598,13 +598,13 @@ export default function LoanDetailView({ loan, onRefresh }) {
                     </div>
                     <div className="pb-4">
                       <p className="text-sm text-gray-800">
-                        <span className="mr-1">{EVENT_ICONS[event.eventType] || '•'}</span>
+                        <span className="mr-1">{EVENT_ICONS[event.event_type] || '•'}</span>
                         {formatEventMessage(event)}
                       </p>
                       <p className="text-xs text-gray-400 mt-0.5">
-                        {formatDate(event.createdAt)}
-                        {event.actorType && (
-                          <span> · {event.actorType}</span>
+                        {formatDate(event.created_at)}
+                        {event.actor_type && (
+                          <span> · {event.actor_type}</span>
                         )}
                       </p>
                     </div>
@@ -620,17 +620,17 @@ export default function LoanDetailView({ loan, onRefresh }) {
 }
 
 function formatEventMessage(event) {
-  switch (event.eventType) {
+  switch (event.event_type) {
     case 'status_change':
-      return `Status: ${STATUS_LABELS[event.oldValue] || event.oldValue} → ${STATUS_LABELS[event.newValue] || event.newValue}`;
+      return `Status: ${STATUS_LABELS[event.old_value] || event.old_value} → ${STATUS_LABELS[event.new_value] || event.new_value}`;
     case 'doc_requested':
-      return `Document requested: ${event.newValue || 'Unknown'}`;
+      return `Document requested: ${event.new_value || 'Unknown'}`;
     case 'doc_uploaded':
-      return `Document uploaded: ${event.newValue || 'Unknown'}`;
+      return `Document uploaded: ${event.new_value || 'Unknown'}`;
     case 'doc_deleted':
-      return `Document deleted: ${event.newValue || 'Unknown'}`;
+      return `Document deleted: ${event.new_value || 'Unknown'}`;
     case 'cd_uploaded':
-      return `Closing Disclosure uploaded: ${event.newValue || 'Unknown'}`;
+      return `Closing Disclosure uploaded: ${event.new_value || 'Unknown'}`;
     case 'cd_extracted':
       return 'CD data extracted successfully';
     case 'cd_extraction_failed':
@@ -642,12 +642,12 @@ function formatEventMessage(event) {
     case 'payroll_sent':
       return 'Sent to payroll for commission processing';
     case 'note_added':
-      return `Note: ${event.newValue || ''}`;
+      return `Note: ${event.new_value || ''}`;
     case 'ssn_revealed':
       return 'SSN was revealed (audited)';
     case 'xml_export':
       return 'MISMO XML exported';
     default:
-      return event.eventType.replace(/_/g, ' ');
+      return event.event_type.replace(/_/g, ' ');
   }
 }

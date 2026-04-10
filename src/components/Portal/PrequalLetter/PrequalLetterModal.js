@@ -18,13 +18,13 @@ function formatAddress(addr) {
 function buildBorrowerNames(loan) {
   const names = [];
   const b = loan.borrower;
-  if (b?.firstName || b?.lastName) {
-    names.push([b.firstName, b.lastName].filter(Boolean).join(' '));
+  if (b?.first_name || b?.last_name) {
+    names.push([b.first_name, b.last_name].filter(Boolean).join(' '));
   }
   if (loan.loanBorrowers?.length) {
     for (const lb of loan.loanBorrowers) {
-      if (lb.firstName || lb.lastName) {
-        names.push([lb.firstName, lb.lastName].filter(Boolean).join(' '));
+      if (lb.first_name || lb.last_name) {
+        names.push([lb.first_name, lb.last_name].filter(Boolean).join(' '));
       }
     }
   }
@@ -47,23 +47,23 @@ function defaultExpiration() {
 export default function PrequalLetterModal({ loan, session, onClose }) {
   const [form, setForm] = useState({
     borrowerNames: '',
-    propertyAddress: '',
-    purchasePrice: '',
-    downPayment: '',
-    loanAmount: '',
+    property_address: '',
+    purchase_price: '',
+    down_payment: '',
+    loan_amount: '',
     ltv: '',
-    loanType: '',
-    loanTerm: '',
-    interestRate: '',
+    loan_type: '',
+    loan_term: '',
+    interest_rate: '',
     letterDate: new Date().toISOString().slice(0, 10),
     expirationDate: defaultExpiration(),
-    referenceNumber: '',
+    reference_number: '',
     creditReviewed: true,
     incomeDocumented: true,
     assetsVerified: true,
     ausApproval: false,
-    appraisalWaiver: false,
-    mloName: '',
+    appraisal_waiver: false,
+    mlo_name: '',
     mloNmls: '',
     mloPhone: '',
     mloEmail: '',
@@ -93,17 +93,17 @@ export default function PrequalLetterModal({ loan, session, onClose }) {
       setForm((prev) => ({
         ...prev,
         borrowerNames: buildBorrowerNames(loan),
-        propertyAddress: formatAddress(loan.propertyAddress),
-        purchasePrice: loan.purchasePrice || '',
-        downPayment: loan.downPayment || '',
-        loanAmount: loan.loanAmount || '',
-        ltv: computeLTV(loan.loanAmount, loan.purchasePrice),
-        loanType: loan.loanType || '',
-        loanTerm: loan.loanTerm || 360,
-        interestRate: loan.interestRate || '',
-        referenceNumber: loan.loanNumber || loan.id?.slice(0, 8) || '',
-        mloName: loan.mlo?.firstName
-          ? `${loan.mlo.firstName} ${loan.mlo.lastName || ''}`.trim()
+        property_address: formatAddress(loan.property_address),
+        purchase_price: loan.purchase_price || '',
+        down_payment: loan.down_payment || '',
+        loan_amount: loan.loan_amount || '',
+        ltv: computeLTV(loan.loan_amount, loan.purchase_price),
+        loan_type: loan.loan_type || '',
+        loan_term: loan.loan_term || 360,
+        interest_rate: loan.interest_rate || '',
+        reference_number: loan.loan_number || loan.id?.slice(0, 8) || '',
+        mlo_name: loan.mlo?.first_name
+          ? `${loan.mlo.first_name} ${loan.mlo.last_name || ''}`.trim()
           : session?.user?.name || 'David Burson',
         mloNmls: loan.mlo?.nmls || '641790',
         mloPhone: '303-444-5251',
@@ -134,27 +134,27 @@ export default function PrequalLetterModal({ loan, session, onClose }) {
   const updateField = useCallback((field, value) => {
     setForm((prev) => {
       const next = { ...prev, [field]: value };
-      const pp = Number(field === 'purchasePrice' ? value : prev.purchasePrice) || 0;
-      const la = Number(field === 'loanAmount' ? value : prev.loanAmount) || 0;
-      const dp = Number(field === 'downPayment' ? value : prev.downPayment) || 0;
+      const pp = Number(field === 'purchase_price' ? value : prev.purchase_price) || 0;
+      const la = Number(field === 'loan_amount' ? value : prev.loan_amount) || 0;
+      const dp = Number(field === 'down_payment' ? value : prev.down_payment) || 0;
 
       // Interlinked: change one, derive the others
-      if (field === 'purchasePrice' && pp > 0) {
+      if (field === 'purchase_price' && pp > 0) {
         if (la > 0) {
-          next.downPayment = pp - la;
+          next.down_payment = pp - la;
           next.ltv = computeLTV(la, pp);
         } else if (dp > 0) {
-          next.loanAmount = pp - dp;
+          next.loan_amount = pp - dp;
           next.ltv = computeLTV(pp - dp, pp);
         }
-      } else if (field === 'loanAmount' && la > 0) {
+      } else if (field === 'loan_amount' && la > 0) {
         if (pp > 0) {
-          next.downPayment = pp - la;
+          next.down_payment = pp - la;
           next.ltv = computeLTV(la, pp);
         }
-      } else if (field === 'downPayment' && dp >= 0) {
+      } else if (field === 'down_payment' && dp >= 0) {
         if (pp > 0) {
-          next.loanAmount = pp - dp;
+          next.loan_amount = pp - dp;
           next.ltv = computeLTV(pp - dp, pp);
         }
       }
@@ -166,24 +166,24 @@ export default function PrequalLetterModal({ loan, session, onClose }) {
   // Build data object for PDF
   const buildPdfData = () => ({
     borrowerNames: form.borrowerNames,
-    propertyAddress: form.propertyAddress,
-    purchasePrice: Number(form.purchasePrice) || 0,
-    loanAmount: Number(form.loanAmount) || 0,
+    property_address: form.property_address,
+    purchase_price: Number(form.purchase_price) || 0,
+    loan_amount: Number(form.loan_amount) || 0,
     ltv: form.ltv,
-    loanType: form.loanType,
-    loanTerm: form.loanTerm,
-    interestRate: form.interestRate,
+    loan_type: form.loan_type,
+    loan_term: form.loan_term,
+    interest_rate: form.interest_rate,
     letterDate: form.letterDate,
     expirationDate: form.expirationDate,
-    referenceNumber: form.referenceNumber,
+    reference_number: form.reference_number,
     verifications: {
       creditReviewed: form.creditReviewed,
       incomeDocumented: form.incomeDocumented,
       assetsVerified: form.assetsVerified,
       ausApproval: form.ausApproval,
-      appraisalWaiver: form.appraisalWaiver,
+      appraisal_waiver: form.appraisal_waiver,
     },
-    mloName: form.mloName,
+    mlo_name: form.mlo_name,
     mloNmls: form.mloNmls,
     mloPhone: form.mloPhone,
     mloEmail: form.mloEmail,
@@ -267,10 +267,10 @@ export default function PrequalLetterModal({ loan, session, onClose }) {
       // Upload to API for Zoho Sign
       const formData = new FormData();
       formData.append('file', blob, pdfFileName());
-      formData.append('mloName', form.mloName);
+      formData.append('mlo_name', form.mlo_name);
       formData.append('mloEmail', form.mloEmail);
       formData.append('borrowerNames', form.borrowerNames);
-      if (loan?.id) formData.append('loanId', loan.id);
+      if (loan?.id) formData.append('loan_id', loan.id);
 
       const res = await fetch('/api/portal/mlo/prequal-letter/sign', {
         method: 'POST',
@@ -333,8 +333,8 @@ export default function PrequalLetterModal({ loan, session, onClose }) {
               />
               <Field
                 label="Subject Property Address"
-                value={form.propertyAddress}
-                onChange={(v) => updateField('propertyAddress', v)}
+                value={form.property_address}
+                onChange={(v) => updateField('property_address', v)}
                 placeholder="123 Main St, Louisville, CO 80027"
               />
             </div>
@@ -348,22 +348,22 @@ export default function PrequalLetterModal({ loan, session, onClose }) {
             <div className="grid grid-cols-2 gap-3">
               <Field
                 label="Purchase Price"
-                value={form.purchasePrice}
-                onChange={(v) => updateField('purchasePrice', v)}
+                value={form.purchase_price}
+                onChange={(v) => updateField('purchase_price', v)}
                 type="number"
                 prefix="$"
               />
               <Field
                 label="Down Payment"
-                value={form.downPayment}
-                onChange={(v) => updateField('downPayment', v)}
+                value={form.down_payment}
+                onChange={(v) => updateField('down_payment', v)}
                 type="number"
                 prefix="$"
               />
               <Field
                 label="Max Loan Amount"
-                value={form.loanAmount}
-                onChange={(v) => updateField('loanAmount', v)}
+                value={form.loan_amount}
+                onChange={(v) => updateField('loan_amount', v)}
                 type="number"
                 prefix="$"
               />
@@ -375,20 +375,20 @@ export default function PrequalLetterModal({ loan, session, onClose }) {
               />
               <SelectField
                 label="Loan Type"
-                value={form.loanType}
-                onChange={(v) => updateField('loanType', v)}
+                value={form.loan_type}
+                onChange={(v) => updateField('loan_type', v)}
                 options={Object.entries(LOAN_TYPE_LABELS).map(([k, v]) => ({ value: k, label: v }))}
               />
               <SelectField
                 label="Loan Term"
-                value={form.loanTerm}
-                onChange={(v) => updateField('loanTerm', v)}
+                value={form.loan_term}
+                onChange={(v) => updateField('loan_term', v)}
                 options={Object.entries(LOAN_TERM_LABELS).map(([k, v]) => ({ value: k, label: v }))}
               />
               <Field
                 label="Interest Rate (optional)"
-                value={form.interestRate}
-                onChange={(v) => updateField('interestRate', v)}
+                value={form.interest_rate}
+                onChange={(v) => updateField('interest_rate', v)}
                 type="number"
                 suffix="%"
                 step="0.125"
@@ -416,8 +416,8 @@ export default function PrequalLetterModal({ loan, session, onClose }) {
               />
               <Field
                 label="Reference #"
-                value={form.referenceNumber}
-                onChange={(v) => updateField('referenceNumber', v)}
+                value={form.reference_number}
+                onChange={(v) => updateField('reference_number', v)}
               />
             </div>
           </fieldset>
@@ -433,7 +433,7 @@ export default function PrequalLetterModal({ loan, session, onClose }) {
                 { key: 'incomeDocumented', label: 'Income Documented' },
                 { key: 'assetsVerified', label: 'Assets Verified' },
                 { key: 'ausApproval', label: 'AUS Approval' },
-                { key: 'appraisalWaiver', label: 'Appraisal Waiver' },
+                { key: 'appraisal_waiver', label: 'Appraisal Waiver' },
               ].map((item) => (
                 <label key={item.key} className="flex items-center gap-2 cursor-pointer">
                   <input
@@ -456,8 +456,8 @@ export default function PrequalLetterModal({ loan, session, onClose }) {
             <div className="grid grid-cols-2 gap-3">
               <Field
                 label="Name"
-                value={form.mloName}
-                onChange={(v) => updateField('mloName', v)}
+                value={form.mlo_name}
+                onChange={(v) => updateField('mlo_name', v)}
               />
               <Field
                 label="NMLS #"

@@ -4,7 +4,7 @@ import { calculatePI } from '@/lib/rates/engine';
 
 export default function RateResults({ scenario, rateData, apiResults, loading, compareRates = [], onToggleCompare, onViewReport, onSaveScenario, brpToken }) {
 
-  if (!scenario.loanAmount || scenario.loanAmount <= 0 || !scenario.propertyValue) {
+  if (!scenario.loan_amount || scenario.loan_amount <= 0 || !scenario.property_value) {
     return (
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 my-4 text-center text-gray-500">
         Enter your scenario above to see today&apos;s rates
@@ -16,7 +16,7 @@ export default function RateResults({ scenario, rateData, apiResults, loading, c
   const useApi = true;
   const llpa = { total: 0, breakdown: apiResults?.[0]?.breakdown || [] };
   const rates = apiResults || [];
-  const currentPI = scenario.currentRate ? calculatePI(scenario.currentRate, scenario.loanAmount) : null;
+  const currentPI = scenario.current_rate ? calculatePI(scenario.current_rate, scenario.loan_amount) : null;
 
   if (loading) {
     return (

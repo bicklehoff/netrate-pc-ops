@@ -9,13 +9,13 @@ import PrequalLetterModal from '../../PrequalLetter/PrequalLetterModal';
 // ─── Constants ──────────────────────────────────────────────
 
 const MILESTONES = [
-  { key: 'applied', label: 'Applied', dateField: 'applicationDate' },
+  { key: 'applied', label: 'Applied', dateField: 'application_date' },
   { key: 'processing', label: 'Processing', dateField: null },
-  { key: 'submitted_uw', label: 'UW', dateField: 'submittedToUwDate' },
-  { key: 'cond_approved', label: 'Approved', dateField: 'condApprovedDate' },
-  { key: 'ctc', label: 'CTC', dateField: 'ctcDate' },
-  { key: 'docs_out', label: 'Docs', dateField: 'docsOutDate' },
-  { key: 'funded', label: 'Funded', dateField: 'fundingDate' },
+  { key: 'submitted_uw', label: 'UW', dateField: 'submitted_to_uw_date' },
+  { key: 'cond_approved', label: 'Approved', dateField: 'cond_approved_date' },
+  { key: 'ctc', label: 'CTC', dateField: 'ctc_date' },
+  { key: 'docs_out', label: 'Docs', dateField: 'docs_out_date' },
+  { key: 'funded', label: 'Funded', dateField: 'funding_date' },
 ];
 
 const LOAN_TYPE_OPTIONS = [
@@ -77,14 +77,14 @@ function isExpired(d) { return d ? new Date(d) < new Date() : false; }
 
 function computeAlerts(loan, dates) {
   const a = [];
-  if (!loan.creditScore) a.push('FICO missing');
-  if (!loan.estimatedValue || Number(loan.estimatedValue) === 0) a.push('Appraised Value missing');
-  if (!dates.lockedDate && !dates.lockExpiration) a.push('Rate not locked');
-  if (dates.lockExpiration && isExpired(dates.lockExpiration)) a.push('Lock EXPIRED');
-  else if (dates.lockExpiration && isExpiringSoon(dates.lockExpiration)) a.push('Lock expires soon');
-  if (dates.creditExpiration && isExpired(dates.creditExpiration)) a.push('Credit EXPIRED');
-  if (!loan.lenderName) a.push('No lender');
-  if (!loan.interestRate) a.push('Rate not set');
+  if (!loan.credit_score) a.push('FICO missing');
+  if (!loan.estimated_value || Number(loan.estimated_value) === 0) a.push('Appraised Value missing');
+  if (!dates.locked_date && !dates.lock_expiration) a.push('Rate not locked');
+  if (dates.lock_expiration && isExpired(dates.lock_expiration)) a.push('Lock EXPIRED');
+  else if (dates.lock_expiration && isExpiringSoon(dates.lock_expiration)) a.push('Lock expires soon');
+  if (dates.credit_expiration && isExpired(dates.credit_expiration)) a.push('Credit EXPIRED');
+  if (!loan.lender_name) a.push('No lender');
+  if (!loan.interest_rate) a.push('Rate not set');
   return a;
 }
 
@@ -119,15 +119,15 @@ export default function OverviewSection({ loan, updateLoanField, updateDates }) 
   const borrower = loan.borrower || {};
   const coBorrowers = loan.loanBorrowers?.filter(lb => lb.borrowerType !== 'primary') || [];
   const alerts = computeAlerts(loan, dates);
-  const addr = fmtAddr(loan.propertyAddress);
+  const addr = fmtAddr(loan.property_address);
 
-  const loanAmt = Number(loan.loanAmount || 0);
-  const propVal = Number(loan.purchasePrice || loan.estimatedValue || 0);
+  const loanAmt = Number(loan.loan_amount || 0);
+  const propVal = Number(loan.purchase_price || loan.estimated_value || 0);
   const ltv = propVal > 0 ? ((loanAmt / propVal) * 100).toFixed(1) + '%' : '—';
 
-  const lockClass = dates.lockExpiration
-    ? isExpired(dates.lockExpiration) ? 'text-red-600 font-bold'
-      : isExpiringSoon(dates.lockExpiration) ? 'text-amber-600 font-bold'
+  const lockClass = dates.lock_expiration
+    ? isExpired(dates.lock_expiration) ? 'text-red-600 font-bold'
+      : isExpiringSoon(dates.lock_expiration) ? 'text-amber-600 font-bold'
       : '' : '';
 
   const save = updateLoanField || (() => Promise.resolve());
@@ -179,35 +179,35 @@ export default function OverviewSection({ loan, updateLoanField, updateDates }) 
         </div>
         {/* Summary strip */}
         <div className="grid grid-cols-4 lg:grid-cols-8 gap-x-4 gap-y-1 px-3 py-2">
-          <EF label="Loan Amt" value={loan.loanAmount} type="currency" onSave={v => save({ loanAmount: v })} />
-          <EF label="Rate" value={loan.interestRate} type="text" onSave={v => save({ interestRate: v })} />
+          <EF label="Loan Amt" value={loan.loan_amount} type="currency" onSave={v => save({ loan_amount: v })} />
+          <EF label="Rate" value={loan.interest_rate} type="text" onSave={v => save({ interest_rate: v })} />
           <RF label="LTV" value={ltv} />
-          <EF label="FICO" value={loan.creditScore} type="text" onSave={v => save({ creditScore: v })} />
+          <EF label="FICO" value={loan.credit_score} type="text" onSave={v => save({ credit_score: v })} />
           <RF label="Mo. Pmt" value={fmt$(loan.monthlyPayment)} />
-          <EF label="Closing" value={dates.estimatedClosing || dates.closingDate} type="date" onSave={v => saveDates({ estimatedClosing: v })} />
+          <EF label="Closing" value={dates.estimated_closing || dates.closing_date} type="date" onSave={v => saveDates({ estimated_closing: v })} />
           <div><div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none mb-0.5">Lock Exp</div>
-            <div className={`text-xs font-semibold leading-tight ${lockClass || 'text-slate-300'}`}>{dates.lockExpiration ? fmtDate(dates.lockExpiration) : '—'}</div></div>
-          <RF label="BIC" value={loan.ballInCourt || '—'} />
+            <div className={`text-xs font-semibold leading-tight ${lockClass || 'text-slate-300'}`}>{dates.lock_expiration ? fmtDate(dates.lock_expiration) : '—'}</div></div>
+          <RF label="BIC" value={loan.ball_in_court || '—'} />
         </div>
       </div>
 
       {/* Borrower — inline strip */}
       <div className="bg-white rounded-md border border-slate-200 px-2 py-1">
         <div className="flex flex-wrap items-center gap-x-1.5 text-xs">
-          <img src={avatarUrl(`${borrower.firstName} ${borrower.lastName}`)} alt="" className="w-6 h-6 rounded-full shrink-0" />
+          <img src={avatarUrl(`${borrower.first_name} ${borrower.last_name}`)} alt="" className="w-6 h-6 rounded-full shrink-0" />
           <span className="text-[9px] font-bold uppercase text-slate-400">Borrower</span>
-          <span className="font-bold text-slate-900">{borrower.firstName} {borrower.lastName}</span>
-          {borrower.ssnLastFour && <><span className="text-slate-300">|</span><span className="text-slate-500">···{borrower.ssnLastFour}</span></>}
+          <span className="font-bold text-slate-900">{borrower.first_name} {borrower.last_name}</span>
+          {borrower.ssn_last_four && <><span className="text-slate-300">|</span><span className="text-slate-500">···{borrower.ssn_last_four}</span></>}
           {borrower.email && <><span className="text-slate-300">|</span><a href={`mailto:${borrower.email}`} className="text-primary font-semibold">{borrower.email}</a></>}
           {borrower.phone && <><span className="text-slate-300">|</span><a href={`tel:${borrower.phone}`} className="text-primary font-semibold">{borrower.phone}</a></>}
-          {coBorrowers.length > 0 && <><span className="text-slate-300">|</span><span className="text-slate-500">Co: {coBorrowers.map(lb => `${lb.borrower?.firstName} ${lb.borrower?.lastName}`).join(', ')}</span></>}
+          {coBorrowers.length > 0 && <><span className="text-slate-300">|</span><span className="text-slate-500">Co: {coBorrowers.map(lb => `${lb.borrower?.first_name} ${lb.borrower?.last_name}`).join(', ')}</span></>}
         </div>
         <div className="flex gap-x-6 mt-1 pt-1 border-t border-slate-100">
-          <div className="flex-1"><EF label="FICO" value={loan.creditScore} type="text" onSave={v => save({ creditScore: v })} /></div>
-          <div className="flex-1"><EF label="Income" value={loan.monthlyBaseIncome} type="currency" onSave={v => save({ monthlyBaseIncome: v })} /></div>
-          <div className="flex-1"><EF label="Employment" value={loan.employmentStatus} type="text" onSave={v => save({ employmentStatus: v })} /></div>
-          <div className="flex-1"><EF label="Employer" value={loan.employerName} type="text" onSave={v => save({ employerName: v })} /></div>
-          <div className="flex-1"><EF label="Housing" value={loan.presentHousingExpense} type="currency" onSave={v => save({ presentHousingExpense: v })} /></div>
+          <div className="flex-1"><EF label="FICO" value={loan.credit_score} type="text" onSave={v => save({ credit_score: v })} /></div>
+          <div className="flex-1"><EF label="Income" value={loan.monthly_base_income} type="currency" onSave={v => save({ monthly_base_income: v })} /></div>
+          <div className="flex-1"><EF label="Employment" value={loan.employment_status} type="text" onSave={v => save({ employment_status: v })} /></div>
+          <div className="flex-1"><EF label="Employer" value={loan.employer_name} type="text" onSave={v => save({ employer_name: v })} /></div>
+          <div className="flex-1"><EF label="Housing" value={loan.present_housing_expense} type="currency" onSave={v => save({ present_housing_expense: v })} /></div>
         </div>
       </div>
 
@@ -217,9 +217,9 @@ export default function OverviewSection({ loan, updateLoanField, updateDates }) 
           <span className="text-[9px] font-bold uppercase text-slate-400 mr-1">Property</span>
           <span className="font-bold text-slate-900">{addr.street}</span>
           {addr.csz && <><span className="text-slate-300">|</span><span className="text-slate-600">{addr.csz}</span></>}
-          {(loan.propertyCounty || addr.county) && <><span className="text-slate-300">|</span><span className="text-slate-500">{loan.propertyCounty || addr.county} County</span></>}
-          {loan.propertyAddress?.googleValidated && <span className="text-[9px] font-bold text-emerald-600 ml-1">✓ Verified</span>}
-          {!loan.propertyAddress?.googleValidated && addr.street !== '—' && (
+          {(loan.property_county || addr.county) && <><span className="text-slate-300">|</span><span className="text-slate-500">{loan.property_county || addr.county} County</span></>}
+          {loan.property_address?.googleValidated && <span className="text-[9px] font-bold text-emerald-600 ml-1">✓ Verified</span>}
+          {!loan.property_address?.googleValidated && addr.street !== '—' && (
             <button
               onClick={async () => {
                 setGeocoding(true);
@@ -281,13 +281,13 @@ export default function OverviewSection({ loan, updateLoanField, updateDates }) 
           </div>
         )}
         <div className="flex gap-x-6 mt-1 pt-1 border-t border-slate-100">
-          <div className="flex-1"><EF label="Type" value={loan.propertyType} type="select" options={PROPERTY_TYPE_OPTIONS} onSave={v => save({ propertyType: v })} /></div>
+          <div className="flex-1"><EF label="Type" value={loan.property_type} type="select" options={PROPERTY_TYPE_OPTIONS} onSave={v => save({ property_type: v })} /></div>
           <div className="flex-1"><EF label="Occup" value={loan.occupancy} type="select" options={OCCUPANCY_OPTIONS} onSave={v => save({ occupancy: v })} /></div>
-          <div className="flex-1"><EF label="Units" value={loan.numUnits} type="text" onSave={v => save({ numUnits: v })} /></div>
-          <div className="flex-1"><EF label="Purchase" value={loan.purchasePrice} type="currency" onSave={v => save({ purchasePrice: v })} /></div>
-          <div className="flex-1"><EF label="Appraised" value={loan.estimatedValue} type="currency" onSave={v => save({ estimatedValue: v })} /></div>
-          <div className="flex-1"><EF label="Down Pmt" value={loan.downPayment} type="currency" onSave={v => save({ downPayment: v })} /></div>
-          <div className="flex-1"><EF label="Cur Bal" value={loan.currentBalance} type="currency" onSave={v => save({ currentBalance: v })} /></div>
+          <div className="flex-1"><EF label="Units" value={loan.num_units} type="text" onSave={v => save({ num_units: v })} /></div>
+          <div className="flex-1"><EF label="Purchase" value={loan.purchase_price} type="currency" onSave={v => save({ purchase_price: v })} /></div>
+          <div className="flex-1"><EF label="Appraised" value={loan.estimated_value} type="currency" onSave={v => save({ estimated_value: v })} /></div>
+          <div className="flex-1"><EF label="Down Pmt" value={loan.down_payment} type="currency" onSave={v => save({ down_payment: v })} /></div>
+          <div className="flex-1"><EF label="Cur Bal" value={loan.current_balance} type="currency" onSave={v => save({ current_balance: v })} /></div>
         </div>
       </div>
 
@@ -296,11 +296,11 @@ export default function OverviewSection({ loan, updateLoanField, updateDates }) 
         <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">Key Dates</div>
         <div className="flex gap-x-6">
           {[
-            ['applicationDate','Applied'], ['submittedToUwDate','UW'],
-            ['condApprovedDate','Approved'], ['ctcDate','CTC'],
-            ['docsOutDate','Docs Out'], ['estimatedClosing','Est. Close'],
-            ['closingDate','Closing'], ['fundingDate','Funding'],
-            ['firstPaymentDate','1st Pmt'],
+            ['application_date','Applied'], ['submitted_to_uw_date','UW'],
+            ['cond_approved_date','Approved'], ['ctc_date','CTC'],
+            ['docs_out_date','Docs Out'], ['estimated_closing','Est. Close'],
+            ['closing_date','Closing'], ['funding_date','Funding'],
+            ['first_payment_date','1st Pmt'],
           ].map(([key, lbl]) => (
             <div key={key} className="flex-1"><EF label={lbl} value={dates[key]} type="date" onSave={v => saveDates({ [key]: v })} /></div>
           ))}
@@ -311,27 +311,27 @@ export default function OverviewSection({ loan, updateLoanField, updateDates }) 
       <div className="bg-white rounded-md border border-slate-200 px-2 py-1">
         <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">Loan Terms</div>
         <div className="flex gap-x-6">
-          <div className="flex-1"><EF label="Amount" value={loan.loanAmount} type="currency" onSave={v => save({ loanAmount: v })} /></div>
-          <div className="flex-1"><EF label="Rate" value={loan.interestRate} type="text" onSave={v => save({ interestRate: v })} /></div>
-          <div className="flex-1"><EF label="Term" value={loan.loanTerm} type="text" onSave={v => save({ loanTerm: v })} /></div>
-          <div className="flex-1"><EF label="Type" value={loan.loanType} type="select" options={LOAN_TYPE_OPTIONS} onSave={v => save({ loanType: v })} /></div>
+          <div className="flex-1"><EF label="Amount" value={loan.loan_amount} type="currency" onSave={v => save({ loan_amount: v })} /></div>
+          <div className="flex-1"><EF label="Rate" value={loan.interest_rate} type="text" onSave={v => save({ interest_rate: v })} /></div>
+          <div className="flex-1"><EF label="Term" value={loan.loan_term} type="text" onSave={v => save({ loan_term: v })} /></div>
+          <div className="flex-1"><EF label="Type" value={loan.loan_type} type="select" options={LOAN_TYPE_OPTIONS} onSave={v => save({ loan_type: v })} /></div>
           <div className="flex-1"><EF label="Purpose" value={loan.purpose} type="select" options={PURPOSE_OPTIONS} onSave={v => save({ purpose: v })} /></div>
-          <div className="flex-1"><EF label="Lender" value={loan.lenderName} type="text" onSave={v => save({ lenderName: v })} /></div>
-          <div className="flex-1"><EF label="Loan #" value={loan.loanNumber} type="text" onSave={v => save({ loanNumber: v })} /></div>
-          <div className="flex-1"><EF label="Lien" value={loan.lienStatus} type="text" onSave={v => save({ lienStatus: v })} /></div>
-          <div className="flex-1"><RF label="BIC" value={loan.ballInCourt} /></div>
+          <div className="flex-1"><EF label="Lender" value={loan.lender_name} type="text" onSave={v => save({ lender_name: v })} /></div>
+          <div className="flex-1"><EF label="Loan #" value={loan.loan_number} type="text" onSave={v => save({ loan_number: v })} /></div>
+          <div className="flex-1"><EF label="Lien" value={loan.lien_status} type="text" onSave={v => save({ lien_status: v })} /></div>
+          <div className="flex-1"><RF label="BIC" value={loan.ball_in_court} /></div>
         </div>
         {(loan.purpose === 'refinance' || loan.purpose === 'cash_out') && (
           <div className="flex gap-x-6 mt-0.5 pt-0.5 border-t border-slate-100">
-            <div className="flex-1"><EF label="Refi Purpose" value={loan.refiPurpose} type="text" onSave={v => save({ refiPurpose: v })} /></div>
-            <div className="flex-1"><EF label="Cash Out" value={loan.cashOutAmount} type="currency" onSave={v => save({ cashOutAmount: v })} /></div>
+            <div className="flex-1"><EF label="Refi Purpose" value={loan.refi_purpose} type="text" onSave={v => save({ refi_purpose: v })} /></div>
+            <div className="flex-1"><EF label="Cash Out" value={loan.cash_out_amount} type="currency" onSave={v => save({ cash_out_amount: v })} /></div>
             <div className="flex-1" /><div className="flex-1" /><div className="flex-1" /><div className="flex-1" /><div className="flex-1" /><div className="flex-1" /><div className="flex-1" />
           </div>
         )}
         <div className="flex gap-x-6 mt-0.5 pt-0.5 border-t border-slate-100">
-          <div className="flex-1"><EF label="Lock Date" value={dates.lockedDate} type="date" onSave={v => saveDates({ lockedDate: v })} /></div>
-          <div className="flex-1"><EF label="Lock Exp" value={dates.lockExpiration} type="date" onSave={v => saveDates({ lockExpiration: v })} /></div>
-          <div className="flex-1"><EF label="Lock Term" value={dates.lockTerm} type="text" onSave={v => saveDates({ lockTerm: v })} /></div>
+          <div className="flex-1"><EF label="Lock Date" value={dates.locked_date} type="date" onSave={v => saveDates({ locked_date: v })} /></div>
+          <div className="flex-1"><EF label="Lock Exp" value={dates.lock_expiration} type="date" onSave={v => saveDates({ lock_expiration: v })} /></div>
+          <div className="flex-1"><EF label="Lock Term" value={dates.lock_term} type="text" onSave={v => saveDates({ lock_term: v })} /></div>
           <div className="flex-1" /><div className="flex-1" /><div className="flex-1" /><div className="flex-1" /><div className="flex-1" /><div className="flex-1" />
         </div>
       </div>
@@ -341,11 +341,11 @@ export default function OverviewSection({ loan, updateLoanField, updateDates }) 
         <div className="bg-white rounded-md border border-slate-200 px-2 py-1">
           <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">Source / CRM</div>
           <div className="grid grid-cols-3 sm:grid-cols-5 gap-x-3 gap-y-0.5">
-            <EF label="Lead Src" value={loan.leadSource} type="text" onSave={v => save({ leadSource: v })} />
-            <EF label="Channel" value={loan.applicationChannel} type="text" onSave={v => save({ applicationChannel: v })} />
-            <EF label="Referral" value={loan.referralSource} type="text" onSave={v => save({ referralSource: v })} />
-            <RF label="LDox ID" value={loan.ldoxLoanId} />
-            <RF label="Created" value={loan.createdAt ? fmtDate(loan.createdAt) : '—'} />
+            <EF label="Lead Src" value={loan.lead_source} type="text" onSave={v => save({ lead_source: v })} />
+            <EF label="Channel" value={loan.application_channel} type="text" onSave={v => save({ application_channel: v })} />
+            <EF label="Referral" value={loan.referral_source} type="text" onSave={v => save({ referral_source: v })} />
+            <RF label="LDox ID" value={loan.ldox_loan_id} />
+            <RF label="Created" value={loan.created_at ? fmtDate(loan.created_at) : '—'} />
           </div>
         </div>
       </div>
