@@ -224,7 +224,7 @@ export default async function HomePage() {
             <div className="px-6 pb-5 pt-1">
               <Link
                 href="/rates"
-                className="block text-center py-3 bg-accent text-ink rounded-nr-md text-sm font-bold hover:bg-accent-dark transition-colors"
+                className="block text-center py-3 bg-go text-white rounded-nr-md text-sm font-bold hover:bg-go-dark transition-colors"
               >
                 Compare Your Options &rarr;
               </Link>

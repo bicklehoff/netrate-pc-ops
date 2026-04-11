@@ -71,14 +71,14 @@ export default function CoBorrowerNav({
             if (container) container.scrollTo({ top: 0, behavior: 'smooth' });
             else window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
-          className="bg-brand text-white px-6 py-2.5 rounded-lg font-medium hover:bg-brand-dark transition-colors"
+          className="bg-go text-white px-6 py-2.5 rounded-lg font-bold hover:bg-go-dark transition-colors"
         >
           {nextLabel}
         </button>
       ) : (
         <button
           type="submit"
-          className="bg-brand text-white px-6 py-2.5 rounded-lg font-medium hover:bg-brand-dark transition-colors"
+          className="bg-go text-white px-6 py-2.5 rounded-lg font-bold hover:bg-go-dark transition-colors"
         >
           Next: {nextStepLabel} &rarr;
         </button>

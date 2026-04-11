@@ -93,7 +93,7 @@ export default function MyRatesAccessPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full bg-brand text-white rounded-lg py-3 font-semibold hover:bg-brand-dark transition-colors disabled:opacity-50"
+              className="w-full bg-go text-white rounded-lg py-3 font-bold hover:bg-go-dark transition-colors disabled:opacity-50"
             >
               {submitting ? 'Sending...' : 'Send Access Link'}
             </button>

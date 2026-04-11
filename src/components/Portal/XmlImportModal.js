@@ -373,7 +373,7 @@ export default function XmlImportModal({ open, onClose }) {
                 </button>
                 <button
                   onClick={handleImport}
-                  className="bg-brand text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-brand-dark transition-colors"
+                  className="bg-go text-white px-6 py-2.5 rounded-lg text-sm font-bold hover:bg-go-dark transition-colors"
                 >
                   Import Loan
                 </button>
@@ -409,7 +409,7 @@ export default function XmlImportModal({ open, onClose }) {
                 </button>
                 <button
                   onClick={handleViewLoan}
-                  className="bg-brand text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-brand-dark transition-colors"
+                  className="bg-go text-white px-6 py-2.5 rounded-lg text-sm font-bold hover:bg-go-dark transition-colors"
                 >
                   View Loan &rarr;
                 </button>

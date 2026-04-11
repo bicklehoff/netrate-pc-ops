@@ -81,7 +81,7 @@ function VerifyContent() {
           <p className="text-gray-500 mb-6">{error}</p>
           <a
             href="/portal/auth/login"
-            className="inline-block bg-brand text-white px-6 py-2.5 rounded-lg font-medium hover:bg-brand-dark transition-colors"
+            className="inline-block bg-go text-white px-6 py-2.5 rounded-lg font-bold hover:bg-go-dark transition-colors"
           >
             Request new link
           </a>

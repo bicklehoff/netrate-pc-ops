@@ -14,13 +14,21 @@ module.exports = {
         // ink    = primary text / dark fill (#1A1F2E)
         // surface / surface-alt = cards / subtle panels
         brand: {
-          DEFAULT: '#0071CE',
-          dark:    '#0060B0',
-          light:   '#E5F0FA',
+          DEFAULT: '#0060B0',
+          dark:    '#004F94',
+          light:   '#E3EEF8',
         },
+        // "go" — primary forward-motion CTA (Apply Now, Submit, See My Rate, Send, etc.)
+        go: {
+          DEFAULT: '#059669',
+          dark:    '#047857',
+          light:   '#D1FAE5',
+        },
+        // yellow accent — highlights, "Live Rates" chip, featured-row tag
+        // Not used for primary CTAs anymore — that's "go" green.
         accent: {
           DEFAULT: '#FFC220',
-          dark:    '#FFD04A', // hover — actually lighter, per design system
+          dark:    '#FFD04A',
           light:   'rgba(255,194,32,0.10)',
         },
         ink: {

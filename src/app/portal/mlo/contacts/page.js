@@ -162,7 +162,7 @@ export default function ContactsPage() {
         </div>
         <button
           onClick={() => setShowCreate(!showCreate)}
-          className="bg-brand text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-dark transition-colors"
+          className="bg-go text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-go-dark transition-colors"
         >
           + New Contact
         </button>
@@ -195,7 +195,7 @@ export default function ContactsPage() {
             </div>
           </div>
           <div className="flex gap-2">
-            <button type="submit" disabled={creating} className="bg-brand text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-dark disabled:opacity-50">
+            <button type="submit" disabled={creating} className="bg-go text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-go-dark disabled:opacity-50">
               {creating ? 'Creating...' : 'Create'}
             </button>
             <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm">Cancel</button>
@@ -389,7 +389,7 @@ export default function ContactsPage() {
                 </div>
               </div>
               <div className="flex gap-2">
-                <button type="submit" disabled={creatingLead} className="flex-1 bg-brand text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-dark disabled:opacity-50">
+                <button type="submit" disabled={creatingLead} className="flex-1 bg-go text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-go-dark disabled:opacity-50">
                   {creatingLead ? 'Creating...' : 'Create Lead'}
                 </button>
                 <button type="button" onClick={() => setLeadModal(null)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm">Cancel</button>

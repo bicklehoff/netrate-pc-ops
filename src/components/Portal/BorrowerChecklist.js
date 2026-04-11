@@ -151,7 +151,7 @@ export default function BorrowerChecklist({ loan }) {
                           }}
                           disabled={uploading === item.id}
                         />
-                        <span className="inline-flex items-center px-3 py-1.5 bg-brand text-white text-xs font-medium rounded-lg hover:bg-brand-dark transition-colors">
+                        <span className="inline-flex items-center px-3 py-1.5 bg-go text-white text-xs font-bold rounded-lg hover:bg-go-dark transition-colors">
                           {uploading === item.id ? 'Uploading...' : 'Upload'}
                         </span>
                       </label>

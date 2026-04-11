@@ -78,7 +78,7 @@ function ScenarioView({ scenario, token }) {
         </div>
         <Link
           href={`/portal/apply?from=brp&token=${token}`}
-          className="bg-brand text-white rounded-lg px-5 py-2.5 text-sm font-semibold hover:bg-brand-dark transition-colors whitespace-nowrap"
+          className="bg-go text-white rounded-lg px-5 py-2.5 text-sm font-bold hover:bg-go-dark transition-colors whitespace-nowrap"
         >
           Apply with This Scenario
         </Link>
@@ -238,7 +238,7 @@ function ScenarioView({ scenario, token }) {
                 </div>
                 <Link
                   href={buildRepriceUrl(sd, token)}
-                  className="bg-brand text-white rounded-lg px-5 py-2.5 text-sm font-semibold hover:bg-brand-dark transition-colors"
+                  className="bg-go text-white rounded-lg px-5 py-2.5 text-sm font-bold hover:bg-go-dark transition-colors"
                 >
                   Reprice Now
                 </Link>
@@ -392,7 +392,7 @@ function MyRatesContent() {
       {!scenario ? (
         <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
           <p className="text-gray-500 mb-4">You don&apos;t have a saved scenario yet.</p>
-          <Link href="/rates" className="inline-block bg-brand text-white rounded-lg px-6 py-2.5 text-sm font-semibold hover:bg-brand-dark transition-colors">
+          <Link href="/rates" className="inline-block bg-go text-white rounded-lg px-6 py-2.5 text-sm font-bold hover:bg-go-dark transition-colors">
             Search Rates
           </Link>
         </div>

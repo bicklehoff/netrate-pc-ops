@@ -232,7 +232,7 @@ export default function DSCRCalculator() {
                   [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-brand
                   [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:cursor-pointer"
                 style={{
-                  background: `linear-gradient(to right, #0071CE 0%, #0071CE ${dpPct}%, #e5e7eb ${dpPct}%, #e5e7eb 100%)`
+                  background: `linear-gradient(to right, #0060B0 0%, #0060B0 ${dpPct}%, #e5e7eb ${dpPct}%, #e5e7eb 100%)`
                 }}
               />
               <div className="flex justify-between text-[11px] text-gray-400 mt-1">
@@ -356,7 +356,7 @@ export default function DSCRCalculator() {
             {/* Stacked bar */}
             <div className="flex h-2.5 rounded-full overflow-hidden gap-0.5 mb-2">
               {[
-                { val: activeRow.pi, color: '#0071CE' },
+                { val: activeRow.pi, color: '#0060B0' },
                 { val: monthlyTaxes, color: '#f59e0b' },
                 { val: monthlyInsurance, color: '#10b981' },
                 { val: monthlyHoa, color: '#8b5cf6' },
@@ -367,7 +367,7 @@ export default function DSCRCalculator() {
             </div>
             <div className="flex flex-wrap gap-3 mb-4">
               {[
-                { color: '#0071CE', label: 'P&I' },
+                { color: '#0060B0', label: 'P&I' },
                 { color: '#f59e0b', label: 'Taxes' },
                 { color: '#10b981', label: 'Insurance' },
                 ...(monthlyHoa > 0 ? [{ color: '#8b5cf6', label: 'HOA' }] : []),
@@ -381,7 +381,7 @@ export default function DSCRCalculator() {
 
             <div className="space-y-2">
               {[
-                { dot: '#0071CE', label: 'Principal & Interest', val: fmtD(activeRow.pi) + '/mo' },
+                { dot: '#0060B0', label: 'Principal & Interest', val: fmtD(activeRow.pi) + '/mo' },
                 { dot: '#f59e0b', label: 'Property Taxes', val: fmtD(monthlyTaxes) + '/mo' },
                 { dot: '#10b981', label: 'Insurance', val: fmtD(monthlyInsurance) + '/mo' },
                 ...(monthlyHoa > 0 ? [{ dot: '#8b5cf6', label: 'HOA', val: fmtD(monthlyHoa) + '/mo' }] : []),

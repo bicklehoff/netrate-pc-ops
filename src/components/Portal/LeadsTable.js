@@ -278,7 +278,7 @@ export default function LeadsTable({ leads, onStatusChange }) {
                   <button
                     onClick={() => handleAddNote(lead.id)}
                     disabled={savingNote || !noteText.trim()}
-                    className="bg-brand text-white px-3 py-1.5 rounded text-sm font-medium hover:bg-brand-dark transition-colors disabled:opacity-50"
+                    className="bg-go text-white px-3 py-1.5 rounded text-sm font-bold hover:bg-go-dark transition-colors disabled:opacity-50"
                   >
                     {savingNote ? '...' : 'Add'}
                   </button>

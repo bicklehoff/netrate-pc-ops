@@ -321,7 +321,7 @@ export default function Step5Declarations({ onNext, onBack }) {
             </button>
             <button
               type="submit"
-              className="bg-brand text-white px-6 py-2.5 rounded-lg font-medium hover:bg-brand-dark transition-colors"
+              className="bg-go text-white px-6 py-2.5 rounded-lg font-bold hover:bg-go-dark transition-colors"
             >
               Next: Review &rarr;
             </button>

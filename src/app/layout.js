@@ -147,7 +147,7 @@ export default function RootLayout({ children }) {
                 <rect width="44" height="44" rx="8" fill="#FFFFFF" stroke="rgba(26,31,46,0.12)"/>
                 <rect x="9"  y="24" width="5" height="11" rx="1" fill="#FFC220"/>
                 <rect x="17" y="21" width="5" height="14" rx="1" fill="#FFC220"/>
-                <rect x="25" y="12" width="5" height="23" rx="1" fill="#0071CE"/>
+                <rect x="25" y="12" width="5" height="23" rx="1" fill="#0060B0"/>
                 <rect x="33" y="26" width="5" height="9"  rx="1" fill="#FFC220"/>
               </svg>
               <div className="flex items-baseline" style={{ fontWeight: 500, letterSpacing: '-0.01em' }}>
@@ -186,7 +186,7 @@ export default function RootLayout({ children }) {
               <a href="/about" className="text-ink-mid hover:text-brand transition-colors">About</a>
               <a href="/contact" className="text-ink-mid hover:text-brand transition-colors">Contact</a>
               <a href="/portal/my-rates/access" className="text-ink-mid hover:text-brand transition-colors">My Rates</a>
-              <a href="/portal/apply" className="bg-accent text-ink px-5 py-2 rounded-nr-md font-bold hover:bg-accent-dark transition-all">
+              <a href="/portal/apply" className="bg-go text-white px-5 py-2 rounded-nr-md font-bold hover:bg-go-dark transition-all">
                 Apply Now
               </a>
             </nav>
@@ -234,7 +234,7 @@ export default function RootLayout({ children }) {
                     <rect width="44" height="44" rx="8" fill="rgba(255,255,255,0.06)"/>
                     <rect x="9"  y="24" width="5" height="11" rx="1" fill="#FFC220"/>
                     <rect x="17" y="21" width="5" height="14" rx="1" fill="#FFC220"/>
-                    <rect x="25" y="12" width="5" height="23" rx="1" fill="#0071CE"/>
+                    <rect x="25" y="12" width="5" height="23" rx="1" fill="#0060B0"/>
                     <rect x="33" y="26" width="5" height="9"  rx="1" fill="#FFC220"/>
                   </svg>
                   <div className="flex items-baseline" style={{ fontWeight: 500, letterSpacing: '-0.01em' }}>

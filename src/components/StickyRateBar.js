@@ -71,7 +71,7 @@ export default function StickyRateBar({ rate, apr }) {
           {/* CTA — always visible */}
           <Link
             href="/portal/apply"
-            className="bg-accent text-ink text-sm font-bold px-5 py-2 rounded-nr-md hover:bg-accent-dark transition-all sm:ml-auto md:ml-0"
+            className="bg-go text-white text-sm font-bold px-5 py-2 rounded-nr-md hover:bg-go-dark transition-all sm:ml-auto md:ml-0"
           >
             Apply Now
           </Link>

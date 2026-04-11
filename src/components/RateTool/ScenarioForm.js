@@ -419,7 +419,7 @@ export default function ScenarioForm({ scenario, onChange, onSubmit, loading }) 
       <button
         onClick={onSubmit}
         disabled={loading || !loanAmount || scenario.units === '5+'}
-        className="w-full bg-accent text-ink py-3 rounded-nr-md font-bold text-base hover:bg-accent-dark transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-2"
+        className="w-full bg-go text-white py-3 rounded-nr-md font-bold text-base hover:bg-go-dark transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-2"
       >
         {loading ? (
           <>

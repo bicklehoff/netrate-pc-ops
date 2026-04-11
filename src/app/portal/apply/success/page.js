@@ -84,7 +84,7 @@ export default function SuccessPage() {
       <div className="flex items-center justify-center gap-4">
         <Link
           href={loginUrl}
-          className="bg-brand text-white px-6 py-2.5 rounded-lg font-medium hover:bg-brand-dark transition-colors"
+          className="bg-go text-white px-6 py-2.5 rounded-lg font-bold hover:bg-go-dark transition-colors"
         >
           Check My Status
         </Link>
