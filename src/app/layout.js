@@ -142,49 +142,51 @@ export default function RootLayout({ children }) {
         {/* Navigation — glassmorphism on scroll */}
         <GlassNav>
           <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-            <a href="/" className="flex items-center gap-3">
-              <svg width="32" height="32" viewBox="0 0 44 44" fill="none" aria-hidden="true">
-                <rect width="44" height="44" rx="14" fill="#024c4f"/>
-                <line x1="10" y1="33" x2="19" y2="11" stroke="#fff000" strokeWidth="4.5" strokeLinecap="round"/>
-                <line x1="25" y1="33" x2="34" y2="11" stroke="#fff000" strokeWidth="4.5" strokeLinecap="round"/>
+            <a href="/" className="flex items-center gap-3 no-underline" aria-label="NetRate Mortgage">
+              <svg width="34" height="34" viewBox="0 0 44 44" aria-hidden="true">
+                <rect width="44" height="44" rx="8" fill="#FFFFFF" stroke="rgba(26,31,46,0.12)"/>
+                <rect x="9"  y="24" width="5" height="11" rx="1" fill="#FFC220"/>
+                <rect x="17" y="21" width="5" height="14" rx="1" fill="#FFC220"/>
+                <rect x="25" y="12" width="5" height="23" rx="1" fill="#0071CE"/>
+                <rect x="33" y="26" width="5" height="9"  rx="1" fill="#FFC220"/>
               </svg>
-              <div className="flex items-baseline gap-0.5">
-                <span className="text-xl font-bold text-gray-900 tracking-[0.3px]">Net</span>
-                <span className="text-xl font-bold text-brand tracking-[0.3px]">Rate</span>
-                <span className="text-lg font-bold text-gray-700 ml-1.5">Mortgage</span>
+              <div className="flex items-baseline" style={{ fontWeight: 500, letterSpacing: '-0.01em' }}>
+                <span className="text-[22px] text-ink">Net</span>
+                <span className="text-[22px] text-brand">Rate</span>
+                <span className="text-[22px] text-ink-mid ml-1.5">Mortgage</span>
               </div>
             </a>
             <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
-              <a href="/rates" className="text-gray-600 hover:text-brand transition-colors">Rates</a>
-              <a href="/tools" className="text-gray-600 hover:text-brand transition-colors">Tools</a>
-              <a href="/rate-watch" className="text-gray-600 hover:text-brand transition-colors">Market</a>
+              <a href="/rates" className="text-ink-mid hover:text-brand transition-colors">Rates</a>
+              <a href="/tools" className="text-ink-mid hover:text-brand transition-colors">Tools</a>
+              <a href="/rate-watch" className="text-ink-mid hover:text-brand transition-colors">Market</a>
               <div className="relative group">
-                <button className="text-gray-600 hover:text-brand transition-colors flex items-center gap-1">
+                <button className="text-ink-mid hover:text-brand transition-colors flex items-center gap-1">
                   Resources
                   <svg className="w-3.5 h-3.5 transition-transform group-hover:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                 </button>
                 <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                  <div className="bg-white rounded-xl shadow-lg border border-gray-200 py-2 w-56">
-                    <a href="/resources" className="block px-4 py-2 text-brand font-medium hover:bg-gray-50 transition-colors">All Resources &rarr;</a>
+                  <div className="bg-white rounded-lg shadow-nr-md border border-gray-200 py-2 w-56">
+                    <a href="/resources" className="block px-4 py-2 text-brand font-medium hover:bg-surface-alt transition-colors">All Resources &rarr;</a>
                     <div className="border-t border-gray-100 my-1"></div>
-                    <a href="/how-pricing-works" className="block px-4 py-2 text-gray-600 hover:bg-gray-50 hover:text-brand transition-colors">How Pricing Works</a>
-                    <a href="/points-and-credits" className="block px-4 py-2 text-gray-600 hover:bg-gray-50 hover:text-brand transition-colors">Points &amp; Credits</a>
-                    <a href="/closing-costs" className="block px-4 py-2 text-gray-600 hover:bg-gray-50 hover:text-brand transition-colors">Closing Costs</a>
-                    <a href="/breakeven" className="block px-4 py-2 text-gray-600 hover:bg-gray-50 hover:text-brand transition-colors">Breakeven Math</a>
-                    <a href="/refinance-playbook" className="block px-4 py-2 text-gray-600 hover:bg-gray-50 hover:text-brand transition-colors">Refinance Playbook</a>
-                    <a href="/reverse-mortgage" className="block px-4 py-2 text-gray-600 hover:bg-gray-50 hover:text-brand transition-colors">Reverse Mortgages</a>
-                    <a href="/condo-rules-changed" className="block px-4 py-2 text-gray-600 hover:bg-gray-50 hover:text-brand transition-colors">Condo Rules Changed</a>
-                    <a href="/equity-without-losing-rate" className="block px-4 py-2 text-gray-600 hover:bg-gray-50 hover:text-brand transition-colors">Home Equity Options</a>
+                    <a href="/how-pricing-works" className="block px-4 py-2 text-ink-mid hover:bg-surface-alt hover:text-brand transition-colors">How Pricing Works</a>
+                    <a href="/points-and-credits" className="block px-4 py-2 text-ink-mid hover:bg-surface-alt hover:text-brand transition-colors">Points &amp; Credits</a>
+                    <a href="/closing-costs" className="block px-4 py-2 text-ink-mid hover:bg-surface-alt hover:text-brand transition-colors">Closing Costs</a>
+                    <a href="/breakeven" className="block px-4 py-2 text-ink-mid hover:bg-surface-alt hover:text-brand transition-colors">Breakeven Math</a>
+                    <a href="/refinance-playbook" className="block px-4 py-2 text-ink-mid hover:bg-surface-alt hover:text-brand transition-colors">Refinance Playbook</a>
+                    <a href="/reverse-mortgage" className="block px-4 py-2 text-ink-mid hover:bg-surface-alt hover:text-brand transition-colors">Reverse Mortgages</a>
+                    <a href="/condo-rules-changed" className="block px-4 py-2 text-ink-mid hover:bg-surface-alt hover:text-brand transition-colors">Condo Rules Changed</a>
+                    <a href="/equity-without-losing-rate" className="block px-4 py-2 text-ink-mid hover:bg-surface-alt hover:text-brand transition-colors">Home Equity Options</a>
                     <div className="border-t border-gray-100 my-1"></div>
-                    <a href="/why-netrate" className="block px-4 py-2 text-gray-600 hover:bg-gray-50 hover:text-brand transition-colors">Why NetRate</a>
-                    <a href="/good-deal" className="block px-4 py-2 text-gray-600 hover:bg-gray-50 hover:text-brand transition-colors">Is It a Good Deal?</a>
+                    <a href="/why-netrate" className="block px-4 py-2 text-ink-mid hover:bg-surface-alt hover:text-brand transition-colors">Why NetRate</a>
+                    <a href="/good-deal" className="block px-4 py-2 text-ink-mid hover:bg-surface-alt hover:text-brand transition-colors">Is It a Good Deal?</a>
                   </div>
                 </div>
               </div>
-              <a href="/about" className="text-gray-600 hover:text-brand transition-colors">About</a>
-              <a href="/contact" className="text-gray-600 hover:text-brand transition-colors">Contact</a>
-              <a href="/portal/my-rates/access" className="text-gray-600 hover:text-brand transition-colors">My Rates</a>
-              <a href="/portal/apply" className="bg-brand text-[#fff000] px-5 py-2 rounded-xl hover:bg-brand-dark glow-brand transition-all">
+              <a href="/about" className="text-ink-mid hover:text-brand transition-colors">About</a>
+              <a href="/contact" className="text-ink-mid hover:text-brand transition-colors">Contact</a>
+              <a href="/portal/my-rates/access" className="text-ink-mid hover:text-brand transition-colors">My Rates</a>
+              <a href="/portal/apply" className="bg-accent text-ink px-5 py-2 rounded-nr-md font-bold hover:bg-accent-dark transition-all">
                 Apply Now
               </a>
             </nav>
@@ -197,7 +199,7 @@ export default function RootLayout({ children }) {
         </main>
 
         {/* Google Reviews Banner — site-wide */}
-        <div className="bg-[#F5F7FA] border-t border-gray-200">
+        <div className="bg-surface-alt border-t border-gray-200">
           <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-center gap-3">
             <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
@@ -205,10 +207,10 @@ export default function RootLayout({ children }) {
               <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
               <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
             </svg>
-            <svg className="w-4 h-4 text-yellow-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <svg className="w-4 h-4 flex-shrink-0" fill="#FFC220" viewBox="0 0 20 20">
               <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
             </svg>
-            <span className="text-gray-900 text-sm font-semibold">4.9</span>
+            <span className="text-ink text-sm font-semibold">4.9</span>
             {/* TODO: Update Google Maps link after GBP name change from Locus → NetRate */}
             <a
               href="https://www.google.com/maps/search/?api=1&query=Locus+Mortgage&query_place_id=ChIJa5-5jCXza4cRptwJxaP23eU"
@@ -222,21 +224,23 @@ export default function RootLayout({ children }) {
         </div>
 
         {/* Footer */}
-        <footer className="bg-deep text-gray-400 mt-auto">
+        <footer className="bg-ink text-gray-400 mt-auto">
           <div className="max-w-6xl mx-auto px-6 py-12">
             <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-8">
               {/* Company */}
               <div className="col-span-2 md:col-span-1">
                 <div className="flex items-center gap-2.5 mb-3">
-                  <svg width="28" height="28" viewBox="0 0 44 44" fill="none" aria-hidden="true">
-                    <rect width="44" height="44" rx="14" fill="rgba(255,255,255,0.12)"/>
-                    <line x1="10" y1="33" x2="19" y2="11" stroke="#fff000" strokeWidth="4.5" strokeLinecap="round"/>
-                    <line x1="25" y1="33" x2="34" y2="11" stroke="#fff000" strokeWidth="4.5" strokeLinecap="round"/>
+                  <svg width="30" height="30" viewBox="0 0 44 44" aria-hidden="true">
+                    <rect width="44" height="44" rx="8" fill="rgba(255,255,255,0.06)"/>
+                    <rect x="9"  y="24" width="5" height="11" rx="1" fill="#FFC220"/>
+                    <rect x="17" y="21" width="5" height="14" rx="1" fill="#FFC220"/>
+                    <rect x="25" y="12" width="5" height="23" rx="1" fill="#0071CE"/>
+                    <rect x="33" y="26" width="5" height="9"  rx="1" fill="#FFC220"/>
                   </svg>
-                  <div className="flex items-baseline gap-0.5">
-                    <span className="text-lg font-bold text-white tracking-[0.3px]">Net</span>
-                    <span className="text-lg font-bold text-brand-light tracking-[0.3px]">Rate</span>
-                    <span className="text-base font-bold text-gray-300 ml-1.5">Mortgage</span>
+                  <div className="flex items-baseline" style={{ fontWeight: 500, letterSpacing: '-0.01em' }}>
+                    <span className="text-lg text-white">Net</span>
+                    <span className="text-lg text-brand">Rate</span>
+                    <span className="text-lg text-white/70 ml-1.5">Mortgage</span>
                   </div>
                 </div>
                 <p className="text-sm leading-relaxed">

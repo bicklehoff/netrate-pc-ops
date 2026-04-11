@@ -74,7 +74,7 @@ export default async function HomePage() {
         <div className="flex">
           {/* Fixed label */}
           <div className="flex-shrink-0 flex items-center px-4 border-r border-white/10 bg-brand-dark">
-            <span className="text-[#fff000] text-[10px] font-bold uppercase tracking-widest">Live Rates</span>
+            <span className="text-accent text-[10px] font-bold uppercase tracking-widest">Live Rates</span>
           </div>
           {/* Scrolling track */}
           <div className="overflow-hidden flex-1">
@@ -97,7 +97,7 @@ export default async function HomePage() {
                     <span className="text-white/50">780+ FICO &middot; 75% LTV &middot; Purchase</span>
                   </div>
                   <div className="w-px h-3.5 bg-white/20" />
-                  <a href="/rate-watch" className="text-[#fff000] hover:text-[#fff000]/80 transition-colors">
+                  <a href="/rate-watch" className="text-accent hover:text-accent/80 transition-colors">
                     Rate Watch &rarr;
                   </a>
                   <div className="w-px h-3.5 bg-white/20" />
@@ -224,7 +224,7 @@ export default async function HomePage() {
             <div className="px-6 pb-5 pt-1">
               <Link
                 href="/rates"
-                className="block text-center py-3 bg-brand text-[#fff000] rounded-2xl text-sm font-medium hover:bg-brand-dark transition-colors"
+                className="block text-center py-3 bg-accent text-ink rounded-nr-md text-sm font-bold hover:bg-accent-dark transition-colors"
               >
                 Compare Your Options &rarr;
               </Link>
@@ -400,7 +400,7 @@ export default async function HomePage() {
       </section>
 
       {/* ===== BOTTOM CTA — dark teal band ===== */}
-      <section className="bg-deep pt-12 pb-16 text-center border-t-2 border-[#fff000]/80">
+      <section className="bg-deep pt-12 pb-16 text-center border-t-2 border-accent/80">
         <div className="max-w-6xl mx-auto px-6 pt-6">
           <h2 className="text-3xl font-extrabold text-white">Not Sure Which Rate? Let Us Help.</h2>
           <p className="text-base text-white/70 mt-3 max-w-xl mx-auto">
@@ -409,7 +409,7 @@ export default async function HomePage() {
           <div className="mt-7">
             <Link
               href="/contact"
-              className="text-[#fff000] font-semibold hover:text-white transition-colors"
+              className="text-accent font-semibold hover:text-white transition-colors"
             >
               Get a free quote &rarr;
             </Link>

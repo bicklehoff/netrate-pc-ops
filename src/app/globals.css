@@ -2,50 +2,88 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================
+   NETRATE MORTGAGE — Design System Tokens
+   Locked April 2026
+   ============================================ */
+
 :root {
-  --brand-primary: #024c4f;
-  --brand-dark: #013638;
-  --brand-light: #afc8c7;
-  --accent-yellow: #fff000;
-  --text-primary: #111827;
-  --text-body: #374151;
-  --text-light: #6B7280;
-  --text-muted: #9CA3AF;
-  --bg-page: #F5F7FA;
-  --bg-card: #ffffff;
-  --bg-subtle: #F5F7FA;
-  --border: #e5e7eb;
-  --success: #059669;
-  --warning: #dc2626;
+  /* Backgrounds */
+  --nr-bg:              #FAFAF7;
+  --nr-surface:         #FFFFFF;
+  --nr-surface-alt:     #F5F4F1;
+
+  /* Text */
+  --nr-text:            #1A1F2E;
+  --nr-text-mid:        #4A5C6E;
+  --nr-text-subtle:     #7A8E9E;
+  --nr-text-faint:      rgba(26,31,46,0.2);
+
+  /* Borders */
+  --nr-border:          rgba(26,31,46,0.08);
+  --nr-border-strong:   rgba(26,31,46,0.16);
+
+  /* Yellow — primary accent / CTA */
+  --nr-yellow:          #FFC220;
+  --nr-yellow-hover:    #FFD04A;
+  --nr-yellow-bg:       rgba(255,194,32,0.10);
+  --nr-yellow-border:   rgba(255,194,32,0.30);
+
+  /* Blue — secondary / interactive */
+  --nr-blue:            #0071CE;
+  --nr-blue-hover:      #0060B0;
+  --nr-blue-bg:         rgba(0,113,206,0.07);
+  --nr-blue-border:     rgba(0,113,206,0.28);
+
+  /* Functional */
+  --nr-positive:        #48B87A;
+  --nr-caution:         #D47A2A;
+  --nr-error:           #C03020;
+
+  /* Legacy aliases — kept for components not yet migrated */
+  --brand-primary: var(--nr-blue);
+  --brand-dark:    var(--nr-blue-hover);
+  --brand-light:   #E5F0FA;
+  --accent-yellow: var(--nr-yellow);
+  --text-primary:  var(--nr-text);
+  --text-body:     var(--nr-text-mid);
+  --text-light:    var(--nr-text-subtle);
+  --text-muted:    var(--nr-text-subtle);
+  --bg-page:       var(--nr-bg);
+  --bg-card:       var(--nr-surface);
+  --bg-subtle:     var(--nr-surface-alt);
+  --border:        var(--nr-border);
+  --success:       var(--nr-positive);
+  --warning:       var(--nr-error);
 }
 
 body {
-  color: var(--text-body);
-  background: var(--bg-page);
+  color: var(--nr-text);
+  background: var(--nr-bg);
 }
 
-/* Tabular numbers — align decimals in rate tables, cards, and financial displays */
+/* Tabular numbers — align decimals in rate tables, cards, financial displays */
 .font-mono,
 .tabular-nums,
 [data-numeric] {
   font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1, 'zero' 0;
 }
 
-/* Apply tabular-nums to all table cells containing financial data */
 td[class*="font-mono"],
 th[class*="font-mono"] {
   font-variant-numeric: tabular-nums;
 }
 
-/* Brand glow on interactive elements */
+/* Subtle glow on primary interactive elements */
 .glow-brand {
   transition: box-shadow 0.2s ease;
 }
 .glow-brand:hover {
-  box-shadow: 0 0 20px rgba(2, 76, 79, 0.2);
+  box-shadow: 0 0 20px rgba(0, 113, 206, 0.18);
 }
 .glow-brand:focus-visible {
-  box-shadow: 0 0 20px rgba(2, 76, 79, 0.3);
+  box-shadow: 0 0 20px rgba(0, 113, 206, 0.28);
 }
 
 /* Market ticker scrolling animation */
@@ -70,12 +108,10 @@ th[class*="font-mono"] {
     font-size: 11px;
   }
 
-  /* Hide nav and screen-only elements via data attribute */
   nav, header, [data-print-hide] {
     display: none !important;
   }
 
-  /* Prevent constrained widths from clipping print layouts */
   .max-w-4xl, .max-w-5xl, .max-w-6xl, .max-w-7xl {
     max-width: 100% !important;
   }
@@ -88,7 +124,6 @@ th[class*="font-mono"] {
     page-break-before: always;
   }
 
-  /* Flatten modal overlay for print — removes backdrop, fixed positioning */
   .report-overlay {
     position: static !important;
     background: none !important;

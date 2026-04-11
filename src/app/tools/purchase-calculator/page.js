@@ -195,7 +195,7 @@ function PurchaseCalculatorContent() {
           </div>
 
           <div className="flex gap-3 pt-2">
-            <Link href="/portal/apply" className="inline-flex items-center px-5 py-2.5 bg-brand text-[#fff000] text-sm font-medium rounded-2xl hover:bg-brand-dark transition-colors">
+            <Link href="/portal/apply" className="inline-flex items-center px-5 py-2.5 bg-accent text-ink text-sm font-bold rounded-nr-md hover:bg-accent-dark transition-colors">
               Get pre-approved
             </Link>
             <Link href="/contact" className="inline-flex items-center px-5 py-2.5 border-2 border-brand text-brand text-sm font-medium rounded-2xl hover:bg-brand/5 transition-colors">

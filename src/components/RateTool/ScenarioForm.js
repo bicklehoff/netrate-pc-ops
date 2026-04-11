@@ -280,8 +280,8 @@ export default function ScenarioForm({ scenario, onChange, onSubmit, loading }) 
                 <button key={val} type="button" onClick={() => update('propertyType', val)}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
                     scenario.propertyType === val
-                      ? 'bg-brand text-[#fff000] border-brand'
-                      : 'bg-white text-gray-600 border-gray-200 hover:border-brand/40 hover:text-brand'
+                      ? 'bg-brand text-white border-brand'
+                      : 'bg-white text-ink-mid border-gray-200 hover:border-brand/40 hover:text-brand'
                   }`}>
                   {label}
                 </button>
@@ -298,8 +298,8 @@ export default function ScenarioForm({ scenario, onChange, onSubmit, loading }) 
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
                     (scenario.units || '1') === val
                       ? val === '5+' ? 'bg-gray-400 text-white border-gray-400 cursor-default'
-                        : 'bg-brand text-[#fff000] border-brand'
-                      : 'bg-white text-gray-600 border-gray-200 hover:border-brand/40 hover:text-brand'
+                        : 'bg-brand text-white border-brand'
+                      : 'bg-white text-ink-mid border-gray-200 hover:border-brand/40 hover:text-brand'
                   }`}>
                   {label}
                 </button>
@@ -419,7 +419,7 @@ export default function ScenarioForm({ scenario, onChange, onSubmit, loading }) 
       <button
         onClick={onSubmit}
         disabled={loading || !loanAmount || scenario.units === '5+'}
-        className="w-full bg-brand text-[#fff000] py-3 rounded-2xl font-semibold text-base hover:bg-brand-dark transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-2"
+        className="w-full bg-accent text-ink py-3 rounded-nr-md font-bold text-base hover:bg-accent-dark transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-2"
       >
         {loading ? (
           <>

@@ -8,17 +8,51 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        // ── Design System (locked April 2026) ───────────────────────
+        // brand  = primary interactive accent (blue #0071CE)
+        // accent = CTA / highlight accent (yellow #FFC220)
+        // ink    = primary text / dark fill (#1A1F2E)
+        // surface / surface-alt = cards / subtle panels
         brand: {
-          DEFAULT: '#024c4f',
-          dark: '#013638',
-          light: '#afc8c7',
+          DEFAULT: '#0071CE',
+          dark:    '#0060B0',
+          light:   '#E5F0FA',
         },
-        deep: '#012d30',
-        surface: '#F5F7FA',
+        accent: {
+          DEFAULT: '#FFC220',
+          dark:    '#FFD04A', // hover — actually lighter, per design system
+          light:   'rgba(255,194,32,0.10)',
+        },
+        ink: {
+          DEFAULT: '#1A1F2E',
+          mid:     '#4A5C6E',
+          subtle:  '#7A8E9E',
+        },
+        surface: {
+          DEFAULT: '#FFFFFF',
+          alt:     '#F5F4F1',
+          page:    '#FAFAF7',
+        },
+        // Legacy tokens kept for components not yet migrated.
+        // Mapped to new-system equivalents so unmigrated code still renders coherently.
+        deep: '#1A1F2E',
       },
       fontFamily: {
         sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
         mono: ['var(--font-mono)', 'JetBrains Mono', 'Fira Code', 'monospace'],
+      },
+      borderRadius: {
+        // Design system radius scale — additive, does not clobber Tailwind defaults
+        'nr-xs': '2px',
+        'nr-sm': '4px',
+        'nr-md': '6px',
+        'nr-lg': '8px',
+        'nr-xl': '12px',
+      },
+      boxShadow: {
+        'nr-sm': '0 1px 3px rgba(26,31,46,0.05)',
+        'nr-md': '0 1px 6px rgba(26,31,46,0.07), 0 2px 12px rgba(26,31,46,0.05)',
+        'nr-lg': '0 2px 8px rgba(26,31,46,0.08), 0 4px 24px rgba(26,31,46,0.06)',
       },
     },
   },
