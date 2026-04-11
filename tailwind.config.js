@@ -14,9 +14,9 @@ module.exports = {
         // ink    = primary text / dark fill (#1A1F2E)
         // surface / surface-alt = cards / subtle panels
         brand: {
-          DEFAULT: '#0060B0',
-          dark:    '#004F94',
-          light:   '#E3EEF8',
+          DEFAULT: '#2E6BA8',
+          dark:    '#24578C',
+          light:   '#E6EEF7',
         },
         // "go" — primary forward-motion CTA (Apply Now, Submit, See My Rate, Send, etc.)
         go: {

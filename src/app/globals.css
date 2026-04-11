@@ -30,10 +30,10 @@
   --nr-yellow-border:   rgba(255,194,32,0.30);
 
   /* Blue — primary interactive / link / secondary button */
-  --nr-blue:            #0060B0;
-  --nr-blue-hover:      #004F94;
-  --nr-blue-bg:         rgba(0,96,176,0.07);
-  --nr-blue-border:     rgba(0,96,176,0.28);
+  --nr-blue:            #2E6BA8;
+  --nr-blue-hover:      #24578C;
+  --nr-blue-bg:         rgba(46,107,168,0.07);
+  --nr-blue-border:     rgba(46,107,168,0.28);
 
   /* Green — primary forward-motion CTA ("go") */
   --nr-green:           #059669;
@@ -86,10 +86,10 @@ th[class*="font-mono"] {
   transition: box-shadow 0.2s ease;
 }
 .glow-brand:hover {
-  box-shadow: 0 0 20px rgba(0, 96, 176, 0.18);
+  box-shadow: 0 0 20px rgba(46, 107, 168, 0.18);
 }
 .glow-brand:focus-visible {
-  box-shadow: 0 0 20px rgba(0, 96, 176, 0.28);
+  box-shadow: 0 0 20px rgba(46, 107, 168, 0.28);
 }
 
 /* Market ticker scrolling animation */

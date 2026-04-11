@@ -147,7 +147,7 @@ export default function RootLayout({ children }) {
                 <rect width="44" height="44" rx="8" fill="#FFFFFF" stroke="rgba(26,31,46,0.12)"/>
                 <rect x="9"  y="24" width="5" height="11" rx="1" fill="#FFC220"/>
                 <rect x="17" y="21" width="5" height="14" rx="1" fill="#FFC220"/>
-                <rect x="25" y="12" width="5" height="23" rx="1" fill="#0060B0"/>
+                <rect x="25" y="12" width="5" height="23" rx="1" fill="#2E6BA8"/>
                 <rect x="33" y="26" width="5" height="9"  rx="1" fill="#FFC220"/>
               </svg>
               <div className="flex items-baseline" style={{ fontWeight: 500, letterSpacing: '-0.01em' }}>
@@ -234,7 +234,7 @@ export default function RootLayout({ children }) {
                     <rect width="44" height="44" rx="8" fill="rgba(255,255,255,0.06)"/>
                     <rect x="9"  y="24" width="5" height="11" rx="1" fill="#FFC220"/>
                     <rect x="17" y="21" width="5" height="14" rx="1" fill="#FFC220"/>
-                    <rect x="25" y="12" width="5" height="23" rx="1" fill="#0060B0"/>
+                    <rect x="25" y="12" width="5" height="23" rx="1" fill="#2E6BA8"/>
                     <rect x="33" y="26" width="5" height="9"  rx="1" fill="#FFC220"/>
                   </svg>
                   <div className="flex items-baseline" style={{ fontWeight: 500, letterSpacing: '-0.01em' }}>
