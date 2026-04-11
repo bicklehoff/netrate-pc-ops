@@ -323,7 +323,7 @@ export default function ContactCard({ contact, onUpdate }) {
         <button
           onClick={handleAddNote}
           disabled={!noteText.trim() || saving}
-          className="px-3 py-1.5 bg-brand text-white text-xs font-semibold rounded-lg hover:bg-brand/90 disabled:opacity-50 transition-colors"
+          className="px-3 py-1.5 bg-go text-white text-xs font-bold rounded-lg hover:bg-go-dark disabled:opacity-50 transition-colors"
         >
           Save
         </button>

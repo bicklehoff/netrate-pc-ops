@@ -189,7 +189,7 @@ export default function SmsThread({ contactId, contactPhone, messages: initialMe
           <button
             onClick={handleSend}
             disabled={!newMessage.trim() || sending}
-            className="p-2 rounded-xl bg-brand text-white hover:bg-brand/90 disabled:bg-gray-200 disabled:text-gray-400 transition-colors flex-shrink-0"
+            className="p-2 rounded-xl bg-go text-white hover:bg-go-dark disabled:bg-gray-200 disabled:text-gray-400 transition-colors flex-shrink-0"
           >
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
               <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />

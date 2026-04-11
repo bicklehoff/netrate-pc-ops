@@ -265,7 +265,7 @@ export default function ContactDetailPage() {
           {(contact.status === 'past_client' || contact.status === 'subscriber') && (
             <button
               onClick={() => setShowLeadModal(true)}
-              className="bg-brand text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-dark transition-colors"
+              className="bg-go text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-go-dark transition-colors"
             >
               + New Lead
             </button>
@@ -520,7 +520,7 @@ export default function ContactDetailPage() {
               <button
                 onClick={addNote}
                 disabled={addingNote || !noteText.trim()}
-                className="bg-brand text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-brand-dark transition-colors disabled:opacity-50"
+                className="bg-go text-white px-3 py-2 rounded-lg text-sm font-bold hover:bg-go-dark transition-colors disabled:opacity-50"
               >
                 {addingNote ? '...' : 'Add'}
               </button>
@@ -607,7 +607,7 @@ export default function ContactDetailPage() {
               <button
                 onClick={createLead}
                 disabled={creatingLead}
-                className="bg-brand text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-dark transition-colors disabled:opacity-50"
+                className="bg-go text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-go-dark transition-colors disabled:opacity-50"
               >
                 {creatingLead ? 'Creating...' : 'Create Lead'}
               </button>
@@ -651,7 +651,7 @@ export default function ContactDetailPage() {
               <button
                 onClick={() => runAction('send_email', emailForm)}
                 disabled={actionLoading || !emailForm.subject || !emailForm.emailBody}
-                className="bg-brand text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-dark transition-colors disabled:opacity-50"
+                className="bg-go text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-go-dark transition-colors disabled:opacity-50"
               >
                 {actionLoading ? 'Sending...' : 'Send Email'}
               </button>
@@ -725,7 +725,7 @@ export default function ContactDetailPage() {
                   runAction('send_needs_list', { documents: docs });
                 }}
                 disabled={actionLoading}
-                className="bg-brand text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-dark transition-colors disabled:opacity-50"
+                className="bg-go text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-go-dark transition-colors disabled:opacity-50"
               >
                 {actionLoading ? 'Sending...' : 'Send Needs List'}
               </button>

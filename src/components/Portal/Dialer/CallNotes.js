@@ -73,7 +73,7 @@ export default function CallNotes({ callLogId, onSaved }) {
       <button
         onClick={handleSave}
         disabled={!content.trim() || saving}
-        className="w-full py-2 rounded-lg bg-brand text-white text-sm font-medium hover:bg-brand/90 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+        className="w-full py-2 rounded-lg bg-go text-white text-sm font-bold hover:bg-go-dark disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
       >
         {saving ? 'Saving...' : 'Save Note'}
       </button>

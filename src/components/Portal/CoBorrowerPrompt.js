@@ -18,7 +18,7 @@ export default function CoBorrowerPrompt({ maritalStatus, hasCoBorrowers, onAddS
           <button
             type="button"
             onClick={() => onAddSpouse()}
-            className="px-4 py-2 bg-brand text-white text-sm font-medium rounded-lg hover:bg-brand-dark transition-colors"
+            className="px-4 py-2 bg-go text-white text-sm font-bold rounded-lg hover:bg-go-dark transition-colors"
           >
             Yes, Add Spouse
           </button>

@@ -125,7 +125,7 @@ export default async function BorrowerDashboardPage() {
           <p className="text-gray-500 mb-4">You don&apos;t have any loan applications yet.</p>
           <a
             href="/portal/apply"
-            className="inline-block bg-brand text-white px-6 py-2.5 rounded-lg font-medium hover:bg-brand-dark transition-colors"
+            className="inline-block bg-go text-white px-6 py-2.5 rounded-lg font-bold hover:bg-go-dark transition-colors"
           >
             Start an Application
           </a>

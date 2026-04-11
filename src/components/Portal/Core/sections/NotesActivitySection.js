@@ -121,7 +121,7 @@ export default function NotesActivitySection({ loan, updateLoanField }) {
           <button
             onClick={handleAddNote}
             disabled={noteLoading || !noteText.trim()}
-            className="px-4 py-2 bg-brand text-white text-sm rounded-lg hover:bg-brand-dark transition-colors disabled:opacity-50"
+            className="px-4 py-2 bg-go text-white text-sm font-bold rounded-lg hover:bg-go-dark transition-colors disabled:opacity-50"
           >
             {noteLoading ? '...' : 'Add'}
           </button>

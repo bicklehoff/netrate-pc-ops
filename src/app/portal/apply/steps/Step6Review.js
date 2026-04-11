@@ -374,7 +374,7 @@ export default function Step6Review({ onBack }) {
           type="button"
           onClick={handleSubmit}
           disabled={!authorizeVerification || submitting || hasMissingPII}
-          className="bg-brand text-white px-8 py-2.5 rounded-lg font-medium hover:bg-brand-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          className="bg-go text-white px-8 py-2.5 rounded-lg font-bold hover:bg-go-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
         >
           {submitting ? (
             <>

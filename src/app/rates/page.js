@@ -65,7 +65,7 @@ export default async function RatesPage({ searchParams }) {
         <div className="flex items-center justify-center gap-3 flex-wrap">
           <Link
             href="/portal/apply"
-            className="bg-brand text-[#fff000] px-6 py-2.5 rounded-2xl font-medium hover:bg-brand-dark transition-colors"
+            className="bg-go text-white px-6 py-2.5 rounded-nr-md font-bold hover:bg-go-dark transition-colors"
           >
             Apply Now
           </Link>

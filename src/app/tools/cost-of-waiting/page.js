@@ -263,7 +263,7 @@ function CostOfWaitingContent() {
               We can build the costs into the rate so you pay nothing out of pocket — and still save every month.
             </p>
             <div className="mt-4 flex gap-3">
-              <Link href="/rates" className="inline-block bg-brand text-[#fff000] px-5 py-2.5 rounded-2xl text-sm font-medium hover:bg-brand-dark transition-colors">
+              <Link href="/rates" className="inline-block bg-go text-white px-5 py-2.5 rounded-nr-md text-sm font-bold hover:bg-go-dark transition-colors">
                 See Today&apos;s Rates
               </Link>
               <Link href="/tools/refi-analyzer" className="inline-block border-2 border-brand text-brand px-5 py-2.5 rounded-2xl text-sm font-medium hover:bg-brand/5 transition-colors">

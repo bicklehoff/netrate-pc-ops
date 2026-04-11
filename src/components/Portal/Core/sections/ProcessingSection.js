@@ -309,7 +309,7 @@ function ProcessingTaskCard({ task, dates, loanId, onUpdateDate }) {
             <button
               onClick={handleOrder}
               disabled={ordering || !orderForm.email.trim()}
-              className="px-3 py-1.5 text-xs font-medium bg-brand text-white rounded-lg hover:bg-brand-dark transition-colors disabled:opacity-50"
+              className="px-3 py-1.5 text-xs font-bold bg-go text-white rounded-lg hover:bg-go-dark transition-colors disabled:opacity-50"
             >
               {ordering ? 'Sending...' : 'Send Order'}
             </button>

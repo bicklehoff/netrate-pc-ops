@@ -196,7 +196,7 @@ export default function LeadDetailPage() {
           <button
             onClick={handleRunQuote}
             disabled={quoting}
-            className="px-4 py-2 text-sm font-medium bg-brand text-white rounded-lg hover:bg-brand-dark transition-colors disabled:opacity-50"
+            className="px-4 py-2 text-sm font-bold bg-go text-white rounded-lg hover:bg-go-dark transition-colors disabled:opacity-50"
           >
             {quoting ? 'Running...' : 'Run Quote'}
           </button>

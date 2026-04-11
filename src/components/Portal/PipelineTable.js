@@ -321,7 +321,7 @@ function SavedViewsDropdown({ views, activeView, onSelect, onSave, onDelete, onC
               onKeyDown={e => { if (e.key === 'Enter' && name.trim()) { onSave(name.trim()); setNaming(false); setName(''); onClose(); } }}
             />
             <button onClick={() => { if (name.trim()) { onSave(name.trim()); setNaming(false); setName(''); onClose(); } }}
-              className="text-xs bg-brand text-white rounded px-2 py-1">Save</button>
+              className="text-xs bg-go text-white font-bold rounded px-2 py-1">Save</button>
           </div>
         ) : (
           <button onClick={() => setNaming(true)}

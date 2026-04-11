@@ -167,7 +167,7 @@ export default function BacklogPage() {
         </div>
         <button
           onClick={() => setShowCreate(!showCreate)}
-          className="inline-flex items-center gap-1.5 px-4 py-2 bg-brand text-white text-sm font-medium rounded-lg hover:bg-brand-dark transition-colors"
+          className="inline-flex items-center gap-1.5 px-4 py-2 bg-go text-white text-sm font-bold rounded-lg hover:bg-go-dark transition-colors"
         >
           <span className="text-lg leading-none">+</span>
           New Ticket
@@ -233,7 +233,7 @@ export default function BacklogPage() {
               <button
                 type="submit"
                 disabled={creating || !newTicket.title.trim()}
-                className="px-4 py-1.5 bg-brand text-white text-sm font-medium rounded-lg hover:bg-brand-dark transition-colors disabled:opacity-50"
+                className="px-4 py-1.5 bg-go text-white text-sm font-bold rounded-lg hover:bg-go-dark transition-colors disabled:opacity-50"
               >
                 {creating ? 'Creating...' : 'Create Ticket'}
               </button>

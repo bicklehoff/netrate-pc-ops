@@ -390,7 +390,7 @@ export default function MloDashboardPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setImportOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-brand rounded-lg hover:bg-brand-dark transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-go rounded-lg hover:bg-go-dark transition-colors"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />

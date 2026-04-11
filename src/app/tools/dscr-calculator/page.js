@@ -191,7 +191,7 @@ export default function DSCRCalculator() {
       <div className="bg-brand border-b border-brand-dark">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
           <span className="text-white font-bold text-base">DSCR Loan Calculator</span>
-          <span className="bg-[#fff000] text-brand text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Investor</span>
+          <span className="bg-accent text-ink text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Investor</span>
           <span className="ml-auto text-white/60 text-xs hidden sm:block">Everstream · Core 7/6 ARM · {SHEET_DATE}</span>
         </div>
       </div>
@@ -232,7 +232,7 @@ export default function DSCRCalculator() {
                   [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-brand
                   [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:cursor-pointer"
                 style={{
-                  background: `linear-gradient(to right, #024c4f 0%, #024c4f ${dpPct}%, #e5e7eb ${dpPct}%, #e5e7eb 100%)`
+                  background: `linear-gradient(to right, #2E6BA8 0%, #2E6BA8 ${dpPct}%, #e5e7eb ${dpPct}%, #e5e7eb 100%)`
                 }}
               />
               <div className="flex justify-between text-[11px] text-gray-400 mt-1">
@@ -356,7 +356,7 @@ export default function DSCRCalculator() {
             {/* Stacked bar */}
             <div className="flex h-2.5 rounded-full overflow-hidden gap-0.5 mb-2">
               {[
-                { val: activeRow.pi, color: '#024c4f' },
+                { val: activeRow.pi, color: '#2E6BA8' },
                 { val: monthlyTaxes, color: '#f59e0b' },
                 { val: monthlyInsurance, color: '#10b981' },
                 { val: monthlyHoa, color: '#8b5cf6' },
@@ -367,7 +367,7 @@ export default function DSCRCalculator() {
             </div>
             <div className="flex flex-wrap gap-3 mb-4">
               {[
-                { color: '#024c4f', label: 'P&I' },
+                { color: '#2E6BA8', label: 'P&I' },
                 { color: '#f59e0b', label: 'Taxes' },
                 { color: '#10b981', label: 'Insurance' },
                 ...(monthlyHoa > 0 ? [{ color: '#8b5cf6', label: 'HOA' }] : []),
@@ -381,7 +381,7 @@ export default function DSCRCalculator() {
 
             <div className="space-y-2">
               {[
-                { dot: '#024c4f', label: 'Principal & Interest', val: fmtD(activeRow.pi) + '/mo' },
+                { dot: '#2E6BA8', label: 'Principal & Interest', val: fmtD(activeRow.pi) + '/mo' },
                 { dot: '#f59e0b', label: 'Property Taxes', val: fmtD(monthlyTaxes) + '/mo' },
                 { dot: '#10b981', label: 'Insurance', val: fmtD(monthlyInsurance) + '/mo' },
                 ...(monthlyHoa > 0 ? [{ dot: '#8b5cf6', label: 'HOA', val: fmtD(monthlyHoa) + '/mo' }] : []),
