@@ -1,8 +1,11 @@
 'use client';
 
+import { useSearchParams } from 'next/navigation';
 import { calculatePI } from '@/lib/rates/engine';
 
 export default function RateResults({ scenario, apiResults, loading, onSaveScenario, brpToken }) {
+  const searchParams = useSearchParams();
+  const debugMode = searchParams?.get('debug') === '1';
 
   if (!scenario.loanAmount || scenario.loanAmount <= 0 || !scenario.propertyValue) {
     return (
@@ -141,6 +144,7 @@ export default function RateResults({ scenario, apiResults, loading, onSaveScena
           <thead>
             <tr className="border-b border-gray-200 text-xs text-gray-500 uppercase tracking-wider">
               <th className="text-left px-3 py-3">Rate</th>
+              {debugMode && <th className="text-left px-2 py-3">Lender</th>}
               <th className="text-right px-2 py-3">APR</th>
               <th className="text-right px-2 py-3">Monthly P&I</th>
               {currentPI && <th className="text-right px-2 py-3">Savings</th>}
@@ -164,6 +168,11 @@ export default function RateResults({ scenario, apiResults, loading, onSaveScena
                     <span className="font-semibold text-gray-800">{r.rate.toFixed(3)}%</span>
                     {r.program && <div className="text-[10px] text-gray-400 truncate max-w-[180px]">{r.program}</div>}
                   </td>
+                  {debugMode && (
+                    <td className="px-2 py-3">
+                      <span className="text-xs font-mono uppercase text-gray-700 bg-gray-100 rounded px-2 py-1">{r.lender || '—'}</span>
+                    </td>
+                  )}
                   <td className="text-right px-2 py-3 font-mono text-gray-500">{r.apr ? r.apr.toFixed(3) + '%' : '—'}</td>
                   <td className="text-right px-2 py-3 font-mono text-gray-700">
                     ${r.monthlyPI.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
