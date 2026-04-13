@@ -365,15 +365,16 @@ async function main() {
       continue;
     }
 
-    // Idempotent: skip if the latest GCS file hasn't changed since last parse
-    const latestFile = files[0]; // already sorted by updated desc
+    // Idempotent: skip if NO files have changed since last parse
+    // Track ALL file paths (not just the latest) — lenders like EverStream
+    // have multiple files (CSV rates + XLSX LLPAs) and either can change independently
+    const fileFingerprint = files.map(f => f.path).sort().join('|');
     const lastParsedKey = `parsed/.last-parsed-${lender}`;
     try {
       const lastParsedRes = await downloadText(lastParsedKey).catch(() => null);
-      // Strip JSON quotes if present (backwards compat with prior uploadJson markers)
       const lastParsed = lastParsedRes?.trim().replace(/^"|"$/g, '');
-      if (lastParsed && lastParsed === latestFile.path) {
-        console.log(`  ⊜ File unchanged (${latestFile.filename}) — skipping`);
+      if (lastParsed && lastParsed === fileFingerprint) {
+        console.log(`  ⊜ Files unchanged (${files.length} files) — skipping`);
         console.log();
         continue;
       }
@@ -389,7 +390,7 @@ async function main() {
       // Seed pricing engine DB for active lenders
       if (DB_READY_LENDERS.has(lender) && result.sheetDate) {
         try {
-          const sourceFile = latestFile.filename;
+          const sourceFile = files[0]?.filename || `gcs-parse-${new Date().toISOString().slice(0, 10)}`;
           const dbResult = await writeRatesToDB(lender, result.programs, result.sheetDate, sourceFile);
           console.log(`  ✓ DB: ${dbResult.pricesInserted} prices, ${dbResult.productsMatched} matched, ${dbResult.productsCreated} new products`);
         } catch (dbErr) {
@@ -398,8 +399,8 @@ async function main() {
         }
       }
 
-      // Write marker so next run skips if same file
-      await uploadText(lastParsedKey, latestFile.path);
+      // Write marker so next run skips if same files
+      await uploadText(lastParsedKey, fileFingerprint);
     } catch (err) {
       console.error(`  ✗ ${lender} failed: ${err.message}`);
       errors.push({ lender, error: err.message });
