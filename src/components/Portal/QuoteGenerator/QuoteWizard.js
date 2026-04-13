@@ -283,7 +283,7 @@ export default function QuoteWizard({ prefill }) {
                 ? 'bg-cyan-600 text-white'
                 : i < step
                   ? 'bg-cyan-50 text-cyan-700 hover:bg-cyan-100 cursor-pointer'
-                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-gray-100 text-ink-subtle cursor-not-allowed'
             }`}
             disabled={i > step}
           >
@@ -309,7 +309,7 @@ export default function QuoteWizard({ prefill }) {
           </div>
           {sendResult.quoteLink && (
             <div className="mt-2 text-xs">
-              <span className="text-gray-500">Quote link: </span>
+              <span className="text-ink-subtle">Quote link: </span>
               <a href={sendResult.quoteLink} target="_blank" rel="noopener noreferrer" className="text-cyan-600 hover:underline break-all">
                 {sendResult.quoteLink}
               </a>

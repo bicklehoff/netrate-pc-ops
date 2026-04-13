@@ -14,10 +14,10 @@ function fmtDate(d) {
 }
 
 function RateChangeBadge({ rateChange }) {
-  if (rateChange == null) return <span className="text-xs text-gray-400">—</span>;
+  if (rateChange == null) return <span className="text-xs text-ink-subtle">—</span>;
   const val = Number(rateChange);
   if (Math.abs(val) < 0.001) {
-    return <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">No change</span>;
+    return <span className="text-xs text-ink-subtle bg-gray-100 px-2 py-0.5 rounded">No change</span>;
   }
   if (val < 0) {
     return <span className="text-xs font-semibold text-green-700 bg-green-50 px-2 py-0.5 rounded">&#9660; {Math.abs(val).toFixed(3)}%</span>;
@@ -34,7 +34,7 @@ function StatusBadge({ status }) {
     approved: 'bg-blue-100 text-blue-800',
   };
   return (
-    <span className={`text-xs font-medium px-2 py-0.5 rounded ${styles[status] || 'bg-gray-100 text-gray-600'}`}>
+    <span className={`text-xs font-medium px-2 py-0.5 rounded ${styles[status] || 'bg-gray-100 text-ink-mid'}`}>
       {status}
     </span>
   );
@@ -60,18 +60,18 @@ export default function ScenarioAlertTable({ items, selectedIds, onSelectionChan
 
   if (!items || items.length === 0) {
     return (
-      <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center text-gray-500 text-sm">
+      <div className="bg-surface-alt border border-gray-200 rounded-lg p-8 text-center text-ink-subtle text-sm">
         No alerts in this view.
       </div>
     );
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+    <div className="bg-white border border-gray-200 rounded-nr-xl overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-gray-200 bg-gray-50 text-xs text-gray-500 uppercase tracking-wider">
+            <tr className="border-b border-gray-200 bg-surface-alt text-xs text-ink-subtle uppercase tracking-wider">
               <th className="px-4 py-3 w-10">
                 <input
                   type="checkbox"
@@ -112,11 +112,11 @@ export default function ScenarioAlertTable({ items, selectedIds, onSelectionChan
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <div className="font-medium text-gray-900">{lead?.name || '—'}</div>
-                    <div className="text-xs text-gray-500">{lead?.email || '—'}</div>
+                    <div className="font-medium text-ink">{lead?.name || '—'}</div>
+                    <div className="text-xs text-ink-subtle">{lead?.email || '—'}</div>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="text-xs text-gray-600">
+                    <div className="text-xs text-ink-mid">
                       {PURPOSE_LABELS[sd.purpose] || sd.purpose || '—'} | {fmtDollar(sd.loan_amount)} | {sd.fico || '—'} FICO | {sd.state || '—'}
                     </div>
                   </td>
@@ -126,20 +126,20 @@ export default function ScenarioAlertTable({ items, selectedIds, onSelectionChan
                   <td className="px-4 py-3 text-center">
                     <RateChangeBadge rateChange={item.rateChange} />
                   </td>
-                  <td className="px-4 py-3 text-center text-xs text-gray-500">
+                  <td className="px-4 py-3 text-center text-xs text-ink-subtle">
                     {item.scenario?.alert_frequency?.replace('_', 'x/') || '—'}
                   </td>
                   <td className="px-4 py-3 text-center">
                     <StatusBadge status={item.status} />
                   </td>
-                  <td className="px-4 py-3 text-xs text-gray-500">
+                  <td className="px-4 py-3 text-xs text-ink-subtle">
                     {fmtDate(item.created_at)}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-1">
                       <button
                         onClick={() => setExpandedId(isExpanded ? null : item.id)}
-                        className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1 rounded transition-colors"
+                        className="text-xs text-ink-subtle hover:text-ink-mid px-2 py-1 rounded transition-colors"
                       >
                         {isExpanded ? 'Hide' : 'Details'}
                       </button>
@@ -179,37 +179,37 @@ export default function ScenarioAlertTable({ items, selectedIds, onSelectionChan
         const sd = item.scenario?.scenario_data || {};
 
         return (
-          <div className="border-t border-gray-200 bg-gray-50 px-6 py-4">
+          <div className="border-t border-gray-200 bg-surface-alt px-6 py-4">
             <div className="grid grid-cols-2 gap-6">
               {/* Scenario Details */}
               <div>
-                <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Scenario Details</h4>
+                <h4 className="text-xs font-semibold text-ink-subtle uppercase mb-2">Scenario Details</h4>
                 <div className="grid grid-cols-2 gap-y-1 text-sm">
-                  <span className="text-gray-500">Purpose:</span>
-                  <span className="text-gray-900">{PURPOSE_LABELS[sd.purpose] || sd.purpose}</span>
-                  <span className="text-gray-500">Loan Amount:</span>
-                  <span className="text-gray-900">{fmtDollar(sd.loan_amount)}</span>
-                  <span className="text-gray-500">Property Value:</span>
-                  <span className="text-gray-900">{sd.property_value ? fmtDollar(sd.property_value) : '—'}</span>
-                  <span className="text-gray-500">FICO:</span>
-                  <span className="text-gray-900">{sd.fico || '—'}</span>
-                  <span className="text-gray-500">LTV:</span>
-                  <span className="text-gray-900">{sd.ltv ? `${Math.round(sd.ltv)}%` : '—'}</span>
-                  <span className="text-gray-500">State:</span>
-                  <span className="text-gray-900">{sd.state || '—'}{sd.county ? ` / ${sd.county}` : ''}</span>
-                  <span className="text-gray-500">Loan Type:</span>
-                  <span className="text-gray-900">{sd.loan_type || '—'}</span>
-                  <span className="text-gray-500">Term:</span>
-                  <span className="text-gray-900">{sd.term ? `${sd.term}yr` : '—'}</span>
+                  <span className="text-ink-subtle">Purpose:</span>
+                  <span className="text-ink">{PURPOSE_LABELS[sd.purpose] || sd.purpose}</span>
+                  <span className="text-ink-subtle">Loan Amount:</span>
+                  <span className="text-ink">{fmtDollar(sd.loan_amount)}</span>
+                  <span className="text-ink-subtle">Property Value:</span>
+                  <span className="text-ink">{sd.property_value ? fmtDollar(sd.property_value) : '—'}</span>
+                  <span className="text-ink-subtle">FICO:</span>
+                  <span className="text-ink">{sd.fico || '—'}</span>
+                  <span className="text-ink-subtle">LTV:</span>
+                  <span className="text-ink">{sd.ltv ? `${Math.round(sd.ltv)}%` : '—'}</span>
+                  <span className="text-ink-subtle">State:</span>
+                  <span className="text-ink">{sd.state || '—'}{sd.county ? ` / ${sd.county}` : ''}</span>
+                  <span className="text-ink-subtle">Loan Type:</span>
+                  <span className="text-ink">{sd.loan_type || '—'}</span>
+                  <span className="text-ink-subtle">Term:</span>
+                  <span className="text-ink">{sd.term ? `${sd.term}yr` : '—'}</span>
                 </div>
               </div>
 
               {/* Rate Comparison */}
               <div>
-                <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Rate Comparison</h4>
+                <h4 className="text-xs font-semibold text-ink-subtle uppercase mb-2">Rate Comparison</h4>
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-xs text-gray-500">
+                    <tr className="text-xs text-ink-subtle">
                       <th className="text-left pb-1">Rate</th>
                       <th className="text-right pb-1">Monthly P&I</th>
                       <th className="text-right pb-1">Previous</th>
@@ -220,13 +220,13 @@ export default function ScenarioAlertTable({ items, selectedIds, onSelectionChan
                       <tr key={i}>
                         <td className="py-1.5 font-mono font-semibold">{Number(r.rate).toFixed(3)}%</td>
                         <td className="py-1.5 text-right font-mono">{fmtDollar(r.monthlyPI)}/mo</td>
-                        <td className="py-1.5 text-right font-mono text-gray-400">
+                        <td className="py-1.5 text-right font-mono text-ink-subtle">
                           {previous[i] ? `${Number(previous[i].rate).toFixed(3)}%` : '—'}
                         </td>
                       </tr>
                     ))}
                     {current.length === 0 && (
-                      <tr><td colSpan={3} className="py-2 text-gray-400 text-center">No pricing data</td></tr>
+                      <tr><td colSpan={3} className="py-2 text-ink-subtle text-center">No pricing data</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -234,7 +234,7 @@ export default function ScenarioAlertTable({ items, selectedIds, onSelectionChan
             </div>
 
             {/* Alert History */}
-            <div className="mt-3 flex items-center gap-4 text-xs text-gray-500">
+            <div className="mt-3 flex items-center gap-4 text-xs text-ink-subtle">
               <span>Created: {fmtDate(item.scenario?.created_at)}</span>
               <span>Last Sent: {fmtDate(item.scenario?.last_sent_at) || 'Never'}</span>
               <span>Sends: {item.scenario?.send_count || 0}</span>

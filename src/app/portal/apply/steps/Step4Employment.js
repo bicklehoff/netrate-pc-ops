@@ -92,7 +92,7 @@ export default function Step4Employment({ onNext, onBack }) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
-      <div className="bg-white rounded-xl border border-gray-200 p-8 shadow-sm space-y-5">
+      <div className="bg-white rounded-nr-xl border border-gray-200 p-8 shadow-nr-sm space-y-5">
 
         {hasCoBorrowers && (
           <BorrowerTabs
@@ -240,7 +240,7 @@ export default function Step4Employment({ onNext, onBack }) {
             <button
               type="button"
               onClick={onBack}
-              className="text-gray-500 hover:text-gray-700 px-4 py-2.5 font-medium transition-colors"
+              className="text-ink-subtle hover:text-ink-mid px-4 py-2.5 font-medium transition-colors"
             >
               &larr; Back
             </button>
@@ -273,7 +273,7 @@ function CoBorrowerEmploymentSection({ coBorrower, onUpdate }) {
   return (
     <div className="space-y-5">
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-ink-mid mb-1">
           Employment Status <span className="text-red-400">*</span>
         </label>
         <select
@@ -291,7 +291,7 @@ function CoBorrowerEmploymentSection({ coBorrower, onUpdate }) {
       {showEmployerFields && (
         <>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-ink-mid mb-1">
               {coBorrower.employmentStatus === 'self_employed' ? 'Business Name' : 'Employer Name'}
             </label>
             <input
@@ -304,7 +304,7 @@ function CoBorrowerEmploymentSection({ coBorrower, onUpdate }) {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Position / Title</label>
+              <label className="block text-sm font-medium text-ink-mid mb-1">Position / Title</label>
               <input
                 type="text"
                 value={coBorrower.positionTitle || ''}
@@ -314,7 +314,7 @@ function CoBorrowerEmploymentSection({ coBorrower, onUpdate }) {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Years in Position</label>
+              <label className="block text-sm font-medium text-ink-mid mb-1">Years in Position</label>
               <input
                 type="number"
                 value={coBorrower.yearsInPosition ?? ''}
@@ -336,7 +336,7 @@ function CoBorrowerEmploymentSection({ coBorrower, onUpdate }) {
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-ink-mid mb-1">
                     Ownership % <span className="text-red-400">*</span>
                   </label>
                   <input
@@ -348,7 +348,7 @@ function CoBorrowerEmploymentSection({ coBorrower, onUpdate }) {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-ink-mid mb-1">
                     Business Type <span className="text-red-400">*</span>
                   </label>
                   <select
@@ -363,7 +363,7 @@ function CoBorrowerEmploymentSection({ coBorrower, onUpdate }) {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Years in Business</label>
+                  <label className="block text-sm font-medium text-ink-mid mb-1">Years in Business</label>
                   <input
                     type="number"
                     value={coBorrower.selfEmployedYearsInBusiness ?? ''}
@@ -379,11 +379,11 @@ function CoBorrowerEmploymentSection({ coBorrower, onUpdate }) {
       )}
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-ink-mid mb-1">
           Monthly Base Income (gross) <span className="text-red-400">*</span>
         </label>
         <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-subtle text-sm">$</span>
           <input
             type="text"
             inputMode="decimal"
@@ -397,9 +397,9 @@ function CoBorrowerEmploymentSection({ coBorrower, onUpdate }) {
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Other Monthly Income</label>
+          <label className="block text-sm font-medium text-ink-mid mb-1">Other Monthly Income</label>
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-subtle text-sm">$</span>
             <input
               type="text"
               inputMode="decimal"
@@ -412,7 +412,7 @@ function CoBorrowerEmploymentSection({ coBorrower, onUpdate }) {
         </div>
         {parseFloat(coBorrower.otherMonthlyIncome) > 0 && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Source of Other Income</label>
+            <label className="block text-sm font-medium text-ink-mid mb-1">Source of Other Income</label>
             <input
               type="text"
               value={coBorrower.otherIncomeSource || ''}

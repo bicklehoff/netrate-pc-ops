@@ -210,15 +210,15 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
     <div className="space-y-4">
 
       {/* ── Multi-rate comparison ─────────────────────────────────────────── */}
-      <div className="bg-gray-900 rounded-xl p-5 shadow-sm">
-        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Rate Comparison</h3>
+      <div className="bg-gray-900 rounded-nr-xl p-5 shadow-nr-sm">
+        <h3 className="text-xs font-bold text-ink-subtle uppercase tracking-wider mb-3">Rate Comparison</h3>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-gray-500 text-xs">
+              <tr className="text-ink-subtle text-xs">
                 <th className="text-left pb-2 font-medium pr-6"></th>
                 {selectedRates.map((r,i) => (
-                  <th key={i} className={`text-right pb-2 font-medium ${i===0 ? 'text-cyan-400' : 'text-gray-400'}`}>
+                  <th key={i} className={`text-right pb-2 font-medium ${i===0 ? 'text-cyan-400' : 'text-ink-subtle'}`}>
                     {r.rate.toFixed(3)}%
                     {i===0 && <span className="ml-1 text-[9px] bg-cyan-900 text-cyan-300 px-1 rounded">PRIMARY</span>}
                   </th>
@@ -227,11 +227,11 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
             </thead>
             <tbody className="divide-y divide-gray-800">
               <tr>
-                <td className="py-1.5 text-gray-400 text-xs pr-6">Program</td>
+                <td className="py-1.5 text-ink-subtle text-xs pr-6">Program</td>
                 {selectedRates.map((r,i) => <td key={i} className="py-1.5 text-right text-xs text-gray-300">{r.program?.split(' ').slice(0,3).join(' ')}</td>)}
               </tr>
               <tr>
-                <td className="py-1.5 text-gray-400 text-xs pr-6">Price (Credit / Cost)</td>
+                <td className="py-1.5 text-ink-subtle text-xs pr-6">Price (Credit / Cost)</td>
                 {selectedRates.map((r,i) => (
                   <td key={i} className={`py-1.5 text-right font-mono text-xs ${r.rebateDollars > 0 ? 'text-green-400' : r.discountDollars > 0 ? 'text-red-400' : 'text-gray-300'}`}>
                     {r.rebateDollars > 0 ? `+$${r.rebateDollars.toLocaleString()}` : r.discountDollars > 0 ? `-$${r.discountDollars.toLocaleString()}` : 'PAR'}
@@ -239,7 +239,7 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
                 ))}
               </tr>
               <tr>
-                <td className="py-1.5 text-gray-400 text-xs pr-6">Daily Interest (per diem)</td>
+                <td className="py-1.5 text-ink-subtle text-xs pr-6">Daily Interest (per diem)</td>
                 {perRateCalc.map((rc,i) => (
                   <td key={i} className="py-1.5 text-right font-mono text-xs text-gray-300">
                     ${rc.perDiem}/day
@@ -250,7 +250,7 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
                 ))}
               </tr>
               <tr>
-                <td className="py-1.5 text-gray-400 text-xs pr-6">Prepaid Interest</td>
+                <td className="py-1.5 text-ink-subtle text-xs pr-6">Prepaid Interest</td>
                 {perRateCalc.map((rc,i) => (
                   <td key={i} className={`py-1.5 text-right font-mono text-xs ${rc.isCredit ? 'text-green-400' : 'text-gray-300'}`}>
                     {rc.isCredit ? '-' : '+'}${Math.abs(rc.interestAmount).toLocaleString()}
@@ -273,11 +273,11 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
       </div>
 
       {/* ── Escrow & Prepaid Panel ────────────────────────────────────────── */}
-      <div className="bg-white rounded-xl border border-amber-200 shadow-sm">
+      <div className="bg-white rounded-nr-xl border border-amber-200 shadow-nr-sm">
         <div className="px-5 py-4 border-b border-amber-100 flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-semibold text-gray-700">Escrow &amp; Prepaid</h3>
-            <p className="text-xs text-gray-400 mt-0.5">All fields pre-populated — edit any value to recalculate</p>
+            <h3 className="text-sm font-semibold text-ink-mid">Escrow &amp; Prepaid</h3>
+            <p className="text-xs text-ink-subtle mt-0.5">All fields pre-populated — edit any value to recalculate</p>
           </div>
           {escrowsWaived
             ? <span className="px-2.5 py-1 bg-orange-100 text-orange-700 rounded-lg text-xs font-semibold border border-orange-200">Escrows Waived — Section G empty</span>
@@ -289,7 +289,7 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
           {/* Dates */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Funding Date</label>
+              <label className="block text-xs font-medium text-ink-subtle mb-1">Funding Date</label>
               <input type="date" value={fundingDate}
                 onChange={e => {
                   const v = e.target.value;
@@ -299,15 +299,15 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
                 }}
                 className="w-full rounded-lg border-gray-300 text-sm focus:ring-amber-400 focus:border-amber-400" />
               {firstPaymentDateStr && (
-                <div className={`text-[10px] mt-0.5 font-medium ${isInterestCredit ? 'text-green-600' : 'text-gray-400'}`}>
+                <div className={`text-[10px] mt-0.5 font-medium ${isInterestCredit ? 'text-green-600' : 'text-ink-subtle'}`}>
                   {isInterestCredit ? 'Interest credit →' : 'Prepaid interest →'} First pmt: {firstPaymentDateStr}
                 </div>
               )}
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">
+              <label className="block text-xs font-medium text-ink-subtle mb-1">
                 HOI Effective Date
-                <span className="ml-1 font-normal text-gray-400">{isPurchase ? '(policy starts at funding)' : '(renewal — 60-day rule)'}</span>
+                <span className="ml-1 font-normal text-ink-subtle">{isPurchase ? '(policy starts at funding)' : '(renewal — 60-day rule)'}</span>
               </label>
               <input type="date" value={hoiDate}
                 onChange={e => { setHoiDate(e.target.value); rebuildEscrow({ hoi: e.target.value }); }}
@@ -331,24 +331,24 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
               <input type="checkbox" checked={hasFlood}
                 onChange={e => { const v = e.target.checked; setHasFlood(v); rebuildEscrow({ flood: v }); }}
                 className="rounded border-gray-300 text-cyan-600 focus:ring-cyan-500" />
-              <span className="text-xs font-medium text-gray-600 w-28">Flood Insurance</span>
+              <span className="text-xs font-medium text-ink-mid w-28">Flood Insurance</span>
             </label>
             {hasFlood
               ? <NumInput value={annualFlood} onChange={v => { setAnnualFlood(v); rebuildEscrow({ floodAmt: v }); }} placeholder="Annual flood premium" className="flex-1" />
-              : <span className="text-xs text-gray-400">Check if property is in a flood zone</span>
+              : <span className="text-xs text-ink-subtle">Check if property is in a flood zone</span>
             }
           </div>
 
           {/* TX extras */}
           {isTX && (
             <div className="space-y-2 pt-2 border-t border-gray-100">
-              <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Texas Extras</div>
+              <div className="text-[10px] font-semibold text-ink-subtle uppercase tracking-wider">Texas Extras</div>
               <div className="flex items-center gap-3">
                 <label className="flex items-center gap-2 cursor-pointer shrink-0">
                   <input type="checkbox" checked={hasMud}
                     onChange={e => { const v = e.target.checked; setHasMud(v); rebuildEscrow({ mud: v }); }}
                     className="rounded border-gray-300 text-cyan-600 focus:ring-cyan-500" />
-                  <span className="text-xs font-medium text-gray-600 w-28">MUD Tax</span>
+                  <span className="text-xs font-medium text-ink-mid w-28">MUD Tax</span>
                 </label>
                 {hasMud && <NumInput value={annualMud} onChange={v => { setAnnualMud(v); rebuildEscrow({ mudAmt: v }); }} placeholder="Annual MUD tax" className="flex-1" />}
               </div>
@@ -357,7 +357,7 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
                   <input type="checkbox" checked={hasHailWind}
                     onChange={e => { const v = e.target.checked; setHasHailWind(v); rebuildEscrow({ hw: v }); }}
                     className="rounded border-gray-300 text-cyan-600 focus:ring-cyan-500" />
-                  <span className="text-xs font-medium text-gray-600 w-28">Hail/Wind</span>
+                  <span className="text-xs font-medium text-ink-mid w-28">Hail/Wind</span>
                 </label>
                 {hasHailWind && <NumInput value={annualHailWind} onChange={v => { setAnnualHailWind(v); rebuildEscrow({ hwAmt: v }); }} placeholder="Annual hail/wind premium" className="flex-1" />}
               </div>
@@ -368,14 +368,14 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
           {isEscrowing && escrowItems.length > 0 && (
             <div className="pt-2 border-t border-gray-100">
               <button type="button" onClick={() => setShowEscrowDetail(v => !v)}
-                className="flex items-center gap-2 text-xs font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-700 mb-2">
+                className="flex items-center gap-2 text-xs font-semibold text-ink-subtle uppercase tracking-wider hover:text-ink-mid mb-2">
                 <span>Show Your Work</span>
-                <span className="text-gray-400">{showEscrowDetail ? '▲' : '▼'}</span>
+                <span className="text-ink-subtle">{showEscrowDetail ? '▲' : '▼'}</span>
               </button>
               {showEscrowDetail && (
                 <div className="rounded-lg border border-gray-200 overflow-hidden">
                   <table className="w-full text-xs">
-                    <thead className="bg-gray-50 text-gray-500">
+                    <thead className="bg-surface-alt text-ink-subtle">
                       <tr>
                         <th className="px-3 py-2 text-left font-medium">Item</th>
                         <th className="px-3 py-2 text-right font-medium">Monthly</th>
@@ -386,8 +386,8 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                       {escrowItems.map(item => (
-                        <tr key={item.key} className="hover:bg-gray-50">
-                          <td className="px-3 py-2 text-gray-700">{item.label}</td>
+                        <tr key={item.key} className="hover:bg-surface-alt">
+                          <td className="px-3 py-2 text-ink-mid">{item.label}</td>
                           <td className="px-3 py-2 text-right font-mono">${item.monthly.toLocaleString()}</td>
                           <td className="px-3 py-2 text-center">
                             <input type="date" value={dueDateOverrides[item.key] || item.dateStr}
@@ -395,7 +395,7 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
                               className="rounded border-gray-300 text-xs focus:ring-amber-400 focus:border-amber-400 py-0.5 px-1.5" />
                           </td>
                           <td className="px-3 py-2 text-right font-mono">${item.installment.toLocaleString()}</td>
-                          <td className="px-3 py-2 text-right font-mono text-gray-500">
+                          <td className="px-3 py-2 text-right font-mono text-ink-subtle">
                             {item.monthsFromFirstPmt != null ? item.monthsFromFirstPmt : '—'}
                           </td>
                         </tr>
@@ -417,10 +417,10 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
       </div>
 
       {/* ── Fee Breakdown ─────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+      <div className="bg-white rounded-nr-xl border border-gray-200 shadow-nr-sm">
         <div className="px-6 py-4 border-b border-gray-100">
-          <h3 className="text-sm font-semibold text-gray-700">Fee Breakdown</h3>
-          <p className="text-xs text-gray-500 mt-0.5">Edit amounts · remove items · add custom fees</p>
+          <h3 className="text-sm font-semibold text-ink-mid">Fee Breakdown</h3>
+          <p className="text-xs text-ink-subtle mt-0.5">Edit amounts · remove items · add custom fees</p>
         </div>
         <div className="divide-y divide-gray-100">
           {sections.map(key => {
@@ -437,22 +437,22 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
             return (
               <div key={key}>
                 <button onClick={() => toggle(key)}
-                  className="w-full px-6 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors">
-                  <span className="text-sm font-medium text-gray-700">{section.label}</span>
+                  className="w-full px-6 py-3 flex items-center justify-between hover:bg-surface-alt transition-colors">
+                  <span className="text-sm font-medium text-ink-mid">{section.label}</span>
                   <div className="flex items-center gap-3">
                     <span className={`text-sm font-mono font-medium ${section.total < 0 ? 'text-green-600' : ''}`}>
                       {section.total < 0 ? '-' : ''}${Math.abs(section.total||0).toLocaleString()}
                     </span>
-                    <span className="text-gray-400 text-xs">{isOpen ? '▲' : '▼'}</span>
+                    <span className="text-ink-subtle text-xs">{isOpen ? '▲' : '▼'}</span>
                   </div>
                 </button>
                 {isOpen && (
                   <div className="px-6 pb-3 space-y-1">
                     {section.items.map((item, i) => (
                       <div key={i} className="flex items-center gap-2">
-                        <span className={`text-xs flex-1 ${item.amount < 0 ? 'text-green-600' : 'text-gray-600'}`}>{item.label}</span>
+                        <span className={`text-xs flex-1 ${item.amount < 0 ? 'text-green-600' : 'text-ink-mid'}`}>{item.label}</span>
                         <div className="relative w-28">
-                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">$</span>
+                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-ink-subtle">$</span>
                           <input type="number" value={item.amount}
                             onFocus={e => e.target.select()}
                             onChange={e => updateItem(key, i, e.target.value)}
@@ -472,13 +472,13 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
                             placeholder="Fee description"
                             className="flex-1 text-xs rounded border-gray-300 focus:ring-cyan-500 focus:border-cyan-500 py-1" />
                           <div className="relative w-24">
-                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">$</span>
+                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-ink-subtle">$</span>
                             <input type="number" value={newFeeAmount} onChange={e => setNewFeeAmount(e.target.value)}
                               onFocus={e => e.target.select()} placeholder="0"
                               className="w-full pl-5 py-1 text-xs font-mono rounded border-gray-300 focus:ring-cyan-500 focus:border-cyan-500" />
                           </div>
                           <button onClick={() => addItem(key)} className="text-xs px-2 py-1 bg-cyan-600 text-white rounded hover:bg-cyan-700">Add</button>
-                          <button onClick={() => { setAddingToSection(null); setNewFeeLabel(''); setNewFeeAmount(''); }} className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
+                          <button onClick={() => { setAddingToSection(null); setNewFeeLabel(''); setNewFeeAmount(''); }} className="text-xs text-ink-subtle hover:text-ink-mid">Cancel</button>
                         </div>
                       ) : (
                         <button onClick={() => setAddingToSection(key)}
@@ -496,11 +496,11 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
       </div>
 
       {/* ── Credits ──────────────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-xl border border-green-200 shadow-sm">
+      <div className="bg-white rounded-nr-xl border border-green-200 shadow-nr-sm">
         <div className="px-6 py-4 border-b border-green-100 flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-semibold text-gray-700">Credits</h3>
-            <p className="text-xs text-gray-400 mt-0.5">Realtor credit, seller credit, tax prorate — reduce cash to close</p>
+            <h3 className="text-sm font-semibold text-ink-mid">Credits</h3>
+            <p className="text-xs text-ink-subtle mt-0.5">Realtor credit, seller credit, tax prorate — reduce cash to close</p>
           </div>
           {creditTotal > 0 && (
             <span className="text-sm font-mono font-semibold text-green-600">-${creditTotal.toLocaleString()}</span>
@@ -513,7 +513,7 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
                 onChange={e => updateCredit(i, 'label', e.target.value)}
                 className="flex-1 text-xs rounded border-gray-300 focus:ring-green-400 focus:border-green-400 py-1.5" />
               <div className="relative w-32">
-                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">$</span>
+                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-ink-subtle">$</span>
                 <input type="number" value={cr.amount || ''}
                   onFocus={e => e.target.select()}
                   onChange={e => updateCredit(i, 'amount', e.target.value)}
@@ -540,7 +540,7 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
                   placeholder="Custom credit label"
                   className="flex-1 text-xs rounded border-gray-300 focus:ring-green-400 focus:border-green-400 py-1" />
                 <div className="relative w-28">
-                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">$</span>
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-ink-subtle">$</span>
                   <input type="number" value={newCreditAmount} onChange={e => setNewCreditAmount(e.target.value)}
                     onFocus={e => e.target.select()} placeholder="0"
                     className="w-full pl-5 py-1 text-xs font-mono rounded border-gray-300 focus:ring-green-400 focus:border-green-400" />
@@ -548,7 +548,7 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
                 <button onClick={() => addCredit(newCreditLabel, newCreditAmount)} disabled={!newCreditLabel.trim()}
                   className="text-xs px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-40">Add</button>
                 <button onClick={() => { setShowCreditAdd(false); setNewCreditLabel(''); setNewCreditAmount(''); }}
-                  className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
+                  className="text-xs text-ink-subtle hover:text-ink-mid">Cancel</button>
               </div>
             </div>
           ) : (
@@ -561,16 +561,16 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
       </div>
 
       {/* ── Totals ─────────────────────────────────────────────────────────── */}
-      <div className="bg-gray-900 rounded-xl px-6 py-5 text-white">
+      <div className="bg-gray-900 rounded-nr-xl px-6 py-5 text-white">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Per-rate CTC */}
           {isPurchase && (
             <div className="md:col-span-2">
-              <div className="text-xs text-gray-400 uppercase tracking-wider mb-2">Cash to Close by Rate</div>
+              <div className="text-xs text-ink-subtle uppercase tracking-wider mb-2">Cash to Close by Rate</div>
               <div className="space-y-1">
                 {perRateCalc.map((rc,i) => (
                   <div key={i} className="flex justify-between items-center">
-                    <span className={`font-mono text-sm ${i===0 ? 'text-cyan-300 font-bold' : 'text-gray-400'}`}>{selectedRates[i].rate.toFixed(3)}%</span>
+                    <span className={`font-mono text-sm ${i===0 ? 'text-cyan-300 font-bold' : 'text-ink-subtle'}`}>{selectedRates[i].rate.toFixed(3)}%</span>
                     <span className={`font-mono text-sm ${i===0 ? 'text-cyan-300 font-bold' : 'text-gray-300'}`}>${rc.ctc.toLocaleString()}</span>
                   </div>
                 ))}
@@ -585,9 +585,9 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
           )}
           {/* Monthly PITI */}
           <div>
-            <div className="text-xs text-gray-400 uppercase tracking-wider mb-2">Monthly PITI</div>
+            <div className="text-xs text-ink-subtle uppercase tracking-wider mb-2">Monthly PITI</div>
             <div className="text-2xl font-mono font-bold text-cyan-300">${(monthlyPI + monthlyTax + monthlyIns).toLocaleString()}</div>
-            <div className="text-[10px] text-gray-500 mt-1">
+            <div className="text-[10px] text-ink-subtle mt-1">
               P&I ${monthlyPI.toLocaleString()} + Tax ${monthlyTax.toLocaleString()} + Ins ${monthlyIns.toLocaleString()}
             </div>
           </div>
@@ -596,10 +596,10 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
 
       {/* ── Actions ─────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
-        <div className="text-xs text-gray-400">Quote ID: {quoteId ? quoteId.slice(0,8) : 'N/A'}</div>
+        <div className="text-xs text-ink-subtle">Quote ID: {quoteId ? quoteId.slice(0,8) : 'N/A'}</div>
         <div className="flex gap-3">
           <button onClick={onSaveDraft} disabled={loading}
-            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50 transition-colors">
+            className="px-4 py-2 border border-gray-300 text-ink-mid rounded-lg text-sm font-medium hover:bg-surface-alt disabled:opacity-50 transition-colors">
             Save Draft
           </button>
           <button onClick={onPreviewPDF} disabled={loading || selectedRates.length === 0}
@@ -622,9 +622,9 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
 function NumInput({ label, value, onChange, sub, placeholder = '0', className = '' }) {
   return (
     <div className={className}>
-      {label && <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>}
+      {label && <label className="block text-xs font-medium text-ink-subtle mb-1">{label}</label>}
       <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">$</span>
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-ink-subtle">$</span>
         <input
           type="number"
           value={value || ''}
@@ -634,7 +634,7 @@ function NumInput({ label, value, onChange, sub, placeholder = '0', className = 
           className="w-full pl-7 rounded-lg border-gray-300 text-sm font-mono focus:ring-amber-400 focus:border-amber-400"
         />
       </div>
-      {sub && <div className="text-[10px] text-gray-400 mt-0.5">{sub}</div>}
+      {sub && <div className="text-[10px] text-ink-subtle mt-0.5">{sub}</div>}
     </div>
   );
 }

@@ -55,10 +55,10 @@ export default function DialerPanel() {
       {/* Header */}
       <div className="px-3 py-3 border-b border-gray-200">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-semibold text-gray-900">Dialer</h3>
+          <h3 className="text-sm font-semibold text-ink">Dialer</h3>
           <div className="flex items-center gap-1.5">
             <span className={`w-2 h-2 rounded-full ${deviceReady ? 'bg-green-500' : 'bg-gray-300'}`} />
-            <span className="text-[10px] text-gray-400">{deviceReady ? 'Online' : 'Connecting...'}</span>
+            <span className="text-[10px] text-ink-subtle">{deviceReady ? 'Online' : 'Connecting...'}</span>
           </div>
         </div>
         <ContactSearch onSelect={handleContactSelect} />
@@ -73,10 +73,10 @@ export default function DialerPanel() {
             </span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-gray-900 truncate">
+            <p className="text-xs font-medium text-ink truncate">
               {selectedContact.first_name} {selectedContact.last_name}
             </p>
-            <p className="text-[10px] text-gray-500 truncate">{selectedContact.phone}</p>
+            <p className="text-[10px] text-ink-subtle truncate">{selectedContact.phone}</p>
           </div>
           <div className="flex gap-1">
             {selectedContact.phone && (
@@ -103,7 +103,7 @@ export default function DialerPanel() {
             </button>
             <button
               onClick={() => setSelectedContact(null)}
-              className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+              className="p-1.5 rounded-lg text-ink-subtle hover:text-ink-mid hover:bg-gray-100 transition-colors"
               title="Clear"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -137,7 +137,7 @@ export default function DialerPanel() {
             className={`flex-1 py-2 text-xs font-medium text-center transition-colors ${
               activeTab === tab.id
                 ? 'text-brand border-b-2 border-brand'
-                : 'text-gray-400 hover:text-gray-600'
+                : 'text-ink-subtle hover:text-ink-mid'
             }`}
           >
             {tab.label}
@@ -153,7 +153,7 @@ export default function DialerPanel() {
             {/* Show notes input after a call ends */}
             {lastCallId && callState === IDLE && (
               <div className="mt-4 pt-4 border-t border-gray-200">
-                <p className="text-xs font-medium text-gray-500 mb-2">Call Notes</p>
+                <p className="text-xs font-medium text-ink-subtle mb-2">Call Notes</p>
                 <CallNotes
                   callLogId={lastCallId}
                   onSaved={() => setLastCallId(null)}
@@ -182,7 +182,7 @@ export default function DialerPanel() {
                 <svg className="w-10 h-10 text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                 </svg>
-                <p className="text-xs text-gray-400">Select a contact to view SMS</p>
+                <p className="text-xs text-ink-subtle">Select a contact to view SMS</p>
               </div>
             )}
           </div>

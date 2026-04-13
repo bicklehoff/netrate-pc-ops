@@ -11,37 +11,37 @@ export const metadata = {
 
 export default function PortalLayout({ children }) {
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-surface-alt flex flex-col">
       {/* Portal Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/portal/apply" className="flex items-center gap-0.5">
-            <span className="text-xl font-bold text-gray-900">Net</span>
+            <span className="text-xl font-bold text-ink">Net</span>
             <span className="text-xl font-bold text-brand">Rate</span>
-            <span className="text-base font-normal text-gray-500 ml-1.5">Portal</span>
+            <span className="text-base font-normal text-ink-subtle ml-1.5">Portal</span>
           </Link>
           <nav className="flex items-center gap-4 text-sm">
             <Link
               href="/portal/apply"
-              className="text-gray-600 hover:text-brand transition-colors"
+              className="text-ink-mid hover:text-brand transition-colors"
             >
               Apply
             </Link>
             <Link
               href="/portal/auth/login"
-              className="text-gray-600 hover:text-brand transition-colors"
+              className="text-ink-mid hover:text-brand transition-colors"
             >
               My Loan
             </Link>
             <Link
               href="/rates"
-              className="text-gray-600 hover:text-brand transition-colors"
+              className="text-ink-mid hover:text-brand transition-colors"
             >
               Rates
             </Link>
             <Link
               href="/"
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-ink-subtle hover:text-ink-mid transition-colors"
             >
               ← Main Site
             </Link>
@@ -56,7 +56,7 @@ export default function PortalLayout({ children }) {
 
       {/* Portal Footer */}
       <footer className="border-t border-gray-200 bg-white mt-auto">
-        <div className="max-w-7xl mx-auto px-6 py-6 text-center text-xs text-gray-400">
+        <div className="max-w-7xl mx-auto px-6 py-6 text-center text-xs text-ink-subtle">
           <p>
             NetRate Mortgage | NMLS #1111861 | 357 South McCaslin Blvd., #200, Louisville, CO 80027
           </p>

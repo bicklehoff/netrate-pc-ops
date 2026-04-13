@@ -6,7 +6,7 @@ import { useScenario } from './ScenarioContext';
 function NumInput({ label, value, onChange, step = 0.001, min, className = '', inputClass = '', suffix = '', ...rest }) {
   return (
     <div className={className}>
-      <label className="block text-xs font-medium text-gray-500 mb-0.5">{label}</label>
+      <label className="block text-xs font-medium text-ink-subtle mb-0.5">{label}</label>
       <div className="relative">
         <input
           type="number"
@@ -18,7 +18,7 @@ function NumInput({ label, value, onChange, step = 0.001, min, className = '', i
           {...rest}
         />
         {suffix && (
-          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">{suffix}</span>
+          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-ink-subtle">{suffix}</span>
         )}
       </div>
     </div>
@@ -28,9 +28,9 @@ function NumInput({ label, value, onChange, step = 0.001, min, className = '', i
 function DollarInput({ label, value, onChange, className = '', inputClass = '', ...rest }) {
   return (
     <div className={className}>
-      <label className="block text-xs font-medium text-gray-500 mb-0.5">{label}</label>
+      <label className="block text-xs font-medium text-ink-subtle mb-0.5">{label}</label>
       <div className="relative">
-        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">$</span>
+        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-ink-subtle">$</span>
         <input
           type="number"
           value={value || ''}
@@ -73,7 +73,7 @@ export default function RateInputs() {
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-4">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-gray-700">Rates & Costs</h3>
+        <h3 className="text-sm font-semibold text-ink-mid">Rates & Costs</h3>
         {state.oneYearCMT > 0 && (
           <span className="text-xs text-green-600">CMT rates loaded</span>
         )}
@@ -123,9 +123,9 @@ export default function RateInputs() {
           inputClass={state.origFeeOverride ? 'bg-yellow-50' : 'bg-emerald-50'}
         />
         <div>
-          <label className="block text-xs font-medium text-gray-500 mb-0.5">3rd Party Costs</label>
+          <label className="block text-xs font-medium text-ink-subtle mb-0.5">3rd Party Costs</label>
           <div className="relative">
-            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">$</span>
+            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-ink-subtle">$</span>
             <input
               type="number"
               value={state.thirdPartyCosts || ''}
@@ -146,7 +146,7 @@ export default function RateInputs() {
       {state.origFeeOverride && (
         <button
           onClick={() => setField('origFeeOverride', false)}
-          className="text-xs text-gray-400 hover:text-gray-600 mt-1"
+          className="text-xs text-ink-subtle hover:text-ink-mid mt-1"
         >
           Reset orig fee to auto-calc
         </button>

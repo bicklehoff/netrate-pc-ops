@@ -81,7 +81,7 @@ function Row({ label, values, format = 'dollar', className = '', highlight = fal
 
   return (
     <tr className={`${highlight ? 'bg-cyan-50 font-medium' : ''} ${className}`}>
-      <td className="px-2 py-1 text-xs text-gray-600 border-r border-gray-100">{label}</td>
+      <td className="px-2 py-1 text-xs text-ink-mid border-r border-gray-100">{label}</td>
       {values.map((v, i) => (
         <td key={i} className={`px-2 py-1 text-xs text-right font-mono ${
           v !== null && v !== undefined && v < 0 ? 'text-red-600' : ''
@@ -96,7 +96,7 @@ function Row({ label, values, format = 'dollar', className = '', highlight = fal
 function SectionHeader({ label }) {
   return (
     <tr>
-      <td colSpan={4} className="px-2 py-1.5 text-xs font-bold text-gray-700 bg-gray-50 border-y border-gray-200">
+      <td colSpan={4} className="px-2 py-1.5 text-xs font-bold text-ink-mid bg-surface-alt border-y border-gray-200">
         {label}
       </td>
     </tr>
@@ -114,7 +114,7 @@ export default function ScenarioTable() {
       <table className="w-full text-left">
         <thead>
           <tr>
-            <th className="px-2 py-2 text-xs font-semibold text-gray-500 bg-gray-50 border-b border-gray-200 min-w-[160px]">
+            <th className="px-2 py-2 text-xs font-semibold text-ink-subtle bg-surface-alt border-b border-gray-200 min-w-[160px]">
               Scenario Comparison
             </th>
             <ColumnHeader index={0} label="A" />
@@ -168,54 +168,54 @@ export default function ScenarioTable() {
 
           {/* Broker Comp (hidden on print) */}
           <tr className="print:hidden">
-            <td colSpan={4} className="px-2 py-1.5 text-xs font-bold text-gray-700 bg-gray-50 border-y border-gray-200">
+            <td colSpan={4} className="px-2 py-1.5 text-xs font-bold text-ink-mid bg-surface-alt border-y border-gray-200">
               Broker Compensation
             </td>
           </tr>
           <tr className="print:hidden">
-            <td className="px-2 py-1 text-xs text-gray-600 border-r border-gray-100">UPB</td>
+            <td className="px-2 py-1 text-xs text-ink-mid border-r border-gray-100">UPB</td>
             {get('upb').map((v, i) => (
               <td key={i} className="px-2 py-1 text-xs text-right font-mono">{fmtDollar(v)}</td>
             ))}
           </tr>
           <tr className="print:hidden">
-            <td className="px-2 py-1 text-xs text-gray-600 border-r border-gray-100">PLU%</td>
+            <td className="px-2 py-1 text-xs text-ink-mid border-r border-gray-100">PLU%</td>
             {get('pluPct').map((v, i) => (
               <td key={i} className="px-2 py-1 text-xs text-right font-mono">{v != null ? fmtPct(v, 1) : '—'}</td>
             ))}
           </tr>
           <tr className="print:hidden">
-            <td className="px-2 py-1 text-xs text-gray-600 border-r border-gray-100">ASL Price (Raw)</td>
+            <td className="px-2 py-1 text-xs text-ink-mid border-r border-gray-100">ASL Price (Raw)</td>
             {get('aslPriceRaw').map((v, i) => (
               <td key={i} className="px-2 py-1 text-xs text-right font-mono">{v != null ? fmt(v, 3) : '—'}</td>
             ))}
           </tr>
           <tr className="print:hidden">
-            <td className="px-2 py-1 text-xs text-gray-600 border-r border-gray-100">LLPA Adj</td>
+            <td className="px-2 py-1 text-xs text-ink-mid border-r border-gray-100">LLPA Adj</td>
             {get('llpaAdj').map((v, i) => (
               <td key={i} className="px-2 py-1 text-xs text-right font-mono">{v != null ? fmt(v, 3) : '—'}</td>
             ))}
           </tr>
           <tr className="print:hidden">
-            <td className="px-2 py-1 text-xs text-gray-600 border-r border-gray-100">ASL Price (Adj)</td>
+            <td className="px-2 py-1 text-xs text-ink-mid border-r border-gray-100">ASL Price (Adj)</td>
             {get('aslPrice').map((v, i) => (
               <td key={i} className="px-2 py-1 text-xs text-right font-mono">{v != null ? fmt(v, 3) : '—'}</td>
             ))}
           </tr>
           <tr className="print:hidden">
-            <td className="px-2 py-1 text-xs text-gray-600 border-r border-gray-100">YSP (bps)</td>
+            <td className="px-2 py-1 text-xs text-ink-mid border-r border-gray-100">YSP (bps)</td>
             {get('yspBps').map((v, i) => (
               <td key={i} className="px-2 py-1 text-xs text-right font-mono">{v != null ? fmt(v, 3) : '—'}</td>
             ))}
           </tr>
           <tr className="print:hidden bg-cyan-50 font-medium">
-            <td className="px-2 py-1 text-xs text-gray-600 border-r border-gray-100">YSP $</td>
+            <td className="px-2 py-1 text-xs text-ink-mid border-r border-gray-100">YSP $</td>
             {get('yspDollar').map((v, i) => (
               <td key={i} className="px-2 py-1 text-xs text-right font-mono">{fmtDollar(v)}</td>
             ))}
           </tr>
           <tr className="print:hidden bg-cyan-50 font-medium">
-            <td className="px-2 py-1 text-xs text-gray-600 border-r border-gray-100">Total Comp</td>
+            <td className="px-2 py-1 text-xs text-ink-mid border-r border-gray-100">Total Comp</td>
             {get('totalComp').map((v, i) => (
               <td key={i} className="px-2 py-1 text-xs text-right font-mono font-semibold">{fmtDollar(v)}</td>
             ))}

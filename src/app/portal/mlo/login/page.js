@@ -42,16 +42,16 @@ export default function MloLoginPage() {
 
   return (
     <div className="max-w-md mx-auto py-16">
-      <h1 className="text-2xl font-bold text-gray-900 mb-2">
+      <h1 className="text-2xl font-bold text-ink mb-2">
         MLO Login
       </h1>
-      <p className="text-gray-500 mb-8">
+      <p className="text-ink-subtle mb-8">
         Sign in to your loan officer dashboard.
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="email" className="block text-sm font-medium text-ink-mid mb-1">
             Email
           </label>
           <input
@@ -65,7 +65,7 @@ export default function MloLoginPage() {
         </div>
 
         <div>
-          <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="password" className="block text-sm font-medium text-ink-mid mb-1">
             Password
           </label>
           <div className="relative">
@@ -80,7 +80,7 @@ export default function MloLoginPage() {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-subtle hover:text-ink-mid transition-colors"
               aria-label={showPassword ? 'Hide password' : 'Show password'}
             >
               {showPassword ? (

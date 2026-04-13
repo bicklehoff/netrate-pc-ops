@@ -88,8 +88,8 @@ export default function MloLeadsPage() {
     <div className="w-full">
       <div className="flex items-start justify-between mb-4">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Leads</h1>
-          <p className="text-gray-500 text-sm mt-1">
+          <h1 className="text-xl font-bold text-ink">Leads</h1>
+          <p className="text-ink-subtle text-sm mt-1">
             {leads.length} total
             {warmCount > 0 && <span className="text-green-600 ml-2">{warmCount} warm</span>}
           </p>
@@ -104,7 +104,7 @@ export default function MloLeadsPage() {
             <button
               onClick={() => setViewMode('table')}
               className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
-                viewMode === 'table' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                viewMode === 'table' ? 'bg-white text-ink shadow-nr-sm' : 'text-ink-subtle hover:text-ink-mid'
               }`}
               title="Table view"
             >
@@ -113,7 +113,7 @@ export default function MloLeadsPage() {
             <button
               onClick={() => setViewMode('kanban')}
               className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
-                viewMode === 'kanban' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                viewMode === 'kanban' ? 'bg-white text-ink shadow-nr-sm' : 'text-ink-subtle hover:text-ink-mid'
               }`}
               title="Board view"
             >
@@ -137,7 +137,7 @@ export default function MloLeadsPage() {
                 className={`px-3 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap transition-colors ${
                   filter === f.value
                     ? 'bg-brand text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    : 'bg-gray-100 text-ink-mid hover:bg-gray-200'
                 }`}
               >
                 {f.label}
@@ -172,8 +172,8 @@ export default function MloLeadsPage() {
       )}
 
       {enrichedLeads.length === 0 && !error ? (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-6 py-12 text-center">
-          <p className="text-gray-400 text-sm">
+        <div className="bg-white rounded-nr-xl border border-gray-200 shadow-nr-sm px-6 py-12 text-center">
+          <p className="text-ink-subtle text-sm">
             {leads.length === 0
               ? 'No leads yet. They will appear here when visitors request a quote from the website.'
               : `No leads matching "${STATUS_FILTERS.find((f) => f.value === filter)?.label}" filter.`}

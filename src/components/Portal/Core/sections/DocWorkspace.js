@@ -255,7 +255,7 @@ export default function DocWorkspace({ loanId, onRefresh }) {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+      <div className="bg-white rounded-nr-xl border border-gray-200 p-6 shadow-nr-sm">
         <div className="animate-pulse space-y-3">
           <div className="h-5 bg-gray-200 rounded w-40" />
           <div className="h-10 bg-gray-100 rounded" />
@@ -288,9 +288,9 @@ export default function DocWorkspace({ loanId, onRefresh }) {
 
   if (!hasWorkDrive) {
     return (
-      <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-gray-900 mb-2">Document Workspace</h2>
-        <p className="text-sm text-gray-400 mb-4">
+      <div className="bg-white rounded-nr-xl border border-gray-200 p-6 shadow-nr-sm">
+        <h2 className="text-lg font-semibold text-ink mb-2">Document Workspace</h2>
+        <p className="text-sm text-ink-subtle mb-4">
           No WorkDrive folder for this loan.
         </p>
         {error && (
@@ -312,11 +312,11 @@ export default function DocWorkspace({ loanId, onRefresh }) {
   return (
     <div className="space-y-4">
       {/* ─── CoreBot + Checklist Status ─── */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-nr-xl border border-gray-200 shadow-nr-sm overflow-hidden">
         <div className="px-6 py-4 flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-semibold text-gray-900">CoreBot</h3>
-            <p className="text-xs text-gray-500">AI document processing — identify, rename, and organize</p>
+            <h3 className="text-sm font-semibold text-ink">CoreBot</h3>
+            <p className="text-xs text-ink-subtle">AI document processing — identify, rename, and organize</p>
           </div>
           <div className="flex items-center gap-2">
             {unnamedFloorFiles.length > 0 && (
@@ -329,7 +329,7 @@ export default function DocWorkspace({ loanId, onRefresh }) {
               disabled={processing}
               className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
                 processing
-                  ? 'bg-gray-100 text-gray-400 cursor-wait'
+                  ? 'bg-gray-100 text-ink-subtle cursor-wait'
                   : 'bg-brand text-white hover:bg-brand-dark'
               }`}
             >
@@ -342,10 +342,10 @@ export default function DocWorkspace({ loanId, onRefresh }) {
         {checklistStatus && (
           <div className="px-6 pb-4 border-t border-gray-100 pt-3">
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs font-medium text-gray-600">
+              <span className="text-xs font-medium text-ink-mid">
                 Submission Checklist: {checklistStatus.received}/{checklistStatus.total}
               </span>
-              <span className="text-xs text-gray-400">{checklistStatus.phase?.replace(/_/g, ' ')}</span>
+              <span className="text-xs text-ink-subtle">{checklistStatus.phase?.replace(/_/g, ' ')}</span>
             </div>
             <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
               <div
@@ -370,21 +370,21 @@ export default function DocWorkspace({ loanId, onRefresh }) {
           <div className="px-6 pb-4 border-t border-gray-100 pt-3">
             <div className="flex items-center gap-4 mb-3">
               <div className="text-center">
-                <div className="text-lg font-bold text-gray-900">{processReport.processed}</div>
-                <div className="text-xs text-gray-500">Processed</div>
+                <div className="text-lg font-bold text-ink">{processReport.processed}</div>
+                <div className="text-xs text-ink-subtle">Processed</div>
               </div>
               <div className="text-center">
                 <div className="text-lg font-bold text-green-600">{processReport.renamed}</div>
-                <div className="text-xs text-gray-500">Renamed</div>
+                <div className="text-xs text-ink-subtle">Renamed</div>
               </div>
               <div className="text-center">
                 <div className="text-lg font-bold text-blue-600">{processReport.conditionsUpdated}</div>
-                <div className="text-xs text-gray-500">Conditions</div>
+                <div className="text-xs text-ink-subtle">Conditions</div>
               </div>
               {processReport.errors?.length > 0 && (
                 <div className="text-center">
                   <div className="text-lg font-bold text-amber-600">{processReport.errors.length}</div>
-                  <div className="text-xs text-gray-500">Errors</div>
+                  <div className="text-xs text-ink-subtle">Errors</div>
                 </div>
               )}
             </div>
@@ -399,14 +399,14 @@ export default function DocWorkspace({ loanId, onRefresh }) {
                       doc.action === 'suggest' ? 'bg-blue-500' :
                       doc.action === 'flagged' ? 'bg-amber-500' : 'bg-red-500'
                     }`} />
-                    <span className="text-gray-500 truncate flex-1">{doc.originalName}</span>
+                    <span className="text-ink-subtle truncate flex-1">{doc.originalName}</span>
                     {doc.newFileName && (
                       <>
-                        <span className="text-gray-400">→</span>
-                        <span className="font-medium text-gray-800 truncate">{doc.newFileName}</span>
+                        <span className="text-ink-subtle">→</span>
+                        <span className="font-medium text-ink truncate">{doc.newFileName}</span>
                       </>
                     )}
-                    <span className="text-gray-400 flex-shrink-0">
+                    <span className="text-ink-subtle flex-shrink-0">
                       {Math.round((doc.confidence || 0) * 100)}%
                     </span>
                   </div>
@@ -416,7 +416,7 @@ export default function DocWorkspace({ loanId, onRefresh }) {
 
             <button
               onClick={() => setProcessReport(null)}
-              className="mt-3 text-xs text-gray-400 hover:text-gray-600"
+              className="mt-3 text-xs text-ink-subtle hover:text-ink-mid"
             >
               Dismiss report
             </button>
@@ -425,10 +425,10 @@ export default function DocWorkspace({ loanId, onRefresh }) {
       </div>
 
       {/* ─── File Browser ─── */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-nr-xl border border-gray-200 shadow-nr-sm overflow-hidden">
         {/* Header */}
         <div className="px-6 pt-5 pb-3 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">Loan Files</h2>
+          <h2 className="text-lg font-semibold text-ink">Loan Files</h2>
           <div className="flex items-center gap-2">
             {/* Submit to Lender — move all named FLOOR files to SUBMITTED */}
             {activeTab === 'FLOOR' && namedFloorFiles.length > 0 && (
@@ -448,7 +448,7 @@ export default function DocWorkspace({ loanId, onRefresh }) {
             )}
             <label className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg cursor-pointer transition-colors ${
               uploading
-                ? 'bg-gray-100 text-gray-400 pointer-events-none'
+                ? 'bg-gray-100 text-ink-subtle pointer-events-none'
                 : 'bg-brand/10 text-brand hover:bg-brand/20 border border-brand/20'
             }`}>
               {uploading ? 'Uploading...' : `📎 Upload to ${FOLDER_TABS.find(t => t.key === activeTab)?.label || activeTab}`}
@@ -475,14 +475,14 @@ export default function DocWorkspace({ loanId, onRefresh }) {
                 className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
                   activeTab === tab.key
                     ? 'border-brand text-brand'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    : 'border-transparent text-ink-subtle hover:text-ink-mid hover:border-gray-300'
                 }`}
               >
                 <span>{tab.icon}</span>
                 <span>{tab.label}</span>
                 {count > 0 && (
                   <span className={`ml-1 px-1.5 py-0.5 text-xs rounded-full ${
-                    activeTab === tab.key ? 'bg-brand/10 text-brand' : 'bg-gray-100 text-gray-500'
+                    activeTab === tab.key ? 'bg-brand/10 text-brand' : 'bg-gray-100 text-ink-subtle'
                   }`}>
                     {count}
                   </span>
@@ -537,7 +537,7 @@ export default function DocWorkspace({ loanId, onRefresh }) {
         {/* File list */}
         <div className="px-6 py-3 min-h-[120px]">
           {currentFiles.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 text-gray-400">
+            <div className="flex flex-col items-center justify-center py-8 text-ink-subtle">
               <span className="text-3xl mb-2">📂</span>
               <p className="text-sm">No files in {activeTab}</p>
               <p className="text-xs mt-1">{FOLDER_TABS.find(t => t.key === activeTab)?.desc}</p>
@@ -556,7 +556,7 @@ export default function DocWorkspace({ loanId, onRefresh }) {
                       <span className="text-lg flex-shrink-0">{locked ? '🔒' : fileIcon(file.name)}</span>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium text-gray-800 truncate">{file.name}</p>
+                          <p className="text-sm font-medium text-ink truncate">{file.name}</p>
                           {locked ? (
                             <span className="flex-shrink-0 px-1.5 py-0.5 text-[10px] font-medium bg-amber-50 text-amber-700 rounded border border-amber-200">
                               Locked
@@ -567,7 +567,7 @@ export default function DocWorkspace({ loanId, onRefresh }) {
                             </span>
                           )}
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-gray-400">
+                        <div className="flex items-center gap-2 text-xs text-ink-subtle">
                           {file.size && <span>{formatBytes(file.size)}</span>}
                           {file.modifiedTime && <span>{formatDate(file.modifiedTime)}</span>}
                         </div>

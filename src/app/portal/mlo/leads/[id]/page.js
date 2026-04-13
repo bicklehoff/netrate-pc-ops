@@ -161,7 +161,7 @@ export default function LeadDetailPage() {
     }
   };
 
-  if (loading) return <div className="w-full py-12 text-center text-gray-400">Loading...</div>;
+  if (loading) return <div className="w-full py-12 text-center text-ink-subtle">Loading...</div>;
   if (!lead) return <div className="w-full py-12 text-center text-red-500">Lead not found</div>;
 
   const isPurchase = lead.loan_purpose === 'purchase';
@@ -172,9 +172,9 @@ export default function LeadDetailPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <Link href="/portal/mlo/leads" className="text-xs text-gray-400 hover:text-brand mb-1 block">← Back to Leads</Link>
-          <h1 className="text-xl font-bold text-gray-900">{lead.name}</h1>
-          <div className="flex items-center gap-3 mt-1 text-sm text-gray-500">
+          <Link href="/portal/mlo/leads" className="text-xs text-ink-subtle hover:text-brand mb-1 block">← Back to Leads</Link>
+          <h1 className="text-xl font-bold text-ink">{lead.name}</h1>
+          <div className="flex items-center gap-3 mt-1 text-sm text-ink-subtle">
             {lead.email && <span>{lead.email}</span>}
             {lead.phone && <span>{lead.phone}</span>}
             <span className="text-xs bg-gray-100 px-2 py-0.5 rounded">{lead.status}</span>
@@ -189,7 +189,7 @@ export default function LeadDetailPage() {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="px-4 py-2 text-sm font-medium border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+            className="px-4 py-2 text-sm font-medium border border-gray-300 rounded-lg hover:bg-surface-alt transition-colors disabled:opacity-50"
           >
             {saving ? 'Saving...' : 'Save'}
           </button>
@@ -224,7 +224,7 @@ export default function LeadDetailPage() {
           <button
             onClick={() => runContactAction('send_portal_invite')}
             disabled={actionLoading}
-            className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 px-3 py-1.5 rounded-lg text-sm hover:bg-gray-50 transition-colors disabled:opacity-50"
+            className="flex items-center gap-1.5 bg-white border border-gray-200 text-ink-mid px-3 py-1.5 rounded-lg text-sm hover:bg-surface-alt transition-colors disabled:opacity-50"
           >
             <span>🔗</span> Send Portal Invite
           </button>
@@ -241,11 +241,11 @@ export default function LeadDetailPage() {
               runContactAction('send_needs_list', { documents: docs });
             }}
             disabled={actionLoading}
-            className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 px-3 py-1.5 rounded-lg text-sm hover:bg-gray-50 transition-colors disabled:opacity-50"
+            className="flex items-center gap-1.5 bg-white border border-gray-200 text-ink-mid px-3 py-1.5 rounded-lg text-sm hover:bg-surface-alt transition-colors disabled:opacity-50"
           >
             <span>📋</span> Send Needs List
           </button>
-          {actionLoading && <span className="text-xs text-gray-400 ml-2">Sending...</span>}
+          {actionLoading && <span className="text-xs text-ink-subtle ml-2">Sending...</span>}
         </div>
       )}
 
@@ -255,8 +255,8 @@ export default function LeadDetailPage() {
       <div className="grid grid-cols-2 gap-6">
         {/* Left: Scenario Inputs */}
         <div className="space-y-4">
-          <div className="bg-white border border-gray-200 rounded-xl p-5">
-            <h3 className="font-semibold text-gray-900 mb-4">Loan Scenario</h3>
+          <div className="bg-white border border-gray-200 rounded-nr-xl p-5">
+            <h3 className="font-semibold text-ink mb-4">Loan Scenario</h3>
 
             <div className="space-y-3">
               <Field label="Loan Purpose">
@@ -348,8 +348,8 @@ export default function LeadDetailPage() {
           </div>
 
           {/* Notes */}
-          <div className="bg-white border border-gray-200 rounded-xl p-5">
-            <h3 className="font-semibold text-gray-900 mb-3">Notes</h3>
+          <div className="bg-white border border-gray-200 rounded-nr-xl p-5">
+            <h3 className="font-semibold text-ink mb-3">Notes</h3>
             <textarea
               value={lead.notes || ''}
               onChange={e => updateField('notes', e.target.value)}
@@ -363,9 +363,9 @@ export default function LeadDetailPage() {
         {/* Right: Quotes */}
         <div className="space-y-4">
           {/* Full quote wizard quotes (BorrowerQuote) */}
-          <div className="bg-white border border-gray-200 rounded-xl p-5">
+          <div className="bg-white border border-gray-200 rounded-nr-xl p-5">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-gray-900">Quotes</h3>
+              <h3 className="font-semibold text-ink">Quotes</h3>
               <Link
                 href={quoteGeneratorUrl}
                 className="text-xs font-medium bg-cyan-600 text-white px-3 py-1.5 rounded-lg hover:bg-cyan-700 transition-colors"
@@ -375,7 +375,7 @@ export default function LeadDetailPage() {
             </div>
 
             {(!lead.borrowerQuotes || lead.borrowerQuotes.length === 0) ? (
-              <div className="text-center py-6 text-gray-400">
+              <div className="text-center py-6 text-ink-subtle">
                 <p className="text-sm">No quotes yet</p>
                 <p className="text-xs mt-1">Click &ldquo;Generate Quote&rdquo; or &ldquo;+ New Quote&rdquo; to build a full quote with PDF</p>
               </div>
@@ -388,23 +388,23 @@ export default function LeadDetailPage() {
                     className="flex items-center justify-between p-3 border border-gray-100 rounded-lg hover:border-cyan-200 hover:bg-cyan-50/30 transition-colors"
                   >
                     <div>
-                      <div className="text-sm font-medium text-gray-900">
+                      <div className="text-sm font-medium text-ink">
                         {q.purpose} · {q.loan_type} · ${Number(q.loan_amount).toLocaleString()}
                       </div>
-                      <div className="text-xs text-gray-500 mt-0.5">
+                      <div className="text-xs text-ink-subtle mt-0.5">
                         {new Date(q.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                         {q.sent_at && <span className="ml-2 text-green-600">Sent</span>}
                         {q.viewedAt && <span className="ml-1 text-blue-500">Viewed</span>}
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-sm font-mono text-gray-900">
+                      <div className="text-sm font-mono text-ink">
                         {q.monthlyPayment ? `$${Number(q.monthlyPayment).toLocaleString()}/mo` : '—'}
                       </div>
                       <div className={`text-[10px] px-1.5 py-0.5 rounded mt-1 inline-block ${
                         q.status === 'sent' ? 'bg-green-100 text-green-700' :
                         q.status === 'viewed' ? 'bg-blue-100 text-blue-700' :
-                        'bg-gray-100 text-gray-500'
+                        'bg-gray-100 text-ink-subtle'
                       }`}>{q.status}</div>
                     </div>
                   </Link>
@@ -415,21 +415,21 @@ export default function LeadDetailPage() {
 
           {/* Quick quotes (LeadQuote — legacy) */}
           {lead.quotes && lead.quotes.length > 0 && (
-            <div className="bg-white border border-gray-200 rounded-xl p-5">
-              <h3 className="font-semibold text-gray-900 mb-3 text-sm">Quick Quotes</h3>
+            <div className="bg-white border border-gray-200 rounded-nr-xl p-5">
+              <h3 className="font-semibold text-ink mb-3 text-sm">Quick Quotes</h3>
               <div className="space-y-2">
                 {lead.quotes.map((quote) => (
                   <div key={quote.id} className="border border-gray-100 rounded-lg p-3">
                     <div className="flex items-center justify-between">
-                      <div className="text-xs text-gray-500">
+                      <div className="text-xs text-ink-subtle">
                         {new Date(quote.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                       </div>
                       {quote.sent_at && <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded">Sent</span>}
                     </div>
                     <div className="flex gap-4 mt-1 text-sm">
                       <span className="font-mono font-bold">{quote.bestRate ? `${Number(quote.bestRate).toFixed(3)}%` : '—'}</span>
-                      <span className="text-gray-500">{quote.bestLender || '—'}</span>
-                      <span className="text-gray-500">{quote.monthlyPayment ? `$${Number(quote.monthlyPayment).toLocaleString()}/mo` : ''}</span>
+                      <span className="text-ink-subtle">{quote.bestLender || '—'}</span>
+                      <span className="text-ink-subtle">{quote.monthlyPayment ? `$${Number(quote.monthlyPayment).toLocaleString()}/mo` : ''}</span>
                     </div>
                   </div>
                 ))}
@@ -461,7 +461,7 @@ export default function LeadDetailPage() {
 function Field({ label, children }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
+      <label className="block text-xs font-medium text-ink-mid mb-1">{label}</label>
       {children}
     </div>
   );

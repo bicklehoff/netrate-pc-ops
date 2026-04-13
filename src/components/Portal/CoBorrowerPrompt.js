@@ -11,7 +11,7 @@ export default function CoBorrowerPrompt({ maritalStatus, hasCoBorrowers, onAddS
   if (maritalStatus === 'married' && !hasCoBorrowers) {
     return (
       <div className={`rounded-lg p-4 ${showError ? 'bg-red-50 border border-red-300' : 'bg-cyan-50 border border-cyan-200'}`}>
-        <p className="text-sm text-gray-700 mb-3">
+        <p className="text-sm text-ink-mid mb-3">
           Would you like to add your spouse as a co-borrower on this application?
         </p>
         <div className="flex gap-3">
@@ -25,7 +25,7 @@ export default function CoBorrowerPrompt({ maritalStatus, hasCoBorrowers, onAddS
           <button
             type="button"
             onClick={() => onDeclineCoBorrower?.()}
-            className="px-4 py-2 text-gray-500 text-sm font-medium hover:text-gray-700 transition-colors"
+            className="px-4 py-2 text-ink-subtle text-sm font-medium hover:text-ink-mid transition-colors"
           >
             No, Continue Solo
           </button>
@@ -56,9 +56,9 @@ export default function CoBorrowerPrompt({ maritalStatus, hasCoBorrowers, onAddS
   // ── Unmarried / Separated: info about separate applications ──
   if (maritalStatus === 'unmarried' || maritalStatus === 'separated') {
     return (
-      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-        <p className="text-sm text-gray-600">
-          <span className="font-medium text-gray-700">Adding a co-borrower?</span>{' '}
+      <div className="bg-surface-alt border border-gray-200 rounded-lg p-4">
+        <p className="text-sm text-ink-mid">
+          <span className="font-medium text-ink-mid">Adding a co-borrower?</span>{' '}
           Non-married co-borrowers must submit a separate application. You can send them a link
           to apply after you complete yours.
         </p>

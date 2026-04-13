@@ -56,12 +56,12 @@ function LoginContent() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
           </svg>
         </div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-3">Check your email</h1>
-        <p className="text-gray-500">
-          We&apos;ve sent a secure login link to <strong className="text-gray-700">{email}</strong>.
+        <h1 className="text-2xl font-bold text-ink mb-3">Check your email</h1>
+        <p className="text-ink-subtle">
+          We&apos;ve sent a secure login link to <strong className="text-ink-mid">{email}</strong>.
           Click the link to access your loan dashboard.
         </p>
-        <p className="text-gray-400 text-sm mt-4">
+        <p className="text-ink-subtle text-sm mt-4">
           The link expires in 15 minutes. Check your spam folder if you don&apos;t see it.
         </p>
       </div>
@@ -70,16 +70,16 @@ function LoginContent() {
 
   return (
     <div className="max-w-md mx-auto py-16">
-      <h1 className="text-2xl font-bold text-gray-900 mb-2">
+      <h1 className="text-2xl font-bold text-ink mb-2">
         Access your loan
       </h1>
-      <p className="text-gray-500 mb-8">
+      <p className="text-ink-subtle mb-8">
         Enter the email you used on your application. We&apos;ll send you a secure login link.
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="email" className="block text-sm font-medium text-ink-mid mb-1">
             Email address
           </label>
           <input
@@ -106,7 +106,7 @@ function LoginContent() {
         </button>
       </form>
 
-      <p className="text-center text-gray-400 text-sm mt-6">
+      <p className="text-center text-ink-subtle text-sm mt-6">
         Don&apos;t have an application yet?{' '}
         <a href="/portal/apply" className="text-brand hover:underline">Apply now</a>
       </p>

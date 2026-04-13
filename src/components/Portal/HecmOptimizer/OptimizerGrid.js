@@ -39,8 +39,8 @@ export default function OptimizerGrid() {
   if (!sweep) {
     return (
       <div className="bg-white border border-gray-200 rounded-lg p-4 print:hidden">
-        <h3 className="text-sm font-semibold text-gray-700">FOA Margin Optimizer</h3>
-        <p className="text-xs text-gray-400 mt-1">Enter borrower age, home value, and CMT rates to see the optimizer grid.</p>
+        <h3 className="text-sm font-semibold text-ink-mid">FOA Margin Optimizer</h3>
+        <p className="text-xs text-ink-subtle mt-1">Enter borrower age, home value, and CMT rates to see the optimizer grid.</p>
       </div>
     );
   }
@@ -51,11 +51,11 @@ export default function OptimizerGrid() {
     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden print:hidden">
       {/* Header */}
       <div
-        className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b cursor-pointer"
+        className="flex items-center justify-between px-4 py-3 bg-surface-alt border-b cursor-pointer"
         onClick={() => setCollapsed(!collapsed)}
       >
         <div className="flex items-center gap-3">
-          <h3 className="text-sm font-semibold text-gray-700">FOA Margin Optimizer</h3>
+          <h3 className="text-sm font-semibold text-ink-mid">FOA Margin Optimizer</h3>
           {sweetSpot && (
             <span className="text-xs bg-cyan-100 text-cyan-700 px-2 py-0.5 rounded-full font-medium">
               Sweet Spot: {sweetSpot.margin}% &rarr; {fmtDollar(sweetSpot.compDollars)} comp
@@ -63,7 +63,7 @@ export default function OptimizerGrid() {
           )}
         </div>
         <div className="flex items-center gap-3">
-          <label className="text-xs text-gray-500" onClick={e => e.stopPropagation()}>
+          <label className="text-xs text-ink-subtle" onClick={e => e.stopPropagation()}>
             Target Comp: $
             <input
               type="number"
@@ -74,7 +74,7 @@ export default function OptimizerGrid() {
               min={0}
             />
           </label>
-          <span className="text-gray-400 text-sm">{collapsed ? '+' : '−'}</span>
+          <span className="text-ink-subtle text-sm">{collapsed ? '+' : '−'}</span>
         </div>
       </div>
 
@@ -82,7 +82,7 @@ export default function OptimizerGrid() {
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="text-gray-500 bg-gray-50 border-b">
+              <tr className="text-ink-subtle bg-surface-alt border-b">
                 <th className="px-3 py-2 text-left font-medium">Margin</th>
                 <th className="px-2 py-2 text-right font-medium">Exp Rate</th>
                 <th className="px-2 py-2 text-right font-medium">PLF</th>
@@ -104,7 +104,7 @@ export default function OptimizerGrid() {
                   <tr
                     key={i}
                     className={`border-b ${
-                      !row.viable ? 'bg-red-50 text-gray-400' :
+                      !row.viable ? 'bg-red-50 text-ink-subtle' :
                       isSweetSpot ? 'bg-cyan-50 font-semibold' :
                       isBorrowerBest ? 'bg-emerald-50' :
                       ''
@@ -137,7 +137,7 @@ export default function OptimizerGrid() {
           </table>
 
           {/* Legend */}
-          <div className="px-3 py-2 bg-gray-50 border-t flex items-center gap-4 text-xs text-gray-500">
+          <div className="px-3 py-2 bg-surface-alt border-t flex items-center gap-4 text-xs text-ink-subtle">
             <span><span className="text-cyan-600 font-semibold">*</span> Sweet Spot — closest to ${fmt(targetComp)} target comp</span>
             <span><span className="text-emerald-600 font-semibold">+</span> Borrower Best — max available funds above target</span>
             <span className="ml-auto">{viable.length} of {rows.length} margins viable</span>

@@ -20,9 +20,9 @@ export default function EligibilityPanel({ eligibility }) {
   const infos = eligibility.warnings.filter(w => w.severity === 'info');
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+    <div className="bg-white rounded-nr-xl border border-gray-200 p-4 shadow-nr-sm">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-gray-700">Eligibility Check</h3>
+        <h3 className="text-sm font-semibold text-ink-mid">Eligibility Check</h3>
         <div className="flex items-center gap-3 text-xs">
           <span className="text-green-600 font-medium">
             {eligibility.eligibleLenders.length} eligible
@@ -44,7 +44,7 @@ export default function EligibilityPanel({ eligibility }) {
         ))}
         {infos.length > 0 && (
           <details className="group">
-            <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700">
+            <summary className="text-xs text-ink-subtle cursor-pointer hover:text-ink-mid">
               {infos.length} disclosure{infos.length > 1 ? 's' : ''} — click to expand
             </summary>
             <div className="mt-2 space-y-2">

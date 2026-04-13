@@ -35,15 +35,15 @@ export default function SuccessPage() {
         </svg>
       </div>
 
-      <h1 className="text-2xl font-bold text-gray-900 mb-3">
+      <h1 className="text-2xl font-bold text-ink mb-3">
         Application Received!
       </h1>
-      <p className="text-gray-500 max-w-md mx-auto mb-4">
-        We&apos;ve received your application and sent a confirmation to <strong className="text-gray-700">{email || 'your email'}</strong>.
+      <p className="text-ink-subtle max-w-md mx-auto mb-4">
+        We&apos;ve received your application and sent a confirmation to <strong className="text-ink-mid">{email || 'your email'}</strong>.
         A member of our team will review it and reach out within 1 business day.
       </p>
 
-      <div className="bg-blue-50 border border-blue-100 rounded-xl p-6 mb-8 max-w-md mx-auto">
+      <div className="bg-blue-50 border border-blue-100 rounded-nr-xl p-6 mb-8 max-w-md mx-auto">
         <h2 className="text-sm font-semibold text-blue-900 mb-2">What happens next?</h2>
         <ol className="text-sm text-blue-800 text-left space-y-2">
           <li className="flex gap-2">
@@ -61,8 +61,8 @@ export default function SuccessPage() {
         </ol>
       </div>
 
-      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-8 max-w-md mx-auto">
-        <p className="text-sm text-gray-600">
+      <div className="bg-surface-alt border border-gray-200 rounded-lg p-4 mb-8 max-w-md mx-auto">
+        <p className="text-sm text-ink-mid">
           <strong>Questions?</strong> Call us at{' '}
           <a href="tel:3034445251" className="text-brand hover:underline">303-444-5251</a>{' '}
           or email{' '}
@@ -91,7 +91,7 @@ export default function SuccessPage() {
         <Link
           href="/"
           onClick={() => resetData()}
-          className="text-gray-500 hover:text-gray-700 px-4 py-2.5 font-medium transition-colors"
+          className="text-ink-subtle hover:text-ink-mid px-4 py-2.5 font-medium transition-colors"
         >
           Back to Main Site
         </Link>

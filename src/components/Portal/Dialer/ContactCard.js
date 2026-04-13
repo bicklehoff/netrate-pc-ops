@@ -113,7 +113,7 @@ export default function ContactCard({ contact, onUpdate }) {
 
   if (!detail) {
     return (
-      <div className="p-4 text-center text-xs text-gray-400">
+      <div className="p-4 text-center text-xs text-ink-subtle">
         Contact not found
       </div>
     );
@@ -146,7 +146,7 @@ export default function ContactCard({ contact, onUpdate }) {
       {/* Contact Info */}
       <div className="p-4">
         <div className="flex items-center justify-between mb-3">
-          <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Contact Info</h4>
+          <h4 className="text-[11px] font-semibold text-ink-subtle uppercase tracking-wide">Contact Info</h4>
           <div className="flex gap-1">
             {!isEditing ? (
               <button
@@ -157,7 +157,7 @@ export default function ContactCard({ contact, onUpdate }) {
               </button>
             ) : (
               <div className="flex gap-2">
-                <button onClick={() => setIsEditing(false)} className="text-[10px] text-gray-400 hover:underline">Cancel</button>
+                <button onClick={() => setIsEditing(false)} className="text-[10px] text-ink-subtle hover:underline">Cancel</button>
                 <button onClick={handleSave} disabled={saving} className="text-[10px] text-brand font-medium hover:underline">
                   {saving ? 'Saving...' : 'Save'}
                 </button>
@@ -211,24 +211,24 @@ export default function ContactCard({ contact, onUpdate }) {
           <div className="space-y-1.5">
             <div className="flex gap-4">
               <div className="flex-1">
-                <div className="text-[10px] text-gray-400">Phone</div>
+                <div className="text-[10px] text-ink-subtle">Phone</div>
                 <div className="text-xs font-medium">{detail.phone || '—'}</div>
               </div>
               <div className="flex-1">
-                <div className="text-[10px] text-gray-400">Email</div>
+                <div className="text-[10px] text-ink-subtle">Email</div>
                 <div className="text-xs font-medium truncate">{detail.email || '—'}</div>
               </div>
             </div>
             {detail.company && (
               <div>
-                <div className="text-[10px] text-gray-400">Company</div>
+                <div className="text-[10px] text-ink-subtle">Company</div>
                 <div className="text-xs font-medium">{detail.company}</div>
               </div>
             )}
             {detail.tags?.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-1">
                 {detail.tags.map(tag => (
-                  <span key={tag} className="px-1.5 py-0.5 text-[10px] bg-gray-100 text-gray-600 rounded">
+                  <span key={tag} className="px-1.5 py-0.5 text-[10px] bg-gray-100 text-ink-mid rounded">
                     {tag}
                   </span>
                 ))}
@@ -241,15 +241,15 @@ export default function ContactCard({ contact, onUpdate }) {
       {/* Loans */}
       {loans.length > 0 && (
         <div className="p-4">
-          <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Loans</h4>
+          <h4 className="text-[11px] font-semibold text-ink-subtle uppercase tracking-wide mb-2">Loans</h4>
           <div className="space-y-2">
             {loans.slice(0, 3).map(loan => (
-              <div key={loan.id} className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
+              <div key={loan.id} className="flex items-center gap-3 p-2 bg-surface-alt rounded-lg">
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-semibold truncate">
                     {loan.loan_type || 'Loan'} · {loan.status}
                   </div>
-                  <div className="text-[10px] text-gray-500">
+                  <div className="text-[10px] text-ink-subtle">
                     {loan.loan_amount ? `$${Number(loan.loan_amount).toLocaleString()}` : ''}
                     {loan.lender_name ? ` · ${loan.lender_name}` : ''}
                   </div>
@@ -282,7 +282,7 @@ export default function ContactCard({ contact, onUpdate }) {
 
       {/* Activity Timeline */}
       <div className="p-4">
-        <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-3">Recent Activity</h4>
+        <h4 className="text-[11px] font-semibold text-ink-subtle uppercase tracking-wide mb-3">Recent Activity</h4>
         {recentActivity.length > 0 ? (
           <div className="space-y-3">
             {recentActivity.map((item, i) => (
@@ -296,8 +296,8 @@ export default function ContactCard({ contact, onUpdate }) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-[11px] font-semibold">{item.title}</div>
-                  {item.desc && <div className="text-[10px] text-gray-500 truncate">{item.desc}</div>}
-                  <div className="text-[9px] text-gray-400 mt-0.5">
+                  {item.desc && <div className="text-[10px] text-ink-subtle truncate">{item.desc}</div>}
+                  <div className="text-[9px] text-ink-subtle mt-0.5">
                     {item.time ? new Date(item.time).toLocaleDateString('en-US', {
                       month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
                     }) : ''}
@@ -307,12 +307,12 @@ export default function ContactCard({ contact, onUpdate }) {
             ))}
           </div>
         ) : (
-          <p className="text-[10px] text-gray-400 text-center py-4">No activity yet</p>
+          <p className="text-[10px] text-ink-subtle text-center py-4">No activity yet</p>
         )}
       </div>
 
       {/* Add note */}
-      <div className="p-3 bg-gray-50/80 flex gap-2">
+      <div className="p-3 bg-surface-alt/80 flex gap-2">
         <input
           className="flex-1 px-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:border-brand focus:outline-none bg-white"
           placeholder="Add a note..."

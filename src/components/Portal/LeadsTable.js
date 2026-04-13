@@ -18,7 +18,7 @@ const STATUS_COLORS = {
   contacted: 'bg-amber-100 text-amber-800',
   qualified: 'bg-green-100 text-green-800',
   converted: 'bg-cyan-100 text-cyan-800',
-  closed: 'bg-gray-100 text-gray-600',
+  closed: 'bg-gray-100 text-ink-mid',
 };
 
 const NEXT_STATUS = {
@@ -118,27 +118,27 @@ export default function LeadsTable({ leads, onStatusChange }) {
   };
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+    <div className="bg-white rounded-nr-xl border border-gray-200 shadow-nr-sm overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-gray-100 bg-gray-50/50">
-              <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">
+            <tr className="border-b border-gray-100 bg-surface-alt/50">
+              <th className="text-left px-4 py-3 font-medium text-ink-subtle text-xs uppercase tracking-wider">
                 Name
               </th>
-              <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">
+              <th className="text-left px-4 py-3 font-medium text-ink-subtle text-xs uppercase tracking-wider">
                 Contact
               </th>
-              <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">
+              <th className="text-left px-4 py-3 font-medium text-ink-subtle text-xs uppercase tracking-wider">
                 Source
               </th>
-              <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">
+              <th className="text-left px-4 py-3 font-medium text-ink-subtle text-xs uppercase tracking-wider">
                 Status
               </th>
-              <th className="text-right px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">
+              <th className="text-right px-4 py-3 font-medium text-ink-subtle text-xs uppercase tracking-wider">
                 Received
               </th>
-              <th className="text-right px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wider">
+              <th className="text-right px-4 py-3 font-medium text-ink-subtle text-xs uppercase tracking-wider">
                 Actions
               </th>
             </tr>
@@ -150,9 +150,9 @@ export default function LeadsTable({ leads, onStatusChange }) {
                   className="px-4 py-3 cursor-pointer"
                   onClick={() => setExpandedId(expandedId === lead.id ? null : lead.id)}
                 >
-                  <a href={`/portal/mlo/leads/${lead.id}`} className="font-medium text-gray-900 hover:text-brand" onClick={e => e.stopPropagation()}>{lead.name}</a>
+                  <a href={`/portal/mlo/leads/${lead.id}`} className="font-medium text-ink hover:text-brand" onClick={e => e.stopPropagation()}>{lead.name}</a>
                   {lead.source_detail && (
-                    <span className="block text-xs text-gray-400 mt-0.5 truncate max-w-[200px]">
+                    <span className="block text-xs text-ink-subtle mt-0.5 truncate max-w-[200px]">
                       {lead.source_detail}
                     </span>
                   )}
@@ -162,7 +162,7 @@ export default function LeadsTable({ leads, onStatusChange }) {
                     {lead.email}
                   </a>
                   {lead.phone && (
-                    <a href={`tel:${lead.phone}`} className="block text-xs text-gray-500 mt-0.5 hover:text-gray-700">
+                    <a href={`tel:${lead.phone}`} className="block text-xs text-ink-subtle mt-0.5 hover:text-ink-mid">
                       {lead.phone}
                     </a>
                   )}
@@ -172,7 +172,7 @@ export default function LeadsTable({ leads, onStatusChange }) {
                     {lead.is_warm && (
                       <span className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700">Warm</span>
                     )}
-                    <span className="text-gray-600 text-sm">
+                    <span className="text-ink-mid text-sm">
                       {SOURCE_LABELS[lead.source] || lead.source}
                     </span>
                   </div>
@@ -190,14 +190,14 @@ export default function LeadsTable({ leads, onStatusChange }) {
                 <td className="px-4 py-3">
                   <span
                     className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      STATUS_COLORS[lead.status] || 'bg-gray-100 text-gray-700'
+                      STATUS_COLORS[lead.status] || 'bg-gray-100 text-ink-mid'
                     }`}
                   >
                     {STATUS_LABELS[lead.status] || lead.status}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <span className="text-xs text-gray-400">{timeAgo(lead.created_at)}</span>
+                  <span className="text-xs text-ink-subtle">{timeAgo(lead.created_at)}</span>
                 </td>
                 <td className="px-4 py-3 text-right">
                   <div className="flex items-center justify-end gap-1.5">
@@ -223,7 +223,7 @@ export default function LeadsTable({ leads, onStatusChange }) {
                     {lead.status !== 'closed' && lead.status !== 'converted' && (
                       <button
                         onClick={(e) => handleClose(e, lead)}
-                        className="text-xs text-gray-400 hover:text-red-600 transition-colors ml-1"
+                        className="text-xs text-ink-subtle hover:text-red-600 transition-colors ml-1"
                         title="Close lead"
                       >
                         &times;
@@ -242,29 +242,29 @@ export default function LeadsTable({ leads, onStatusChange }) {
         const lead = leads.find((l) => l.id === expandedId);
         if (!lead) return null;
         return (
-          <div className="border-t border-gray-200 bg-gray-50 px-6 py-4">
+          <div className="border-t border-gray-200 bg-surface-alt px-6 py-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Details</h4>
-                <p className="text-sm text-gray-700"><strong>Name:</strong> {lead.name}</p>
-                <p className="text-sm text-gray-700"><strong>Email:</strong> {lead.email}</p>
-                {lead.phone && <p className="text-sm text-gray-700"><strong>Phone:</strong> {lead.phone}</p>}
-                <p className="text-sm text-gray-700"><strong>Source:</strong> {SOURCE_LABELS[lead.source] || lead.source}</p>
-                {lead.source_detail && <p className="text-sm text-gray-700"><strong>Rate:</strong> {lead.source_detail}</p>}
+                <h4 className="text-xs font-semibold text-ink-subtle uppercase tracking-wider mb-2">Details</h4>
+                <p className="text-sm text-ink-mid"><strong>Name:</strong> {lead.name}</p>
+                <p className="text-sm text-ink-mid"><strong>Email:</strong> {lead.email}</p>
+                {lead.phone && <p className="text-sm text-ink-mid"><strong>Phone:</strong> {lead.phone}</p>}
+                <p className="text-sm text-ink-mid"><strong>Source:</strong> {SOURCE_LABELS[lead.source] || lead.source}</p>
+                {lead.source_detail && <p className="text-sm text-ink-mid"><strong>Rate:</strong> {lead.source_detail}</p>}
                 {lead.utm_source && (
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="text-sm text-ink-subtle mt-1">
                     UTM: {lead.utm_source}/{lead.utm_medium}/{lead.utm_campaign}
                   </p>
                 )}
               </div>
               <div>
-                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Notes</h4>
+                <h4 className="text-xs font-semibold text-ink-subtle uppercase tracking-wider mb-2">Notes</h4>
                 {lead.message ? (
-                  <pre className="text-sm text-gray-700 whitespace-pre-wrap font-sans bg-white border border-gray-200 rounded p-3 max-h-40 overflow-y-auto">
+                  <pre className="text-sm text-ink-mid whitespace-pre-wrap font-sans bg-white border border-gray-200 rounded p-3 max-h-40 overflow-y-auto">
                     {lead.message}
                   </pre>
                 ) : (
-                  <p className="text-sm text-gray-400">No notes yet.</p>
+                  <p className="text-sm text-ink-subtle">No notes yet.</p>
                 )}
                 <div className="flex gap-2 mt-2">
                   <input

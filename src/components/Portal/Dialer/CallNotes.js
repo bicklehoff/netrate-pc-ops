@@ -9,10 +9,10 @@ import { useState } from 'react';
 const DISPOSITIONS = [
   { value: 'interested', label: 'Interested', color: 'bg-green-100 text-green-700' },
   { value: 'callback', label: 'Callback', color: 'bg-blue-100 text-blue-700' },
-  { value: 'not_interested', label: 'Not Interested', color: 'bg-gray-100 text-gray-700' },
+  { value: 'not_interested', label: 'Not Interested', color: 'bg-gray-100 text-ink-mid' },
   { value: 'wrong_number', label: 'Wrong Number', color: 'bg-red-100 text-red-700' },
   { value: 'voicemail', label: 'Voicemail', color: 'bg-amber-100 text-amber-700' },
-  { value: 'no_answer', label: 'No Answer', color: 'bg-gray-100 text-gray-500' },
+  { value: 'no_answer', label: 'No Answer', color: 'bg-gray-100 text-ink-subtle' },
 ];
 
 export default function CallNotes({ callLogId, onSaved }) {
@@ -62,7 +62,7 @@ export default function CallNotes({ callLogId, onSaved }) {
             className={`px-2 py-1 rounded-md text-xs font-medium transition-all ${
               disposition === d.value
                 ? `${d.color} ring-2 ring-offset-1 ring-brand/30`
-                : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+                : 'bg-surface-alt text-ink-subtle hover:bg-gray-100'
             }`}
           >
             {d.label}
@@ -73,7 +73,7 @@ export default function CallNotes({ callLogId, onSaved }) {
       <button
         onClick={handleSave}
         disabled={!content.trim() || saving}
-        className="w-full py-2 rounded-lg bg-go text-white text-sm font-bold hover:bg-go-dark disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+        className="w-full py-2 rounded-lg bg-go text-white text-sm font-bold hover:bg-go-dark disabled:bg-gray-200 disabled:text-ink-subtle disabled:cursor-not-allowed transition-colors"
       >
         {saving ? 'Saving...' : 'Save Note'}
       </button>

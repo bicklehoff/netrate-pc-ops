@@ -128,23 +128,23 @@ export default function ConditionsSection({ loan, onRefresh }) {
         }
       >
         {approvals.length === 0 ? (
-          <p className="text-sm text-gray-400">No approval documents uploaded yet.</p>
+          <p className="text-sm text-ink-subtle">No approval documents uploaded yet.</p>
         ) : (
           <div className="space-y-1.5">
             {approvals.map((doc) => (
               <div
                 key={doc.id}
-                className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-surface-alt transition-colors"
               >
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <span className="text-gray-400 flex-shrink-0">
+                  <span className="text-ink-subtle flex-shrink-0">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                   </span>
                   <div className="min-w-0">
-                    <span className="text-sm text-gray-700 truncate block">{doc.file_name || doc.label}</span>
-                    <span className="text-[10px] text-gray-400">
+                    <span className="text-sm text-ink-mid truncate block">{doc.file_name || doc.label}</span>
+                    <span className="text-[10px] text-ink-subtle">
                       {new Date(doc.uploaded_at || doc.created_at).toLocaleDateString('en-US', {
                         month: 'short', day: 'numeric', year: 'numeric',
                       })}
@@ -175,12 +175,12 @@ export default function ConditionsSection({ loan, onRefresh }) {
             {/* Loan Data */}
             {extraction.extraction.data.loanData && (
               <div>
-                <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Loan Data</h4>
+                <h4 className="text-xs font-bold text-ink-subtle uppercase tracking-wider mb-2">Loan Data</h4>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                   {Object.entries(extraction.extraction.data.loanData).filter(([, v]) => v != null && v !== '' && !Array.isArray(v)).map(([key, val]) => (
-                    <div key={key} className="px-3 py-1.5 bg-gray-50 rounded text-sm">
-                      <span className="text-[10px] text-gray-400 uppercase">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
-                      <span className="block text-gray-700 truncate">{String(val)}</span>
+                    <div key={key} className="px-3 py-1.5 bg-surface-alt rounded text-sm">
+                      <span className="text-[10px] text-ink-subtle uppercase">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
+                      <span className="block text-ink-mid truncate">{String(val)}</span>
                     </div>
                   ))}
                 </div>
@@ -189,7 +189,7 @@ export default function ConditionsSection({ loan, onRefresh }) {
 
             {/* Extracted Conditions */}
             <div>
-              <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+              <h4 className="text-xs font-bold text-ink-subtle uppercase tracking-wider mb-2">
                 Conditions ({extraction.extraction.data.conditions.length} found)
               </h4>
               <div className="max-h-80 overflow-y-auto space-y-1 border border-gray-200 rounded-lg p-2">
@@ -198,14 +198,14 @@ export default function ConditionsSection({ loan, onRefresh }) {
                   if (stageConds.length === 0) return null;
                   return (
                     <div key={stageKey} className="mb-2">
-                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                      <span className="text-[10px] font-bold text-ink-subtle uppercase tracking-wider">
                         {CONDITION_STAGE_LABELS[stageKey] || stageKey} ({stageConds.length})
                       </span>
                       {stageConds.map((c, i) => (
-                        <div key={i} className="flex items-start gap-2 py-1 px-2 text-sm hover:bg-gray-50 rounded">
-                          <span className="text-xs text-gray-400 font-mono flex-shrink-0 w-8">#{c.conditionNumber}</span>
-                          <span className="text-gray-700 text-xs line-clamp-2">{c.title}</span>
-                          <span className="text-[10px] text-gray-400 flex-shrink-0 ml-auto">
+                        <div key={i} className="flex items-start gap-2 py-1 px-2 text-sm hover:bg-surface-alt rounded">
+                          <span className="text-xs text-ink-subtle font-mono flex-shrink-0 w-8">#{c.conditionNumber}</span>
+                          <span className="text-ink-mid text-xs line-clamp-2">{c.title}</span>
+                          <span className="text-[10px] text-ink-subtle flex-shrink-0 ml-auto">
                             {CONDITION_OWNER_LABELS[c.ownerRole] || c.ownerRole}
                           </span>
                         </div>
@@ -234,7 +234,7 @@ export default function ConditionsSection({ loan, onRefresh }) {
               </button>
               <button
                 onClick={() => { setExtraction(null); onRefresh(); }}
-                className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                className="px-4 py-2 text-sm text-ink-subtle hover:text-ink-mid transition-colors"
               >
                 Discard
               </button>
@@ -260,7 +260,7 @@ function SummaryPill({ color, label, count }) {
   return (
     <div className="flex items-center gap-1.5">
       <span className={`inline-block w-2.5 h-2.5 rounded-full ${color}`} />
-      <span className="text-sm text-gray-600">{count} {label.toLowerCase()}</span>
+      <span className="text-sm text-ink-mid">{count} {label.toLowerCase()}</span>
     </div>
   );
 }
@@ -416,7 +416,7 @@ function ConditionsTable({ conditions, apiCall, onRefresh, error, setError }) {
                 {saving ? 'Saving...' : `Save ${dirtyIds.size} change${dirtyIds.size > 1 ? 's' : ''}`}
               </button>
               <button onClick={handleDiscard}
-                className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 transition-colors">
+                className="px-3 py-1.5 text-xs text-ink-subtle hover:text-ink-mid transition-colors">
                 Discard
               </button>
             </>
@@ -434,7 +434,7 @@ function ConditionsTable({ conditions, apiCall, onRefresh, error, setError }) {
           <SummaryPill color="bg-amber-400" label="Needed" count={needed} />
           <SummaryPill color="bg-blue-400" label="Received" count={received} />
           <SummaryPill color="bg-green-400" label="Cleared" count={cleared} />
-          <span className="text-xs text-gray-400 ml-auto">{localRows.length} total</span>
+          <span className="text-xs text-ink-subtle ml-auto">{localRows.length} total</span>
           {isDirty && <span className="text-xs text-amber-600 font-medium">Unsaved changes</span>}
         </div>
       )}
@@ -450,17 +450,17 @@ function ConditionsTable({ conditions, apiCall, onRefresh, error, setError }) {
       {/* Bulk actions */}
       {selected.size > 0 && (
         <div className="mb-3 flex items-center gap-2 px-2 py-1.5 bg-brand/5 rounded-lg">
-          <span className="text-xs text-gray-600">{selected.size} selected:</span>
+          <span className="text-xs text-ink-mid">{selected.size} selected:</span>
           <button onClick={() => bulkSetStatus('received')} className="px-2 py-0.5 text-[10px] font-medium text-blue-600 bg-blue-50 rounded hover:bg-blue-100">Received</button>
           <button onClick={() => bulkSetStatus('cleared')} className="px-2 py-0.5 text-[10px] font-medium text-green-600 bg-green-50 rounded hover:bg-green-100">Cleared</button>
-          <button onClick={() => bulkSetStatus('waived')} className="px-2 py-0.5 text-[10px] font-medium text-gray-600 bg-gray-100 rounded hover:bg-gray-200">Waived</button>
-          <button onClick={() => setSelected(new Set())} className="ml-auto text-[10px] text-gray-400 hover:text-gray-600">Clear</button>
+          <button onClick={() => bulkSetStatus('waived')} className="px-2 py-0.5 text-[10px] font-medium text-ink-mid bg-gray-100 rounded hover:bg-gray-200">Waived</button>
+          <button onClick={() => setSelected(new Set())} className="ml-auto text-[10px] text-ink-subtle hover:text-ink-mid">Clear</button>
         </div>
       )}
 
       {/* Add form */}
       {showAddForm && (
-        <div className="mb-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+        <div className="mb-3 p-3 bg-surface-alt border border-gray-200 rounded-lg">
           <div className="grid grid-cols-6 gap-2 mb-2">
             <input type="number" placeholder="#" value={formData.conditionNumber} onChange={(e) => setFormData({ ...formData, conditionNumber: e.target.value })}
               className="px-2 py-1.5 text-xs border border-gray-300 rounded-md" />
@@ -480,14 +480,14 @@ function ConditionsTable({ conditions, apiCall, onRefresh, error, setError }) {
               className="px-3 py-1 text-xs font-medium text-white bg-brand hover:bg-brand-dark rounded-md disabled:opacity-50">
               {addLoading ? 'Adding...' : 'Add'}
             </button>
-            <button onClick={() => setShowAddForm(false)} className="px-3 py-1 text-xs text-gray-500 hover:text-gray-700">Cancel</button>
+            <button onClick={() => setShowAddForm(false)} className="px-3 py-1 text-xs text-ink-subtle hover:text-ink-mid">Cancel</button>
           </div>
         </div>
       )}
 
       {/* Table */}
       {localRows.length === 0 ? (
-        <p className="text-sm text-gray-400">No conditions yet. Upload an approval or add manually.</p>
+        <p className="text-sm text-ink-subtle">No conditions yet. Upload an approval or add manually.</p>
       ) : (
         <div className="overflow-x-auto -mx-2">
           <table className="w-full text-xs">
@@ -502,22 +502,22 @@ function ConditionsTable({ conditions, apiCall, onRefresh, error, setError }) {
                 <SortHeader field="stage" label="Stage" current={sortField} dir={sortDir} onClick={toggleSort} className="w-32" />
                 <SortHeader field="status" label="Status" current={sortField} dir={sortDir} onClick={toggleSort} className="w-28" />
                 <SortHeader field="ownerRole" label="Owner" current={sortField} dir={sortDir} onClick={toggleSort} className="w-24" />
-                <th className="px-2 py-2 text-left text-gray-500 font-medium w-10">BLK</th>
+                <th className="px-2 py-2 text-left text-ink-subtle font-medium w-10">BLK</th>
               </tr>
             </thead>
             <tbody>
               {sorted.map((row) => {
                 const dirty = dirtyIds.has(row.id);
                 return (
-                  <tr key={row.id} className={`border-b border-gray-100 hover:bg-gray-50/50 ${dirty ? 'bg-amber-50/30' : ''} ${selected.has(row.id) ? 'bg-brand/5' : ''}`}>
+                  <tr key={row.id} className={`border-b border-gray-100 hover:bg-surface-alt/50 ${dirty ? 'bg-amber-50/30' : ''} ${selected.has(row.id) ? 'bg-brand/5' : ''}`}>
                     <td className="px-2 py-1.5">
                       <input type="checkbox" checked={selected.has(row.id)}
                         onChange={() => setSelected((prev) => { const n = new Set(prev); if (n.has(row.id)) { n.delete(row.id); } else { n.add(row.id); } return n; })}
                         className="rounded border-gray-300 text-brand focus:ring-brand/30" />
                     </td>
-                    <td className="px-2 py-1.5 text-gray-400 font-mono">{row.conditionNumber || '—'}</td>
+                    <td className="px-2 py-1.5 text-ink-subtle font-mono">{row.conditionNumber || '—'}</td>
                     <td className="px-2 py-1.5">
-                      <span className="text-gray-700 line-clamp-2">{row.title}</span>
+                      <span className="text-ink-mid line-clamp-2">{row.title}</span>
                       {row.source === 'approval' && <span className="ml-1 text-[9px] px-1 py-0.5 rounded bg-purple-50 text-purple-400">auto</span>}
                     </td>
                     <td className="px-1 py-1.5">
@@ -527,7 +527,7 @@ function ConditionsTable({ conditions, apiCall, onRefresh, error, setError }) {
                     </td>
                     <td className="px-1 py-1.5">
                       <select value={row.status} onChange={(e) => editCell(row.id, 'status', e.target.value)}
-                        className={`${cellSelect} ${row.status === 'needed' ? 'text-amber-700' : row.status === 'received' ? 'text-blue-700' : row.status === 'cleared' ? 'text-green-700' : 'text-gray-500'}`}>
+                        className={`${cellSelect} ${row.status === 'needed' ? 'text-amber-700' : row.status === 'received' ? 'text-blue-700' : row.status === 'cleared' ? 'text-green-700' : 'text-ink-subtle'}`}>
                         {Object.entries(CONDITION_STATUS_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                       </select>
                     </td>
@@ -556,7 +556,7 @@ function ConditionsTable({ conditions, apiCall, onRefresh, error, setError }) {
 function SortHeader({ field, label, current, dir, onClick, className = '' }) {
   const active = current === field;
   return (
-    <th className={`px-2 py-2 text-left text-gray-500 font-medium cursor-pointer select-none hover:text-gray-700 ${className}`}
+    <th className={`px-2 py-2 text-left text-ink-subtle font-medium cursor-pointer select-none hover:text-ink-mid ${className}`}
       onClick={() => onClick(field)}>
       {label}
       {active && <span className="ml-0.5 text-brand">{dir === 'asc' ? '↑' : '↓'}</span>}

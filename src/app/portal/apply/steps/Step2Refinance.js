@@ -80,7 +80,7 @@ export default function Step2Refinance({ onNext, onBack }) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
-      <div className="bg-white rounded-xl border border-gray-200 p-8 shadow-sm space-y-5">
+      <div className="bg-white rounded-nr-xl border border-gray-200 p-8 shadow-nr-sm space-y-5">
         <SelectField
           label="Refinance Purpose"
           name="refiPurpose"
@@ -124,7 +124,7 @@ export default function Step2Refinance({ onNext, onBack }) {
         {ltvPct !== null && (
           <div className="rounded-lg border border-gray-200 p-4 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-700">Estimated Loan-to-Value (LTV)</span>
+              <span className="text-sm font-medium text-ink-mid">Estimated Loan-to-Value (LTV)</span>
               <span className={`text-sm font-semibold ${
                 ltvPct <= 80 ? 'text-green-600' : ltvPct <= 90 ? 'text-amber-600' : 'text-red-600'
               }`}>
@@ -139,7 +139,7 @@ export default function Step2Refinance({ onNext, onBack }) {
                 style={{ width: `${Math.min(ltvPct, 100)}%` }}
               />
             </div>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-ink-subtle">
               {ltvPct <= 80
                 ? 'Great — under 80% LTV typically means no private mortgage insurance (PMI).'
                 : ltvPct <= 90
@@ -195,7 +195,7 @@ export default function Step2Refinance({ onNext, onBack }) {
           <button
             type="button"
             onClick={onBack}
-            className="text-gray-500 hover:text-gray-700 px-4 py-2.5 font-medium transition-colors"
+            className="text-ink-subtle hover:text-ink-mid px-4 py-2.5 font-medium transition-colors"
           >
             ← Back
           </button>

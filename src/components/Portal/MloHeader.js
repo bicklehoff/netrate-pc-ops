@@ -57,20 +57,20 @@ export default function MloHeader() {
       {/* Left: Company branding */}
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-0.5">
-          <span className="text-lg font-bold text-gray-900">Net</span>
+          <span className="text-lg font-bold text-ink">Net</span>
           <span className="text-lg font-bold text-brand">Rate</span>
-          <span className="text-sm font-normal text-gray-400 ml-1">Mortgage</span>
+          <span className="text-sm font-normal text-ink-subtle ml-1">Mortgage</span>
         </div>
         <span className="text-gray-300">|</span>
-        <span className="text-xs text-gray-400">NMLS #1111861</span>
-        <span className="text-xs text-gray-400 hidden md:inline">· 303-444-5251</span>
+        <span className="text-xs text-ink-subtle">NMLS #1111861</span>
+        <span className="text-xs text-ink-subtle hidden md:inline">· 303-444-5251</span>
       </div>
 
       {/* Right: Logged-in user */}
       <div className="flex items-center gap-3">
         <div className="text-right hidden sm:block">
-          <div className="text-sm font-medium text-gray-700">{userName}</div>
-          <div className="text-[10px] text-gray-400">{userEmail}</div>
+          <div className="text-sm font-medium text-ink-mid">{userName}</div>
+          <div className="text-[10px] text-ink-subtle">{userEmail}</div>
         </div>
         <UserAvatar name={userName} />
       </div>

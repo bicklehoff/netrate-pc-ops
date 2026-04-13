@@ -81,7 +81,7 @@ export default function ApplyPage() {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <div className="w-8 h-8 border-2 border-brand border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-sm text-gray-500">Loading your scenario details...</p>
+          <p className="text-sm text-ink-subtle">Loading your scenario details...</p>
         </div>
       </div>
     );
@@ -97,15 +97,15 @@ export default function ApplyPage() {
       />
 
       <div className="mt-8 max-w-2xl mx-auto">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">
+        <h1 className="text-2xl font-bold text-ink mb-2">
           Let&apos;s get started
         </h1>
-        <p className="text-gray-500 mb-8">
+        <p className="text-ink-subtle mb-8">
           Tell us about yourself. This information is encrypted and secure.
         </p>
 
         <form onSubmit={handleSubmit(onSubmit)}>
-          <div className="bg-white rounded-xl border border-gray-200 p-8 shadow-sm space-y-5">
+          <div className="bg-white rounded-nr-xl border border-gray-200 p-8 shadow-nr-sm space-y-5">
             {/* Returning-user callout when other steps have data */}
             {hasLaterStepsData && (!data.ssn || !data.dob) && (
               <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -165,13 +165,13 @@ export default function ApplyPage() {
             />
 
             {/* Security callout before PII fields */}
-            <div className="flex items-start gap-3 bg-gray-50 border border-gray-200 rounded-lg p-4 -mb-1">
+            <div className="flex items-start gap-3 bg-surface-alt border border-gray-200 rounded-lg p-4 -mb-1">
               <svg className="w-5 h-5 text-brand mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
               </svg>
               <div>
-                <p className="text-sm font-medium text-gray-800">Your information is protected</p>
-                <p className="text-xs text-gray-500 mt-0.5">
+                <p className="text-sm font-medium text-ink">Your information is protected</p>
+                <p className="text-xs text-ink-subtle mt-0.5">
                   This page is secured with SSL encryption. Your SSN and date of birth are
                   encrypted with AES-256 before storage and are never saved in your browser.
                 </p>
@@ -231,7 +231,7 @@ export default function ApplyPage() {
                   Next: Property &rarr;
                 </button>
               </div>
-              <p className="text-xs text-gray-400 text-center mt-4">
+              <p className="text-xs text-ink-subtle text-center mt-4">
                 Have questions? <a href="/book" className="text-brand hover:text-brand-dark underline">Schedule a call with David &rarr;</a>
               </p>
             </div>

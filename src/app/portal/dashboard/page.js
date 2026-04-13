@@ -112,17 +112,17 @@ export default async function BorrowerDashboardPage() {
   return (
     <div className="max-w-3xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">
+        <h1 className="text-2xl font-bold text-ink">
           Welcome back, {primaryName || 'there'}
         </h1>
-        <p className="text-gray-500 text-sm mt-1">
+        <p className="text-ink-subtle text-sm mt-1">
           Track your application status, upload documents, and see what&apos;s next.
         </p>
       </div>
 
       {!loan ? (
-        <div className="bg-white rounded-xl border border-gray-200 p-8 shadow-sm text-center">
-          <p className="text-gray-500 mb-4">You don&apos;t have any loan applications yet.</p>
+        <div className="bg-white rounded-nr-xl border border-gray-200 p-8 shadow-nr-sm text-center">
+          <p className="text-ink-subtle mb-4">You don&apos;t have any loan applications yet.</p>
           <a
             href="/portal/apply"
             className="inline-block bg-go text-white px-6 py-2.5 rounded-lg font-bold hover:bg-go-dark transition-colors"

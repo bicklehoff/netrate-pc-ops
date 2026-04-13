@@ -6,7 +6,7 @@ import { useScenario } from './ScenarioContext';
 function Input({ label, value, onChange, type = 'text', className = '', inputClass = '', ...rest }) {
   return (
     <div className={className}>
-      <label className="block text-xs font-medium text-gray-500 mb-0.5">{label}</label>
+      <label className="block text-xs font-medium text-ink-subtle mb-0.5">{label}</label>
       <input
         type={type}
         value={value}
@@ -62,11 +62,11 @@ export default function RefiSection() {
     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden print:hidden">
       {/* Toggle header */}
       <div
-        className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b cursor-pointer"
+        className="flex items-center justify-between px-4 py-3 bg-surface-alt border-b cursor-pointer"
         onClick={() => setCollapsed(!collapsed)}
       >
         <div className="flex items-center gap-3">
-          <h3 className="text-sm font-semibold text-gray-700">Refinance Analysis</h3>
+          <h3 className="text-sm font-semibold text-ink-mid">Refinance Analysis</h3>
           <label className="flex items-center gap-1.5 text-xs" onClick={e => e.stopPropagation()}>
             <input
               type="checkbox"
@@ -77,7 +77,7 @@ export default function RefiSection() {
             This is a refinance
           </label>
         </div>
-        <span className="text-gray-400 text-sm">{collapsed ? '+' : '−'}</span>
+        <span className="text-ink-subtle text-sm">{collapsed ? '+' : '−'}</span>
       </div>
 
       {!collapsed && state.isRefi && (
@@ -102,10 +102,10 @@ export default function RefiSection() {
           {/* Refi comparison table */}
           {refiAnalysis && (
             <div className="mt-3">
-              <h4 className="text-xs font-semibold text-gray-600 mb-2">Refi Comparison</h4>
+              <h4 className="text-xs font-semibold text-ink-mid mb-2">Refi Comparison</h4>
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="text-gray-500 bg-gray-50 border-b">
+                  <tr className="text-ink-subtle bg-surface-alt border-b">
                     <th className="px-3 py-1.5 text-left font-medium">Metric</th>
                     {results.map((_, i) => (
                       <th key={i} className="px-2 py-1.5 text-right font-medium">Option {['A','B','C'][i]}</th>
@@ -114,19 +114,19 @@ export default function RefiSection() {
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   <tr>
-                    <td className="px-3 py-1.5 text-gray-600">Original PL</td>
+                    <td className="px-3 py-1.5 text-ink-mid">Original PL</td>
                     {refiAnalysis.map((a, i) => (
                       <td key={i} className="px-2 py-1.5 text-right font-mono">{a ? fmtDollar(a.origPL) : '—'}</td>
                     ))}
                   </tr>
                   <tr>
-                    <td className="px-3 py-1.5 text-gray-600">New PL</td>
+                    <td className="px-3 py-1.5 text-ink-mid">New PL</td>
                     {refiAnalysis.map((a, i) => (
                       <td key={i} className="px-2 py-1.5 text-right font-mono">{a ? fmtDollar(a.newPL) : '—'}</td>
                     ))}
                   </tr>
                   <tr className="bg-cyan-50 font-medium">
-                    <td className="px-3 py-1.5 text-gray-600">PL Increase</td>
+                    <td className="px-3 py-1.5 text-ink-mid">PL Increase</td>
                     {refiAnalysis.map((a, i) => (
                       <td key={i} className={`px-2 py-1.5 text-right font-mono ${a && a.plIncrease < 0 ? 'text-red-600' : ''}`}>
                         {a ? fmtDollar(a.plIncrease) : '—'}
@@ -134,19 +134,19 @@ export default function RefiSection() {
                     ))}
                   </tr>
                   <tr>
-                    <td className="px-3 py-1.5 text-gray-600">Unclaimed Benefit</td>
+                    <td className="px-3 py-1.5 text-ink-mid">Unclaimed Benefit</td>
                     {refiAnalysis.map((a, i) => (
                       <td key={i} className="px-2 py-1.5 text-right font-mono">{a ? fmtDollar(a.unclaimedBenefit) : '—'}</td>
                     ))}
                   </tr>
                   <tr>
-                    <td className="px-3 py-1.5 text-gray-600">Additional Benefit</td>
+                    <td className="px-3 py-1.5 text-ink-mid">Additional Benefit</td>
                     {refiAnalysis.map((a, i) => (
                       <td key={i} className="px-2 py-1.5 text-right font-mono">{a ? fmtDollar(a.additionalBenefit) : '—'}</td>
                     ))}
                   </tr>
                   <tr>
-                    <td className="px-3 py-1.5 text-gray-600">Rate Change</td>
+                    <td className="px-3 py-1.5 text-ink-mid">Rate Change</td>
                     {refiAnalysis.map((a, i) => (
                       <td key={i} className={`px-2 py-1.5 text-right font-mono ${a && a.rateChange > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
                         {a ? (a.rateChange > 0 ? '+' : '') + a.rateChange.toFixed(3) + '%' : '—'}

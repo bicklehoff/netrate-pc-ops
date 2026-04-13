@@ -14,7 +14,7 @@ import PrintView from './PrintView';
 
 function Legend() {
   return (
-    <div className="flex items-center gap-4 text-xs text-gray-500">
+    <div className="flex items-center gap-4 text-xs text-ink-subtle">
       <span className="flex items-center gap-1">
         <span className="inline-block w-3 h-3 bg-yellow-50 border border-yellow-300 rounded" />
         Input
@@ -34,14 +34,14 @@ function PageContent() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Reverse Mortgage Calculator</h1>
-          <p className="text-sm text-gray-500">See how much equity you could access with a reverse mortgage</p>
+          <h1 className="text-xl font-bold text-ink">Reverse Mortgage Calculator</h1>
+          <p className="text-sm text-ink-subtle">See how much equity you could access with a reverse mortgage</p>
         </div>
         <div className="flex items-center gap-3">
           <Legend />
           <button
             onClick={() => window.print()}
-            className="px-3 py-1.5 text-xs font-medium text-gray-600 border border-gray-300 rounded hover:bg-gray-50 print:hidden"
+            className="px-3 py-1.5 text-xs font-medium text-ink-mid border border-gray-300 rounded hover:bg-surface-alt print:hidden"
           >
             Print
           </button>

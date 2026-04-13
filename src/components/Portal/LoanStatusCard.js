@@ -3,7 +3,7 @@
 import { STATUS_LABELS, BALL_IN_COURT } from '@/lib/loan-states';
 
 const STATUS_COLORS = {
-  draft: 'bg-gray-100 text-gray-700',
+  draft: 'bg-gray-100 text-ink-mid',
   applied: 'bg-blue-100 text-blue-800',
   processing: 'bg-yellow-100 text-yellow-800',
   submitted_uw: 'bg-purple-100 text-purple-800',
@@ -44,7 +44,7 @@ function formatAddress(addr) {
 
 export default function LoanStatusCard({ loan }) {
   const statusLabel = STATUS_LABELS[loan.status] || loan.status;
-  const statusColor = STATUS_COLORS[loan.status] || 'bg-gray-100 text-gray-700';
+  const statusColor = STATUS_COLORS[loan.status] || 'bg-gray-100 text-ink-mid';
   const ball = BALL_IN_COURT[loan.status];
   const ballMessage = BALL_MESSAGES[ball] || '';
   const pendingDocs = loan.documents?.filter((d) => d.status === 'requested').length || 0;
@@ -55,12 +55,12 @@ export default function LoanStatusCard({ loan }) {
     : loan.estimated_value;
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+    <div className="bg-white rounded-nr-xl border border-gray-200 p-6 shadow-nr-sm">
       <div className="flex items-start justify-between mb-4">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">Loan Status</h2>
+          <h2 className="text-lg font-semibold text-ink">Loan Status</h2>
           {loan.mlo && (
-            <p className="text-sm text-gray-500 mt-0.5">
+            <p className="text-sm text-ink-subtle mt-0.5">
               Loan Officer: {loan.mlo.first_name} {loan.mlo.last_name}
             </p>
           )}
@@ -74,7 +74,7 @@ export default function LoanStatusCard({ loan }) {
       {ball && (
         <div className={`
           rounded-lg px-4 py-3 mb-4 text-sm
-          ${ball === 'borrower' ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'bg-gray-50 text-gray-600'}
+          ${ball === 'borrower' ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'bg-surface-alt text-ink-mid'}
         `}>
           {ball === 'borrower' && pendingDocs > 0 ? (
             <span className="font-medium">
@@ -88,8 +88,8 @@ export default function LoanStatusCard({ loan }) {
 
       {/* Property Address */}
       <div className="text-sm mb-4">
-        <span className="text-gray-400 block">Property</span>
-        <span className="text-gray-800 font-medium">
+        <span className="text-ink-subtle block">Property</span>
+        <span className="text-ink font-medium">
           {formatAddress(loan.property_address)}
         </span>
       </div>
@@ -97,18 +97,18 @@ export default function LoanStatusCard({ loan }) {
       {/* Loan Summary */}
       <div className="grid grid-cols-3 gap-4 text-sm">
         <div>
-          <span className="text-gray-400 block">Purpose</span>
-          <span className="text-gray-800 font-medium capitalize">{loan.purpose || '—'}</span>
+          <span className="text-ink-subtle block">Purpose</span>
+          <span className="text-ink font-medium capitalize">{loan.purpose || '—'}</span>
         </div>
         <div>
-          <span className="text-gray-400 block">
+          <span className="text-ink-subtle block">
             {loan.purpose === 'purchase' ? 'Price' : 'Value'}
           </span>
-          <span className="text-gray-800 font-medium">{formatCurrency(loanAmount)}</span>
+          <span className="text-ink font-medium">{formatCurrency(loanAmount)}</span>
         </div>
         <div>
-          <span className="text-gray-400 block">Type</span>
-          <span className="text-gray-800 font-medium">
+          <span className="text-ink-subtle block">Type</span>
+          <span className="text-ink font-medium">
             {PROPERTY_TYPE_LABELS[loan.property_type] || loan.property_type || '—'}
           </span>
         </div>

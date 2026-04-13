@@ -20,7 +20,7 @@ const STATUS_OPTIONS = [
 
 const STATUS_COLORS = {
   past_client: 'bg-green-100 text-green-800',
-  subscriber: 'bg-gray-100 text-gray-700',
+  subscriber: 'bg-gray-100 text-ink-mid',
   lead: 'bg-blue-100 text-blue-800',
   applicant: 'bg-amber-100 text-amber-800',
   in_process: 'bg-purple-100 text-purple-800',
@@ -157,8 +157,8 @@ export default function ContactsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Contacts</h1>
-          <p className="text-gray-500 text-sm">{pagination.total} total</p>
+          <h1 className="text-xl font-bold text-ink">Contacts</h1>
+          <p className="text-ink-subtle text-sm">{pagination.total} total</p>
         </div>
         <button
           onClick={() => setShowCreate(!showCreate)}
@@ -170,26 +170,26 @@ export default function ContactsPage() {
 
       {/* Create Form */}
       {showCreate && (
-        <form onSubmit={handleCreate} className="bg-white border border-gray-200 rounded-xl p-5 mb-4 shadow-sm">
-          <h3 className="font-semibold text-gray-900 mb-3">New Contact</h3>
+        <form onSubmit={handleCreate} className="bg-white border border-gray-200 rounded-nr-xl p-5 mb-4 shadow-nr-sm">
+          <h3 className="font-semibold text-ink mb-3">New Contact</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">First Name *</label>
+              <label className="block text-xs font-medium text-ink-mid mb-1">First Name *</label>
               <input required value={newContact.first_name} onChange={(e) => setNewContact({ ...newContact, first_name: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Last Name *</label>
+              <label className="block text-xs font-medium text-ink-mid mb-1">Last Name *</label>
               <input required value={newContact.last_name} onChange={(e) => setNewContact({ ...newContact, last_name: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Email</label>
+              <label className="block text-xs font-medium text-ink-mid mb-1">Email</label>
               <input type="email" value={newContact.email} onChange={(e) => setNewContact({ ...newContact, email: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Phone</label>
+              <label className="block text-xs font-medium text-ink-mid mb-1">Phone</label>
               <input value={newContact.phone} onChange={(e) => setNewContact({ ...newContact, phone: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none" />
             </div>
@@ -198,7 +198,7 @@ export default function ContactsPage() {
             <button type="submit" disabled={creating} className="bg-go text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-go-dark disabled:opacity-50">
               {creating ? 'Creating...' : 'Create'}
             </button>
-            <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm">Cancel</button>
+            <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-ink-mid hover:bg-gray-100 rounded-lg text-sm">Cancel</button>
           </div>
         </form>
       )}
@@ -209,7 +209,7 @@ export default function ContactsPage() {
         <div className="flex items-center gap-1 flex-wrap">
           <button
             onClick={() => { setStatusFilter(''); setPagination(p => ({ ...p, page: 1 })); }}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${!statusFilter ? 'bg-brand text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${!statusFilter ? 'bg-brand text-white' : 'bg-gray-100 text-ink-mid hover:bg-gray-200'}`}
           >
             All {totalAll > 0 && <span className="ml-1 opacity-75">{totalAll}</span>}
           </button>
@@ -220,7 +220,7 @@ export default function ContactsPage() {
               <button
                 key={s.value}
                 onClick={() => { setStatusFilter(s.value); setPagination(p => ({ ...p, page: 1 })); }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${statusFilter === s.value ? 'bg-brand text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${statusFilter === s.value ? 'bg-brand text-white' : 'bg-gray-100 text-ink-mid hover:bg-gray-200'}`}
               >
                 {s.label} {count > 0 && <span className="ml-1 opacity-75">{count}</span>}
               </button>
@@ -248,26 +248,26 @@ export default function ContactsPage() {
 
       {/* Table */}
       {loading ? (
-        <div className="text-center py-12 text-gray-400">Loading contacts...</div>
+        <div className="text-center py-12 text-ink-subtle">Loading contacts...</div>
       ) : contacts.length === 0 ? (
-        <div className="text-center py-12 text-gray-400">
+        <div className="text-center py-12 text-ink-subtle">
           {search || statusFilter ? 'No contacts match your filters' : 'No contacts yet'}
         </div>
       ) : (
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+        <div className="bg-white border border-gray-200 rounded-nr-xl shadow-nr-sm overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-200 text-xs text-gray-500 uppercase tracking-wider">
-                <th className="text-left px-4 py-3 cursor-pointer hover:text-gray-700" onClick={() => handleSort('name')}>
+              <tr className="bg-surface-alt border-b border-gray-200 text-xs text-ink-subtle uppercase tracking-wider">
+                <th className="text-left px-4 py-3 cursor-pointer hover:text-ink-mid" onClick={() => handleSort('name')}>
                   Name <SortIcon field="name" />
                 </th>
                 <th className="text-left px-4 py-3">Email</th>
                 <th className="text-left px-4 py-3">Phone</th>
-                <th className="text-left px-4 py-3 cursor-pointer hover:text-gray-700" onClick={() => handleSort('status')}>
+                <th className="text-left px-4 py-3 cursor-pointer hover:text-ink-mid" onClick={() => handleSort('status')}>
                   Status <SortIcon field="status" />
                 </th>
                 <th className="text-left px-4 py-3">MLO</th>
-                <th className="text-left px-4 py-3 cursor-pointer hover:text-gray-700" onClick={() => handleSort('last_contacted_at')}>
+                <th className="text-left px-4 py-3 cursor-pointer hover:text-ink-mid" onClick={() => handleSort('last_contacted_at')}>
                   Last Contact <SortIcon field="last_contacted_at" />
                 </th>
                 <th className="text-left px-4 py-3">Loans</th>
@@ -279,30 +279,30 @@ export default function ContactsPage() {
                 <tr
                   key={c.id}
                   onClick={() => router.push(`/portal/mlo/contacts/${c.id}`)}
-                  className="hover:bg-gray-50 cursor-pointer transition-colors"
+                  className="hover:bg-surface-alt cursor-pointer transition-colors"
                 >
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 rounded-full bg-brand/10 text-brand font-semibold text-xs flex items-center justify-center flex-shrink-0">
                         {c.first_name?.[0]}{c.last_name?.[0]}
                       </div>
-                      <span className="font-medium text-gray-900">{c.first_name} {c.last_name}</span>
+                      <span className="font-medium text-ink">{c.first_name} {c.last_name}</span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-gray-600 truncate max-w-[200px]">{c.email || '—'}</td>
-                  <td className="px-4 py-3 text-gray-600">{c.phone || '—'}</td>
+                  <td className="px-4 py-3 text-ink-mid truncate max-w-[200px]">{c.email || '—'}</td>
+                  <td className="px-4 py-3 text-ink-mid">{c.phone || '—'}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[c.status] || 'bg-gray-100'}`}>
                       {c.status?.replace('_', ' ')}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-gray-600 text-xs">
+                  <td className="px-4 py-3 text-ink-mid text-xs">
                     {c.assignedMlo ? `${c.assignedMlo.first_name} ${c.assignedMlo.last_name?.[0]}.` : '—'}
                   </td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">{timeAgo(c.last_contacted_at)}</td>
+                  <td className="px-4 py-3 text-ink-subtle text-xs">{timeAgo(c.last_contacted_at)}</td>
                   <td className="px-4 py-3">
                     {c.borrower?.loans?.length > 0 && (
-                      <span className="text-xs text-gray-500">{c.borrower.loans.length}</span>
+                      <span className="text-xs text-ink-subtle">{c.borrower.loans.length}</span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
@@ -320,22 +320,22 @@ export default function ContactsPage() {
 
           {/* Pagination */}
           {pagination.pages > 1 && (
-            <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-gray-50 text-sm">
-              <span className="text-gray-500">
+            <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-surface-alt text-sm">
+              <span className="text-ink-subtle">
                 Page {pagination.page} of {pagination.pages} ({pagination.total} contacts)
               </span>
               <div className="flex gap-1">
                 <button
                   disabled={pagination.page <= 1}
                   onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))}
-                  className="px-3 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-50"
+                  className="px-3 py-1 rounded border border-gray-300 text-ink-mid hover:bg-gray-100 disabled:opacity-50"
                 >
                   Prev
                 </button>
                 <button
                   disabled={pagination.page >= pagination.pages}
                   onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))}
-                  className="px-3 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-50"
+                  className="px-3 py-1 rounded border border-gray-300 text-ink-mid hover:bg-gray-100 disabled:opacity-50"
                 >
                   Next
                 </button>
@@ -348,9 +348,9 @@ export default function ContactsPage() {
       {/* Create Lead Modal */}
       {leadModal && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setLeadModal(null)}>
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
-            <h3 className="font-bold text-gray-900 text-lg mb-1">Create Lead</h3>
-            <p className="text-sm text-gray-500 mb-4">
+          <div className="bg-white rounded-nr-xl shadow-2xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-bold text-ink text-lg mb-1">Create Lead</h3>
+            <p className="text-sm text-ink-subtle mb-4">
               {leadModal.first_name} {leadModal.last_name}
               {leadModal.status === 'past_client' && (
                 <span className="ml-2 inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Returning Client</span>
@@ -359,7 +359,7 @@ export default function ContactsPage() {
             <form onSubmit={handleCreateLead}>
               <div className="space-y-3 mb-4">
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Loan Purpose</label>
+                  <label className="block text-xs font-medium text-ink-mid mb-1">Loan Purpose</label>
                   <select value={leadForm.loan_purpose} onChange={(e) => setLeadForm({ ...leadForm, loan_purpose: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none">
                     <option value="">Select...</option>
@@ -371,7 +371,7 @@ export default function ContactsPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">State</label>
+                  <label className="block text-xs font-medium text-ink-mid mb-1">State</label>
                   <select value={leadForm.property_state} onChange={(e) => setLeadForm({ ...leadForm, property_state: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none">
                     <option value="">Select...</option>
@@ -382,7 +382,7 @@ export default function ContactsPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Notes</label>
+                  <label className="block text-xs font-medium text-ink-mid mb-1">Notes</label>
                   <textarea value={leadForm.notes} onChange={(e) => setLeadForm({ ...leadForm, notes: e.target.value })}
                     rows={2} placeholder="Context..."
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none" />
@@ -392,7 +392,7 @@ export default function ContactsPage() {
                 <button type="submit" disabled={creatingLead} className="flex-1 bg-go text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-go-dark disabled:opacity-50">
                   {creatingLead ? 'Creating...' : 'Create Lead'}
                 </button>
-                <button type="button" onClick={() => setLeadModal(null)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm">Cancel</button>
+                <button type="button" onClick={() => setLeadModal(null)} className="px-4 py-2 text-ink-mid hover:bg-gray-100 rounded-lg text-sm">Cancel</button>
               </div>
             </form>
           </div>

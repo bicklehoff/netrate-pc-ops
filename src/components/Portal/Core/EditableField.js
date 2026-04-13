@@ -20,7 +20,7 @@ const SOURCE_BADGES = {
   app: { label: 'App', color: 'bg-blue-50 text-blue-600' },
   corebot: { label: 'Bot', color: 'bg-purple-50 text-purple-600' },
   xml: { label: 'XML', color: 'bg-orange-50 text-orange-600' },
-  manual: { label: 'Edit', color: 'bg-gray-50 text-gray-500' },
+  manual: { label: 'Edit', color: 'bg-surface-alt text-ink-subtle' },
 };
 
 function formatCurrencyDisplay(val) {
@@ -127,10 +127,10 @@ export default function EditableField({
     return (
       <div className={className}>
         {label && (
-          <span className="block text-xs font-medium text-gray-400 mb-0.5">{label}</span>
+          <span className="block text-xs font-medium text-ink-subtle mb-0.5">{label}</span>
         )}
         <div className="flex items-center gap-1.5">
-          <span className="text-sm text-gray-800">
+          <span className="text-sm text-ink">
             {displayValue || <span className="text-gray-300">{placeholder}</span>}
           </span>
           {sourceBadge && (
@@ -152,7 +152,7 @@ export default function EditableField({
     return (
       <div className={className}>
         {label && (
-          <span className="block text-xs font-medium text-gray-400 mb-0.5">{label}</span>
+          <span className="block text-xs font-medium text-ink-subtle mb-0.5">{label}</span>
         )}
         {type === 'select' ? (
           <select
@@ -248,14 +248,14 @@ export default function EditableField({
   return (
     <div className={className}>
       {label && (
-        <span className="block text-xs font-medium text-gray-400 mb-0.5">{label}</span>
+        <span className="block text-xs font-medium text-ink-subtle mb-0.5">{label}</span>
       )}
       <div className="flex items-center gap-1.5">
         <span
           onClick={() => setEditing(true)}
           className={`inline-block px-1.5 py-0.5 rounded cursor-pointer text-sm transition-colors hover:bg-gray-100 border border-transparent hover:border-dashed hover:border-gray-300 min-w-[40px] ${
             error ? 'bg-red-50 border-red-300' : ''
-          } ${displayValue ? 'text-gray-800' : 'text-gray-300'}`}
+          } ${displayValue ? 'text-ink' : 'text-gray-300'}`}
           title="Click to edit"
         >
           {displayValue || placeholder}

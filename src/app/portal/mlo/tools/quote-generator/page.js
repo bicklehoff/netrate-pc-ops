@@ -20,7 +20,7 @@ class QuoteErrorBoundary extends Component {
     if (this.state.hasError) {
       return (
         <div className="p-6 max-w-4xl mx-auto">
-          <div className="bg-red-50 border border-red-200 rounded-xl p-6">
+          <div className="bg-red-50 border border-red-200 rounded-nr-xl p-6">
             <h2 className="text-lg font-bold text-red-800 mb-2">Quote Generator Error</h2>
             <p className="text-red-700 mb-4">{this.state.error?.message || 'Unknown error'}</p>
             <details className="text-xs text-red-600">
@@ -73,8 +73,8 @@ function QuoteGeneratorContent() {
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-gray-900">Quote Generator</h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <h1 className="text-xl font-bold text-ink">Quote Generator</h1>
+        <p className="text-sm text-ink-subtle mt-1">
           Price a scenario against all lenders, select rates, and build a quote for the borrower.
         </p>
       </div>
@@ -87,7 +87,7 @@ function QuoteGeneratorContent() {
 
 export default function QuoteGeneratorPage() {
   return (
-    <Suspense fallback={<div className="p-6 text-gray-400">Loading...</div>}>
+    <Suspense fallback={<div className="p-6 text-ink-subtle">Loading...</div>}>
       <QuoteGeneratorContent />
     </Suspense>
   );

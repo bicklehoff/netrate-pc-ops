@@ -12,9 +12,9 @@ function FeeRow({ fee, index, onUpdate, onRemove, isCustom }) {
   const borrower = Math.max((fee.cost || 0) - (fee.poc || 0), 0);
 
   return (
-    <tr className="border-b border-gray-100 hover:bg-gray-50/50 group">
+    <tr className="border-b border-gray-100 hover:bg-surface-alt/50 group">
       {/* HUD Line */}
-      <td className="px-2 py-1 text-xs text-gray-400 w-12 text-right">
+      <td className="px-2 py-1 text-xs text-ink-subtle w-12 text-right">
         {isCustom ? (
           <input
             type="text"
@@ -29,7 +29,7 @@ function FeeRow({ fee, index, onUpdate, onRemove, isCustom }) {
       </td>
 
       {/* Name */}
-      <td className="px-2 py-1 text-xs text-gray-700 min-w-[180px]">
+      <td className="px-2 py-1 text-xs text-ink-mid min-w-[180px]">
         {isCustom ? (
           <input
             type="text"
@@ -44,7 +44,7 @@ function FeeRow({ fee, index, onUpdate, onRemove, isCustom }) {
       </td>
 
       {/* Payee */}
-      <td className="px-2 py-1 text-xs text-gray-500 min-w-[140px]">
+      <td className="px-2 py-1 text-xs text-ink-subtle min-w-[140px]">
         <input
           type="text"
           value={fee.payee}
@@ -119,15 +119,15 @@ export default function FeesSection() {
       {/* Header */}
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gray-50 transition-colors"
+        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-surface-alt transition-colors"
       >
         <div className="flex items-center gap-3">
-          <h2 className="text-sm font-bold text-gray-900">Fee Calculation</h2>
-          <span className="text-xs text-gray-400 font-mono">
+          <h2 className="text-sm font-bold text-ink">Fee Calculation</h2>
+          <span className="text-xs text-ink-subtle font-mono">
             Total: ${fmt(totalCost)} | POC: ${fmt(totalPoc)} | Borrower: ${fmt(feesTotal)}
           </span>
         </div>
-        <span className="text-gray-400 text-sm">{open ? '−' : '+'}</span>
+        <span className="text-ink-subtle text-sm">{open ? '−' : '+'}</span>
       </button>
 
       {open && (
@@ -135,36 +135,36 @@ export default function FeesSection() {
           <table className="w-full border-collapse">
             <thead>
               <tr className="border-b-2 border-gray-200">
-                <th className="px-2 py-1.5 text-xs font-semibold text-gray-500 text-right w-12">Id</th>
-                <th className="px-2 py-1.5 text-xs font-semibold text-gray-500 text-left">Name</th>
-                <th className="px-2 py-1.5 text-xs font-semibold text-gray-500 text-left">Payee</th>
-                <th className="px-2 py-1.5 text-xs font-semibold text-gray-500 text-right w-24">Cost</th>
-                <th className="px-2 py-1.5 text-xs font-semibold text-gray-500 text-right w-24">POC</th>
-                <th className="px-2 py-1.5 text-xs font-semibold text-gray-500 text-right w-24">Borrower</th>
+                <th className="px-2 py-1.5 text-xs font-semibold text-ink-subtle text-right w-12">Id</th>
+                <th className="px-2 py-1.5 text-xs font-semibold text-ink-subtle text-left">Name</th>
+                <th className="px-2 py-1.5 text-xs font-semibold text-ink-subtle text-left">Payee</th>
+                <th className="px-2 py-1.5 text-xs font-semibold text-ink-subtle text-right w-24">Cost</th>
+                <th className="px-2 py-1.5 text-xs font-semibold text-ink-subtle text-right w-24">POC</th>
+                <th className="px-2 py-1.5 text-xs font-semibold text-ink-subtle text-right w-24">Borrower</th>
                 <th className="w-8"></th>
               </tr>
             </thead>
             <tbody>
               {/* Origination fee (read-only, pulled from scenario calc) */}
-              <tr className="border-b border-gray-100 bg-gray-50/50">
-                <td className="px-2 py-1 text-xs text-gray-400 text-right">801</td>
-                <td className="px-2 py-1 text-xs text-gray-700 font-medium">Origination fee</td>
-                <td className="px-2 py-1 text-xs text-gray-500">Broker</td>
+              <tr className="border-b border-gray-100 bg-surface-alt/50">
+                <td className="px-2 py-1 text-xs text-ink-subtle text-right">801</td>
+                <td className="px-2 py-1 text-xs text-ink-mid font-medium">Origination fee</td>
+                <td className="px-2 py-1 text-xs text-ink-subtle">Broker</td>
                 <td className="px-2 py-1 text-xs text-right font-mono bg-emerald-50/50">{fmt(state.origFee)}</td>
-                <td className="px-2 py-1 text-xs text-right font-mono text-gray-400">0.00</td>
+                <td className="px-2 py-1 text-xs text-right font-mono text-ink-subtle">0.00</td>
                 <td className="px-2 py-1 text-xs text-right font-mono bg-emerald-50/50">{fmt(state.origFee)}</td>
                 <td></td>
               </tr>
 
               {/* MIP (read-only, calculated from MCA) */}
-              <tr className="border-b border-gray-100 bg-gray-50/50">
-                <td className="px-2 py-1 text-xs text-gray-400 text-right">902</td>
-                <td className="px-2 py-1 text-xs text-gray-700 font-medium">Mortgage insurance premium</td>
-                <td className="px-2 py-1 text-xs text-gray-500">HUD</td>
+              <tr className="border-b border-gray-100 bg-surface-alt/50">
+                <td className="px-2 py-1 text-xs text-ink-subtle text-right">902</td>
+                <td className="px-2 py-1 text-xs text-ink-mid font-medium">Mortgage insurance premium</td>
+                <td className="px-2 py-1 text-xs text-ink-subtle">HUD</td>
                 <td className="px-2 py-1 text-xs text-right font-mono bg-emerald-50/50">
                   {fmt(Math.min(state.homeValue, state.fhaLimit) * 0.02)}
                 </td>
-                <td className="px-2 py-1 text-xs text-right font-mono text-gray-400">0.00</td>
+                <td className="px-2 py-1 text-xs text-right font-mono text-ink-subtle">0.00</td>
                 <td className="px-2 py-1 text-xs text-right font-mono bg-emerald-50/50">
                   {fmt(Math.min(state.homeValue, state.fhaLimit) * 0.02)}
                 </td>
@@ -204,7 +204,7 @@ export default function FeesSection() {
 
               {/* Totals row (3rd party only, excl origination + MIP) */}
               <tr className="border-t-2 border-gray-300">
-                <td colSpan="3" className="px-2 py-2 text-xs font-bold text-gray-700 text-right">
+                <td colSpan="3" className="px-2 py-2 text-xs font-bold text-ink-mid text-right">
                   Third Party Totals
                 </td>
                 <td className="px-2 py-2 text-xs text-right font-bold font-mono">{fmt(totalCost)}</td>
@@ -214,8 +214,8 @@ export default function FeesSection() {
               </tr>
 
               {/* Grand total including orig + MIP */}
-              <tr className="border-t border-gray-200 bg-gray-50">
-                <td colSpan="3" className="px-2 py-2 text-xs font-bold text-gray-900 text-right">
+              <tr className="border-t border-gray-200 bg-surface-alt">
+                <td colSpan="3" className="px-2 py-2 text-xs font-bold text-ink text-right">
                   Total Closing Costs
                 </td>
                 <td className="px-2 py-2 text-xs text-right font-bold font-mono">

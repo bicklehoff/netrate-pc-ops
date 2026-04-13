@@ -58,7 +58,7 @@ export default function CoBorrowerNav({
       <button
         type="button"
         onClick={onBack}
-        className="text-gray-500 hover:text-gray-700 px-4 py-2.5 font-medium transition-colors"
+        className="text-ink-subtle hover:text-ink-mid px-4 py-2.5 font-medium transition-colors"
       >
         &larr; Back
       </button>

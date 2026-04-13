@@ -105,8 +105,8 @@ export default function StepPage() {
       />
 
       <div className="mt-8 max-w-2xl mx-auto">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">{title}</h1>
-        <p className="text-gray-500 mb-8">{description}</p>
+        <h1 className="text-2xl font-bold text-ink mb-2">{title}</h1>
+        <p className="text-ink-subtle mb-8">{description}</p>
 
         {renderStep()}
       </div>

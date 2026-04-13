@@ -58,7 +58,7 @@ function MatchBadge({ match }) {
   if (match === 'yes') return <span className="text-green-600 text-xs font-medium">Match</span>;
   if (match === 'new') return <span className="inline-block bg-amber-100 text-amber-700 text-xs font-medium px-1.5 py-0.5 rounded">New</span>;
   if (match === 'no') return <span className="inline-block bg-red-100 text-red-700 text-xs font-medium px-1.5 py-0.5 rounded">Mismatch</span>;
-  return <span className="text-gray-400 text-xs">--</span>;
+  return <span className="text-ink-subtle text-xs">--</span>;
 }
 
 export default function PayrollSection({ loan }) {
@@ -356,14 +356,14 @@ export default function PayrollSection({ loan }) {
   }
 
   return (
-    <div className="bg-white rounded-xl border-2 border-green-200 shadow-sm overflow-hidden">
+    <div className="bg-white rounded-nr-xl border-2 border-green-200 shadow-nr-sm overflow-hidden">
       {/* Header */}
       <div className="bg-green-50 px-6 py-4 border-b border-green-200">
         <div className="flex items-center gap-3">
           <span className="text-2xl">💰</span>
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">Payroll</h2>
-            <p className="text-xs text-gray-500">{subtitle}</p>
+            <h2 className="text-lg font-semibold text-ink">Payroll</h2>
+            <p className="text-xs text-ink-subtle">{subtitle}</p>
           </div>
         </div>
       </div>
@@ -419,7 +419,7 @@ export default function PayrollSection({ loan }) {
               onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
               onDragLeave={() => setDragOver(false)}
               onClick={() => fileInputRef.current?.click()}
-              className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
+              className={`border-2 border-dashed rounded-nr-xl p-8 text-center cursor-pointer transition-colors ${
                 dragOver
                   ? 'border-green-400 bg-green-50'
                   : 'border-gray-300 hover:border-green-400 hover:bg-green-50/50'
@@ -434,10 +434,10 @@ export default function PayrollSection({ loan }) {
               />
               <div className="space-y-2">
                 <div className="text-4xl">📋</div>
-                <p className="text-sm font-medium text-gray-700">
+                <p className="text-sm font-medium text-ink-mid">
                   Upload Final Closing Disclosure
                 </p>
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-ink-subtle">
                   Drop a PDF here, or click to browse
                 </p>
               </div>
@@ -455,8 +455,8 @@ export default function PayrollSection({ loan }) {
         {uploading && (
           <div className="py-8 text-center space-y-3">
             <div className="w-10 h-10 border-3 border-green-500 border-t-transparent rounded-full animate-spin mx-auto" />
-            <p className="text-sm font-medium text-gray-700">Uploading & extracting CD data...</p>
-            <p className="text-xs text-gray-400">This may take 10-15 seconds</p>
+            <p className="text-sm font-medium text-ink-mid">Uploading & extracting CD data...</p>
+            <p className="text-xs text-ink-subtle">This may take 10-15 seconds</p>
           </div>
         )}
 
@@ -469,10 +469,10 @@ export default function PayrollSection({ loan }) {
               <p className="text-xs text-red-600 mt-1">{extraction.error}</p>
             </div>
 
-            <div className="flex items-center gap-3 bg-gray-50 rounded-lg px-4 py-3">
+            <div className="flex items-center gap-3 bg-surface-alt rounded-lg px-4 py-3">
               <span className="text-xl">📕</span>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">{loan.cdFileName}</p>
+                <p className="text-sm font-medium text-ink truncate">{loan.cdFileName}</p>
               </div>
               <button
                 onClick={handleDownloadCD}
@@ -486,7 +486,7 @@ export default function PayrollSection({ loan }) {
               <button
                 onClick={() => retryInputRef.current?.click()}
                 disabled={uploading}
-                className="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-200 transition-colors"
+                className="flex-1 bg-gray-100 text-ink-mid py-2.5 rounded-nr-xl text-sm font-medium hover:bg-gray-200 transition-colors"
               >
                 Upload Different CD
               </button>
@@ -505,10 +505,10 @@ export default function PayrollSection({ loan }) {
         {hasCD && isExtracted && !isApproved && !isSent && !uploading && (
           <div className="space-y-4">
             {/* CD file info */}
-            <div className="flex items-center gap-3 bg-gray-50 rounded-lg px-4 py-3">
+            <div className="flex items-center gap-3 bg-surface-alt rounded-lg px-4 py-3">
               <span className="text-xl">📕</span>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">{loan.cdFileName}</p>
+                <p className="text-sm font-medium text-ink truncate">{loan.cdFileName}</p>
                 <p className="text-xs text-green-600 font-medium">Data extracted — review below</p>
               </div>
               <button
@@ -521,20 +521,20 @@ export default function PayrollSection({ loan }) {
 
             {/* Comparison table */}
             <div className="border border-gray-200 rounded-lg overflow-hidden">
-              <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
-                <div className="grid grid-cols-12 gap-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              <div className="bg-surface-alt px-4 py-2 border-b border-gray-200">
+                <div className="grid grid-cols-12 gap-2 text-xs font-semibold text-ink-subtle uppercase tracking-wider">
                   <div className="col-span-4">Field</div>
                   <div className="col-span-3 text-right text-blue-600">From CD</div>
-                  <div className="col-span-3 text-right text-gray-400">On File</div>
+                  <div className="col-span-3 text-right text-ink-subtle">On File</div>
                   <div className="col-span-2 text-center">Status</div>
                 </div>
               </div>
               <div className="divide-y divide-gray-100">
                 {comparisonRows.map((row) => (
                   <div key={row.label} className={`grid grid-cols-12 gap-2 px-4 py-2 text-xs items-center ${row.match === 'no' ? 'bg-red-50/50' : ''}`}>
-                    <div className="col-span-4 font-medium text-gray-700">{row.label}</div>
-                    <div className="col-span-3 text-right text-gray-900 font-mono">{row.cdDisplay}</div>
-                    <div className="col-span-3 text-right text-gray-500 font-mono">{row.loanDisplay}</div>
+                    <div className="col-span-4 font-medium text-ink-mid">{row.label}</div>
+                    <div className="col-span-3 text-right text-ink font-mono">{row.cdDisplay}</div>
+                    <div className="col-span-3 text-right text-ink-subtle font-mono">{row.loanDisplay}</div>
                     <div className="col-span-2 text-center"><MatchBadge match={row.match} /></div>
                   </div>
                 ))}
@@ -554,12 +554,12 @@ export default function PayrollSection({ loan }) {
                   <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-2">Compensation Breakdown</p>
                   <div className="space-y-1">
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Broker Compensation</span>
-                      <span className="font-medium text-gray-900">{formatCurrency(gross)}</span>
+                      <span className="text-ink-mid">Broker Compensation</span>
+                      <span className="font-medium text-ink">{formatCurrency(gross)}</span>
                     </div>
                     <div className="flex justify-between text-xs">
-                      <span className="text-gray-500 pl-2">NetRate House Fee (12.95%)</span>
-                      <span className="text-gray-700">-{formatCurrency(house)}</span>
+                      <span className="text-ink-subtle pl-2">NetRate House Fee (12.95%)</span>
+                      <span className="text-ink-mid">-{formatCurrency(house)}</span>
                     </div>
                     {pickedReimb > 0 && (
                       <div className="flex justify-between text-xs">
@@ -577,8 +577,8 @@ export default function PayrollSection({ loan }) {
                       <>
                         <div className="border-t border-emerald-200 my-1.5" />
                         <div className="flex justify-between text-sm font-semibold">
-                          <span className="text-gray-700">Expected Wire Total</span>
-                          <span className="text-gray-900">{formatCurrency(extraction.data.totalDueToBroker)}</span>
+                          <span className="text-ink-mid">Expected Wire Total</span>
+                          <span className="text-ink">{formatCurrency(extraction.data.totalDueToBroker)}</span>
                         </div>
                       </>
                     )}
@@ -614,9 +614,9 @@ export default function PayrollSection({ loan }) {
                         className="rounded border-amber-400 text-amber-600 focus:ring-amber-500 flex-shrink-0"
                       />
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-gray-800 truncate">{item.label}</p>
+                        <p className="text-xs font-medium text-ink truncate">{item.label}</p>
                         {item.payee && (
-                          <p className="text-xs text-gray-400 truncate">{item.payee}</p>
+                          <p className="text-xs text-ink-subtle truncate">{item.payee}</p>
                         )}
                       </div>
                       {item.selected ? (
@@ -632,7 +632,7 @@ export default function PayrollSection({ loan }) {
                           className="w-24 text-right text-xs font-mono border border-amber-300 rounded-lg px-2 py-1 focus:ring-amber-500 focus:border-amber-500"
                         />
                       ) : (
-                        <span className="text-xs font-mono text-gray-400">{formatCurrency(item.amount)}</span>
+                        <span className="text-xs font-mono text-ink-subtle">{formatCurrency(item.amount)}</span>
                       )}
                     </div>
                   ))}
@@ -698,7 +698,7 @@ export default function PayrollSection({ loan }) {
                 </div>
                 {unmatchedPersons.map((person, idx) => (
                   <div key={idx} className="bg-white rounded-lg border border-purple-100 px-4 py-3 space-y-2">
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-sm font-medium text-ink">
                       {person.first_name} {person.last_name}
                     </p>
                     <div className="flex gap-2">
@@ -789,7 +789,7 @@ export default function PayrollSection({ loan }) {
               <button
                 onClick={handleApprove}
                 disabled={approving || disputing || unmatchedPersons.some(p => !p.role)}
-                className="flex-1 bg-green-600 text-white py-3 rounded-xl text-sm font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="flex-1 bg-green-600 text-white py-3 rounded-nr-xl text-sm font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {approving ? (
                   <>
@@ -803,13 +803,13 @@ export default function PayrollSection({ loan }) {
               <button
                 onClick={handleDispute}
                 disabled={approving || disputing}
-                className="px-5 py-3 rounded-xl text-sm font-medium border border-red-300 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-5 py-3 rounded-nr-xl text-sm font-medium border border-red-300 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {disputing ? 'Clearing...' : 'Dispute'}
               </button>
             </div>
 
-            <p className="text-xs text-gray-400 text-center">
+            <p className="text-xs text-ink-subtle text-center">
               Disputing will clear the CD — you{"'"}ll need to upload a corrected version.
             </p>
           </div>
@@ -828,10 +828,10 @@ export default function PayrollSection({ loan }) {
             </div>
 
             {/* CD file info */}
-            <div className="flex items-center gap-3 bg-gray-50 rounded-lg px-4 py-3">
+            <div className="flex items-center gap-3 bg-surface-alt rounded-lg px-4 py-3">
               <span className="text-xl">📕</span>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">{loan.cdFileName}</p>
+                <p className="text-sm font-medium text-ink truncate">{loan.cdFileName}</p>
                 <p className="text-xs text-green-600 font-medium">Verified Closing Disclosure</p>
               </div>
               <button
@@ -844,33 +844,33 @@ export default function PayrollSection({ loan }) {
 
             {/* Key extracted values summary */}
             {isExtracted && (
-              <div className="bg-gray-50 rounded-lg px-4 py-3">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+              <div className="bg-surface-alt rounded-lg px-4 py-3">
+                <p className="text-xs font-semibold text-ink-subtle uppercase tracking-wider mb-2">
                   Verified CD Data
                 </p>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                   {extraction.data.loan_amount != null && (
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Loan Amount</span>
-                      <span className="text-gray-800 font-medium">{formatCurrency(extraction.data.loan_amount)}</span>
+                      <span className="text-ink-subtle">Loan Amount</span>
+                      <span className="text-ink font-medium">{formatCurrency(extraction.data.loan_amount)}</span>
                     </div>
                   )}
                   {extraction.data.interest_rate != null && (
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Rate</span>
-                      <span className="text-gray-800 font-medium">{formatRate(extraction.data.interest_rate)}</span>
+                      <span className="text-ink-subtle">Rate</span>
+                      <span className="text-ink font-medium">{formatRate(extraction.data.interest_rate)}</span>
                     </div>
                   )}
                   {extraction.data.brokerCompensation != null && (
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Broker Comp</span>
-                      <span className="text-gray-800 font-medium">{formatCurrency(extraction.data.brokerCompensation)}</span>
+                      <span className="text-ink-subtle">Broker Comp</span>
+                      <span className="text-ink font-medium">{formatCurrency(extraction.data.brokerCompensation)}</span>
                     </div>
                   )}
                   {extraction.data.monthlyPI != null && (
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Monthly P&I</span>
-                      <span className="text-gray-800 font-medium">{formatCurrency(extraction.data.monthlyPI)}</span>
+                      <span className="text-ink-subtle">Monthly P&I</span>
+                      <span className="text-ink font-medium">{formatCurrency(extraction.data.monthlyPI)}</span>
                     </div>
                   )}
                 </div>
@@ -881,7 +881,7 @@ export default function PayrollSection({ loan }) {
             <button
               onClick={handleSend}
               disabled={sending}
-              className="w-full bg-green-600 text-white py-3 rounded-xl text-sm font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full bg-green-600 text-white py-3 rounded-nr-xl text-sm font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {sending ? (
                 <>
@@ -895,7 +895,7 @@ export default function PayrollSection({ loan }) {
 
             {/* Re-upload option */}
             <div className="text-center">
-              <label className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-500 hover:text-gray-700 cursor-pointer hover:bg-gray-100 rounded-lg transition-colors">
+              <label className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-ink-subtle hover:text-ink-mid cursor-pointer hover:bg-gray-100 rounded-lg transition-colors">
                 Upload new CD (resets approval)
                 <input
                   type="file"
@@ -922,43 +922,43 @@ export default function PayrollSection({ loan }) {
               <>
                 {/* TrackerPortal response */}
                 {payrollDetails.trackerResult?.success && (
-                  <div className="bg-gray-50 rounded-lg px-4 py-3">
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                  <div className="bg-surface-alt rounded-lg px-4 py-3">
+                    <p className="text-xs font-semibold text-ink-subtle uppercase tracking-wider mb-2">
                       Payroll Confirmation
                     </p>
                     <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
                       {payrollDetails.trackerResult.cdNumber && (
                         <div className="flex justify-between">
-                          <span className="text-gray-500">CD #</span>
-                          <span className="text-gray-800 font-medium">{payrollDetails.trackerResult.cdNumber}</span>
+                          <span className="text-ink-subtle">CD #</span>
+                          <span className="text-ink font-medium">{payrollDetails.trackerResult.cdNumber}</span>
                         </div>
                       )}
                       {payrollDetails.trackerResult.wireTotal && (
                         <div className="flex justify-between">
-                          <span className="text-gray-500">Wire Total</span>
-                          <span className="text-gray-800 font-medium">{formatCurrency(payrollDetails.trackerResult.wireTotal)}</span>
+                          <span className="text-ink-subtle">Wire Total</span>
+                          <span className="text-ink font-medium">{formatCurrency(payrollDetails.trackerResult.wireTotal)}</span>
                         </div>
                       )}
                       {payrollDetails.trackerResult.loCompAmount && (
                         <div className="flex justify-between">
-                          <span className="text-gray-500">LO Comp</span>
-                          <span className="text-gray-800 font-medium">{formatCurrency(payrollDetails.trackerResult.loCompAmount)}</span>
+                          <span className="text-ink-subtle">LO Comp</span>
+                          <span className="text-ink font-medium">{formatCurrency(payrollDetails.trackerResult.loCompAmount)}</span>
                         </div>
                       )}
                       {payrollDetails.trackerResult.loName && (
                         <div className="flex justify-between">
-                          <span className="text-gray-500">LO</span>
-                          <span className="text-gray-800 font-medium">{payrollDetails.trackerResult.loName}</span>
+                          <span className="text-ink-subtle">LO</span>
+                          <span className="text-ink font-medium">{payrollDetails.trackerResult.loName}</span>
                         </div>
                       )}
                       {payrollDetails.trackerResult.status && (
                         <div className="flex justify-between">
-                          <span className="text-gray-500">Status</span>
-                          <span className="text-gray-800 font-medium capitalize">{payrollDetails.trackerResult.status}</span>
+                          <span className="text-ink-subtle">Status</span>
+                          <span className="text-ink font-medium capitalize">{payrollDetails.trackerResult.status}</span>
                         </div>
                       )}
                       {payrollDetails.trackerResult.message && (
-                        <div className="col-span-2 text-gray-600 italic mt-1">
+                        <div className="col-span-2 text-ink-mid italic mt-1">
                           {payrollDetails.trackerResult.message}
                         </div>
                       )}
@@ -968,42 +968,42 @@ export default function PayrollSection({ loan }) {
 
                 {/* What was sent */}
                 {payrollDetails.trackerPayload && (
-                  <div className="bg-gray-50 rounded-lg px-4 py-3">
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                  <div className="bg-surface-alt rounded-lg px-4 py-3">
+                    <p className="text-xs font-semibold text-ink-subtle uppercase tracking-wider mb-2">
                       Submitted Data
                     </p>
                     <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                       <div className="flex justify-between">
-                        <span className="text-gray-500">Borrower</span>
-                        <span className="text-gray-800 font-medium">{payrollDetails.trackerPayload.borrower_name}</span>
+                        <span className="text-ink-subtle">Borrower</span>
+                        <span className="text-ink font-medium">{payrollDetails.trackerPayload.borrower_name}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-500">Loan #</span>
-                        <span className="text-gray-800 font-medium">{payrollDetails.trackerPayload.loan_number}</span>
+                        <span className="text-ink-subtle">Loan #</span>
+                        <span className="text-ink font-medium">{payrollDetails.trackerPayload.loan_number}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-500">Lender</span>
-                        <span className="text-gray-800 font-medium">{payrollDetails.trackerPayload.lender}</span>
+                        <span className="text-ink-subtle">Lender</span>
+                        <span className="text-ink font-medium">{payrollDetails.trackerPayload.lender}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-500">Amount</span>
-                        <span className="text-gray-800 font-medium">{formatCurrency(payrollDetails.trackerPayload.loan_amount)}</span>
+                        <span className="text-ink-subtle">Amount</span>
+                        <span className="text-ink font-medium">{formatCurrency(payrollDetails.trackerPayload.loan_amount)}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-500">Rate</span>
-                        <span className="text-gray-800 font-medium">{formatRate(payrollDetails.trackerPayload.interest_rate)}</span>
+                        <span className="text-ink-subtle">Rate</span>
+                        <span className="text-ink font-medium">{formatRate(payrollDetails.trackerPayload.interest_rate)}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-500">Gross Comp</span>
-                        <span className="text-gray-800 font-medium">{formatCurrency(payrollDetails.trackerPayload.grossComp)}</span>
+                        <span className="text-ink-subtle">Gross Comp</span>
+                        <span className="text-ink font-medium">{formatCurrency(payrollDetails.trackerPayload.grossComp)}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-500">Closing</span>
-                        <span className="text-gray-800 font-medium">{payrollDetails.trackerPayload.closing_date}</span>
+                        <span className="text-ink-subtle">Closing</span>
+                        <span className="text-ink font-medium">{payrollDetails.trackerPayload.closing_date}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-500">Funding</span>
-                        <span className="text-gray-800 font-medium">{payrollDetails.trackerPayload.funding_date}</span>
+                        <span className="text-ink-subtle">Funding</span>
+                        <span className="text-ink font-medium">{payrollDetails.trackerPayload.funding_date}</span>
                       </div>
                     </div>
                   </div>
@@ -1011,10 +1011,10 @@ export default function PayrollSection({ loan }) {
               </>
             )}
 
-            <div className="flex items-center gap-3 bg-gray-50 rounded-lg px-4 py-3">
+            <div className="flex items-center gap-3 bg-surface-alt rounded-lg px-4 py-3">
               <span className="text-xl">📕</span>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">{loan.cdFileName}</p>
+                <p className="text-sm font-medium text-ink truncate">{loan.cdFileName}</p>
                 <p className="text-xs text-green-600 font-medium">Final Closing Disclosure</p>
               </div>
               <button
@@ -1052,7 +1052,7 @@ export default function PayrollSection({ loan }) {
                   </label>
                   <button
                     onClick={() => setShowStartOver(false)}
-                    className="px-4 py-2 text-xs font-medium text-gray-500 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                    className="px-4 py-2 text-xs font-medium text-ink-subtle border border-gray-300 rounded-lg hover:bg-surface-alt transition-colors"
                   >
                     Cancel
                   </button>

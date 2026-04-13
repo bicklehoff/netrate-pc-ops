@@ -31,9 +31,9 @@ export default function CoBorrowerIdentityForm({ coBorrower, index, onUpdate, on
   };
 
   return (
-    <div className="bg-gray-50 border border-gray-200 rounded-lg p-5 space-y-4">
+    <div className="bg-surface-alt border border-gray-200 rounded-lg p-5 space-y-4">
       <div className="flex items-center justify-between">
-        <h4 className="text-sm font-semibold text-gray-800">
+        <h4 className="text-sm font-semibold text-ink">
           Co-Borrower {index + 1}
         </h4>
         <button
@@ -47,7 +47,7 @@ export default function CoBorrowerIdentityForm({ coBorrower, index, onUpdate, on
 
       {/* Relationship */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-ink-mid mb-1">
           Relationship to Primary Borrower <span className="text-red-400">*</span>
         </label>
         <select
@@ -65,7 +65,7 @@ export default function CoBorrowerIdentityForm({ coBorrower, index, onUpdate, on
       {/* Name */}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-ink-mid mb-1">
             First Name <span className="text-red-400">*</span>
           </label>
           <input
@@ -77,7 +77,7 @@ export default function CoBorrowerIdentityForm({ coBorrower, index, onUpdate, on
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-ink-mid mb-1">
             Last Name <span className="text-red-400">*</span>
           </label>
           <input
@@ -93,7 +93,7 @@ export default function CoBorrowerIdentityForm({ coBorrower, index, onUpdate, on
       {/* Email & Phone */}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-ink-mid mb-1">
             Email <span className="text-red-400">*</span>
           </label>
           <input
@@ -105,7 +105,7 @@ export default function CoBorrowerIdentityForm({ coBorrower, index, onUpdate, on
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-ink-mid mb-1">
             Phone <span className="text-red-400">*</span>
           </label>
           <input
@@ -121,7 +121,7 @@ export default function CoBorrowerIdentityForm({ coBorrower, index, onUpdate, on
       {/* DOB & SSN */}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-ink-mid mb-1">
             Date of Birth <span className="text-red-400">*</span>
           </label>
           <input
@@ -132,7 +132,7 @@ export default function CoBorrowerIdentityForm({ coBorrower, index, onUpdate, on
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-ink-mid mb-1">
             Social Security Number <span className="text-red-400">*</span>
           </label>
           <div className="relative">
@@ -148,7 +148,7 @@ export default function CoBorrowerIdentityForm({ coBorrower, index, onUpdate, on
             <button
               type="button"
               onClick={() => setSsnVisible((v) => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-subtle hover:text-ink-mid transition-colors"
               aria-label={ssnVisible ? 'Hide SSN' : 'Show SSN'}
             >
               {ssnVisible ? (
@@ -163,7 +163,7 @@ export default function CoBorrowerIdentityForm({ coBorrower, index, onUpdate, on
               )}
             </button>
           </div>
-          <p className="text-xs text-gray-400 mt-1">
+          <p className="text-xs text-ink-subtle mt-1">
             Encrypted with AES-256 — never stored in plaintext.
           </p>
         </div>

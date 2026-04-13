@@ -82,7 +82,7 @@ function SmsStartPanel({ onSelectContact }) {
     <div className="flex flex-col h-full">
       <div className="p-4 space-y-3">
         <div className="relative">
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-subtle pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <input
@@ -90,7 +90,7 @@ function SmsStartPanel({ onSelectContact }) {
             value={smsTo}
             onChange={(e) => setSmsTo(e.target.value)}
             placeholder="Search contact or type a number..."
-            className="w-full pl-9 pr-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand bg-gray-50"
+            className="w-full pl-9 pr-3 py-2.5 text-sm border border-gray-200 rounded-nr-xl focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand bg-surface-alt"
             autoFocus
           />
           {searching && (
@@ -104,7 +104,7 @@ function SmsStartPanel({ onSelectContact }) {
         {isPhone && (
           <button
             onClick={handleStartWithNumber}
-            className="w-full flex items-center gap-3 px-3 py-2.5 bg-brand/5 rounded-xl hover:bg-brand/10 transition-colors text-left"
+            className="w-full flex items-center gap-3 px-3 py-2.5 bg-brand/5 rounded-nr-xl hover:bg-brand/10 transition-colors text-left"
           >
             <div className="w-8 h-8 bg-brand/10 rounded-full flex items-center justify-center">
               <svg className="w-4 h-4 text-brand" fill="currentColor" viewBox="0 0 24 24">
@@ -112,20 +112,20 @@ function SmsStartPanel({ onSelectContact }) {
               </svg>
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-900">Text {smsTo}</p>
-              <p className="text-[10px] text-gray-500">Send to this number directly</p>
+              <p className="text-sm font-medium text-ink">Text {smsTo}</p>
+              <p className="text-[10px] text-ink-subtle">Send to this number directly</p>
             </div>
           </button>
         )}
 
         {/* Contact results */}
         {searchResults.length > 0 && (
-          <div className="border border-gray-200 rounded-xl overflow-hidden">
+          <div className="border border-gray-200 rounded-nr-xl overflow-hidden">
             {searchResults.slice(0, 5).map((contact) => (
               <button
                 key={contact.id}
                 onClick={() => onSelectContact(contact)}
-                className="w-full px-3 py-2.5 text-left hover:bg-gray-50 flex items-center gap-3 border-b border-gray-100 last:border-0"
+                className="w-full px-3 py-2.5 text-left hover:bg-surface-alt flex items-center gap-3 border-b border-gray-100 last:border-0"
               >
                 <div className="w-8 h-8 bg-brand/10 rounded-full flex items-center justify-center flex-shrink-0">
                   <span className="text-xs font-semibold text-brand">
@@ -133,10 +133,10 @@ function SmsStartPanel({ onSelectContact }) {
                   </span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">
+                  <p className="text-sm font-medium text-ink truncate">
                     {contact.first_name} {contact.last_name}
                   </p>
-                  <p className="text-xs text-gray-500 truncate">{contact.phone || ''}</p>
+                  <p className="text-xs text-ink-subtle truncate">{contact.phone || ''}</p>
                 </div>
                 <svg className="w-4 h-4 text-brand flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
@@ -147,7 +147,7 @@ function SmsStartPanel({ onSelectContact }) {
         )}
 
         {smsTo.length >= 2 && searchResults.length === 0 && !searching && !isPhone && (
-          <p className="text-xs text-gray-400 text-center py-4">No contacts found</p>
+          <p className="text-xs text-ink-subtle text-center py-4">No contacts found</p>
         )}
       </div>
 
@@ -156,7 +156,7 @@ function SmsStartPanel({ onSelectContact }) {
           <svg className="w-10 h-10 text-gray-200 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
           </svg>
-          <p className="text-xs text-gray-400">Search a contact or type a number</p>
+          <p className="text-xs text-ink-subtle">Search a contact or type a number</p>
         </div>
       )}
     </div>
@@ -413,7 +413,7 @@ export default function PhonePanel() {
       {/* Header — drag handle */}
       <div
         onMouseDown={(e) => { if (!e.target.closest('button')) handleDragStart(e, 'panel'); }}
-        className="px-4 py-3 border-b border-gray-100 bg-gray-50/80 flex items-center gap-3 cursor-grab active:cursor-grabbing select-none"
+        className="px-4 py-3 border-b border-gray-100 bg-surface-alt/80 flex items-center gap-3 cursor-grab active:cursor-grabbing select-none"
       >
         <svg className="w-[18px] h-[18px] text-brand flex-shrink-0 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
@@ -421,7 +421,7 @@ export default function PhonePanel() {
         <h3 className="text-sm font-bold flex-1 pointer-events-none">Phone</h3>
         <div className="flex items-center gap-1.5 mr-2">
           <span className={`w-2 h-2 rounded-full ${deviceReady ? 'bg-green-500' : 'bg-gray-300'}`} />
-          <span className="text-[10px] text-gray-400">{deviceReady ? 'Online' : 'Connecting...'}</span>
+          <span className="text-[10px] text-ink-subtle">{deviceReady ? 'Online' : 'Connecting...'}</span>
         </div>
         {/* Pop out button */}
         <button
@@ -437,7 +437,7 @@ export default function PhonePanel() {
         {!isInCall && (
           <button
             onClick={() => setIsOpen(false)}
-            className="w-7 h-7 rounded-md flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+            className="w-7 h-7 rounded-md flex items-center justify-center text-ink-subtle hover:bg-gray-100 hover:text-ink-mid transition-colors"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -460,10 +460,10 @@ export default function PhonePanel() {
             </span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-gray-900 truncate">
+            <p className="text-xs font-semibold text-ink truncate">
               {selectedContact.first_name} {selectedContact.last_name}
             </p>
-            <p className="text-[10px] text-gray-500 truncate">{selectedContact.phone}</p>
+            <p className="text-[10px] text-ink-subtle truncate">{selectedContact.phone}</p>
           </div>
           <div className="flex gap-1">
             {selectedContact.phone && (
@@ -488,7 +488,7 @@ export default function PhonePanel() {
             </button>
             <button
               onClick={() => setActiveTab('contact')}
-              className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+              className="p-1.5 rounded-lg text-ink-subtle hover:bg-gray-100 hover:text-ink-mid transition-colors"
               title="View contact"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -497,7 +497,7 @@ export default function PhonePanel() {
             </button>
             <button
               onClick={() => setSelectedContact(null)}
-              className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+              className="p-1.5 rounded-lg text-ink-subtle hover:text-ink-mid hover:bg-gray-100 transition-colors"
               title="Clear"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -531,7 +531,7 @@ export default function PhonePanel() {
             className={`flex-1 py-2.5 text-xs font-medium text-center transition-colors border-b-2 ${
               activeTab === tab.id
                 ? 'text-brand border-brand'
-                : 'text-gray-400 border-transparent hover:text-gray-600'
+                : 'text-ink-subtle border-transparent hover:text-ink-mid'
             }`}
           >
             {tab.label}
@@ -552,7 +552,7 @@ export default function PhonePanel() {
             }} />
             {lastCallId && callState === IDLE && (
               <div className="mt-4 pt-4 border-t border-gray-200">
-                <p className="text-xs font-medium text-gray-500 mb-2">Call Notes</p>
+                <p className="text-xs font-medium text-ink-subtle mb-2">Call Notes</p>
                 <CallNotes callLogId={lastCallId} onSaved={() => setLastCallId(null)} />
               </div>
             )}
@@ -587,7 +587,7 @@ export default function PhonePanel() {
                 <svg className="w-10 h-10 text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
-                <p className="text-xs text-gray-400">Search and select a contact</p>
+                <p className="text-xs text-ink-subtle">Search and select a contact</p>
               </div>
             )}
           </div>

@@ -65,8 +65,8 @@ function VerifyContent() {
       {status === 'verifying' && (
         <>
           <div className="w-12 h-12 border-4 border-brand/30 border-t-brand rounded-full animate-spin mx-auto mb-6" />
-          <h1 className="text-xl font-bold text-gray-900 mb-2">Verifying your link...</h1>
-          <p className="text-gray-500">Please wait a moment.</p>
+          <h1 className="text-xl font-bold text-ink mb-2">Verifying your link...</h1>
+          <p className="text-ink-subtle">Please wait a moment.</p>
         </>
       )}
 
@@ -77,8 +77,8 @@ function VerifyContent() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </div>
-          <h1 className="text-xl font-bold text-gray-900 mb-2">Link expired or invalid</h1>
-          <p className="text-gray-500 mb-6">{error}</p>
+          <h1 className="text-xl font-bold text-ink mb-2">Link expired or invalid</h1>
+          <p className="text-ink-subtle mb-6">{error}</p>
           <a
             href="/portal/auth/login"
             className="inline-block bg-go text-white px-6 py-2.5 rounded-lg font-bold hover:bg-go-dark transition-colors"
@@ -91,8 +91,8 @@ function VerifyContent() {
       {status === 'success' && (
         <>
           <div className="w-12 h-12 border-4 border-brand/30 border-t-brand rounded-full animate-spin mx-auto mb-6" />
-          <h1 className="text-xl font-bold text-gray-900 mb-2">Verified!</h1>
-          <p className="text-gray-500">Redirecting...</p>
+          <h1 className="text-xl font-bold text-ink mb-2">Verified!</h1>
+          <p className="text-ink-subtle">Redirecting...</p>
         </>
       )}
     </div>
@@ -105,7 +105,7 @@ export default function VerifyPage() {
       fallback={
         <div className="max-w-md mx-auto text-center py-16">
           <div className="w-12 h-12 border-4 border-brand/30 border-t-brand rounded-full animate-spin mx-auto mb-6" />
-          <h1 className="text-xl font-bold text-gray-900 mb-2">Loading...</h1>
+          <h1 className="text-xl font-bold text-ink mb-2">Loading...</h1>
         </div>
       }
     >

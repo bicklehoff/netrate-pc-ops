@@ -50,16 +50,16 @@ function formatDate(dateStr) {
 export default function LoanTimeline({ events }) {
   if (!events || events.length === 0) {
     return (
-      <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Activity</h2>
-        <p className="text-gray-400 text-sm">No activity yet.</p>
+      <div className="bg-white rounded-nr-xl border border-gray-200 p-6 shadow-nr-sm">
+        <h2 className="text-lg font-semibold text-ink mb-4">Activity</h2>
+        <p className="text-ink-subtle text-sm">No activity yet.</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-      <h2 className="text-lg font-semibold text-gray-900 mb-4">Activity</h2>
+    <div className="bg-white rounded-nr-xl border border-gray-200 p-6 shadow-nr-sm">
+      <h2 className="text-lg font-semibold text-ink mb-4">Activity</h2>
 
       <div className="space-y-0">
         {events.map((event, index) => (
@@ -74,11 +74,11 @@ export default function LoanTimeline({ events }) {
 
             {/* Event content */}
             <div className="pb-4">
-              <p className="text-sm text-gray-800">
+              <p className="text-sm text-ink">
                 <span className="mr-1">{EVENT_ICONS[event.event_type] || '•'}</span>
                 {formatEventMessage(event)}
               </p>
-              <p className="text-xs text-gray-400 mt-0.5">
+              <p className="text-xs text-ink-subtle mt-0.5">
                 {formatDate(event.created_at)}
                 {event.actor_type && event.actor_type !== 'system' && (
                   <span> · by {event.actor_type}</span>

@@ -58,19 +58,19 @@ export default function DialPad({ onDial }) {
       {/* Number display (only when not in a call) */}
       {!inCall && (
         <div className="w-full mb-3">
-          <div className="flex items-center bg-gray-50 rounded-lg border border-gray-200 px-3 py-2">
+          <div className="flex items-center bg-surface-alt rounded-lg border border-gray-200 px-3 py-2">
             <input
               type="tel"
               value={number}
               onChange={(e) => setNumber(e.target.value)}
               placeholder="Enter number..."
-              className="flex-1 bg-transparent text-lg font-mono text-gray-900 outline-none placeholder-gray-400"
+              className="flex-1 bg-transparent text-lg font-mono text-ink outline-none placeholder-gray-400"
               onKeyDown={(e) => e.key === 'Enter' && handleCall()}
             />
             {number && (
               <button
                 onClick={handleBackspace}
-                className="text-gray-400 hover:text-gray-600 ml-2"
+                className="text-ink-subtle hover:text-ink-mid ml-2"
                 title="Backspace"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -89,11 +89,11 @@ export default function DialPad({ onDial }) {
             <button
               key={key}
               onClick={() => handleKey(key)}
-              className="flex flex-col items-center justify-center h-14 rounded-xl bg-gray-50 hover:bg-gray-100 active:bg-gray-200 transition-colors border border-gray-200"
+              className="flex flex-col items-center justify-center h-14 rounded-nr-xl bg-surface-alt hover:bg-gray-100 active:bg-gray-200 transition-colors border border-gray-200"
             >
-              <span className="text-xl font-semibold text-gray-900">{key}</span>
+              <span className="text-xl font-semibold text-ink">{key}</span>
               {LETTERS[key] && (
-                <span className="text-[9px] text-gray-400 tracking-widest">{LETTERS[key]}</span>
+                <span className="text-[9px] text-ink-subtle tracking-widest">{LETTERS[key]}</span>
               )}
             </button>
           ))

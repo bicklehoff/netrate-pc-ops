@@ -25,7 +25,7 @@ export default function MloLayout({ children }) {
         <IncomingCallPopup />
 
         {/* MLO portal — full viewport */}
-        <div className="flex flex-col h-screen fixed inset-0 z-50 bg-gray-50">
+        <div className="flex flex-col h-screen fixed inset-0 z-50 bg-surface-alt">
           {/* Top header bar */}
           <MloHeader />
 

@@ -11,14 +11,14 @@ const PRIORITY_COLORS = {
   critical: 'bg-red-100 text-red-800',
   high: 'bg-orange-100 text-orange-800',
   medium: 'bg-blue-100 text-blue-800',
-  low: 'bg-gray-100 text-gray-600',
+  low: 'bg-gray-100 text-ink-mid',
 };
 
 const STATUS_COLORS = {
   open: 'bg-amber-100 text-amber-800',
   in_progress: 'bg-blue-100 text-blue-800',
   resolved: 'bg-green-100 text-green-800',
-  closed: 'bg-gray-200 text-gray-500',
+  closed: 'bg-gray-200 text-ink-subtle',
 };
 
 const PRODUCT_COLORS = {
@@ -32,8 +32,8 @@ const TYPE_LABELS = { bug: 'Bug', feature: 'Feature', improvement: 'Improvement'
 
 const ENTRY_TYPE_STYLES = {
   comment: '',
-  status_change: 'italic text-gray-500',
-  assignment: 'italic text-gray-500',
+  status_change: 'italic text-ink-subtle',
+  assignment: 'italic text-ink-subtle',
 };
 
 export default function TicketDetailPage() {
@@ -163,13 +163,13 @@ export default function TicketDetailPage() {
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center h-64 text-gray-400">Loading...</div>;
+    return <div className="flex items-center justify-center h-64 text-ink-subtle">Loading...</div>;
   }
 
   if (!ticket) {
     return (
       <div className="max-w-3xl mx-auto text-center py-16">
-        <p className="text-gray-500">Ticket not found</p>
+        <p className="text-ink-subtle">Ticket not found</p>
         <button onClick={() => router.push('/portal/mlo/backlog')} className="text-brand hover:underline mt-2 text-sm">
           ← Back to backlog
         </button>
@@ -193,11 +193,11 @@ export default function TicketDetailPage() {
         <svg className="w-3.5 h-3.5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
         </svg>
-        <span className="text-gray-500 truncate">{ticket.title}</span>
+        <span className="text-ink-subtle truncate">{ticket.title}</span>
       </div>
 
       {/* Ticket header */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm mb-4">
+      <div className="bg-white rounded-nr-xl border border-gray-200 p-6 shadow-nr-sm mb-4">
         {editing ? (
           <div className="space-y-3">
             <input
@@ -215,7 +215,7 @@ export default function TicketDetailPage() {
             />
             <div className="flex gap-2">
               <button onClick={handleSaveEdit} className="px-3 py-1.5 bg-go text-white text-sm font-bold rounded-lg hover:bg-go-dark">Save</button>
-              <button onClick={() => setEditing(false)} className="px-3 py-1.5 text-gray-500 text-sm hover:text-gray-700">Cancel</button>
+              <button onClick={() => setEditing(false)} className="px-3 py-1.5 text-ink-subtle text-sm hover:text-ink-mid">Cancel</button>
             </div>
           </div>
         ) : (
@@ -224,19 +224,19 @@ export default function TicketDetailPage() {
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
                   <span>{TYPE_ICONS[ticket.ticketType]}</span>
-                  <span className="text-xs text-gray-400 uppercase">{TYPE_LABELS[ticket.ticketType]}</span>
+                  <span className="text-xs text-ink-subtle uppercase">{TYPE_LABELS[ticket.ticketType]}</span>
                   <span className={`px-2 py-0.5 text-xs font-medium rounded border ${PRODUCT_COLORS[ticket.product]}`}>
                     {ticket.product}
                   </span>
                 </div>
-                <h1 className="text-xl font-bold text-gray-900">{ticket.title}</h1>
+                <h1 className="text-xl font-bold text-ink">{ticket.title}</h1>
                 {ticket.description && (
-                  <p className="text-sm text-gray-600 mt-2 whitespace-pre-wrap">{ticket.description}</p>
+                  <p className="text-sm text-ink-mid mt-2 whitespace-pre-wrap">{ticket.description}</p>
                 )}
               </div>
               <button
                 onClick={startEditing}
-                className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1 rounded hover:bg-gray-100 flex-shrink-0"
+                className="text-xs text-ink-subtle hover:text-ink-mid px-2 py-1 rounded hover:bg-gray-100 flex-shrink-0"
               >
                 Edit
               </button>
@@ -245,7 +245,7 @@ export default function TicketDetailPage() {
             {/* Controls row */}
             <div className="flex items-center gap-3 mt-4 pt-4 border-t border-gray-100">
               <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-400">Status:</span>
+                <span className="text-xs text-ink-subtle">Status:</span>
                 <select
                   value={ticket.status}
                   onChange={(e) => handleStatusChange(e.target.value)}
@@ -261,7 +261,7 @@ export default function TicketDetailPage() {
               <div className="w-px h-4 bg-gray-200" />
 
               <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-400">Priority:</span>
+                <span className="text-xs text-ink-subtle">Priority:</span>
                 <select
                   value={ticket.priority}
                   onChange={(e) => handlePriorityChange(e.target.value)}
@@ -276,7 +276,7 @@ export default function TicketDetailPage() {
 
               <div className="flex-1" />
 
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-ink-subtle">
                 Created {new Date(ticket.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
               </span>
             </div>
@@ -285,12 +285,12 @@ export default function TicketDetailPage() {
       </div>
 
       {/* Activity thread */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="px-5 py-3 border-b border-gray-100 bg-gray-50/50">
-          <h2 className="text-sm font-medium text-gray-700">
+      <div className="bg-white rounded-nr-xl border border-gray-200 shadow-nr-sm overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-100 bg-surface-alt/50">
+          <h2 className="text-sm font-medium text-ink-mid">
             Activity
             {ticket.entries?.length > 0 && (
-              <span className="text-gray-400 font-normal ml-1">({ticket.entries.length})</span>
+              <span className="text-ink-subtle font-normal ml-1">({ticket.entries.length})</span>
             )}
           </h2>
         </div>
@@ -298,17 +298,17 @@ export default function TicketDetailPage() {
         {/* Entries */}
         <div className="divide-y divide-gray-50">
           {(!ticket.entries || ticket.entries.length === 0) && (
-            <div className="px-5 py-8 text-center text-sm text-gray-400">
+            <div className="px-5 py-8 text-center text-sm text-ink-subtle">
               No activity yet. Add a comment to get started.
             </div>
           )}
           {ticket.entries?.map((entry) => (
             <div key={entry.id} className="px-5 py-3">
               <div className="flex items-baseline justify-between gap-2 mb-1">
-                <span className="text-xs font-medium text-gray-700">
+                <span className="text-xs font-medium text-ink-mid">
                   {entry.authorLabel || entry.authorId}
                 </span>
-                <span className="text-[11px] text-gray-400">
+                <span className="text-[11px] text-ink-subtle">
                   {new Date(entry.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                   {' '}
                   {new Date(entry.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
@@ -324,7 +324,7 @@ export default function TicketDetailPage() {
                   <img
                     src={entry.imageUrl}
                     alt="Attached screenshot"
-                    className="max-w-full max-h-96 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
+                    className="max-w-full max-h-96 rounded-lg border border-gray-200 shadow-nr-sm hover:shadow-md transition-shadow"
                   />
                 </a>
               )}
@@ -382,7 +382,7 @@ export default function TicketDetailPage() {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1 transition-colors"
+                className="text-xs text-ink-subtle hover:text-ink-mid flex items-center gap-1 transition-colors"
                 title="Attach image"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

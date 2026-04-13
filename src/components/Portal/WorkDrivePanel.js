@@ -169,7 +169,7 @@ export default function WorkDrivePanel({ loanId }) {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+      <div className="bg-white rounded-nr-xl border border-gray-200 p-6 shadow-nr-sm">
         <div className="animate-pulse space-y-3">
           <div className="h-5 bg-gray-200 rounded w-40" />
           <div className="h-10 bg-gray-100 rounded" />
@@ -181,9 +181,9 @@ export default function WorkDrivePanel({ loanId }) {
 
   if (!hasWorkDrive) {
     return (
-      <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-gray-900 mb-2">Loan Files</h2>
-        <p className="text-sm text-gray-400">
+      <div className="bg-white rounded-nr-xl border border-gray-200 p-6 shadow-nr-sm">
+        <h2 className="text-lg font-semibold text-ink mb-2">Loan Files</h2>
+        <p className="text-sm text-ink-subtle">
           No WorkDrive folder for this loan. Folders are created automatically when a new application is submitted.
         </p>
       </div>
@@ -193,13 +193,13 @@ export default function WorkDrivePanel({ loanId }) {
   const currentFiles = allFiles[activeTab] || [];
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+    <div className="bg-white rounded-nr-xl border border-gray-200 shadow-nr-sm overflow-hidden">
       {/* Header */}
       <div className="px-6 pt-5 pb-3 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-900">Loan Files</h2>
+        <h2 className="text-lg font-semibold text-ink">Loan Files</h2>
         <label className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg cursor-pointer transition-colors ${
           uploading
-            ? 'bg-gray-100 text-gray-400 pointer-events-none'
+            ? 'bg-gray-100 text-ink-subtle pointer-events-none'
             : 'bg-brand/10 text-brand hover:bg-brand/20 border border-brand/20'
         }`}>
           {uploading ? 'Uploading...' : `📎 Upload to ${FOLDER_TABS.find(t => t.key === activeTab)?.label || activeTab}`}
@@ -224,14 +224,14 @@ export default function WorkDrivePanel({ loanId }) {
               className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
                 activeTab === tab.key
                   ? 'border-brand text-brand'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  : 'border-transparent text-ink-subtle hover:text-ink-mid hover:border-gray-300'
               }`}
             >
               <span>{tab.icon}</span>
               <span>{tab.label}</span>
               {count > 0 && (
                 <span className={`ml-1 px-1.5 py-0.5 text-xs rounded-full ${
-                  activeTab === tab.key ? 'bg-brand/10 text-brand' : 'bg-gray-100 text-gray-500'
+                  activeTab === tab.key ? 'bg-brand/10 text-brand' : 'bg-gray-100 text-ink-subtle'
                 }`}>
                   {count}
                 </span>
@@ -286,7 +286,7 @@ export default function WorkDrivePanel({ loanId }) {
       {/* File list */}
       <div className="px-6 py-3 min-h-[120px]">
         {currentFiles.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-8 text-gray-400">
+          <div className="flex flex-col items-center justify-center py-8 text-ink-subtle">
             <span className="text-3xl mb-2">📂</span>
             <p className="text-sm">No files in {activeTab}</p>
             <p className="text-xs mt-1">{FOLDER_TABS.find(t => t.key === activeTab)?.desc}</p>
@@ -301,8 +301,8 @@ export default function WorkDrivePanel({ loanId }) {
                 <div className="flex items-center gap-3 min-w-0 flex-1">
                   <span className="text-lg flex-shrink-0">{fileIcon(file.name)}</span>
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-gray-800 truncate">{file.name}</p>
-                    <div className="flex items-center gap-2 text-xs text-gray-400">
+                    <p className="text-sm font-medium text-ink truncate">{file.name}</p>
+                    <div className="flex items-center gap-2 text-xs text-ink-subtle">
                       {file.size && <span>{formatBytes(file.size)}</span>}
                       {file.modifiedTime && <span>{formatDate(file.modifiedTime)}</span>}
                     </div>

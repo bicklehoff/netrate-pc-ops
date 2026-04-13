@@ -49,14 +49,14 @@ export default function CompensationSection({ loan }) {
   const status = tracker.status;
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+    <div className="bg-white rounded-nr-xl border border-gray-200 shadow-nr-sm overflow-hidden">
       <div className="bg-emerald-50 px-6 py-4 border-b border-emerald-200">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="text-2xl">💵</span>
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">Compensation</h2>
-              <p className="text-xs text-gray-500">
+              <h2 className="text-lg font-semibold text-ink">Compensation</h2>
+              <p className="text-xs text-ink-subtle">
                 {isSent ? `Sent to payroll${cdNumber ? ` — ${cdNumber}` : ''}` : 'From approved CD'}
               </p>
             </div>
@@ -65,7 +65,7 @@ export default function CompensationSection({ loan }) {
             <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
               status === 'confirmed' ? 'bg-green-100 text-green-700'
               : status === 'matched' ? 'bg-blue-100 text-blue-700'
-              : 'bg-gray-100 text-gray-600'
+              : 'bg-gray-100 text-ink-mid'
             }`}>
               {status === 'confirmed' ? 'Confirmed' : status === 'matched' ? 'Wire Matched' : status}
             </span>
@@ -82,24 +82,24 @@ export default function CompensationSection({ loan }) {
           <div className="space-y-4">
             {/* Wire Info */}
             <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Wire Info</p>
+              <p className="text-xs font-semibold text-ink-subtle uppercase tracking-wider mb-2">Wire Info</p>
               <div className="space-y-1">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Broker Compensation</span>
-                  <span className="font-medium text-gray-900">{fmt$(grossComp)}</span>
+                  <span className="text-ink-mid">Broker Compensation</span>
+                  <span className="font-medium text-ink">{fmt$(grossComp)}</span>
                 </div>
                 {reimbSelections.map((r, i) => (
                   <div key={i} className="flex justify-between text-sm">
-                    <span className="text-gray-500">{r.label}</span>
-                    <span className="text-gray-700">{fmt$(r.editedAmount)}</span>
+                    <span className="text-ink-subtle">{r.label}</span>
+                    <span className="text-ink-mid">{fmt$(r.editedAmount)}</span>
                   </div>
                 ))}
                 {wireTotal && (
                   <>
                     <div className="border-t border-gray-200 my-1.5" />
                     <div className="flex justify-between text-sm font-semibold">
-                      <span className="text-gray-700">Expected Wire</span>
-                      <span className="text-gray-900">{fmt$(wireTotal)}</span>
+                      <span className="text-ink-mid">Expected Wire</span>
+                      <span className="text-ink">{fmt$(wireTotal)}</span>
                     </div>
                   </>
                 )}
@@ -139,7 +139,7 @@ export default function CompensationSection({ loan }) {
 
             {/* Status message */}
             {tracker.message && (
-              <p className="text-xs text-gray-500 italic text-center mt-2">{tracker.message}</p>
+              <p className="text-xs text-ink-subtle italic text-center mt-2">{tracker.message}</p>
             )}
           </div>
         )}

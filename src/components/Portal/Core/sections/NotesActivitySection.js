@@ -131,7 +131,7 @@ export default function NotesActivitySection({ loan, updateLoanField }) {
       {/* ─── Activity Timeline ─── */}
       <SectionCard title="Activity" icon="📜" badge={events.length > 0 ? `${events.length}` : null} defaultOpen={true}>
         {events.length === 0 ? (
-          <p className="text-gray-400 text-sm">No activity yet.</p>
+          <p className="text-ink-subtle text-sm">No activity yet.</p>
         ) : (
           <div className="space-y-0">
             {events.map((event, index) => (
@@ -143,11 +143,11 @@ export default function NotesActivitySection({ loan, updateLoanField }) {
                   )}
                 </div>
                 <div className="pb-4">
-                  <p className="text-sm text-gray-800">
+                  <p className="text-sm text-ink">
                     <span className="mr-1">{EVENT_ICONS[event.event_type] || '•'}</span>
                     {formatEventMessage(event)}
                   </p>
-                  <p className="text-xs text-gray-400 mt-0.5">
+                  <p className="text-xs text-ink-subtle mt-0.5">
                     {formatDate(event.created_at)}
                     {event.actor_type && (
                       <span> · {event.actor_type}</span>
