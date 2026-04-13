@@ -1,6 +1,28 @@
+import sql from '@/lib/db';
+
 const BASE_URL = 'https://netratemortgage.com';
 
-export default function sitemap() {
+export default async function sitemap() {
+  // Fetch published content pages from DB
+  let contentPages = [];
+  try {
+    contentPages = await sql`
+      SELECT slug, updated_at FROM content_pages
+      WHERE status = 'published'
+      ORDER BY published_at DESC
+    `;
+  } catch (e) {
+    // DB unavailable — degrade gracefully, static entries still work
+    console.error('Sitemap: content_pages query failed:', e.message);
+  }
+
+  const dynamicPages = contentPages.map(p => ({
+    url: `${BASE_URL}/${p.slug}`,
+    lastModified: p.updated_at ? new Date(p.updated_at) : new Date(),
+    changeFrequency: 'monthly',
+    priority: 0.7,
+  }));
+
   return [
     {
       url: BASE_URL,
@@ -277,5 +299,7 @@ export default function sitemap() {
       changeFrequency: 'yearly',
       priority: 0.2,
     },
+    // Dynamic content pages from DB
+    ...dynamicPages,
   ];
 }
