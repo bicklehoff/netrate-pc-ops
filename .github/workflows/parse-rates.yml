@@ -1,0 +1,31 @@
+name: Parse Rate Sheets
+
+on:
+  schedule:
+    # Weekdays only (Mon-Fri), 4 runs per day in UTC (= Mountain Time)
+    - cron: '0 14 * * 1-5'    # 8:00 AM MT (morning open)
+    - cron: '30 16 * * 1-5'   # 10:30 AM MT (mid-morning)
+    - cron: '30 19 * * 1-5'   # 1:30 PM MT (post-lunch)
+    - cron: '30 21 * * 1-5'   # 3:30 PM MT (end-of-day)
+  workflow_dispatch:            # Manual trigger via GitHub UI
+
+jobs:
+  parse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Parse rate sheets from GCS
+        run: node scripts/parse-gcs-rates.mjs
+        env:
+          GCS_SERVICE_ACCOUNT_KEY: ${{ secrets.GCS_SERVICE_ACCOUNT_KEY }}
+          GCS_BUCKET_NAME: ${{ secrets.GCS_BUCKET_NAME }}
+          PC_DATABASE_URL: ${{ secrets.PC_DATABASE_URL }}
