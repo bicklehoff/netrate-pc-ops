@@ -303,15 +303,15 @@ export default function PrequalLetterModal({ loan, session, onClose }) {
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
     >
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-nr-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">
+          <h2 className="text-lg font-semibold text-ink">
             Pre-Qualification Letter
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-xl leading-none"
+            className="text-ink-subtle hover:text-ink-mid text-xl leading-none"
           >
             &times;
           </button>
@@ -321,7 +321,7 @@ export default function PrequalLetterModal({ loan, session, onClose }) {
         <div className="px-6 py-5 space-y-5">
           {/* Borrower Info */}
           <fieldset>
-            <legend className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+            <legend className="text-xs font-semibold text-ink-subtle uppercase tracking-wider mb-3">
               Borrower Information
             </legend>
             <div className="grid grid-cols-1 gap-3">
@@ -342,7 +342,7 @@ export default function PrequalLetterModal({ loan, session, onClose }) {
 
           {/* Loan Terms */}
           <fieldset>
-            <legend className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+            <legend className="text-xs font-semibold text-ink-subtle uppercase tracking-wider mb-3">
               Loan Terms
             </legend>
             <div className="grid grid-cols-2 gap-3">
@@ -398,7 +398,7 @@ export default function PrequalLetterModal({ loan, session, onClose }) {
 
           {/* Letter Details */}
           <fieldset>
-            <legend className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+            <legend className="text-xs font-semibold text-ink-subtle uppercase tracking-wider mb-3">
               Letter Details
             </legend>
             <div className="grid grid-cols-3 gap-3">
@@ -424,7 +424,7 @@ export default function PrequalLetterModal({ loan, session, onClose }) {
 
           {/* Verification Checklist */}
           <fieldset>
-            <legend className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+            <legend className="text-xs font-semibold text-ink-subtle uppercase tracking-wider mb-3">
               Verification Checklist
             </legend>
             <div className="grid grid-cols-2 gap-2">
@@ -442,7 +442,7 @@ export default function PrequalLetterModal({ loan, session, onClose }) {
                     onChange={(e) => updateField(item.key, e.target.checked)}
                     className="w-4 h-4 rounded border-gray-300 text-brand focus:ring-brand"
                   />
-                  <span className="text-sm text-gray-700">{item.label}</span>
+                  <span className="text-sm text-ink-mid">{item.label}</span>
                 </label>
               ))}
             </div>
@@ -450,7 +450,7 @@ export default function PrequalLetterModal({ loan, session, onClose }) {
 
           {/* MLO Info */}
           <fieldset>
-            <legend className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+            <legend className="text-xs font-semibold text-ink-subtle uppercase tracking-wider mb-3">
               Loan Officer
             </legend>
             <div className="grid grid-cols-2 gap-3">
@@ -498,21 +498,21 @@ export default function PrequalLetterModal({ loan, session, onClose }) {
         </div>
 
         {/* Footer Actions */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl">
-          <span className="text-xs text-gray-400">
+        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-surface-alt rounded-b-xl">
+          <span className="text-xs text-ink-subtle">
             {saving ? 'Saving...' : 'Auto-saved'}
           </span>
           <div className="flex items-center gap-3">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+            className="px-4 py-2 text-sm font-medium text-ink-mid hover:text-ink"
           >
             Close
           </button>
           <button
             onClick={handleDownload}
             disabled={pdfBusy || !form.borrowerNames}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+            className="px-4 py-2 text-sm font-medium text-ink-mid bg-white border border-gray-300 rounded-lg hover:bg-surface-alt disabled:opacity-50"
           >
             {pdfBusy ? 'Generating...' : 'Download PDF'}
           </button>
@@ -520,7 +520,7 @@ export default function PrequalLetterModal({ loan, session, onClose }) {
             <button
               onClick={handleSaveToFolder}
               disabled={saveFolderBusy || !form.borrowerNames}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              className="px-4 py-2 text-sm font-medium text-ink-mid bg-white border border-gray-300 rounded-lg hover:bg-surface-alt disabled:opacity-50"
             >
               {saveFolderBusy ? 'Saving...' : '📁 Save to Folder'}
             </button>
@@ -544,10 +544,10 @@ export default function PrequalLetterModal({ loan, session, onClose }) {
 function Field({ label, value, onChange, type = 'text', prefix, suffix, readOnly, placeholder, step }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
+      <label className="block text-xs font-medium text-ink-mid mb-1">{label}</label>
       <div className="relative">
         {prefix && (
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-ink-subtle">
             {prefix}
           </span>
         )}
@@ -560,10 +560,10 @@ function Field({ label, value, onChange, type = 'text', prefix, suffix, readOnly
           step={step}
           className={`w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-brand focus:border-brand ${
             prefix ? 'pl-7' : ''
-          } ${suffix ? 'pr-8' : ''} ${readOnly ? 'bg-gray-50 text-gray-500' : ''}`}
+          } ${suffix ? 'pr-8' : ''} ${readOnly ? 'bg-surface-alt text-ink-subtle' : ''}`}
         />
         {suffix && (
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-ink-subtle">
             {suffix}
           </span>
         )}
@@ -575,7 +575,7 @@ function Field({ label, value, onChange, type = 'text', prefix, suffix, readOnly
 function SelectField({ label, value, onChange, options }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
+      <label className="block text-xs font-medium text-ink-mid mb-1">{label}</label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}

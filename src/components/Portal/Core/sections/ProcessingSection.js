@@ -189,7 +189,7 @@ function ProcessingTaskCard({ task, dates, loanId, onUpdateDate }) {
       {/* Header */}
       <div className="flex items-center gap-2 mb-3">
         <span className="text-lg">{task.icon}</span>
-        <h4 className="text-sm font-semibold text-gray-800">{task.label}</h4>
+        <h4 className="text-sm font-semibold text-ink">{task.label}</h4>
         {hasAnyDate && !hasExpired && !hasExpiry && (
           <span className="text-green-500 text-sm">✓</span>
         )}
@@ -221,7 +221,7 @@ function ProcessingTaskCard({ task, dates, loanId, onUpdateDate }) {
               }}
               className="rounded border-gray-300 text-brand focus:ring-brand/30"
             />
-            <span className="text-xs text-gray-500">{task.toggleLabel}</span>
+            <span className="text-xs text-ink-subtle">{task.toggleLabel}</span>
           </label>
         )}
       </div>
@@ -236,7 +236,7 @@ function ProcessingTaskCard({ task, dates, loanId, onUpdateDate }) {
 
           return (
             <div key={df.key}>
-              <span className="block text-[10px] text-gray-400 uppercase tracking-wider mb-0.5">
+              <span className="block text-[10px] text-ink-subtle uppercase tracking-wider mb-0.5">
                 {df.label}
               </span>
               {isEditing ? (
@@ -258,10 +258,10 @@ function ProcessingTaskCard({ task, dates, loanId, onUpdateDate }) {
               ) : (
                 <span
                   onClick={() => handleDateClick(df.key, dateVal)}
-                  className={`inline-block text-xs px-1.5 py-0.5 rounded cursor-pointer transition-colors border border-transparent hover:border-dashed hover:border-gray-300 hover:bg-gray-50 min-w-[60px] ${
+                  className={`inline-block text-xs px-1.5 py-0.5 rounded cursor-pointer transition-colors border border-transparent hover:border-dashed hover:border-gray-300 hover:bg-surface-alt min-w-[60px] ${
                     expired ? 'text-red-600 font-medium' :
                     expiring ? 'text-amber-600 font-medium' :
-                    dateVal ? 'text-gray-700' : 'text-gray-300'
+                    dateVal ? 'text-ink-mid' : 'text-gray-300'
                   }`}
                   title="Click to edit"
                 >
@@ -278,7 +278,7 @@ function ProcessingTaskCard({ task, dates, loanId, onUpdateDate }) {
       {/* Inline order form */}
       {orderForm && (
         <div className="mt-3 pt-3 border-t border-gray-200">
-          <p className="text-xs font-semibold text-gray-600 mb-2">Order {task.label}</p>
+          <p className="text-xs font-semibold text-ink-mid mb-2">Order {task.label}</p>
           {orderError && (
             <p className="text-xs text-red-600 mb-2">{orderError}</p>
           )}
@@ -315,7 +315,7 @@ function ProcessingTaskCard({ task, dates, loanId, onUpdateDate }) {
             </button>
             <button
               onClick={() => { setOrderForm(null); setOrderError(''); }}
-              className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700"
+              className="px-3 py-1.5 text-xs text-ink-subtle hover:text-ink-mid"
             >
               Cancel
             </button>

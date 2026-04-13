@@ -21,7 +21,7 @@ const INDUSTRY_COLORS = {
   title: 'bg-purple-100 text-purple-800',
   insurance: 'bg-amber-100 text-amber-800',
   realtor: 'bg-green-100 text-green-800',
-  other: 'bg-gray-100 text-gray-700',
+  other: 'bg-gray-100 text-ink-mid',
 };
 
 export default function AccountsPage() {
@@ -70,8 +70,8 @@ export default function AccountsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Accounts</h1>
-          <p className="text-gray-500 text-sm">Partner directory — lenders, title, insurance, realtors</p>
+          <h1 className="text-xl font-bold text-ink">Accounts</h1>
+          <p className="text-ink-subtle text-sm">Partner directory — lenders, title, insurance, realtors</p>
         </div>
       </div>
 
@@ -87,7 +87,7 @@ export default function AccountsPage() {
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                   industryFilter === opt.value
                     ? 'bg-brand text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    : 'bg-gray-100 text-ink-mid hover:bg-gray-200'
                 }`}
               >
                 {opt.label} {count > 0 && <span className="ml-1 opacity-75">{count}</span>}
@@ -112,14 +112,14 @@ export default function AccountsPage() {
 
       {/* Table */}
       {loading ? (
-        <div className="text-center py-12 text-gray-400">Loading accounts...</div>
+        <div className="text-center py-12 text-ink-subtle">Loading accounts...</div>
       ) : accounts.length === 0 ? (
-        <div className="text-center py-12 text-gray-400">No accounts found</div>
+        <div className="text-center py-12 text-ink-subtle">No accounts found</div>
       ) : (
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+        <div className="bg-white border border-gray-200 rounded-nr-xl shadow-nr-sm overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-200 text-xs text-gray-500 uppercase tracking-wider">
+              <tr className="bg-surface-alt border-b border-gray-200 text-xs text-ink-subtle uppercase tracking-wider">
                 <th className="text-left px-4 py-3">Name</th>
                 <th className="text-left px-4 py-3">Industry</th>
                 <th className="text-left px-4 py-3">Phone</th>
@@ -136,9 +136,9 @@ export default function AccountsPage() {
                     onClick={() => setExpandedId(expandedId === account.id ? null : account.id)}
                   >
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-gray-900">{account.name}</span>
+                      <span className="font-medium text-ink">{account.name}</span>
                       {account._count.accountContacts > 0 && (
-                        <svg className={`w-3 h-3 text-gray-400 transition-transform ${expandedId === account.id ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className={`w-3 h-3 text-ink-subtle transition-transform ${expandedId === account.id ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                         </svg>
                       )}
@@ -147,9 +147,9 @@ export default function AccountsPage() {
                     {expandedId === account.id && account.accountContacts?.length > 0 && (
                       <div className="mt-2 space-y-1.5 pl-2 border-l-2 border-brand/20">
                         {account.accountContacts.map(c => (
-                          <div key={c.id} className="text-xs text-gray-600">
+                          <div key={c.id} className="text-xs text-ink-mid">
                             <span className="font-medium">{c.first_name} {c.last_name}</span>
-                            {c.role && <span className="text-gray-400 ml-1">({c.role})</span>}
+                            {c.role && <span className="text-ink-subtle ml-1">({c.role})</span>}
                             {c.isPrimary && <span className="ml-1 text-brand text-[10px]">PRIMARY</span>}
                             <div className="flex gap-3 mt-0.5">
                               {c.email && <a href={`mailto:${c.email}`} className="text-brand hover:underline">{c.email}</a>}
@@ -165,10 +165,10 @@ export default function AccountsPage() {
                       {account.industry || 'other'}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-gray-600">
+                  <td className="px-4 py-3 text-ink-mid">
                     {account.phone ? <a href={`tel:${account.phone}`} className="hover:text-brand">{account.phone}</a> : '—'}
                   </td>
-                  <td className="px-4 py-3 text-gray-600">
+                  <td className="px-4 py-3 text-ink-mid">
                     {account.website ? (
                       <a href={account.website.startsWith('http') ? account.website : `https://${account.website}`}
                         target="_blank" rel="noopener noreferrer" className="text-brand hover:underline truncate max-w-[200px] block">
@@ -176,10 +176,10 @@ export default function AccountsPage() {
                       </a>
                     ) : '—'}
                   </td>
-                  <td className="px-4 py-3 text-gray-600 text-xs">
+                  <td className="px-4 py-3 text-ink-mid text-xs">
                     {[account.city, account.state].filter(Boolean).join(', ') || '—'}
                   </td>
-                  <td className="px-4 py-3 text-right text-gray-500">
+                  <td className="px-4 py-3 text-right text-ink-subtle">
                     {account._count.accountContacts || '—'}
                   </td>
                 </tr>

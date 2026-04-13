@@ -156,7 +156,7 @@ export default function OverviewSection({ loan, updateLoanField, updateDates }) 
       )}
 
       {/* Pipeline + Summary strip — combined */}
-      <div className="bg-white rounded-lg border border-slate-200 shadow-sm">
+      <div className="bg-white rounded-lg border border-slate-200 shadow-nr-sm">
         {/* Pipeline bar */}
         <div className="flex items-center px-3 py-1.5 border-b border-slate-100">
           {MILESTONES.map((m, i) => {

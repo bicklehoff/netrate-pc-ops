@@ -118,20 +118,20 @@ export default function SmsThread({ contactId, contactPhone, messages: initialMe
         {loading ? (
           <div className="text-center py-8">
             <div className="w-6 h-6 mx-auto border-2 border-gray-300 border-t-brand rounded-full animate-spin mb-2" />
-            <p className="text-xs text-gray-400">Loading messages...</p>
+            <p className="text-xs text-ink-subtle">Loading messages...</p>
           </div>
         ) : messages.length === 0 ? (
           <div className="text-center py-8">
             <svg className="w-8 h-8 mx-auto text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
-            <p className="text-xs text-gray-400">No messages yet</p>
+            <p className="text-xs text-ink-subtle">No messages yet</p>
           </div>
         ) : (
           Object.entries(grouped).map(([date, msgs]) => (
             <div key={date}>
               <div className="text-center my-2">
-                <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{date}</span>
+                <span className="text-[10px] text-ink-subtle bg-gray-100 px-2 py-0.5 rounded-full">{date}</span>
               </div>
               {msgs.map((msg) => (
                 <div
@@ -142,12 +142,12 @@ export default function SmsThread({ contactId, contactPhone, messages: initialMe
                     className={`max-w-[80%] px-3 py-2 rounded-2xl text-sm ${
                       msg.direction === 'outbound'
                         ? 'bg-brand text-white rounded-br-md'
-                        : 'bg-gray-100 text-gray-900 rounded-bl-md'
+                        : 'bg-gray-100 text-ink rounded-bl-md'
                     }`}
                   >
                     <p className="whitespace-pre-wrap break-words">{msg.body}</p>
                     <p className={`text-[10px] mt-0.5 ${
-                      msg.direction === 'outbound' ? 'text-white/60' : 'text-gray-400'
+                      msg.direction === 'outbound' ? 'text-white/60' : 'text-ink-subtle'
                     }`}>
                       {formatTime(msg.sentAt)}
                       {msg.direction === 'outbound' && msg.status === 'delivered' && ' ✓✓'}
@@ -184,12 +184,12 @@ export default function SmsThread({ contactId, contactPhone, messages: initialMe
             }}
             placeholder="Type a message..."
             rows={1}
-            className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand max-h-20"
+            className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-nr-xl resize-none focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand max-h-20"
           />
           <button
             onClick={handleSend}
             disabled={!newMessage.trim() || sending}
-            className="p-2 rounded-xl bg-go text-white hover:bg-go-dark disabled:bg-gray-200 disabled:text-gray-400 transition-colors flex-shrink-0"
+            className="p-2 rounded-nr-xl bg-go text-white hover:bg-go-dark disabled:bg-gray-200 disabled:text-ink-subtle transition-colors flex-shrink-0"
           >
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
               <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />

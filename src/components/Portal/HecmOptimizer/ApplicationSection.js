@@ -6,7 +6,7 @@ import { useScenario } from './ScenarioContext';
 function Input({ label, value, onChange, type = 'text', className = '', inputClass = '', ...rest }) {
   return (
     <div className={className}>
-      <label className="block text-xs font-medium text-gray-500 mb-0.5">{label}</label>
+      <label className="block text-xs font-medium text-ink-subtle mb-0.5">{label}</label>
       <input
         type={type}
         value={value}
@@ -21,7 +21,7 @@ function Input({ label, value, onChange, type = 'text', className = '', inputCla
 function Select({ label, value, onChange, options, className = '' }) {
   return (
     <div className={className}>
-      <label className="block text-xs font-medium text-gray-500 mb-0.5">{label}</label>
+      <label className="block text-xs font-medium text-ink-subtle mb-0.5">{label}</label>
       <select
         value={value}
         onChange={onChange}
@@ -38,7 +38,7 @@ function Select({ label, value, onChange, options, className = '' }) {
 
 function Checkbox({ label, checked, onChange }) {
   return (
-    <label className="flex items-center gap-2 text-xs text-gray-600 py-1">
+    <label className="flex items-center gap-2 text-xs text-ink-mid py-1">
       <input
         type="checkbox"
         checked={checked}
@@ -53,7 +53,7 @@ function Checkbox({ label, checked, onChange }) {
 function SectionBlock({ title, children }) {
   return (
     <div>
-      <h4 className="text-xs font-semibold text-gray-600 mb-2 border-b border-gray-100 pb-1">{title}</h4>
+      <h4 className="text-xs font-semibold text-ink-mid mb-2 border-b border-gray-100 pb-1">{title}</h4>
       {children}
     </div>
   );
@@ -70,11 +70,11 @@ export default function ApplicationSection() {
   return (
     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden print:hidden">
       <div
-        className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b cursor-pointer"
+        className="flex items-center justify-between px-4 py-3 bg-surface-alt border-b cursor-pointer"
         onClick={() => setCollapsed(!collapsed)}
       >
-        <h3 className="text-sm font-semibold text-gray-700">Application Details</h3>
-        <span className="text-gray-400 text-sm">{collapsed ? '+' : '−'}</span>
+        <h3 className="text-sm font-semibold text-ink-mid">Application Details</h3>
+        <span className="text-ink-subtle text-sm">{collapsed ? '+' : '−'}</span>
       </div>
 
       {!collapsed && (

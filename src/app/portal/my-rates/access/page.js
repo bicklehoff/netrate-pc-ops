@@ -35,24 +35,24 @@ export default function MyRatesAccessPage() {
   return (
     <div className="max-w-md mx-auto px-4 py-16 sm:py-24">
       <div className="text-center mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Access My Rates</h1>
-        <p className="text-gray-500 mt-2">
+        <h1 className="text-2xl font-bold text-ink">Access My Rates</h1>
+        <p className="text-ink-subtle mt-2">
           Enter the email you used when saving your rate scenario. We&apos;ll send you a link to view your rates.
         </p>
       </div>
 
       {sent ? (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-8 text-center">
+        <div className="bg-white rounded-nr-xl border border-gray-200 shadow-nr-sm p-8 text-center">
           <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
           </div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-2">Check Your Email</h2>
-          <p className="text-sm text-gray-600 mb-1">
+          <h2 className="text-lg font-semibold text-ink mb-2">Check Your Email</h2>
+          <p className="text-sm text-ink-mid mb-1">
             If we have a saved scenario for <strong>{email}</strong>, you&apos;ll receive an access link shortly.
           </p>
-          <p className="text-xs text-gray-400 mt-3">
+          <p className="text-xs text-ink-subtle mt-3">
             Don&apos;t see it? Check your spam folder.
           </p>
           <div className="mt-6 pt-4 border-t border-gray-100 flex flex-col gap-3">
@@ -62,16 +62,16 @@ export default function MyRatesAccessPage() {
             >
               Try a different email
             </button>
-            <Link href="/rates" className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
+            <Link href="/rates" className="text-sm text-ink-subtle hover:text-ink-mid transition-colors">
               Or search new rates
             </Link>
           </div>
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <div className="bg-white rounded-nr-xl border border-gray-200 shadow-nr-sm p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label htmlFor="email" className="block text-sm font-medium text-ink-mid mb-1.5">
                 Email Address
               </label>
               <input
@@ -100,7 +100,7 @@ export default function MyRatesAccessPage() {
           </form>
 
           <div className="mt-6 pt-4 border-t border-gray-100 text-center">
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-ink-subtle">
               Don&apos;t have a saved scenario?{' '}
               <Link href="/rates" className="text-brand hover:text-brand-dark font-medium">
                 Search rates first

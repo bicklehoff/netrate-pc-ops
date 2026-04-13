@@ -35,7 +35,7 @@ export default function ApplicationSection({ loan }) {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   if (loading) return <div className="flex justify-center py-16"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#005ac0]" /></div>;
-  if (!app) return <p className="text-xs text-gray-400 text-center py-12">No application data available</p>;
+  if (!app) return <p className="text-xs text-ink-subtle text-center py-12">No application data available</p>;
 
   const borrowers = app.loanBorrowers || [];
   const primary = borrowers[0];
@@ -425,7 +425,7 @@ export default function ApplicationSection({ loan }) {
                 </div>
               </Panel>
             ) : (
-              <div className="bg-white rounded-xl shadow-sm border-2 border-dashed border-[#c1c6d6]/30 flex items-center justify-center opacity-40 py-4">
+              <div className="bg-white rounded-nr-xl shadow-nr-sm border-2 border-dashed border-[#c1c6d6]/30 flex items-center justify-center opacity-40 py-4">
                 <div className="text-center">
                   <p className="text-[10px] font-bold text-slate-400 uppercase">ARM Details (N/A)</p>
                 </div>
@@ -456,7 +456,7 @@ export default function ApplicationSection({ loan }) {
 
 function Panel({ icon, title, badge, action, className = '', children }) {
   return (
-    <section className={`bg-white rounded-xl shadow-sm p-3 ${className}`}>
+    <section className={`bg-white rounded-nr-xl shadow-nr-sm p-3 ${className}`}>
       {title && (
         <div className="flex justify-between items-center mb-2">
           <h2 className="text-[11px] font-bold text-[#005ac0] flex items-center gap-1.5">

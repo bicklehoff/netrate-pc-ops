@@ -104,7 +104,7 @@ function QuoteViewContent() {
   if (error) {
     return (
       <div className="min-h-screen bg-[#f8f9fb] flex items-center justify-center">
-        <div className="bg-white rounded-2xl p-8 max-w-md text-center shadow-sm">
+        <div className="bg-white rounded-2xl p-8 max-w-md text-center shadow-nr-sm">
           <h2 className="text-lg font-bold text-[#191c1e] mb-2">Quote Unavailable</h2>
           <p className="text-[#737783] text-sm mb-4">{error}</p>
           <p className="text-[#737783] text-xs">Contact David at 303-444-5251 or david@netratemortgage.com</p>
@@ -154,7 +154,7 @@ function QuoteViewContent() {
                   href={quote.pdfUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-5 py-2 bg-gradient-to-r from-cyan-700 to-cyan-600 text-white rounded-xl text-sm font-semibold shadow-sm hover:opacity-90 transition-all"
+                  className="px-5 py-2 bg-gradient-to-r from-cyan-700 to-cyan-600 text-white rounded-nr-xl text-sm font-semibold shadow-nr-sm hover:opacity-90 transition-all"
                 >
                   Download PDF
                 </a>
@@ -227,13 +227,13 @@ function QuoteViewContent() {
           <div className="flex justify-center gap-4 flex-wrap">
             <a
               href="tel:3034445251"
-              className="px-6 py-2.5 bg-gradient-to-r from-cyan-600 to-cyan-500 text-white rounded-xl font-bold text-sm hover:opacity-90 transition-all"
+              className="px-6 py-2.5 bg-gradient-to-r from-cyan-600 to-cyan-500 text-white rounded-nr-xl font-bold text-sm hover:opacity-90 transition-all"
             >
               Call 303-444-5251
             </a>
             <a
               href="mailto:david@netratemortgage.com"
-              className="px-6 py-2.5 bg-white/10 text-white rounded-xl font-medium text-sm hover:bg-white/20 transition-all"
+              className="px-6 py-2.5 bg-white/10 text-white rounded-nr-xl font-medium text-sm hover:bg-white/20 transition-all"
             >
               Email David
             </a>
@@ -277,7 +277,7 @@ function LoanSummaryTab({ quote, scenarios, fees, loanAmount, propertyValue, ltv
       <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-6 border-b border-[#c3c6d4]/15">
         <div className="space-y-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-cyan-600 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-cyan-600 rounded-nr-xl flex items-center justify-center">
               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
             </div>
             <div>
@@ -378,7 +378,7 @@ function MonthlyPaymentsTab({ scenarios, fees, monthlyTax, monthlyIns }) {
           const mipPct = (mip / total * 100).toFixed(0);
 
           return (
-            <div key={i} className="bg-white rounded-2xl p-6 shadow-sm">
+            <div key={i} className="bg-white rounded-2xl p-6 shadow-nr-sm">
               <div className="text-xs uppercase tracking-widest text-[#737783] mb-1">Option {i + 1}</div>
               <div className="text-3xl font-extrabold text-[#191c1e] mb-1">{pct(r.rate)}</div>
               <div className="text-sm text-[#737783] mb-6">{r.program || 'Fixed Rate'}</div>
@@ -479,7 +479,7 @@ function ClosingCostsTab({ scenarios, fees, loanAmount, propertyValue, quote }) 
       </div>
 
       {/* Fee breakdown */}
-      <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-nr-sm overflow-hidden">
         {/* Loan Costs A-C */}
         {loanCostSections.map(renderFeeSection)}
 
@@ -556,9 +556,9 @@ function AmortizationTab({ scenarios, loanAmount, term }) {
             <button
               key={i}
               onClick={() => setSelectedRate(i)}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+              className={`px-4 py-2 rounded-nr-xl text-sm font-semibold transition-all ${
                 selectedRate === i
-                  ? 'bg-cyan-600 text-white shadow-sm'
+                  ? 'bg-cyan-600 text-white shadow-nr-sm'
                   : 'bg-[#f2f4f6] text-[#191c1e]/60 hover:bg-[#eceef0]'
               }`}
             >
@@ -599,7 +599,7 @@ function AmortizationTab({ scenarios, loanAmount, term }) {
       )}
 
       {/* Amortization table */}
-      <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-nr-sm overflow-hidden">
         {/* Header */}
         <div className="grid grid-cols-5 px-6 py-3 bg-[#191c1e] text-white text-xs font-bold uppercase tracking-wider">
           <div>Year</div>
@@ -634,7 +634,7 @@ function AmortizationTab({ scenarios, loanAmount, term }) {
 
 function SummaryCard({ label, value }) {
   return (
-    <div className="bg-[#f2f4f6] p-5 rounded-xl">
+    <div className="bg-[#f2f4f6] p-5 rounded-nr-xl">
       <p className="text-xs uppercase tracking-wider text-[#737783] mb-1">{label}</p>
       <p className="text-2xl font-extrabold text-[#191c1e]">{value}</p>
     </div>
@@ -648,7 +648,7 @@ function SectionTitle({ children }) {
 }
 
 function ComparisonTable({ children }) {
-  return <div className="bg-white rounded-2xl shadow-sm overflow-hidden">{children}</div>;
+  return <div className="bg-white rounded-2xl shadow-nr-sm overflow-hidden">{children}</div>;
 }
 
 function CompHeader({ rates }) {
@@ -728,7 +728,7 @@ function CashToCloseSection({ rates, fees, loanAmount, propertyValue, quote }) {
   const softCosts = fees?.sectionI ?? ((fees?.sectionE?.total||0) + (fees?.sectionF?.total||0) + (fees?.sectionG?.total||0) + (fees?.sectionH?.total||0));
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+    <div className="bg-white rounded-2xl shadow-nr-sm overflow-hidden">
       {/* Title bar */}
       <div className="flex items-center gap-3 px-6 py-4 border-l-4 border-cyan-600 bg-[#f2f4f6]">
         <h4 className="text-base font-extrabold text-[#191c1e]">Estimated Cash to Close</h4>

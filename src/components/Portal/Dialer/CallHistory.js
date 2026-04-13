@@ -75,7 +75,7 @@ export default function CallHistory({ onSelectContact }) {
         <svg className="w-8 h-8 mx-auto text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
         </svg>
-        <p className="text-xs text-gray-400">No recent calls</p>
+        <p className="text-xs text-ink-subtle">No recent calls</p>
       </div>
     );
   }
@@ -97,7 +97,7 @@ export default function CallHistory({ onSelectContact }) {
                 onSelectContact(call.contact);
               }
             }}
-            className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-50 transition-colors text-left"
+            className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-surface-alt transition-colors text-left"
           >
             {/* Direction arrow */}
             <div className={`flex-shrink-0 ${isMissed ? 'text-red-500' : isInbound ? 'text-blue-500' : 'text-green-500'}`}>
@@ -114,14 +114,14 @@ export default function CallHistory({ onSelectContact }) {
 
             {/* Info */}
             <div className="flex-1 min-w-0">
-              <p className={`text-sm font-medium truncate ${isMissed ? 'text-red-600' : 'text-gray-900'}`}>
+              <p className={`text-sm font-medium truncate ${isMissed ? 'text-red-600' : 'text-ink'}`}>
                 {contactName}
               </p>
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-ink-subtle">
                 {timeAgo(call.started_at)}
                 {call.duration ? ` · ${formatDuration(call.duration)}` : ''}
                 {call.notes?.[0]?.disposition && (
-                  <span className="ml-1 text-gray-500">· {call.notes[0].disposition.replace('_', ' ')}</span>
+                  <span className="ml-1 text-ink-subtle">· {call.notes[0].disposition.replace('_', ' ')}</span>
                 )}
               </p>
             </div>

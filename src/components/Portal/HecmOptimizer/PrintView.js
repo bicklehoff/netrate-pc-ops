@@ -20,35 +20,35 @@ function CoverPage() {
       {/* Header */}
       <div className="text-center mb-8">
         <h1 className="text-2xl font-bold text-cyan-700">NetRate Mortgage LLC</h1>
-        <p className="text-sm text-gray-500">NMLS #1111861</p>
-        <p className="text-xs text-gray-400 mt-1">357 South McCaslin Blvd., #200, Louisville, CO 80027 | 303-444-5251</p>
+        <p className="text-sm text-ink-subtle">NMLS #1111861</p>
+        <p className="text-xs text-ink-subtle mt-1">357 South McCaslin Blvd., #200, Louisville, CO 80027 | 303-444-5251</p>
       </div>
 
       <div className="border-t-2 border-cyan-600 pt-6 mb-6">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">HECM Reverse Mortgage Analysis</h2>
-        <p className="text-sm text-gray-600 mb-1">Prepared for: <strong>{state.borrower_name || 'Borrower'}</strong></p>
+        <h2 className="text-xl font-semibold text-ink mb-4">HECM Reverse Mortgage Analysis</h2>
+        <p className="text-sm text-ink-mid mb-1">Prepared for: <strong>{state.borrower_name || 'Borrower'}</strong></p>
         {state.co_borrower_name && (
-          <p className="text-sm text-gray-600 mb-1">Co-Borrower: <strong>{state.co_borrower_name}</strong></p>
+          <p className="text-sm text-ink-mid mb-1">Co-Borrower: <strong>{state.co_borrower_name}</strong></p>
         )}
-        <p className="text-sm text-gray-600 mb-1">Date: <strong>{state.todayDate || new Date().toLocaleDateString()}</strong></p>
+        <p className="text-sm text-ink-mid mb-1">Date: <strong>{state.todayDate || new Date().toLocaleDateString()}</strong></p>
         {state.reference_number && (
-          <p className="text-sm text-gray-600 mb-1">Reference: <strong>{state.reference_number}</strong></p>
+          <p className="text-sm text-ink-mid mb-1">Reference: <strong>{state.reference_number}</strong></p>
         )}
       </div>
 
       {/* Property Summary */}
-      <div className="bg-gray-50 rounded-lg p-4 mb-6">
-        <h3 className="text-sm font-semibold text-gray-700 mb-2">Property & Borrower Summary</h3>
+      <div className="bg-surface-alt rounded-lg p-4 mb-6">
+        <h3 className="text-sm font-semibold text-ink-mid mb-2">Property & Borrower Summary</h3>
         <div className="grid grid-cols-2 gap-2 text-sm">
-          <div><span className="text-gray-500">Address:</span> {state.address}{state.city ? `, ${state.city}` : ''}{state.state ? `, ${state.state}` : ''} {state.zip}</div>
-          <div><span className="text-gray-500">Home Value:</span> {fmtDollar(state.home_value)}</div>
-          <div><span className="text-gray-500">Age (youngest):</span> {age || '—'}</div>
-          <div><span className="text-gray-500">Existing Liens:</span> {fmtDollar(state.existingLiens)}</div>
+          <div><span className="text-ink-subtle">Address:</span> {state.address}{state.city ? `, ${state.city}` : ''}{state.state ? `, ${state.state}` : ''} {state.zip}</div>
+          <div><span className="text-ink-subtle">Home Value:</span> {fmtDollar(state.home_value)}</div>
+          <div><span className="text-ink-subtle">Age (youngest):</span> {age || '—'}</div>
+          <div><span className="text-ink-subtle">Existing Liens:</span> {fmtDollar(state.existingLiens)}</div>
         </div>
       </div>
 
       {/* Trust indicators */}
-      <div className="mt-8 text-xs text-gray-500 space-y-2">
+      <div className="mt-8 text-xs text-ink-subtle space-y-2">
         <p>This analysis is for informational purposes only and does not constitute a loan commitment or guarantee. Actual rates, fees, and proceeds may vary based on current market conditions at the time of application.</p>
         <p>A Home Equity Conversion Mortgage (HECM) is a Federal Housing Administration (FHA) insured reverse mortgage. Borrowers must be at least 62 years of age and meet HUD counseling requirements.</p>
         <p>David Burson, NMLS #641790 | NetRate Mortgage LLC, NMLS #1111861</p>
@@ -98,11 +98,11 @@ function PrintScenarioTable() {
 
   return (
     <div className="print-page">
-      <h2 className="text-lg font-semibold text-gray-800 mb-3">Scenario Comparison</h2>
+      <h2 className="text-lg font-semibold text-ink mb-3">Scenario Comparison</h2>
       <table className="w-full text-xs border border-gray-300">
         <thead>
           <tr className="bg-cyan-50">
-            <th className="px-2 py-1.5 text-left text-gray-600 border-b border-r border-gray-300 w-40">Metric</th>
+            <th className="px-2 py-1.5 text-left text-ink-mid border-b border-r border-gray-300 w-40">Metric</th>
             {labels.map((l, i) => (
               <th key={i} className="px-2 py-1.5 text-right text-cyan-700 border-b border-gray-300 font-semibold">
                 Option {l}
@@ -115,7 +115,7 @@ function PrintScenarioTable() {
             if (row.section) {
               return (
                 <tr key={i}>
-                  <td colSpan={4} className="px-2 py-1 text-xs font-bold text-gray-700 bg-gray-100 border-b border-gray-300">
+                  <td colSpan={4} className="px-2 py-1 text-xs font-bold text-ink-mid bg-gray-100 border-b border-gray-300">
                     {row.section}
                   </td>
                 </tr>
@@ -124,7 +124,7 @@ function PrintScenarioTable() {
             const format = row.fmt === 'pct' ? fmtPct : fmtDollar;
             return (
               <tr key={i} className={row.highlight ? 'bg-cyan-50 font-semibold' : ''}>
-                <td className="px-2 py-1 text-gray-600 border-r border-gray-200">{row.label}</td>
+                <td className="px-2 py-1 text-ink-mid border-r border-gray-200">{row.label}</td>
                 {(row.values || []).map((v, j) => (
                   <td key={j} className={`px-2 py-1 text-right font-mono ${v < 0 ? 'text-red-600' : ''}`}>
                     {typeof v === 'string' ? v : format(v)}
@@ -137,7 +137,7 @@ function PrintScenarioTable() {
       </table>
 
       {/* Rate info footer */}
-      <div className="mt-4 text-xs text-gray-500">
+      <div className="mt-4 text-xs text-ink-subtle">
         <p>CMT 1yr: {fmtPct(state.oneYearCMT)} | CMT 10yr: {fmtPct(state.tenYearCMT)} | MIP: {fmtPct(state.mipRate)} | FHA Limit: {fmtDollar(state.fhaLimit)}</p>
       </div>
     </div>

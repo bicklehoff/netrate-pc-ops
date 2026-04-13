@@ -27,9 +27,9 @@ export default function QuoteDetailPage() {
     load();
   }, [id]);
 
-  if (loading) return <div className="p-6 text-gray-400">Loading quote...</div>;
+  if (loading) return <div className="p-6 text-ink-subtle">Loading quote...</div>;
   if (error) return <div className="p-6 text-red-600">Error: {error}</div>;
-  if (!quote) return <div className="p-6 text-gray-400">Quote not found</div>;
+  if (!quote) return <div className="p-6 text-ink-subtle">Quote not found</div>;
 
   // Re-open the wizard with quote data as prefill
   const prefill = {
@@ -57,15 +57,15 @@ export default function QuoteDetailPage() {
   return (
     <div className="p-6">
       <div className="flex items-center gap-3 mb-6">
-        <Link href="/portal/mlo/quotes" className="text-sm text-gray-500 hover:text-gray-700">&larr; Quotes</Link>
+        <Link href="/portal/mlo/quotes" className="text-sm text-ink-subtle hover:text-ink-mid">&larr; Quotes</Link>
         <span className="text-gray-300">|</span>
-        <h1 className="text-lg font-bold text-gray-900">
+        <h1 className="text-lg font-bold text-ink">
           {quote.borrower_name || 'Unnamed Quote'}
         </h1>
         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
           quote.status === 'sent' ? 'bg-blue-100 text-blue-700' :
           quote.status === 'viewed' ? 'bg-green-100 text-green-700' :
-          'bg-gray-100 text-gray-600'
+          'bg-gray-100 text-ink-mid'
         }`}>
           {quote.status}
         </span>

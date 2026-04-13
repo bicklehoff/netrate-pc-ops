@@ -91,7 +91,7 @@ export default function ScenarioAlertsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <h1 className="text-xl font-bold text-gray-900">Rate Alerts</h1>
+          <h1 className="text-xl font-bold text-ink">Rate Alerts</h1>
           {pendingCount > 0 && (
             <span className="bg-amber-100 text-amber-800 text-xs font-semibold px-2.5 py-1 rounded-full">
               {pendingCount} pending
@@ -125,7 +125,7 @@ export default function ScenarioAlertsPage() {
             className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
               filter === f.value
                 ? 'bg-brand text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                : 'bg-gray-100 text-ink-mid hover:bg-gray-200'
             }`}
           >
             {f.label}
@@ -139,7 +139,7 @@ export default function ScenarioAlertsPage() {
 
       {/* Bulk Action Bar */}
       {selectedIds.length > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white rounded-xl shadow-2xl px-6 py-3 flex items-center gap-4">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white rounded-nr-xl shadow-2xl px-6 py-3 flex items-center gap-4">
           <span className="text-sm font-medium">{selectedIds.length} selected</span>
           <button
             onClick={() => handleAction('approve', selectedIds)}
@@ -157,7 +157,7 @@ export default function ScenarioAlertsPage() {
           </button>
           <button
             onClick={() => setSelectedIds([])}
-            className="text-gray-400 hover:text-white text-sm transition-colors"
+            className="text-ink-subtle hover:text-white text-sm transition-colors"
           >
             Clear
           </button>

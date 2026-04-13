@@ -183,8 +183,8 @@ export default function XmlImportModal({ open, onClose }) {
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">Import MISMO XML</h2>
-            <p className="text-xs text-gray-500 mt-0.5">
+            <h2 className="text-lg font-semibold text-ink">Import MISMO XML</h2>
+            <p className="text-xs text-ink-subtle mt-0.5">
               {phase === 'upload' && 'Upload a Fannie Mae MISMO 3.4 XML file'}
               {phase === 'preview' && 'Review extracted data before importing'}
               {phase === 'importing' && 'Creating loan record...'}
@@ -193,7 +193,7 @@ export default function XmlImportModal({ open, onClose }) {
           </div>
           <button
             onClick={handleClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+            className="text-ink-subtle hover:text-ink-mid transition-colors p-1"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -215,7 +215,7 @@ export default function XmlImportModal({ open, onClose }) {
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onClick={() => fileInputRef.current?.click()}
-              className={`border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-colors ${
+              className={`border-2 border-dashed rounded-nr-xl p-12 text-center cursor-pointer transition-colors ${
                 dragOver
                   ? 'border-brand bg-brand/5'
                   : 'border-gray-300 hover:border-gray-400'
@@ -231,15 +231,15 @@ export default function XmlImportModal({ open, onClose }) {
               {loading ? (
                 <div className="space-y-3">
                   <div className="w-10 h-10 border-3 border-brand border-t-transparent rounded-full animate-spin mx-auto" />
-                  <p className="text-sm text-gray-500">Parsing XML...</p>
+                  <p className="text-sm text-ink-subtle">Parsing XML...</p>
                 </div>
               ) : (
                 <div className="space-y-3">
                   <div className="text-4xl">📄</div>
-                  <p className="text-sm font-medium text-gray-700">
+                  <p className="text-sm font-medium text-ink-mid">
                     Drop a MISMO XML file here, or click to browse
                   </p>
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-ink-subtle">
                     Supports Fannie Mae MISMO 3.4 format (.xml, max 25 MB)
                   </p>
                 </div>
@@ -251,17 +251,17 @@ export default function XmlImportModal({ open, onClose }) {
           {phase === 'preview' && preview && (
             <div className="space-y-5">
               {/* File info */}
-              <div className="flex items-center gap-3 bg-gray-50 rounded-lg px-4 py-3">
+              <div className="flex items-center gap-3 bg-surface-alt rounded-lg px-4 py-3">
                 <span className="text-xl">📄</span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{file?.name}</p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-sm font-medium text-ink truncate">{file?.name}</p>
+                  <p className="text-xs text-ink-subtle">
                     {(file?.size / 1024).toFixed(1)} KB · {preview.stats.borrowerCount} borrower{preview.stats.borrowerCount !== 1 ? 's' : ''} found
                   </p>
                 </div>
                 <button
                   onClick={reset}
-                  className="text-xs text-gray-400 hover:text-gray-600"
+                  className="text-xs text-ink-subtle hover:text-ink-mid"
                 >
                   Change file
                 </button>
@@ -269,7 +269,7 @@ export default function XmlImportModal({ open, onClose }) {
 
               {/* Loan Summary */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-900 mb-2">Loan Details</h3>
+                <h3 className="text-sm font-semibold text-ink mb-2">Loan Details</h3>
                 <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
                   <Field label="Loan #" value={preview.loan.loan_number} />
                   <Field label="Lender" value={preview.loan.lender_name} />
@@ -287,8 +287,8 @@ export default function XmlImportModal({ open, onClose }) {
               {/* Property Address */}
               {preview.property?.address && (
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Subject Property</h3>
-                  <p className="text-sm text-gray-700">
+                  <h3 className="text-sm font-semibold text-ink mb-2">Subject Property</h3>
+                  <p className="text-sm text-ink-mid">
                     {[
                       preview.property.address.street,
                       preview.property.address.city,
@@ -301,25 +301,25 @@ export default function XmlImportModal({ open, onClose }) {
 
               {/* Borrowers */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-900 mb-2">Borrowers</h3>
+                <h3 className="text-sm font-semibold text-ink mb-2">Borrowers</h3>
                 <div className="space-y-2">
                   {preview.borrowers.map((b, i) => (
-                    <div key={i} className="bg-gray-50 rounded-lg px-4 py-3">
+                    <div key={i} className="bg-surface-alt rounded-lg px-4 py-3">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm font-medium text-gray-900">
+                          <p className="text-sm font-medium text-ink">
                             {b.first_name} {b.last_name}
-                            <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">
+                            <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-gray-200 text-ink-mid">
                               {b.borrowerType === 'primary' ? 'Primary' : 'Co-Borrower'}
                             </span>
                           </p>
-                          <p className="text-xs text-gray-500 mt-0.5">
+                          <p className="text-xs text-ink-subtle mt-0.5">
                             {[b.email, b.phone, b.ssn].filter(Boolean).join(' · ')}
                           </p>
                         </div>
                       </div>
                       {(b.employer_name || b.monthly_base_income) && (
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-ink-subtle mt-1">
                           {[
                             b.employer_name,
                             b.monthly_base_income ? `$${Number(b.monthly_base_income).toLocaleString()}/mo` : null,
@@ -333,10 +333,10 @@ export default function XmlImportModal({ open, onClose }) {
 
               {/* Import Options */}
               <div className="border-t border-gray-200 pt-4">
-                <h3 className="text-sm font-semibold text-gray-900 mb-3">Import Options</h3>
+                <h3 className="text-sm font-semibold text-ink mb-3">Import Options</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Initial Status</label>
+                    <label className="block text-xs font-medium text-ink-mid mb-1">Initial Status</label>
                     <select
                       value={status}
                       onChange={(e) => setStatus(e.target.value)}
@@ -348,7 +348,7 @@ export default function XmlImportModal({ open, onClose }) {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Assign to LO</label>
+                    <label className="block text-xs font-medium text-ink-mid mb-1">Assign to LO</label>
                     <select
                       value={mloId}
                       onChange={(e) => setMloId(e.target.value)}
@@ -367,7 +367,7 @@ export default function XmlImportModal({ open, onClose }) {
               <div className="flex justify-end gap-3 pt-2">
                 <button
                   onClick={handleClose}
-                  className="px-4 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors"
+                  className="px-4 py-2.5 text-sm font-medium text-ink-mid hover:text-ink transition-colors"
                 >
                   Cancel
                 </button>
@@ -385,7 +385,7 @@ export default function XmlImportModal({ open, onClose }) {
           {phase === 'importing' && (
             <div className="py-12 text-center space-y-3">
               <div className="w-10 h-10 border-3 border-brand border-t-transparent rounded-full animate-spin mx-auto" />
-              <p className="text-sm text-gray-500">Creating loan record and WorkDrive folder...</p>
+              <p className="text-sm text-ink-subtle">Creating loan record and WorkDrive folder...</p>
             </div>
           )}
 
@@ -394,8 +394,8 @@ export default function XmlImportModal({ open, onClose }) {
             <div className="py-8 text-center space-y-4">
               <div className="text-5xl">✅</div>
               <div>
-                <p className="text-lg font-semibold text-gray-900">Loan Imported</p>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-lg font-semibold text-ink">Loan Imported</p>
+                <p className="text-sm text-ink-subtle mt-1">
                   {result.borrower_name}
                   {result.loan_number ? ` · #${result.loan_number}` : ''}
                 </p>
@@ -403,7 +403,7 @@ export default function XmlImportModal({ open, onClose }) {
               <div className="flex justify-center gap-3 pt-2">
                 <button
                   onClick={() => { reset(); }}
-                  className="px-4 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors"
+                  className="px-4 py-2.5 text-sm font-medium text-ink-mid hover:text-ink transition-colors"
                 >
                   Import Another
                 </button>
@@ -427,8 +427,8 @@ export default function XmlImportModal({ open, onClose }) {
 function Field({ label, value }) {
   return (
     <div className="flex justify-between">
-      <span className="text-gray-500">{label}</span>
-      <span className={`font-medium ${value ? 'text-gray-900' : 'text-gray-300'}`}>
+      <span className="text-ink-subtle">{label}</span>
+      <span className={`font-medium ${value ? 'text-ink' : 'text-gray-300'}`}>
         {value || '—'}
       </span>
     </div>

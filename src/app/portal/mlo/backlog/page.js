@@ -38,12 +38,12 @@ const PRIORITY_COLORS = {
   critical: 'bg-red-100 text-red-800',
   high: 'bg-orange-100 text-orange-800',
   medium: 'bg-blue-100 text-blue-800',
-  low: 'bg-gray-100 text-gray-600',
+  low: 'bg-gray-100 text-ink-mid',
 };
 
 const STATUS_COLORS = {
   open: 'bg-amber-100 text-amber-800',
-  closed: 'bg-gray-200 text-gray-500',
+  closed: 'bg-gray-200 text-ink-subtle',
 };
 
 const TYPE_ICONS = {
@@ -138,7 +138,7 @@ export default function BacklogPage() {
   };
 
   if (authStatus === 'loading') {
-    return <div className="flex items-center justify-center h-64 text-gray-400">Loading...</div>;
+    return <div className="flex items-center justify-center h-64 text-ink-subtle">Loading...</div>;
   }
 
   const openCount = tickets.filter(t => t.status === 'open').length;
@@ -151,15 +151,15 @@ export default function BacklogPage() {
         <div>
           <button
             onClick={() => router.push('/portal/mlo')}
-            className="text-xs text-gray-400 hover:text-brand transition-colors mb-1 flex items-center gap-1"
+            className="text-xs text-ink-subtle hover:text-brand transition-colors mb-1 flex items-center gap-1"
           >
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
             Pipeline
           </button>
-          <h1 className="text-2xl font-bold text-gray-900">Dev Backlog</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-2xl font-bold text-ink">Dev Backlog</h1>
+          <p className="text-sm text-ink-subtle mt-1">
             {tickets.length} ticket{tickets.length !== 1 ? 's' : ''}
             {openCount > 0 && <span className="ml-2 text-amber-600">{openCount} open</span>}
             {inProgressCount > 0 && <span className="ml-2 text-blue-600">{inProgressCount} in progress</span>}
@@ -176,7 +176,7 @@ export default function BacklogPage() {
 
       {/* Create form */}
       {showCreate && (
-        <form onSubmit={handleCreate} className="bg-white rounded-xl border border-gray-200 p-5 mb-6 shadow-sm">
+        <form onSubmit={handleCreate} className="bg-white rounded-nr-xl border border-gray-200 p-5 mb-6 shadow-nr-sm">
           <div className="grid grid-cols-1 gap-4">
             <input
               type="text"
@@ -226,7 +226,7 @@ export default function BacklogPage() {
               <button
                 type="button"
                 onClick={() => setShowCreate(false)}
-                className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700"
+                className="px-3 py-1.5 text-sm text-ink-subtle hover:text-ink-mid"
               >
                 Cancel
               </button>
@@ -251,7 +251,7 @@ export default function BacklogPage() {
             className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
               filters.product === p.value
                 ? 'bg-gray-900 text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                : 'bg-gray-100 text-ink-mid hover:bg-gray-200'
             }`}
           >
             {p.label}
@@ -265,7 +265,7 @@ export default function BacklogPage() {
             className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
               filters.status === s.value
                 ? 'bg-gray-900 text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                : 'bg-gray-100 text-ink-mid hover:bg-gray-200'
             }`}
           >
             {s.label}
@@ -279,7 +279,7 @@ export default function BacklogPage() {
             className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
               filters.type === t.value
                 ? 'bg-gray-900 text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                : 'bg-gray-100 text-ink-mid hover:bg-gray-200'
             }`}
           >
             {t.label}
@@ -288,27 +288,27 @@ export default function BacklogPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+      <div className="bg-white rounded-nr-xl border border-gray-200 overflow-hidden shadow-nr-sm">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-gray-50 border-b border-gray-200">
-              <th className="text-left px-4 py-2.5 font-medium text-gray-500 text-xs uppercase tracking-wider w-10"></th>
-              <th className="text-left px-4 py-2.5 font-medium text-gray-500 text-xs uppercase tracking-wider">Ticket</th>
-              <th className="text-left px-4 py-2.5 font-medium text-gray-500 text-xs uppercase tracking-wider w-24">Product</th>
-              <th className="text-left px-4 py-2.5 font-medium text-gray-500 text-xs uppercase tracking-wider w-24">Priority</th>
-              <th className="text-left px-4 py-2.5 font-medium text-gray-500 text-xs uppercase tracking-wider w-28">Status</th>
-              <th className="text-left px-4 py-2.5 font-medium text-gray-500 text-xs uppercase tracking-wider w-16 text-center">💬</th>
-              <th className="text-left px-4 py-2.5 font-medium text-gray-500 text-xs uppercase tracking-wider w-28">Updated</th>
+            <tr className="bg-surface-alt border-b border-gray-200">
+              <th className="text-left px-4 py-2.5 font-medium text-ink-subtle text-xs uppercase tracking-wider w-10"></th>
+              <th className="text-left px-4 py-2.5 font-medium text-ink-subtle text-xs uppercase tracking-wider">Ticket</th>
+              <th className="text-left px-4 py-2.5 font-medium text-ink-subtle text-xs uppercase tracking-wider w-24">Product</th>
+              <th className="text-left px-4 py-2.5 font-medium text-ink-subtle text-xs uppercase tracking-wider w-24">Priority</th>
+              <th className="text-left px-4 py-2.5 font-medium text-ink-subtle text-xs uppercase tracking-wider w-28">Status</th>
+              <th className="text-left px-4 py-2.5 font-medium text-ink-subtle text-xs uppercase tracking-wider w-16 text-center">💬</th>
+              <th className="text-left px-4 py-2.5 font-medium text-ink-subtle text-xs uppercase tracking-wider w-28">Updated</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {loading ? (
               <tr>
-                <td colSpan={7} className="px-4 py-12 text-center text-gray-400">Loading tickets...</td>
+                <td colSpan={7} className="px-4 py-12 text-center text-ink-subtle">Loading tickets...</td>
               </tr>
             ) : tickets.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-12 text-center text-gray-400">
+                <td colSpan={7} className="px-4 py-12 text-center text-ink-subtle">
                   No tickets match your filters.
                   <button onClick={() => setShowCreate(true)} className="text-brand hover:underline ml-1">Create one?</button>
                 </td>
@@ -316,7 +316,7 @@ export default function BacklogPage() {
             ) : tickets.map((ticket) => (
               <tr
                 key={ticket.id}
-                className="hover:bg-gray-50/50 cursor-pointer transition-colors"
+                className="hover:bg-surface-alt/50 cursor-pointer transition-colors"
                 onClick={() => router.push(`/portal/mlo/backlog/${ticket.id}`)}
               >
                 {/* Type icon */}
@@ -326,15 +326,15 @@ export default function BacklogPage() {
 
                 {/* Title + description preview */}
                 <td className="px-4 py-3">
-                  <div className="font-medium text-gray-900 leading-tight">{ticket.title}</div>
+                  <div className="font-medium text-ink leading-tight">{ticket.title}</div>
                   {ticket.description && (
-                    <div className="text-xs text-gray-400 mt-0.5">{ticket.description}</div>
+                    <div className="text-xs text-ink-subtle mt-0.5">{ticket.description}</div>
                   )}
                 </td>
 
                 {/* Product */}
                 <td className="px-4 py-3">
-                  <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded border ${PRODUCT_COLORS[ticket.product] || 'bg-gray-50 text-gray-600'}`}>
+                  <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded border ${PRODUCT_COLORS[ticket.product] || 'bg-surface-alt text-ink-mid'}`}>
                     {ticket.product}
                   </span>
                 </td>
@@ -361,12 +361,12 @@ export default function BacklogPage() {
                 </td>
 
                 {/* Comment count */}
-                <td className="px-4 py-3 text-center text-xs text-gray-400">
+                <td className="px-4 py-3 text-center text-xs text-ink-subtle">
                   {ticket._count?.entries > 0 ? ticket._count.entries : '—'}
                 </td>
 
                 {/* Updated */}
-                <td className="px-4 py-3 text-xs text-gray-400">
+                <td className="px-4 py-3 text-xs text-ink-subtle">
                   {new Date(ticket.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                 </td>
               </tr>

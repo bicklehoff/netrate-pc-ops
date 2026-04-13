@@ -47,7 +47,7 @@ export default function StepIndicator({ steps, currentStep, stepCompletions, onS
                       ? 'bg-brand text-white group-hover:ring-4 group-hover:ring-brand/20'
                       : isActive
                         ? 'bg-brand text-white ring-4 ring-brand/20'
-                        : 'bg-gray-200 text-gray-500'
+                        : 'bg-gray-200 text-ink-subtle'
                     }
                   `}
                 >
@@ -65,8 +65,8 @@ export default function StepIndicator({ steps, currentStep, stepCompletions, onS
                     ${isActive
                       ? 'text-brand'
                       : isCompleted
-                        ? 'text-gray-600 group-hover:text-brand'
-                        : 'text-gray-400'
+                        ? 'text-ink-mid group-hover:text-brand'
+                        : 'text-ink-subtle'
                     }
                   `}
                 >

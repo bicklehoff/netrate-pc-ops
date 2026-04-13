@@ -21,7 +21,7 @@ const STATUS_LABELS = {
 };
 
 const STATUS_COLORS = {
-  draft: 'bg-gray-100 text-gray-700',
+  draft: 'bg-gray-100 text-ink-mid',
   applied: 'bg-blue-100 text-blue-800',
   processing: 'bg-yellow-100 text-yellow-800',
   submitted_uw: 'bg-purple-100 text-purple-800',
@@ -253,15 +253,15 @@ export default function LoanDetailView({ loan, onRefresh }) {
       )}
 
       {/* ─── Header ─── */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+      <div className="bg-white rounded-nr-xl border border-gray-200 p-6 shadow-nr-sm">
         <div className="flex items-start justify-between mb-4">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">
+            <h1 className="text-xl font-bold text-ink">
               {loan.borrower.first_name} {loan.borrower.last_name}
             </h1>
-            <p className="text-sm text-gray-500 mt-0.5">{loan.borrower.email}</p>
+            <p className="text-sm text-ink-subtle mt-0.5">{loan.borrower.email}</p>
             {loan.borrower.phone && (
-              <p className="text-sm text-gray-500">{loan.borrower.phone}</p>
+              <p className="text-sm text-ink-subtle">{loan.borrower.phone}</p>
             )}
           </div>
           <div className="flex items-center gap-3">
@@ -281,7 +281,7 @@ export default function LoanDetailView({ loan, onRefresh }) {
             )}
             <button
               onClick={handleXmlExport}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-ink-mid bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
               title="Export MISMO XML"
             >
               📤 XML
@@ -291,14 +291,14 @@ export default function LoanDetailView({ loan, onRefresh }) {
 
         {/* SSN */}
         <div className="flex items-center gap-3 mb-4 text-sm">
-          <span className="text-gray-500">SSN:</span>
+          <span className="text-ink-subtle">SSN:</span>
           {ssnRevealed ? (
-            <span className="font-mono text-gray-900 bg-yellow-50 px-2 py-0.5 rounded">
+            <span className="font-mono text-ink bg-yellow-50 px-2 py-0.5 rounded">
               {ssnRevealed}
             </span>
           ) : (
             <>
-              <span className="text-gray-700">···-··-{loan.borrower.ssn_last_four}</span>
+              <span className="text-ink-mid">···-··-{loan.borrower.ssn_last_four}</span>
               <button
                 onClick={handleSsnReveal}
                 disabled={ssnLoading}
@@ -313,7 +313,7 @@ export default function LoanDetailView({ loan, onRefresh }) {
         {/* Status Transitions */}
         {nextStatuses.length > 0 && (
           <div className="border-t border-gray-100 pt-4">
-            <span className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2 block">
+            <span className="text-xs font-medium text-ink-subtle uppercase tracking-wider mb-2 block">
               Move to:
             </span>
             <div className="flex flex-wrap gap-2">
@@ -341,85 +341,85 @@ export default function LoanDetailView({ loan, onRefresh }) {
         {/* ─── Left Column (2/3 width) ─── */}
         <div className="lg:col-span-2 space-y-6">
           {/* Loan Summary */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Loan Details</h2>
+          <div className="bg-white rounded-nr-xl border border-gray-200 p-6 shadow-nr-sm">
+            <h2 className="text-lg font-semibold text-ink mb-4">Loan Details</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
               <div>
-                <span className="text-gray-400 block">Purpose</span>
-                <span className="text-gray-800 font-medium capitalize">{loan.purpose || '—'}</span>
+                <span className="text-ink-subtle block">Purpose</span>
+                <span className="text-ink font-medium capitalize">{loan.purpose || '—'}</span>
               </div>
               <div>
-                <span className="text-gray-400 block">Occupancy</span>
-                <span className="text-gray-800 font-medium capitalize">{loan.occupancy || '—'}</span>
+                <span className="text-ink-subtle block">Occupancy</span>
+                <span className="text-ink font-medium capitalize">{loan.occupancy || '—'}</span>
               </div>
               <div>
-                <span className="text-gray-400 block">Property Type</span>
-                <span className="text-gray-800 font-medium capitalize">
+                <span className="text-ink-subtle block">Property Type</span>
+                <span className="text-ink font-medium capitalize">
                   {loan.property_type?.replace('_', ' ') || '—'}
                 </span>
               </div>
               <div>
-                <span className="text-gray-400 block">Property Address</span>
-                <span className="text-gray-800 font-medium">{formatAddress(loan.property_address)}</span>
+                <span className="text-ink-subtle block">Property Address</span>
+                <span className="text-ink font-medium">{formatAddress(loan.property_address)}</span>
               </div>
               {loan.purpose === 'purchase' ? (
                 <>
                   <div>
-                    <span className="text-gray-400 block">Purchase Price</span>
-                    <span className="text-gray-800 font-medium">{formatCurrency(loan.purchase_price)}</span>
+                    <span className="text-ink-subtle block">Purchase Price</span>
+                    <span className="text-ink font-medium">{formatCurrency(loan.purchase_price)}</span>
                   </div>
                   <div>
-                    <span className="text-gray-400 block">Down Payment</span>
-                    <span className="text-gray-800 font-medium">{formatCurrency(loan.down_payment)}</span>
+                    <span className="text-ink-subtle block">Down Payment</span>
+                    <span className="text-ink font-medium">{formatCurrency(loan.down_payment)}</span>
                   </div>
                 </>
               ) : (
                 <>
                   <div>
-                    <span className="text-gray-400 block">Estimated Value</span>
-                    <span className="text-gray-800 font-medium">{formatCurrency(loan.estimated_value)}</span>
+                    <span className="text-ink-subtle block">Estimated Value</span>
+                    <span className="text-ink font-medium">{formatCurrency(loan.estimated_value)}</span>
                   </div>
                   <div>
-                    <span className="text-gray-400 block">Current Balance</span>
-                    <span className="text-gray-800 font-medium">{formatCurrency(loan.current_balance)}</span>
+                    <span className="text-ink-subtle block">Current Balance</span>
+                    <span className="text-ink font-medium">{formatCurrency(loan.current_balance)}</span>
                   </div>
                 </>
               )}
               <div>
-                <span className="text-gray-400 block">Employment</span>
-                <span className="text-gray-800 font-medium capitalize">
+                <span className="text-ink-subtle block">Employment</span>
+                <span className="text-ink font-medium capitalize">
                   {loan.employment_status?.replace('_', ' ') || '—'}
                 </span>
               </div>
               {loan.employer_name && (
                 <div>
-                  <span className="text-gray-400 block">Employer</span>
-                  <span className="text-gray-800 font-medium">{loan.employer_name}</span>
+                  <span className="text-ink-subtle block">Employer</span>
+                  <span className="text-ink font-medium">{loan.employer_name}</span>
                 </div>
               )}
               <div>
-                <span className="text-gray-400 block">Monthly Income</span>
-                <span className="text-gray-800 font-medium">{formatCurrency(loan.monthly_base_income)}</span>
+                <span className="text-ink-subtle block">Monthly Income</span>
+                <span className="text-ink font-medium">{formatCurrency(loan.monthly_base_income)}</span>
               </div>
               <div>
-                <span className="text-gray-400 block">Housing Expense</span>
-                <span className="text-gray-800 font-medium">{formatCurrency(loan.present_housing_expense)}</span>
+                <span className="text-ink-subtle block">Housing Expense</span>
+                <span className="text-ink font-medium">{formatCurrency(loan.present_housing_expense)}</span>
               </div>
               <div>
-                <span className="text-gray-400 block">Marital Status</span>
-                <span className="text-gray-800 font-medium capitalize">{loan.maritalStatus || '—'}</span>
+                <span className="text-ink-subtle block">Marital Status</span>
+                <span className="text-ink font-medium capitalize">{loan.maritalStatus || '—'}</span>
               </div>
               <div>
-                <span className="text-gray-400 block">Submitted</span>
-                <span className="text-gray-800 font-medium">{formatDate(loan.submitted_at)}</span>
+                <span className="text-ink-subtle block">Submitted</span>
+                <span className="text-ink font-medium">{formatDate(loan.submitted_at)}</span>
               </div>
             </div>
           </div>
 
           {/* Documents */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+          <div className="bg-white rounded-nr-xl border border-gray-200 p-6 shadow-nr-sm">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Documents</h2>
+              <h2 className="text-lg font-semibold text-ink">Documents</h2>
               <button
                 onClick={() => setDocForm({ ...docForm, open: !docForm.open })}
                 className="text-sm text-brand hover:underline"
@@ -430,10 +430,10 @@ export default function LoanDetailView({ loan, onRefresh }) {
 
             {/* Document Request Form */}
             {docForm.open && (
-              <div className="bg-gray-50 rounded-lg p-4 mb-4 border border-gray-200">
+              <div className="bg-surface-alt rounded-lg p-4 mb-4 border border-gray-200">
                 <div className="grid grid-cols-2 gap-3 mb-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Type</label>
+                    <label className="block text-xs font-medium text-ink-mid mb-1">Type</label>
                     <select
                       value={docForm.docType}
                       onChange={(e) => setDocForm({ ...docForm, docType: e.target.value })}
@@ -445,7 +445,7 @@ export default function LoanDetailView({ loan, onRefresh }) {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Label</label>
+                    <label className="block text-xs font-medium text-ink-mid mb-1">Label</label>
                     <input
                       type="text"
                       value={docForm.label}
@@ -456,7 +456,7 @@ export default function LoanDetailView({ loan, onRefresh }) {
                   </div>
                 </div>
                 <div className="mb-3">
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Notes (optional)</label>
+                  <label className="block text-xs font-medium text-ink-mid mb-1">Notes (optional)</label>
                   <input
                     type="text"
                     value={docForm.notes}
@@ -475,7 +475,7 @@ export default function LoanDetailView({ loan, onRefresh }) {
                   </button>
                   <button
                     onClick={() => setDocForm({ open: false, docType: 'pay_stub', label: '', notes: '' })}
-                    className="px-4 py-2 text-gray-600 text-sm hover:text-gray-800"
+                    className="px-4 py-2 text-ink-mid text-sm hover:text-ink"
                   >
                     Cancel
                   </button>
@@ -485,7 +485,7 @@ export default function LoanDetailView({ loan, onRefresh }) {
 
             {/* Document List */}
             {(!loan.documents || loan.documents.length === 0) ? (
-              <p className="text-gray-400 text-sm">No documents yet.</p>
+              <p className="text-ink-subtle text-sm">No documents yet.</p>
             ) : (
               <div className="space-y-2">
                 {loan.documents.map((doc) => (
@@ -494,22 +494,22 @@ export default function LoanDetailView({ loan, onRefresh }) {
                     className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0"
                   >
                     <div className="flex-1">
-                      <span className="text-sm font-medium text-gray-800">{doc.label}</span>
+                      <span className="text-sm font-medium text-ink">{doc.label}</span>
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${DOC_STATUS_COLORS[doc.status]}`}>
                           {DOC_STATUS_LABELS[doc.status] || doc.status}
                         </span>
                         {doc.file_name && (
-                          <span className="text-xs text-gray-400">{doc.file_name}</span>
+                          <span className="text-xs text-ink-subtle">{doc.file_name}</span>
                         )}
                         {doc.requestedBy && (
-                          <span className="text-xs text-gray-400">
+                          <span className="text-xs text-ink-subtle">
                             by {doc.requestedBy.first_name} {doc.requestedBy.last_name}
                           </span>
                         )}
                       </div>
                       {doc.notes && (
-                        <p className="text-xs text-gray-500 mt-0.5">{doc.notes}</p>
+                        <p className="text-xs text-ink-subtle mt-0.5">{doc.notes}</p>
                       )}
                     </div>
                     <div className="flex items-center gap-2">
@@ -558,8 +558,8 @@ export default function LoanDetailView({ loan, onRefresh }) {
         {/* ─── Right Column (1/3 width) ─── */}
         <div className="space-y-6">
           {/* Notes */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Add Note</h2>
+          <div className="bg-white rounded-nr-xl border border-gray-200 p-6 shadow-nr-sm">
+            <h2 className="text-lg font-semibold text-ink mb-4">Add Note</h2>
             <div className="flex gap-2">
               <input
                 type="text"
@@ -582,10 +582,10 @@ export default function LoanDetailView({ loan, onRefresh }) {
           </div>
 
           {/* Activity Timeline */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Activity</h2>
+          <div className="bg-white rounded-nr-xl border border-gray-200 p-6 shadow-nr-sm">
+            <h2 className="text-lg font-semibold text-ink mb-4">Activity</h2>
             {(!loan.events || loan.events.length === 0) ? (
-              <p className="text-gray-400 text-sm">No activity yet.</p>
+              <p className="text-ink-subtle text-sm">No activity yet.</p>
             ) : (
               <div className="space-y-0">
                 {loan.events.map((event, index) => (
@@ -597,11 +597,11 @@ export default function LoanDetailView({ loan, onRefresh }) {
                       )}
                     </div>
                     <div className="pb-4">
-                      <p className="text-sm text-gray-800">
+                      <p className="text-sm text-ink">
                         <span className="mr-1">{EVENT_ICONS[event.event_type] || '•'}</span>
                         {formatEventMessage(event)}
                       </p>
-                      <p className="text-xs text-gray-400 mt-0.5">
+                      <p className="text-xs text-ink-subtle mt-0.5">
                         {formatDate(event.created_at)}
                         {event.actor_type && (
                           <span> · {event.actor_type}</span>

@@ -40,7 +40,7 @@ function ReviewSection({ title, step, children }) {
   return (
     <div className="border-b border-gray-100 pb-5 last:border-0 last:pb-0">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
+        <h3 className="text-sm font-semibold text-ink">{title}</h3>
         <a
           href={step === 1 ? '/portal/apply' : `/portal/apply/${step}`}
           className="text-xs text-brand hover:underline"
@@ -56,8 +56,8 @@ function ReviewSection({ title, step, children }) {
 function ReviewItem({ label, value }) {
   return (
     <div>
-      <dt className="text-xs text-gray-400">{label}</dt>
-      <dd className="text-sm text-gray-800">{value || '—'}</dd>
+      <dt className="text-xs text-ink-subtle">{label}</dt>
+      <dd className="text-sm text-ink">{value || '—'}</dd>
     </div>
   );
 }
@@ -133,7 +133,7 @@ export default function Step6Review({ onBack }) {
   };
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-8 shadow-sm space-y-5">
+    <div className="bg-white rounded-nr-xl border border-gray-200 p-8 shadow-nr-sm space-y-5">
       {/* Warning banner when PII is missing (cleared by security on refresh) */}
       {hasMissingPII && (
         <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-lg p-4">
@@ -317,8 +317,8 @@ export default function Step6Review({ onBack }) {
             onChange={(e) => setAuthorizeVerification(e.target.checked)}
             className="w-4 h-4 mt-0.5 rounded border-gray-300 text-brand focus:ring-brand"
           />
-          <span className="text-sm text-gray-600">
-            <span className="font-medium text-gray-700">Required:</span>{' '}
+          <span className="text-sm text-ink-mid">
+            <span className="font-medium text-ink-mid">Required:</span>{' '}
             I authorize NetRate Mortgage LLC (NMLS #1111861) to verify the information provided
             in this application{hasCoBorrowers ? ', including information for all co-borrowers listed above' : ''}.
             I understand that this is not a commitment to lend and that my information will be
@@ -333,8 +333,8 @@ export default function Step6Review({ onBack }) {
             onChange={(e) => setAuthorizeCreditPull(e.target.checked)}
             className="w-4 h-4 mt-0.5 rounded border-gray-300 text-brand focus:ring-brand"
           />
-          <span className="text-sm text-gray-600">
-            <span className="font-medium text-gray-700">Optional:</span>{' '}
+          <span className="text-sm text-ink-mid">
+            <span className="font-medium text-ink-mid">Optional:</span>{' '}
             I authorize NetRate Mortgage to obtain my credit report and credit score for the
             purpose of evaluating my mortgage application.
           </span>
@@ -366,7 +366,7 @@ export default function Step6Review({ onBack }) {
         <button
           type="button"
           onClick={onBack}
-          className="text-gray-500 hover:text-gray-700 px-4 py-2.5 font-medium transition-colors"
+          className="text-ink-subtle hover:text-ink-mid px-4 py-2.5 font-medium transition-colors"
         >
           &larr; Back
         </button>

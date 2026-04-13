@@ -61,7 +61,7 @@ export default function ContactSearch({ onSelect }) {
     <div ref={containerRef} className="relative">
       <div className="relative">
         <svg
-          className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+          className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-subtle"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -73,7 +73,7 @@ export default function ContactSearch({ onSelect }) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search contacts..."
-          className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand bg-gray-50"
+          className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand bg-surface-alt"
         />
         {loading && (
           <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -89,7 +89,7 @@ export default function ContactSearch({ onSelect }) {
             <button
               key={contact.id}
               onClick={() => handleSelect(contact)}
-              className="w-full px-3 py-2.5 text-left hover:bg-gray-50 flex items-center gap-3 border-b border-gray-100 last:border-0"
+              className="w-full px-3 py-2.5 text-left hover:bg-surface-alt flex items-center gap-3 border-b border-gray-100 last:border-0"
             >
               <div className="w-8 h-8 bg-brand/10 rounded-full flex items-center justify-center flex-shrink-0">
                 <span className="text-xs font-semibold text-brand">
@@ -97,10 +97,10 @@ export default function ContactSearch({ onSelect }) {
                 </span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">
+                <p className="text-sm font-medium text-ink truncate">
                   {contact.first_name} {contact.last_name}
                 </p>
-                <p className="text-xs text-gray-500 truncate">
+                <p className="text-xs text-ink-subtle truncate">
                   {contact.phone || contact.email || contact.company || ''}
                 </p>
               </div>
@@ -116,7 +116,7 @@ export default function ContactSearch({ onSelect }) {
 
       {open && query.length >= 2 && results.length === 0 && !loading && (
         <div className="absolute z-20 w-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 px-3 py-4 text-center">
-          <p className="text-sm text-gray-500">No contacts found</p>
+          <p className="text-sm text-ink-subtle">No contacts found</p>
         </div>
       )}
     </div>

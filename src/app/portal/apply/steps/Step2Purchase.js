@@ -130,7 +130,7 @@ export default function Step2Purchase({ onNext, onBack }) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
-      <div className="bg-white rounded-xl border border-gray-200 p-8 shadow-sm space-y-5">
+      <div className="bg-white rounded-nr-xl border border-gray-200 p-8 shadow-nr-sm space-y-5">
         <SelectField
           label="How will you use this property?"
           name="occupancy"
@@ -153,14 +153,14 @@ export default function Step2Purchase({ onNext, onBack }) {
 
         {/* Down Payment — currency input + LTV slider */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-ink-mid mb-1">
             Down Payment <span className="text-red-400">*</span>
           </label>
 
           <div className="grid grid-cols-2 gap-4 items-start">
             {/* Currency input */}
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-subtle text-sm">$</span>
               <input
                 id="downPayment"
                 type="text"
@@ -193,14 +193,14 @@ export default function Step2Purchase({ onNext, onBack }) {
             </div>
 
             {/* LTV / Loan summary */}
-            <div className="text-sm text-gray-500 pt-2.5">
+            <div className="text-sm text-ink-subtle pt-2.5">
               {priceNum > 0 ? (
                 <>
-                  <span className="font-medium text-gray-700">{dpPercent}% down</span>
+                  <span className="font-medium text-ink-mid">{dpPercent}% down</span>
                   {' '}/ Loan: {formatDollar(priceNum - dpAmount)} ({ltv}% LTV)
                 </>
               ) : (
-                <span className="text-gray-400">Enter a purchase price first</span>
+                <span className="text-ink-subtle">Enter a purchase price first</span>
               )}
             </div>
           </div>
@@ -221,7 +221,7 @@ export default function Step2Purchase({ onNext, onBack }) {
                 className="w-full h-2 mt-3 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-brand"
               />
 
-              <div className="flex justify-between mt-1 text-xs text-gray-400">
+              <div className="flex justify-between mt-1 text-xs text-ink-subtle">
                 <span>50% down</span>
                 <span>20% down</span>
                 <span>5%</span>
@@ -230,7 +230,7 @@ export default function Step2Purchase({ onNext, onBack }) {
             </>
           )}
 
-          <p className="text-xs text-gray-400 mt-2">
+          <p className="text-xs text-ink-subtle mt-2">
             Type an amount or drag the slider. A larger down payment means a smaller loan and typically better rates. Most lenders require at least 3-5% down.
           </p>
 
@@ -265,7 +265,7 @@ export default function Step2Purchase({ onNext, onBack }) {
 
         {/* Property Identified? */}
         <div>
-          <label htmlFor="propertyIdentified" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="propertyIdentified" className="block text-sm font-medium text-ink-mid mb-1">
             Do you have a property in mind?
           </label>
           <select
@@ -291,7 +291,7 @@ export default function Step2Purchase({ onNext, onBack }) {
         )}
 
         {propertyIdentified === 'no' && (
-          <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-500">
+          <div className="bg-surface-alt rounded-lg p-4 text-sm text-ink-subtle">
             No problem! The property address will be set to &ldquo;TBD&rdquo; for now. You can update it later with your loan officer.
           </div>
         )}
@@ -301,7 +301,7 @@ export default function Step2Purchase({ onNext, onBack }) {
           <button
             type="button"
             onClick={onBack}
-            className="text-gray-500 hover:text-gray-700 px-4 py-2.5 font-medium transition-colors"
+            className="text-ink-subtle hover:text-ink-mid px-4 py-2.5 font-medium transition-colors"
           >
             &larr; Back
           </button>

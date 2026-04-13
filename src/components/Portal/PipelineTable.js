@@ -161,7 +161,7 @@ function EditableText({ value, onSave, placeholder = '—' }) {
   }
   return (
     <span onClick={() => setEditing(true)}
-      className={`inline-block px-1.5 py-0.5 rounded cursor-pointer text-sm transition-colors hover:bg-gray-100 border border-transparent hover:border-dashed hover:border-gray-300 min-w-[40px] ${value ? 'text-gray-700' : 'text-gray-300'}`}
+      className={`inline-block px-1.5 py-0.5 rounded cursor-pointer text-sm transition-colors hover:bg-gray-100 border border-transparent hover:border-dashed hover:border-gray-300 min-w-[40px] ${value ? 'text-ink-mid' : 'text-gray-300'}`}
       title="Click to edit">
       {value || placeholder}
     </span>
@@ -239,16 +239,16 @@ function ColumnFilterDropdown({ column, allLoans, filter, onFilterChange, onClos
         )}
         <div className="max-h-52 overflow-y-auto">
           {filteredOptions.map(opt => (
-            <label key={opt} className="flex items-center gap-2 px-2 py-1 hover:bg-gray-50 rounded cursor-pointer">
+            <label key={opt} className="flex items-center gap-2 px-2 py-1 hover:bg-surface-alt rounded cursor-pointer">
               <input type="checkbox" checked={selected.has(opt)} onChange={() => toggle(opt)}
                 className="rounded border-gray-300 text-brand focus:ring-brand/30" />
-              <span className="text-xs text-gray-700">{(labelMap && labelMap[opt]) || opt}</span>
+              <span className="text-xs text-ink-mid">{(labelMap && labelMap[opt]) || opt}</span>
             </label>
           ))}
         </div>
         <div className="border-t border-gray-100 mt-1 pt-1">
           <button onClick={() => { onFilterChange(null); onClose(); }}
-            className="w-full text-xs text-gray-500 hover:text-gray-700 px-2 py-1 text-left">Clear filter</button>
+            className="w-full text-xs text-ink-subtle hover:text-ink-mid px-2 py-1 text-left">Clear filter</button>
         </div>
       </div>
     );
@@ -270,12 +270,12 @@ function ColumnVisibilityDropdown({ visibleColumns, onToggle, onClose }) {
 
   return (
     <div ref={ref} className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl p-2 z-50 min-w-[160px]">
-      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-2 pb-1">Show Columns</p>
+      <p className="text-xs font-semibold text-ink-subtle uppercase tracking-wider px-2 pb-1">Show Columns</p>
       {COLUMNS.map(col => (
-        <label key={col.key} className="flex items-center gap-2 px-2 py-1 hover:bg-gray-50 rounded cursor-pointer">
+        <label key={col.key} className="flex items-center gap-2 px-2 py-1 hover:bg-surface-alt rounded cursor-pointer">
           <input type="checkbox" checked={visibleColumns.has(col.key)} onChange={() => onToggle(col.key)}
             className="rounded border-gray-300 text-brand focus:ring-brand/30" />
-          <span className="text-xs text-gray-700">{col.label}</span>
+          <span className="text-xs text-ink-mid">{col.label}</span>
         </label>
       ))}
     </div>
@@ -298,13 +298,13 @@ function SavedViewsDropdown({ views, activeView, onSelect, onSave, onDelete, onC
   return (
     <div ref={ref} className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl p-2 z-50 min-w-[200px]">
       <button onClick={() => { onSelect(null); onClose(); }}
-        className={`w-full text-left px-3 py-1.5 text-sm rounded transition-colors ${!activeView ? 'bg-brand/10 text-brand font-medium' : 'hover:bg-gray-50 text-gray-700'}`}>
+        className={`w-full text-left px-3 py-1.5 text-sm rounded transition-colors ${!activeView ? 'bg-brand/10 text-brand font-medium' : 'hover:bg-surface-alt text-ink-mid'}`}>
         Default View
       </button>
       {views.map(v => (
         <div key={v.name} className="flex items-center group">
           <button onClick={() => { onSelect(v.name); onClose(); }}
-            className={`flex-1 text-left px-3 py-1.5 text-sm rounded transition-colors ${activeView === v.name ? 'bg-brand/10 text-brand font-medium' : 'hover:bg-gray-50 text-gray-700'}`}>
+            className={`flex-1 text-left px-3 py-1.5 text-sm rounded transition-colors ${activeView === v.name ? 'bg-brand/10 text-brand font-medium' : 'hover:bg-surface-alt text-ink-mid'}`}>
             {v.name}
           </button>
           <button onClick={() => onDelete(v.name)}
@@ -340,8 +340,8 @@ function DetailField({ label, value }) {
   if (value === null || value === undefined || value === '') return null;
   return (
     <div>
-      <span className="text-[10px] uppercase tracking-wider text-gray-400 block">{label}</span>
-      <span className="text-sm text-gray-800">{value}</span>
+      <span className="text-[10px] uppercase tracking-wider text-ink-subtle block">{label}</span>
+      <span className="text-sm text-ink">{value}</span>
     </div>
   );
 }
@@ -354,32 +354,32 @@ function ExpandedDetail({ loan }) {
   return (
     <div className="grid grid-cols-4 gap-x-6 gap-y-3 p-4 text-sm">
       <div className="space-y-2">
-        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100 pb-1">Borrower</div>
+        <div className="text-xs font-semibold text-ink-subtle uppercase tracking-wider border-b border-gray-100 pb-1">Borrower</div>
         <DetailField label="Name" value={loan.borrower_name} />
         <DetailField label="Email" value={loan.borrower_email} />
         <DetailField label="Phone" value={loan.borrower_phone} />
         <DetailField label="FICO" value={loan.credit_score} />
         {loan.coBorrowers?.length > 0 && (
           <div className="pt-1">
-            <span className="text-[10px] uppercase tracking-wider text-gray-400 block mb-1">Co-Borrowers</span>
+            <span className="text-[10px] uppercase tracking-wider text-ink-subtle block mb-1">Co-Borrowers</span>
             {loan.coBorrowers.map((cb, i) => (
-              <div key={i} className="text-xs text-gray-600 mb-1">{cb.name}{cb.email ? ` · ${cb.email}` : ''}</div>
+              <div key={i} className="text-xs text-ink-mid mb-1">{cb.name}{cb.email ? ` · ${cb.email}` : ''}</div>
             ))}
           </div>
         )}
       </div>
       <div className="space-y-2">
-        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100 pb-1">Property</div>
+        <div className="text-xs font-semibold text-ink-subtle uppercase tracking-wider border-b border-gray-100 pb-1">Property</div>
         <DetailField label="Address" value={addrStr} />
         <DetailField label="Type" value={loan.property_type} />
         <DetailField label="Occupancy" value={loan.occupancy} />
-        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100 pb-1 mt-3">Financials</div>
+        <div className="text-xs font-semibold text-ink-subtle uppercase tracking-wider border-b border-gray-100 pb-1 mt-3">Financials</div>
         <DetailField label="Amount" value={formatCurrency(loan.loan_amount)} />
         <DetailField label="Purchase Price" value={formatCurrency(loan.purchase_price)} />
         <DetailField label="Down Payment" value={formatCurrency(loan.down_payment)} />
       </div>
       <div className="space-y-2">
-        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100 pb-1">Key Dates</div>
+        <div className="text-xs font-semibold text-ink-subtle uppercase tracking-wider border-b border-gray-100 pb-1">Key Dates</div>
         <DetailField label="Application" value={formatShortDate(d.application_date)} />
         <DetailField label="Lock Exp" value={formatShortDate(loan.lock_expiration)} />
         <DetailField label="Appraisal" value={formatShortDate(d.appraisal_received)} />
@@ -388,7 +388,7 @@ function ExpandedDetail({ loan }) {
         <DetailField label="Funding" value={formatShortDate(d.funding_date)} />
       </div>
       <div className="space-y-2">
-        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100 pb-1">Source</div>
+        <div className="text-xs font-semibold text-ink-subtle uppercase tracking-wider border-b border-gray-100 pb-1">Source</div>
         <DetailField label="Lead Source" value={loan.lead_source} />
         <DetailField label="Referral" value={loan.referral_source} />
         <DetailField label="Channel" value={loan.application_channel} />
@@ -578,20 +578,20 @@ export default function PipelineTable({ loans, allLoans, mloList, selectedIds, o
         return <EditableText value={loan.lender_name} placeholder="—" onSave={val => onLoanUpdate(loan.id, { lender_name: val })} />;
       case 'purpose':
         return loan.purpose ? (
-          <span className={`inline-flex px-1.5 py-0.5 rounded text-xs font-medium ${PURPOSE_COLORS[loan.purpose] || 'bg-gray-50 text-gray-600'}`}>
+          <span className={`inline-flex px-1.5 py-0.5 rounded text-xs font-medium ${PURPOSE_COLORS[loan.purpose] || 'bg-surface-alt text-ink-mid'}`}>
             {PURPOSE_LABELS[loan.purpose] || loan.purpose}
           </span>
         ) : <span className="text-xs text-gray-300">—</span>;
       case 'loan_type':
         return loan.loan_type ? (
-          <span className="inline-flex px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">
+          <span className="inline-flex px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-ink-mid">
             {TYPE_LABELS[loan.loan_type] || loan.loan_type}
           </span>
         ) : <span className="text-xs text-gray-300">—</span>;
       case 'interest_rate':
         return <span className="text-sm font-semibold text-slate-800 tabular-nums">{loan.interest_rate ? `${loan.interest_rate}%` : '—'}</span>;
       case 'loan_term':
-        return <span className="text-xs text-gray-600">{loan.loan_term ? `${loan.loan_term}yr` : '—'}</span>;
+        return <span className="text-xs text-ink-mid">{loan.loan_term ? `${loan.loan_term}yr` : '—'}</span>;
       case 'mlo_name':
         return (
           <EditableSelect value={loan.mlo_id || ''} options={mloOptions}
@@ -616,7 +616,7 @@ export default function PipelineTable({ loans, allLoans, mloList, selectedIds, o
           <EditableSelect value={loan.status} options={statusOptions}
             onSave={val => onLoanUpdate(loan.id, { status: val })}
             renderValue={val => (
-              <span className={`inline-flex items-center px-3 py-1 rounded-md text-xs font-bold shadow-sm ${STATUS_COLORS[val] || 'bg-gray-200 text-gray-800'}`}>
+              <span className={`inline-flex items-center px-3 py-1 rounded-md text-xs font-bold shadow-nr-sm ${STATUS_COLORS[val] || 'bg-gray-200 text-ink'}`}>
                 {STATUS_LABELS[val] || val}
               </span>
             )}
@@ -626,38 +626,38 @@ export default function PipelineTable({ loans, allLoans, mloList, selectedIds, o
         return <span className="text-slate-900 font-semibold tabular-nums">{formatCurrency(loan.loan_amount || loan.purchase_price || loan.estimated_value)}</span>;
       case 'lock_expiration':
         return loan.lock_expiration ? (
-          <span className={`text-xs ${isExpired(loan.lock_expiration) ? 'text-red-600 font-medium' : isExpiringSoon(loan.lock_expiration) ? 'text-amber-600 font-medium' : 'text-gray-600'}`}>
+          <span className={`text-xs ${isExpired(loan.lock_expiration) ? 'text-red-600 font-medium' : isExpiringSoon(loan.lock_expiration) ? 'text-amber-600 font-medium' : 'text-ink-mid'}`}>
             {formatShortDate(loan.lock_expiration)}
           </span>
         ) : <span className="text-xs text-gray-300">—</span>;
       case 'closing_date':
-        return <span className="text-xs text-gray-600">{formatShortDate(loan.closing_date || loan.estimated_closing)}</span>;
+        return <span className="text-xs text-ink-mid">{formatShortDate(loan.closing_date || loan.estimated_closing)}</span>;
       case 'pending_docs':
         return loan.pending_docs > 0 ? (
           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">{loan.pending_docs} pending</span>
         ) : loan.total_docs > 0 ? (
-          <span className="text-xs text-gray-400">{loan.total_docs} docs</span>
+          <span className="text-xs text-ink-subtle">{loan.total_docs} docs</span>
         ) : <span className="text-xs text-gray-300">—</span>;
       case 'credit_score':
-        return <span className="text-xs text-gray-700">{loan.credit_score || '—'}</span>;
+        return <span className="text-xs text-ink-mid">{loan.credit_score || '—'}</span>;
       case 'property_state':
-        return <span className="text-xs text-gray-600">{loan.property_state || '—'}</span>;
+        return <span className="text-xs text-ink-mid">{loan.property_state || '—'}</span>;
       case 'updated_at':
-        return <span className="text-xs text-gray-500">{formatShortDate(loan.updated_at)}</span>;
+        return <span className="text-xs text-ink-subtle">{formatShortDate(loan.updated_at)}</span>;
       default:
-        return <span className="text-xs text-gray-500">{loan[col.key] || '—'}</span>;
+        return <span className="text-xs text-ink-subtle">{loan[col.key] || '—'}</span>;
     }
   };
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+    <div className="bg-white rounded-nr-xl border border-gray-200 shadow-nr-sm overflow-hidden">
       {/* Toolbar: saved views + column picker + active filters count */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100 bg-gray-50/50">
+      <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100 bg-surface-alt/50">
         <div className="flex items-center gap-2">
           {/* Saved Views */}
           <div className="relative">
             <button onClick={() => setShowViewPicker(!showViewPicker)}
-              className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
+              className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-ink-mid hover:text-ink hover:bg-gray-100 rounded-lg transition-colors">
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
               </svg>
@@ -685,7 +685,7 @@ export default function PipelineTable({ loans, allLoans, mloList, selectedIds, o
         {/* Column Picker */}
         <div className="relative">
           <button onClick={() => setShowColumnPicker(!showColumnPicker)}
-            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-ink-subtle hover:text-ink-mid hover:bg-gray-100 rounded-lg transition-colors"
             title="Show/hide columns">
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -729,7 +729,7 @@ export default function PipelineTable({ loans, allLoans, mloList, selectedIds, o
                           )}
                         </button>
                       ) : (
-                        <span className="text-gray-500">{col.label}</span>
+                        <span className="text-ink-subtle">{col.label}</span>
                       )}
 
                       {/* Filter button */}
@@ -761,9 +761,9 @@ export default function PipelineTable({ loans, allLoans, mloList, selectedIds, o
               const isExpanded = expandedId === loan.id;
               return (
                 <React.Fragment key={loan.id}>
-                  <tr className={`transition-colors ${selectedIds.has(loan.id) ? 'bg-brand/5' : isExpanded ? 'bg-gray-50' : 'hover:bg-gray-50'}`}>
+                  <tr className={`transition-colors ${selectedIds.has(loan.id) ? 'bg-brand/5' : isExpanded ? 'bg-surface-alt' : 'hover:bg-surface-alt'}`}>
                     <td className="pl-2 py-3.5 w-6">
-                      <button onClick={() => setExpandedId(isExpanded ? null : loan.id)} className="text-gray-400 hover:text-gray-600 text-xs">
+                      <button onClick={() => setExpandedId(isExpanded ? null : loan.id)} className="text-ink-subtle hover:text-ink-mid text-xs">
                         {isExpanded ? '▼' : '▶'}
                       </button>
                     </td>
@@ -781,7 +781,7 @@ export default function PipelineTable({ loans, allLoans, mloList, selectedIds, o
                     ))}
                   </tr>
                   {isExpanded && (
-                    <tr className="bg-gray-50/80">
+                    <tr className="bg-surface-alt/80">
                       <td colSpan={colSpanTotal} className="px-0 py-0 border-b border-gray-200">
                         <ExpandedDetail loan={loan} />
                       </td>

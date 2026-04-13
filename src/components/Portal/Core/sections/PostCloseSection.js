@@ -220,12 +220,12 @@ export default function PostCloseSection({ loan }) {
         )}
 
         {loading ? (
-          <p className="text-sm text-gray-400">Loading...</p>
+          <p className="text-sm text-ink-subtle">Loading...</p>
         ) : (
           <div className="space-y-5">
             {Object.entries(grouped).map(([category, categoryTasks]) => (
               <div key={category}>
-                <h4 className={`text-xs font-bold uppercase tracking-wider mb-2 ${CATEGORY_COLORS[category] || 'text-gray-500'}`}>
+                <h4 className={`text-xs font-bold uppercase tracking-wider mb-2 ${CATEGORY_COLORS[category] || 'text-ink-subtle'}`}>
                   {CATEGORY_LABELS[category]}
                 </h4>
                 <div className="space-y-1">
@@ -239,7 +239,7 @@ export default function PostCloseSection({ loan }) {
                       <div
                         key={task.key}
                         className={`flex items-center gap-3 py-2 px-3 rounded-lg transition-colors ${
-                          status === 'done' ? 'bg-green-50/50' : 'hover:bg-gray-50'
+                          status === 'done' ? 'bg-green-50/50' : 'hover:bg-surface-alt'
                         }`}
                       >
                         <button
@@ -257,12 +257,12 @@ export default function PostCloseSection({ loan }) {
                             </svg>
                           )}
                         </button>
-                        <span className={`flex-1 text-sm ${status === 'done' ? 'text-gray-400 line-through' : 'text-gray-700'}`}>
+                        <span className={`flex-1 text-sm ${status === 'done' ? 'text-ink-subtle line-through' : 'text-ink-mid'}`}>
                           {task.label}
-                          {task.auto && <span className="text-xs text-gray-400 ml-1">(auto)</span>}
+                          {task.auto && <span className="text-xs text-ink-subtle ml-1">(auto)</span>}
                         </span>
                         {completedDate && (
-                          <span className="text-xs text-gray-400">{formatDate(completedDate)}</span>
+                          <span className="text-xs text-ink-subtle">{formatDate(completedDate)}</span>
                         )}
                         {hasAction && status !== 'done' && (
                           <button
@@ -287,32 +287,32 @@ export default function PostCloseSection({ loan }) {
       <SectionCard title="Funded Loan Summary">
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <span className="text-gray-500 text-xs">Borrower</span>
+            <span className="text-ink-subtle text-xs">Borrower</span>
             <div className="font-medium">{loan.borrower?.first_name} {loan.borrower?.last_name}</div>
           </div>
           <div>
-            <span className="text-gray-500 text-xs">Loan Amount</span>
+            <span className="text-ink-subtle text-xs">Loan Amount</span>
             <div className="font-medium">{loan.loan_amount ? `$${Number(loan.loan_amount).toLocaleString()}` : '—'}</div>
           </div>
           <div>
-            <span className="text-gray-500 text-xs">Rate</span>
+            <span className="text-ink-subtle text-xs">Rate</span>
             <div className="font-medium">{loan.interest_rate ? `${loan.interest_rate}%` : '—'}</div>
           </div>
           <div>
-            <span className="text-gray-500 text-xs">Lender</span>
+            <span className="text-ink-subtle text-xs">Lender</span>
             <div className="font-medium">{loan.lender_name || '—'}</div>
           </div>
           <div>
-            <span className="text-gray-500 text-xs">Loan Type</span>
+            <span className="text-ink-subtle text-xs">Loan Type</span>
             <div className="font-medium capitalize">{loan.loan_type || '—'}</div>
           </div>
           <div>
-            <span className="text-gray-500 text-xs">Funding Date</span>
+            <span className="text-ink-subtle text-xs">Funding Date</span>
             <div className="font-medium">{formatDate(loan.dates?.funding_date) || '—'}</div>
           </div>
           {loan.loan_number && (
             <div>
-              <span className="text-gray-500 text-xs">Loan #</span>
+              <span className="text-ink-subtle text-xs">Loan #</span>
               <div className="font-medium">{loan.loan_number}</div>
             </div>
           )}

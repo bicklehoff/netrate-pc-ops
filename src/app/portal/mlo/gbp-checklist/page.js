@@ -38,21 +38,21 @@ export default async function GbpChecklistPage() {
         <div>
           <Link
             href="/portal/mlo"
-            className="text-sm text-gray-400 hover:text-brand transition-colors"
+            className="text-sm text-ink-subtle hover:text-brand transition-colors"
           >
             &larr; Back to Pipeline
           </Link>
-          <h1 className="text-2xl font-bold text-gray-900 mt-1">
+          <h1 className="text-2xl font-bold text-ink mt-1">
             GBP Rename Checklist
           </h1>
-          <p className="text-gray-500 text-sm mt-1">
+          <p className="text-ink-subtle text-sm mt-1">
             Citation seeding plan and step-by-step rename process.
           </p>
         </div>
       </div>
 
       {/* Checklist Content */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 md:p-8">
+      <div className="bg-white rounded-nr-xl border border-gray-200 shadow-nr-sm p-6 md:p-8">
         <MarkdownContent content={content} />
       </div>
     </div>

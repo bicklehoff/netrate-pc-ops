@@ -271,7 +271,7 @@ export default function LoanInfoSection({ loan, updateLoanField, updateDates }) 
             onSave={save('application_method')}
           />
         </div>
-        <p className="text-xs text-gray-400 mt-3">
+        <p className="text-xs text-ink-subtle mt-3">
           These fields are used for quarterly MCR reporting via Tracker.
         </p>
       </SectionCard>

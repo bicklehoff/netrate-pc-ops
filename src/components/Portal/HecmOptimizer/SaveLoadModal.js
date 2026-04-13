@@ -117,12 +117,12 @@ export default function SaveLoadModal({ open, onClose }) {
       <div className="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b">
-          <h2 className="text-sm font-semibold text-gray-800">HECM Scenarios</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg">&times;</button>
+          <h2 className="text-sm font-semibold text-ink">HECM Scenarios</h2>
+          <button onClick={onClose} className="text-ink-subtle hover:text-ink-mid text-lg">&times;</button>
         </div>
 
         {/* Save buttons */}
-        <div className="px-4 py-3 border-b bg-gray-50 flex items-center gap-2">
+        <div className="px-4 py-3 border-b bg-surface-alt flex items-center gap-2">
           <button
             onClick={handleSave}
             disabled={saving}
@@ -139,7 +139,7 @@ export default function SaveLoadModal({ open, onClose }) {
               Save as New
             </button>
           )}
-          <span className="text-xs text-gray-400 ml-auto">
+          <span className="text-xs text-ink-subtle ml-auto">
             {state.borrower_name || 'Untitled'} {state.home_value > 0 ? `— ${fmtDollar(state.home_value)}` : ''}
           </span>
         </div>
@@ -148,13 +148,13 @@ export default function SaveLoadModal({ open, onClose }) {
         <div className="max-h-64 overflow-y-auto">
           {error && <p className="px-4 py-2 text-xs text-red-500">{error}</p>}
           {loading ? (
-            <p className="px-4 py-8 text-center text-xs text-gray-400">Loading...</p>
+            <p className="px-4 py-8 text-center text-xs text-ink-subtle">Loading...</p>
           ) : scenarios.length === 0 ? (
-            <p className="px-4 py-8 text-center text-xs text-gray-400">No saved scenarios</p>
+            <p className="px-4 py-8 text-center text-xs text-ink-subtle">No saved scenarios</p>
           ) : (
             <table className="w-full text-xs">
               <thead>
-                <tr className="text-gray-500 border-b">
+                <tr className="text-ink-subtle border-b">
                   <th className="px-4 py-2 text-left font-medium">Name</th>
                   <th className="px-2 py-2 text-left font-medium">Home Value</th>
                   <th className="px-2 py-2 text-left font-medium">Updated</th>
@@ -165,11 +165,11 @@ export default function SaveLoadModal({ open, onClose }) {
                 {scenarios.map((s) => (
                   <tr
                     key={s.id}
-                    className={`border-b hover:bg-gray-50 ${s.id === activeId ? 'bg-cyan-50' : ''}`}
+                    className={`border-b hover:bg-surface-alt ${s.id === activeId ? 'bg-cyan-50' : ''}`}
                   >
                     <td className="px-4 py-2 font-medium">{s.borrower_name || 'Untitled'}</td>
-                    <td className="px-2 py-2 text-gray-600">{fmtDollar(s.home_value)}</td>
-                    <td className="px-2 py-2 text-gray-400">{fmtDate(s.updated_at)}</td>
+                    <td className="px-2 py-2 text-ink-mid">{fmtDollar(s.home_value)}</td>
+                    <td className="px-2 py-2 text-ink-subtle">{fmtDate(s.updated_at)}</td>
                     <td className="px-2 py-2 text-right space-x-2">
                       <button
                         onClick={() => handleLoad(s.id)}

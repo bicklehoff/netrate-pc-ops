@@ -71,10 +71,10 @@ function ScenarioView({ scenario, token }) {
   return (
     <div className="space-y-6">
       {/* Apply CTA — above the fold */}
-      <div className="bg-gradient-to-br from-brand/5 to-cyan-50 rounded-xl border border-brand/20 p-5 flex items-center justify-between flex-wrap gap-4">
+      <div className="bg-gradient-to-br from-brand/5 to-cyan-50 rounded-nr-xl border border-brand/20 p-5 flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h3 className="text-base font-semibold text-gray-900">Ready to move forward?</h3>
-          <p className="text-sm text-gray-500">Your details will be pre-filled in the application.</p>
+          <h3 className="text-base font-semibold text-ink">Ready to move forward?</h3>
+          <p className="text-sm text-ink-subtle">Your details will be pre-filled in the application.</p>
         </div>
         <Link
           href={`/portal/apply?from=brp&token=${token}`}
@@ -85,20 +85,20 @@ function ScenarioView({ scenario, token }) {
       </div>
 
       {/* Scenario Summary Header */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-nr-xl border border-gray-200 shadow-nr-sm overflow-hidden">
         <div className="bg-brand/5 border-b border-brand/10 px-6 py-4">
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
-              <h2 className="text-lg font-bold text-gray-900">
+              <h2 className="text-lg font-bold text-ink">
                 {purposeLabel} - {loanTypeLabel}
               </h2>
-              <p className="text-sm text-gray-500 mt-0.5">Saved {savedDate}</p>
+              <p className="text-sm text-ink-subtle mt-0.5">Saved {savedDate}</p>
             </div>
             <div className="flex items-center gap-2">
               <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
                 scenario.alert_status === 'active' ? 'bg-green-50 text-green-700 border border-green-200' :
                 scenario.alert_status === 'paused' ? 'bg-yellow-50 text-yellow-700 border border-yellow-200' :
-                'bg-gray-100 text-gray-500 border border-gray-200'
+                'bg-gray-100 text-ink-subtle border border-gray-200'
               }`}>
                 {scenario.alert_status === 'active' ? 'Alerts Active' :
                  scenario.alert_status === 'paused' ? 'Alerts Paused' :
@@ -113,57 +113,57 @@ function ScenarioView({ scenario, token }) {
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4">
             {sd.loan_amount > 0 && (
               <div>
-                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Loan Amount</p>
-                <p className="text-base font-semibold text-gray-900 mt-0.5">{formatDollar(sd.loan_amount)}</p>
+                <p className="text-xs font-medium text-ink-subtle uppercase tracking-wide">Loan Amount</p>
+                <p className="text-base font-semibold text-ink mt-0.5">{formatDollar(sd.loan_amount)}</p>
               </div>
             )}
             {sd.property_value > 0 && (
               <div>
-                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">
+                <p className="text-xs font-medium text-ink-subtle uppercase tracking-wide">
                   {sd.purpose === 'purchase' ? 'Home Price' : 'Property Value'}
                 </p>
-                <p className="text-base font-semibold text-gray-900 mt-0.5">{formatDollar(sd.property_value)}</p>
+                <p className="text-base font-semibold text-ink mt-0.5">{formatDollar(sd.property_value)}</p>
               </div>
             )}
             {downPayment > 0 && (
               <div>
-                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Down Payment</p>
-                <p className="text-base font-semibold text-gray-900 mt-0.5">
+                <p className="text-xs font-medium text-ink-subtle uppercase tracking-wide">Down Payment</p>
+                <p className="text-base font-semibold text-ink mt-0.5">
                   {formatDollar(downPayment)}
-                  {sd.downPaymentPct ? <span className="text-sm text-gray-400 ml-1">({sd.downPaymentPct}%)</span> : null}
+                  {sd.downPaymentPct ? <span className="text-sm text-ink-subtle ml-1">({sd.downPaymentPct}%)</span> : null}
                 </p>
               </div>
             )}
             {sd.ltv > 0 && (
               <div>
-                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">LTV</p>
-                <p className="text-base font-semibold text-gray-900 mt-0.5">{Math.round(sd.ltv * 10) / 10}%</p>
+                <p className="text-xs font-medium text-ink-subtle uppercase tracking-wide">LTV</p>
+                <p className="text-base font-semibold text-ink mt-0.5">{Math.round(sd.ltv * 10) / 10}%</p>
               </div>
             )}
             {sd.fico > 0 && (
               <div>
-                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Credit Score</p>
-                <p className="text-base font-semibold text-gray-900 mt-0.5">{sd.fico}</p>
+                <p className="text-xs font-medium text-ink-subtle uppercase tracking-wide">Credit Score</p>
+                <p className="text-base font-semibold text-ink mt-0.5">{sd.fico}</p>
               </div>
             )}
             {sd.term > 0 && (
               <div>
-                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Term</p>
-                <p className="text-base font-semibold text-gray-900 mt-0.5">{sd.term}-year {sd.productType === 'fixed' ? 'Fixed' : sd.productType || 'Fixed'}</p>
+                <p className="text-xs font-medium text-ink-subtle uppercase tracking-wide">Term</p>
+                <p className="text-base font-semibold text-ink mt-0.5">{sd.term}-year {sd.productType === 'fixed' ? 'Fixed' : sd.productType || 'Fixed'}</p>
               </div>
             )}
             {sd.state && (
               <div>
-                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Location</p>
-                <p className="text-base font-semibold text-gray-900 mt-0.5">
+                <p className="text-xs font-medium text-ink-subtle uppercase tracking-wide">Location</p>
+                <p className="text-base font-semibold text-ink mt-0.5">
                   {sd.county ? `${sd.county}, ` : ''}{sd.state}
                 </p>
               </div>
             )}
             {propLabel && (
               <div>
-                <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Property Type</p>
-                <p className="text-base font-semibold text-gray-900 mt-0.5">{propLabel}</p>
+                <p className="text-xs font-medium text-ink-subtle uppercase tracking-wide">Property Type</p>
+                <p className="text-base font-semibold text-ink mt-0.5">{propLabel}</p>
               </div>
             )}
           </div>
@@ -172,19 +172,19 @@ function ScenarioView({ scenario, token }) {
 
       {/* Rate Table */}
       {rates.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-nr-xl border border-gray-200 shadow-nr-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-100">
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-semibold text-gray-900">Your Rates</h3>
+              <h3 className="text-base font-semibold text-ink">Your Rates</h3>
               {pricedDate && (
-                <p className="text-xs text-gray-400">Last priced {pricedDate}</p>
+                <p className="text-xs text-ink-subtle">Last priced {pricedDate}</p>
               )}
             </div>
           </div>
           <div className="px-6 py-3">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-xs text-gray-400 uppercase tracking-wide">
+                <tr className="text-xs text-ink-subtle uppercase tracking-wide">
                   <th className="text-left pb-3 font-medium">Rate</th>
                   <th className="text-right pb-3 font-medium">Est. Monthly P&I</th>
                   <th className="text-right pb-3 font-medium">Points / Credit</th>
@@ -197,10 +197,10 @@ function ScenarioView({ scenario, token }) {
                   return (
                     <tr key={i} className={`border-t border-gray-100 ${i === 0 ? 'bg-brand/3' : ''}`}>
                       <td className="py-3">
-                        <span className="font-mono font-bold text-gray-900 text-base">{Number(r.rate).toFixed(3)}%</span>
+                        <span className="font-mono font-bold text-ink text-base">{Number(r.rate).toFixed(3)}%</span>
                         {i === 0 && <span className="ml-2 text-[10px] font-semibold text-brand bg-brand/10 px-1.5 py-0.5 rounded">BEST</span>}
                       </td>
-                      <td className="py-3 text-right font-medium text-gray-900">
+                      <td className="py-3 text-right font-medium text-ink">
                         {pi ? formatDollar(Math.round(pi)) + '/mo' : '-'}
                       </td>
                       <td className="py-3 text-right">
@@ -209,10 +209,10 @@ function ScenarioView({ scenario, token }) {
                         ) : r.discountDollars > 0 ? (
                           <span className="font-medium text-red-600">+{formatDollar(r.discountDollars)} cost</span>
                         ) : (
-                          <span className="text-gray-400">Par</span>
+                          <span className="text-ink-subtle">Par</span>
                         )}
                       </td>
-                      <td className="py-3 text-right text-gray-600">
+                      <td className="py-3 text-right text-ink-mid">
                         {r.lenderFee ? formatDollar(r.lenderFee) : '-'}
                       </td>
                     </tr>
@@ -224,15 +224,15 @@ function ScenarioView({ scenario, token }) {
 
           {/* Best rate highlight */}
           {bestRate && (
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
+            <div className="px-6 py-4 bg-surface-alt border-t border-gray-100">
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <div>
-                  <p className="text-sm text-gray-500">Best available rate</p>
+                  <p className="text-sm text-ink-subtle">Best available rate</p>
                   <p className="text-2xl font-bold text-brand tabular-nums">{Number(bestRate.rate).toFixed(3)}%</p>
                   {(() => {
                     const pi = bestRate.monthlyPI || calcMonthlyPI(bestRate.rate, sd.loan_amount, sd.term);
                     return pi ? (
-                      <p className="text-sm text-gray-500">{formatDollar(Math.round(pi))}/mo estimated payment</p>
+                      <p className="text-sm text-ink-subtle">{formatDollar(Math.round(pi))}/mo estimated payment</p>
                     ) : null;
                   })()}
                 </div>
@@ -249,31 +249,31 @@ function ScenarioView({ scenario, token }) {
       )}
 
       {/* Alert Schedule */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-nr-xl border border-gray-200 shadow-nr-sm overflow-hidden">
         <div className="px-6 py-4">
-          <h3 className="text-base font-semibold text-gray-900 mb-3">Alert Schedule</h3>
+          <h3 className="text-base font-semibold text-ink mb-3">Alert Schedule</h3>
           <div className="flex items-center gap-3 flex-wrap">
-            <div className="bg-gray-50 rounded-lg px-4 py-2.5">
-              <p className="text-xs text-gray-400 mb-0.5">Frequency</p>
-              <p className="text-sm font-medium text-gray-900">
+            <div className="bg-surface-alt rounded-lg px-4 py-2.5">
+              <p className="text-xs text-ink-subtle mb-0.5">Frequency</p>
+              <p className="text-sm font-medium text-ink">
                 {FREQ_LABELS[scenario.alert_frequency] || scenario.alert_frequency}
               </p>
             </div>
             {scenario.alert_days?.length > 0 && (
-              <div className="bg-gray-50 rounded-lg px-4 py-2.5">
-                <p className="text-xs text-gray-400 mb-0.5">Days</p>
-                <p className="text-sm font-medium text-gray-900">
+              <div className="bg-surface-alt rounded-lg px-4 py-2.5">
+                <p className="text-xs text-ink-subtle mb-0.5">Days</p>
+                <p className="text-sm font-medium text-ink">
                   {scenario.alert_days.map(d => DAY_NAMES[d] || d).join(', ')}
                 </p>
               </div>
             )}
             {scenario.send_count > 0 && (
-              <div className="bg-gray-50 rounded-lg px-4 py-2.5">
-                <p className="text-xs text-gray-400 mb-0.5">Updates Sent</p>
-                <p className="text-sm font-medium text-gray-900">
+              <div className="bg-surface-alt rounded-lg px-4 py-2.5">
+                <p className="text-xs text-ink-subtle mb-0.5">Updates Sent</p>
+                <p className="text-sm font-medium text-ink">
                   {scenario.send_count}
                   {scenario.last_sent_at && (
-                    <span className="text-gray-400 text-xs ml-1">
+                    <span className="text-ink-subtle text-xs ml-1">
                       (last: {new Date(scenario.last_sent_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})
                     </span>
                   )}
@@ -286,10 +286,10 @@ function ScenarioView({ scenario, token }) {
 
       {/* Calculator Links */}
       {calcs.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-nr-xl border border-gray-200 shadow-nr-sm overflow-hidden">
           <div className="px-6 py-4">
-            <h3 className="text-base font-semibold text-gray-900 mb-1">Run the Numbers</h3>
-            <p className="text-sm text-gray-500 mb-4">These calculators are pre-filled with your scenario details.</p>
+            <h3 className="text-base font-semibold text-ink mb-1">Run the Numbers</h3>
+            <p className="text-sm text-ink-subtle mb-4">These calculators are pre-filled with your scenario details.</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {calcs.map(c => (
                 <Link
@@ -303,7 +303,7 @@ function ScenarioView({ scenario, token }) {
                     </svg>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-900 group-hover:text-brand transition-colors">{c.label}</p>
+                    <p className="text-sm font-medium text-ink group-hover:text-brand transition-colors">{c.label}</p>
                   </div>
                   <svg className="w-4 h-4 text-gray-300 group-hover:text-brand ml-auto transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -350,7 +350,7 @@ function MyRatesContent() {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <div className="w-8 h-8 border-2 border-brand border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-sm text-gray-500">Loading your rates...</p>
+          <p className="text-sm text-ink-subtle">Loading your rates...</p>
         </div>
       </div>
     );
@@ -365,7 +365,7 @@ function MyRatesContent() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <p className="text-sm text-gray-600 mb-4">{error}</p>
+          <p className="text-sm text-ink-mid mb-4">{error}</p>
           <Link href="/rates" className="text-sm font-medium text-brand hover:text-brand-dark">
             Go to Rate Tool
           </Link>
@@ -381,17 +381,17 @@ function MyRatesContent() {
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">
+        <h1 className="text-2xl font-bold text-ink">
           {data?.name ? `${data.name.split(' ')[0]}, here are your rates.` : 'Your Rates'}
         </h1>
-        <p className="text-gray-500 mt-1">
+        <p className="text-ink-subtle mt-1">
           Your saved scenario and current pricing from NetRate Mortgage.
         </p>
       </div>
 
       {!scenario ? (
-        <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
-          <p className="text-gray-500 mb-4">You don&apos;t have a saved scenario yet.</p>
+        <div className="bg-white rounded-nr-xl border border-gray-200 p-8 text-center">
+          <p className="text-ink-subtle mb-4">You don&apos;t have a saved scenario yet.</p>
           <Link href="/rates" className="inline-block bg-go text-white rounded-lg px-6 py-2.5 text-sm font-bold hover:bg-go-dark transition-colors">
             Search Rates
           </Link>

@@ -84,7 +84,7 @@ function BulkActionBar({ count, mloList, onBulkUpdate, onBulkDelete, onClear }) 
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
       <div
         ref={barRef}
-        className="flex items-center gap-3 px-5 py-3 bg-gray-900 text-white rounded-xl shadow-2xl border border-gray-700"
+        className="flex items-center gap-3 px-5 py-3 bg-gray-900 text-white rounded-nr-xl shadow-2xl border border-gray-700"
       >
         <span className="text-sm font-medium whitespace-nowrap">
           {count} loan{count !== 1 ? 's' : ''} selected
@@ -105,7 +105,7 @@ function BulkActionBar({ count, mloList, onBulkUpdate, onBulkDelete, onClear }) 
             </svg>
           </button>
           {activeAction === 'status' && (
-            <div className="absolute bottom-full mb-2 left-0 bg-white text-gray-900 rounded-lg shadow-xl border border-gray-200 py-1 min-w-[160px] max-h-64 overflow-y-auto">
+            <div className="absolute bottom-full mb-2 left-0 bg-white text-ink rounded-lg shadow-xl border border-gray-200 py-1 min-w-[160px] max-h-64 overflow-y-auto">
               {ALL_STATUSES.map((s) => (
                 <button
                   key={s}
@@ -132,10 +132,10 @@ function BulkActionBar({ count, mloList, onBulkUpdate, onBulkDelete, onClear }) 
             </svg>
           </button>
           {activeAction === 'mlo' && (
-            <div className="absolute bottom-full mb-2 left-0 bg-white text-gray-900 rounded-lg shadow-xl border border-gray-200 py-1 min-w-[180px] max-h-64 overflow-y-auto">
+            <div className="absolute bottom-full mb-2 left-0 bg-white text-ink rounded-lg shadow-xl border border-gray-200 py-1 min-w-[180px] max-h-64 overflow-y-auto">
               <button
                 onClick={() => applyUpdate({ mlo_id: null })}
-                className="block w-full text-left px-3 py-1.5 text-sm text-gray-400 hover:bg-gray-100 transition-colors"
+                className="block w-full text-left px-3 py-1.5 text-sm text-ink-subtle hover:bg-gray-100 transition-colors"
               >
                 Unassigned
               </button>
@@ -193,7 +193,7 @@ function BulkActionBar({ count, mloList, onBulkUpdate, onBulkDelete, onClear }) 
         {/* Clear selection */}
         <button
           onClick={onClear}
-          className="px-3 py-1.5 text-xs font-medium text-gray-400 hover:text-white transition-colors"
+          className="px-3 py-1.5 text-xs font-medium text-ink-subtle hover:text-white transition-colors"
         >
           Clear
         </button>
@@ -382,8 +382,8 @@ export default function MloDashboardPage() {
     <div>
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Loan Pipeline</h1>
-          <p className="text-gray-500 text-sm mt-1">
+          <h1 className="text-2xl font-bold text-ink">Loan Pipeline</h1>
+          <p className="text-ink-subtle text-sm mt-1">
             Welcome back, {session?.user?.name || 'there'}. Manage your active applications.
           </p>
         </div>
@@ -400,7 +400,7 @@ export default function MloDashboardPage() {
           <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-brand/10 text-brand">
             {activeCount} Active
           </span>
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-ink-mid">
             {loans.length} Total
           </span>
         </div>
@@ -417,9 +417,9 @@ export default function MloDashboardPage() {
             <button
               key={t.value}
               onClick={() => { setTier1(t.value); setTier2(null); }}
-              className={`flex flex-col items-center px-5 py-2 rounded-xl transition-all ${
+              className={`flex flex-col items-center px-5 py-2 rounded-nr-xl transition-all ${
                 isActive
-                  ? 'bg-white border-2 border-primary shadow-sm'
+                  ? 'bg-white border-2 border-primary shadow-nr-sm'
                   : 'bg-white border border-slate-200 hover:border-slate-300'
               }`}
             >
@@ -461,7 +461,7 @@ export default function MloDashboardPage() {
           <button
             onClick={() => setTier2(null)}
             className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
-              !tier2 ? 'bg-gray-700 text-white' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+              !tier2 ? 'bg-gray-700 text-white' : 'bg-surface-alt text-ink-subtle hover:bg-gray-100'
             }`}
           >
             All
@@ -476,8 +476,8 @@ export default function MloDashboardPage() {
                 tier2 === status
                   ? 'bg-gray-700 text-white'
                   : count > 0
-                    ? 'bg-gray-50 text-gray-500 hover:bg-gray-100'
-                    : 'bg-gray-50 text-gray-300'
+                    ? 'bg-surface-alt text-ink-subtle hover:bg-gray-100'
+                    : 'bg-surface-alt text-gray-300'
               }`}
             >
               {STATUS_LABELS[status] || status}
@@ -495,8 +495,8 @@ export default function MloDashboardPage() {
       )}
 
       {filteredLoans.length === 0 && !error ? (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-6 py-12 text-center">
-          <p className="text-gray-400 text-sm">
+        <div className="bg-white rounded-nr-xl border border-gray-200 shadow-nr-sm px-6 py-12 text-center">
+          <p className="text-ink-subtle text-sm">
             {loans.length === 0
               ? 'No loan applications yet. They will appear here when borrowers apply.'
               : search
@@ -515,7 +515,7 @@ export default function MloDashboardPage() {
             onLoanUpdate={handleLoanUpdate}
           />
           {/* Pagination controls */}
-          <div className="flex items-center justify-between mt-3 text-sm text-gray-500">
+          <div className="flex items-center justify-between mt-3 text-sm text-ink-subtle">
             <div className="flex items-center gap-2">
               <span>Show</span>
               <select

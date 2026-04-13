@@ -12,7 +12,7 @@ const COLUMNS = [
   { key: 'contacted', label: 'Contacted', color: 'border-amber-400', bg: 'bg-amber-50' },
   { key: 'qualified', label: 'Qualified', color: 'border-green-400', bg: 'bg-green-50' },
   { key: 'quoted', label: 'Quoted', color: 'border-cyan-400', bg: 'bg-cyan-50' },
-  { key: 'closed', label: 'Closed', color: 'border-gray-400', bg: 'bg-gray-50' },
+  { key: 'closed', label: 'Closed', color: 'border-gray-400', bg: 'bg-surface-alt' },
 ];
 
 function daysAgo(dateStr) {
@@ -23,7 +23,7 @@ function daysAgo(dateStr) {
 function ageColor(days) {
   if (days >= 14) return 'text-red-600 bg-red-50';
   if (days >= 7) return 'text-amber-600 bg-amber-50';
-  return 'text-gray-500 bg-gray-100';
+  return 'text-ink-subtle bg-gray-100';
 }
 
 export default function LeadKanban({ leads, onStatusChange }) {
@@ -85,7 +85,7 @@ export default function LeadKanban({ leads, onStatusChange }) {
         return (
           <div
             key={col.key}
-            className={`flex-1 min-w-[240px] max-w-[320px] rounded-xl border-t-4 ${col.color} bg-gray-50/50 transition-colors ${
+            className={`flex-1 min-w-[240px] max-w-[320px] rounded-nr-xl border-t-4 ${col.color} bg-surface-alt/50 transition-colors ${
               isDragOver ? 'bg-brand/5 ring-2 ring-brand/20' : ''
             }`}
             onDragOver={(e) => handleDragOver(e, col.key)}
@@ -93,8 +93,8 @@ export default function LeadKanban({ leads, onStatusChange }) {
             onDrop={(e) => handleDrop(e, col.key)}
           >
             <div className="px-3 py-2 flex items-center justify-between">
-              <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">{col.label}</h3>
-              <span className="text-xs text-gray-400 bg-white px-1.5 py-0.5 rounded">{colLeads.length}</span>
+              <h3 className="text-xs font-bold text-ink-subtle uppercase tracking-wider">{col.label}</h3>
+              <span className="text-xs text-ink-subtle bg-white px-1.5 py-0.5 rounded">{colLeads.length}</span>
             </div>
 
             <div className="px-2 pb-2 space-y-2 max-h-[600px] overflow-y-auto">
@@ -114,14 +114,14 @@ export default function LeadKanban({ leads, onStatusChange }) {
                     draggable={!isUpdating}
                     onDragStart={(e) => handleDragStart(e, lead)}
                     onDragEnd={handleDragEnd}
-                    className={`bg-white rounded-lg border border-gray-200 p-3 cursor-grab active:cursor-grabbing shadow-sm hover:shadow transition-all ${
+                    className={`bg-white rounded-lg border border-gray-200 p-3 cursor-grab active:cursor-grabbing shadow-nr-sm hover:shadow transition-all ${
                       isDraggingThis ? 'opacity-40 scale-95' : ''
                     } ${isUpdating ? 'opacity-60' : ''}`}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <Link
                         href={`/portal/mlo/leads/${lead.id}`}
-                        className="font-medium text-sm text-gray-900 hover:text-brand truncate"
+                        className="font-medium text-sm text-ink hover:text-brand truncate"
                         onClick={(e) => e.stopPropagation()}
                       >
                         {lead.name || lead.first_name || 'Unknown'}
@@ -133,7 +133,7 @@ export default function LeadKanban({ leads, onStatusChange }) {
                       )}
                     </div>
 
-                    <div className="flex items-center gap-2 mt-1.5 text-xs text-gray-500">
+                    <div className="flex items-center gap-2 mt-1.5 text-xs text-ink-subtle">
                       {lead.source && (
                         <span className="truncate">{lead.source.replace(/_/g, ' ')}</span>
                       )}
@@ -143,7 +143,7 @@ export default function LeadKanban({ leads, onStatusChange }) {
                     </div>
 
                     {lead.loan_purpose && (
-                      <div className="mt-1.5 text-xs text-gray-400 capitalize">
+                      <div className="mt-1.5 text-xs text-ink-subtle capitalize">
                         {lead.loan_purpose.replace('_', ' ')}
                         {lead.loan_amount && ` — $${Number(lead.loan_amount).toLocaleString()}`}
                       </div>

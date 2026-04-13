@@ -41,14 +41,14 @@ function PhonePopoutInner() {
   return (
     <div className="flex flex-col h-screen bg-white">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/80 flex items-center gap-3">
+      <div className="px-4 py-3 border-b border-gray-100 bg-surface-alt/80 flex items-center gap-3">
         <svg className="w-[18px] h-[18px] text-brand flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
         </svg>
         <h3 className="text-sm font-bold flex-1">Phone</h3>
         <div className="flex items-center gap-1.5">
           <span className={`w-2 h-2 rounded-full ${deviceReady ? 'bg-green-500' : 'bg-gray-300'}`} />
-          <span className="text-[10px] text-gray-400">{deviceReady ? 'Online' : 'Connecting...'}</span>
+          <span className="text-[10px] text-ink-subtle">{deviceReady ? 'Online' : 'Connecting...'}</span>
         </div>
       </div>
 
@@ -66,14 +66,14 @@ function PhonePopoutInner() {
             </span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-gray-900 truncate">
+            <p className="text-xs font-semibold text-ink truncate">
               {selectedContact.first_name} {selectedContact.last_name}
             </p>
-            <p className="text-[10px] text-gray-500 truncate">{selectedContact.phone}</p>
+            <p className="text-[10px] text-ink-subtle truncate">{selectedContact.phone}</p>
           </div>
           <button
             onClick={() => setSelectedContact(null)}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+            className="p-1.5 rounded-lg text-ink-subtle hover:text-ink-mid hover:bg-gray-100 transition-colors"
             title="Clear"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -106,7 +106,7 @@ function PhonePopoutInner() {
             className={`flex-1 py-2.5 text-xs font-medium text-center transition-colors border-b-2 ${
               activeTab === tab.id
                 ? 'text-brand border-brand'
-                : 'text-gray-400 border-transparent hover:text-gray-600'
+                : 'text-ink-subtle border-transparent hover:text-ink-mid'
             }`}
           >
             {tab.label}
@@ -141,7 +141,7 @@ function PhonePopoutInner() {
                 <svg className="w-10 h-10 text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                 </svg>
-                <p className="text-xs text-gray-400">Select a contact to start texting</p>
+                <p className="text-xs text-ink-subtle">Select a contact to start texting</p>
               </div>
             )}
           </div>
@@ -156,7 +156,7 @@ function PhonePopoutInner() {
                 <svg className="w-10 h-10 text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
-                <p className="text-xs text-gray-400">Search and select a contact</p>
+                <p className="text-xs text-ink-subtle">Search and select a contact</p>
               </div>
             )}
           </div>

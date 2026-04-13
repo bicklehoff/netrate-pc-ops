@@ -30,10 +30,10 @@ export default function IncomingCallPopup() {
 
           <div className="flex-1 min-w-0">
             <p className="text-xs font-medium text-green-600 uppercase tracking-wide">Incoming Call</p>
-            <p className="font-semibold text-gray-900 truncate">
+            <p className="font-semibold text-ink truncate">
               {callerInfo?.name || 'Unknown Caller'}
             </p>
-            <p className="text-sm text-gray-500">{callerInfo?.phone || ''}</p>
+            <p className="text-sm text-ink-subtle">{callerInfo?.phone || ''}</p>
           </div>
         </div>
 
@@ -41,13 +41,13 @@ export default function IncomingCallPopup() {
         <div className="flex gap-3">
           <button
             onClick={rejectCall}
-            className="flex-1 py-2.5 rounded-xl bg-red-50 text-red-600 font-medium text-sm hover:bg-red-100 transition-colors"
+            className="flex-1 py-2.5 rounded-nr-xl bg-red-50 text-red-600 font-medium text-sm hover:bg-red-100 transition-colors"
           >
             Decline
           </button>
           <button
             onClick={acceptCall}
-            className="flex-1 py-2.5 rounded-xl bg-green-500 text-white font-medium text-sm hover:bg-green-600 transition-colors"
+            className="flex-1 py-2.5 rounded-nr-xl bg-green-500 text-white font-medium text-sm hover:bg-green-600 transition-colors"
           >
             Accept
           </button>

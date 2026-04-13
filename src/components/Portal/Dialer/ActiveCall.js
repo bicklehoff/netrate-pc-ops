@@ -37,7 +37,7 @@ export default function ActiveCall() {
   }[callState];
 
   return (
-    <div className="bg-brand/5 border border-brand/20 rounded-xl p-4">
+    <div className="bg-brand/5 border border-brand/20 rounded-nr-xl p-4">
       {/* Caller info */}
       <div className="text-center mb-3">
         <div className="w-12 h-12 mx-auto bg-brand/10 rounded-full flex items-center justify-center mb-2">
@@ -45,11 +45,11 @@ export default function ActiveCall() {
             <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
           </svg>
         </div>
-        <p className="font-semibold text-gray-900 text-sm">
+        <p className="font-semibold text-ink text-sm">
           {callerInfo?.name || callerInfo?.phone || 'Unknown'}
         </p>
         {callerInfo?.name && callerInfo?.phone && (
-          <p className="text-xs text-gray-500">{callerInfo.phone}</p>
+          <p className="text-xs text-ink-subtle">{callerInfo.phone}</p>
         )}
         <p className={`text-sm mt-1 font-mono ${callState === IN_PROGRESS ? 'text-green-600' : 'text-amber-600'}`}>
           {statusLabel}
@@ -64,7 +64,7 @@ export default function ActiveCall() {
           className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
             isMuted
               ? 'bg-red-100 text-red-600'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              : 'bg-gray-100 text-ink-mid hover:bg-gray-200'
           }`}
           title={isMuted ? 'Unmute' : 'Mute'}
         >
@@ -85,7 +85,7 @@ export default function ActiveCall() {
           className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
             showDialPad
               ? 'bg-brand/10 text-brand'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              : 'bg-gray-100 text-ink-mid hover:bg-gray-200'
           }`}
           title="Dial Pad"
         >

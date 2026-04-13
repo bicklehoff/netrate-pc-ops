@@ -113,7 +113,7 @@ export default function Step5Declarations({ onNext, onBack }) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
-      <div className="bg-white rounded-xl border border-gray-200 p-8 shadow-sm space-y-6">
+      <div className="bg-white rounded-nr-xl border border-gray-200 p-8 shadow-nr-sm space-y-6">
 
         {hasCoBorrowers && (
           <BorrowerTabs
@@ -127,13 +127,13 @@ export default function Step5Declarations({ onNext, onBack }) {
         {/* ── Primary Borrower Declarations ────────────────────── */}
         {(!hasCoBorrowers || activeTab === 'primary') && (
           <>
-            <p className="text-sm text-gray-500 -mt-1">
+            <p className="text-sm text-ink-subtle -mt-1">
               Please answer these questions honestly. They are required on all mortgage applications per federal guidelines.
             </p>
 
             {/* ─── Citizenship (moved to top) ────────────────────────── */}
             <div>
-              <h3 className="text-sm font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
+              <h3 className="text-sm font-semibold text-ink mb-4 pb-2 border-b border-gray-200">
                 Citizenship
               </h3>
               <SelectField
@@ -148,7 +148,7 @@ export default function Step5Declarations({ onNext, onBack }) {
 
             {/* ─── Section 5a: About this Property and Your Money ───── */}
             <div>
-              <h3 className="text-sm font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
+              <h3 className="text-sm font-semibold text-ink mb-4 pb-2 border-b border-gray-200">
                 About this Property and Your Money
               </h3>
               <div className="space-y-5">
@@ -171,8 +171,8 @@ export default function Step5Declarations({ onNext, onBack }) {
                       watch={watch}
                       setValue={setValue}
                     />
-                    <p className="text-xs text-gray-400 mt-2 ml-0.5">
-                      This does <strong className="font-medium text-gray-500">not</strong> include
+                    <p className="text-xs text-ink-subtle mt-2 ml-0.5">
+                      This does <strong className="font-medium text-ink-subtle">not</strong> include
                       the home you are currently buying or refinancing. It means any <em>other</em> property
                       you have owned, co-owned, or been on the title of during the past three
                       years &mdash; including properties you sold, rented out, or held as an investment.
@@ -263,7 +263,7 @@ export default function Step5Declarations({ onNext, onBack }) {
 
             {/* ─── Section 5b: About Your Finances ──────────────────── */}
             <div>
-              <h3 className="text-sm font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
+              <h3 className="text-sm font-semibold text-ink mb-4 pb-2 border-b border-gray-200">
                 About Your Finances
               </h3>
               <div className="space-y-5">
@@ -315,7 +315,7 @@ export default function Step5Declarations({ onNext, onBack }) {
             <button
               type="button"
               onClick={onBack}
-              className="text-gray-500 hover:text-gray-700 px-4 py-2.5 font-medium transition-colors"
+              className="text-ink-subtle hover:text-ink-mid px-4 py-2.5 font-medium transition-colors"
             >
               &larr; Back
             </button>
@@ -349,17 +349,17 @@ function CoBorrowerDeclarationsSection({ coBorrower, onUpdate, isPurchase }) {
 
   return (
     <div className="space-y-6">
-      <p className="text-sm text-gray-500 -mt-1">
+      <p className="text-sm text-ink-subtle -mt-1">
         Please answer these questions for {name}.
       </p>
 
       {/* Citizenship */}
       <div>
-        <h3 className="text-sm font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
+        <h3 className="text-sm font-semibold text-ink mb-4 pb-2 border-b border-gray-200">
           Citizenship
         </h3>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-ink-mid mb-1">
             Citizenship Status <span className="text-red-400">*</span>
           </label>
           <select
@@ -377,7 +377,7 @@ function CoBorrowerDeclarationsSection({ coBorrower, onUpdate, isPurchase }) {
 
       {/* Section 5a — Property & Money */}
       <div>
-        <h3 className="text-sm font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
+        <h3 className="text-sm font-semibold text-ink mb-4 pb-2 border-b border-gray-200">
           About this Property and {name}&apos;s Money
         </h3>
         <div className="space-y-5">
@@ -398,7 +398,7 @@ function CoBorrowerDeclarationsSection({ coBorrower, onUpdate, isPurchase }) {
           {(decl.primaryResidence ?? true) && decl.priorOwnership3Years && (
             <div className="grid grid-cols-2 gap-4 pl-4 border-l-2 border-gray-100">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">A2. Type of property owned</label>
+                <label className="block text-sm font-medium text-ink-mid mb-1">A2. Type of property owned</label>
                 <select
                   value={decl.priorPropertyType || ''}
                   onChange={(e) => setDecl('priorPropertyType', e.target.value)}
@@ -411,7 +411,7 @@ function CoBorrowerDeclarationsSection({ coBorrower, onUpdate, isPurchase }) {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">How was title held?</label>
+                <label className="block text-sm font-medium text-ink-mid mb-1">How was title held?</label>
                 <select
                   value={decl.priorPropertyTitleHeld || ''}
                   onChange={(e) => setDecl('priorPropertyTitleHeld', e.target.value)}
@@ -444,7 +444,7 @@ function CoBorrowerDeclarationsSection({ coBorrower, onUpdate, isPurchase }) {
 
       {/* Section 5b — Finances */}
       <div>
-        <h3 className="text-sm font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">
+        <h3 className="text-sm font-semibold text-ink mb-4 pb-2 border-b border-gray-200">
           About {name}&apos;s Finances
         </h3>
         <div className="space-y-5">
@@ -459,7 +459,7 @@ function CoBorrowerDeclarationsSection({ coBorrower, onUpdate, isPurchase }) {
 
           {decl.bankruptcy && (
             <div className="pl-4 border-l-2 border-gray-100">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Bankruptcy chapter</label>
+              <label className="block text-sm font-medium text-ink-mid mb-1">Bankruptcy chapter</label>
               <select
                 value={decl.bankruptcyChapter || ''}
                 onChange={(e) => setDecl('bankruptcyChapter', e.target.value)}
@@ -526,10 +526,10 @@ function HmdaSection({ data, updateData }) {
 
   return (
     <div>
-      <h3 className="text-sm font-semibold text-gray-900 mb-2 pb-2 border-b border-gray-200">
+      <h3 className="text-sm font-semibold text-ink mb-2 pb-2 border-b border-gray-200">
         Government Monitoring (HMDA)
       </h3>
-      <p className="text-xs text-gray-400 mb-5">
+      <p className="text-xs text-ink-subtle mb-5">
         The following information is requested by the federal government in order to monitor compliance
         with federal statutes that prohibit discrimination in housing. You are not required to furnish
         this information, but are encouraged to do so. The law provides that a lender may not discriminate
@@ -538,7 +538,7 @@ function HmdaSection({ data, updateData }) {
 
       {/* Ethnicity */}
       <div className="mb-5">
-        <label className="block text-sm font-medium text-gray-700 mb-2">Ethnicity</label>
+        <label className="block text-sm font-medium text-ink-mid mb-2">Ethnicity</label>
         <div className="space-y-2">
           {ETHNICITY_OPTIONS.map((opt) => (
             <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
@@ -550,7 +550,7 @@ function HmdaSection({ data, updateData }) {
                 onChange={() => updateData({ hmdaEthnicity: opt.value })}
                 className="w-4 h-4 text-brand focus:ring-brand border-gray-300"
               />
-              <span className="text-sm text-gray-700">{opt.label}</span>
+              <span className="text-sm text-ink-mid">{opt.label}</span>
             </label>
           ))}
         </div>
@@ -558,7 +558,7 @@ function HmdaSection({ data, updateData }) {
 
       {/* Race */}
       <div className="mb-5">
-        <label className="block text-sm font-medium text-gray-700 mb-2">Race <span className="text-xs text-gray-400 font-normal">(select all that apply)</span></label>
+        <label className="block text-sm font-medium text-ink-mid mb-2">Race <span className="text-xs text-ink-subtle font-normal">(select all that apply)</span></label>
         <div className="space-y-2">
           {RACE_OPTIONS.map((opt) => (
             <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
@@ -568,7 +568,7 @@ function HmdaSection({ data, updateData }) {
                 onChange={() => handleRaceToggle(opt.value)}
                 className="w-4 h-4 rounded text-brand focus:ring-brand border-gray-300"
               />
-              <span className="text-sm text-gray-700">{opt.label}</span>
+              <span className="text-sm text-ink-mid">{opt.label}</span>
             </label>
           ))}
         </div>
@@ -576,7 +576,7 @@ function HmdaSection({ data, updateData }) {
 
       {/* Sex */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Sex</label>
+        <label className="block text-sm font-medium text-ink-mid mb-2">Sex</label>
         <div className="space-y-2">
           {SEX_OPTIONS.map((opt) => (
             <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
@@ -588,7 +588,7 @@ function HmdaSection({ data, updateData }) {
                 onChange={() => updateData({ hmdaSex: opt.value })}
                 className="w-4 h-4 text-brand focus:ring-brand border-gray-300"
               />
-              <span className="text-sm text-gray-700">{opt.label}</span>
+              <span className="text-sm text-ink-mid">{opt.label}</span>
             </label>
           ))}
         </div>
@@ -601,7 +601,7 @@ function HmdaSection({ data, updateData }) {
 function CoBorrowerYesNo({ label, value, onChange }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>
+      <label className="block text-sm font-medium text-ink-mid mb-2">{label}</label>
       <div className="flex gap-2">
         <button
           type="button"
@@ -609,7 +609,7 @@ function CoBorrowerYesNo({ label, value, onChange }) {
           className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors border ${
             value === true
               ? 'bg-brand text-white border-brand'
-              : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'
+              : 'bg-white text-ink-mid border-gray-300 hover:border-gray-400'
           }`}
         >
           Yes
@@ -620,7 +620,7 @@ function CoBorrowerYesNo({ label, value, onChange }) {
           className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors border ${
             value === false
               ? 'bg-brand text-white border-brand'
-              : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'
+              : 'bg-white text-ink-mid border-gray-300 hover:border-gray-400'
           }`}
         >
           No

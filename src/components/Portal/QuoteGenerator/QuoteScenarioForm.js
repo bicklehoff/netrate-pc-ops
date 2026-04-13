@@ -232,8 +232,8 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       {/* Borrower Info */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-        <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider mb-4">Borrower</h3>
+      <div className="bg-white rounded-nr-xl border border-gray-200 p-5 shadow-nr-sm">
+        <h3 className="text-xs font-bold text-ink uppercase tracking-wider mb-4">Borrower</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Field label="Name" value={scenario.borrower_name} onChange={v => update('borrower_name', v)} placeholder="Borrower name" />
           <Field label="Email" value={scenario.borrower_email} onChange={v => update('borrower_email', v)} placeholder="email@example.com" type="email" />
@@ -242,8 +242,8 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
       </div>
 
       {/* Loan Scenario */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-        <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider mb-4">Loan Scenario</h3>
+      <div className="bg-white rounded-nr-xl border border-gray-200 p-5 shadow-nr-sm">
+        <h3 className="text-xs font-bold text-ink uppercase tracking-wider mb-4">Loan Scenario</h3>
 
         {/* Purpose + Type + Term + Product Type */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
@@ -311,7 +311,7 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
           <Field label="Credit Score" value={scenario.fico || ''} onChange={v => update('fico', v === '' ? '' : Number(v))} type="number" />
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">
+            <label className="block text-xs font-medium text-ink-subtle mb-1">
               Zip Code {zipLoading && <span className="text-cyan-500 ml-1">...</span>}
             </label>
             <input
@@ -328,7 +328,7 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
             onChange({ ...scenario, state: v, county: '', ...deriveFromClosing(scenario.closing_date, v, scenario.purpose) });
           }} />
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">County</label>
+            <label className="block text-xs font-medium text-ink-subtle mb-1">County</label>
             <select
               value={scenario.county}
               onChange={e => update('county', e.target.value)}
@@ -370,8 +370,8 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
 
       {/* Refi-specific */}
       {!isPurchase && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-          <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider mb-4">Current Loan</h3>
+        <div className="bg-white rounded-nr-xl border border-gray-200 p-5 shadow-nr-sm">
+          <h3 className="text-xs font-bold text-ink uppercase tracking-wider mb-4">Current Loan</h3>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Field label="Current Rate" value={scenario.current_rate} onChange={v => update('current_rate', v)} type="number" step="0.125" suffix="%" />
             <DollarField label="Current Balance" value={scenario.current_balance} onChange={v => update('current_balance', v)} />
@@ -382,10 +382,10 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
       )}
 
       {/* Summary bar + Submit */}
-      <div className="flex items-center justify-between bg-gray-900 text-white rounded-xl px-6 py-4">
+      <div className="flex items-center justify-between bg-gray-900 text-white rounded-nr-xl px-6 py-4">
         <div className="flex items-center gap-6 text-sm">
           <div>
-            <span className="text-gray-400 text-xs">Loan</span>
+            <span className="text-ink-subtle text-xs">Loan</span>
             <div className="font-mono font-bold">${fmt(effectiveLoan)}</div>
           </div>
           {scenario.loan_type === 'fha' && effectiveLoan > 0 && (
@@ -395,15 +395,15 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
             </div>
           )}
           <div>
-            <span className="text-gray-400 text-xs">LTV</span>
+            <span className="text-ink-subtle text-xs">LTV</span>
             <div className="font-mono font-bold">{effectiveLtv}%</div>
           </div>
           <div>
-            <span className="text-gray-400 text-xs">FICO</span>
+            <span className="text-ink-subtle text-xs">FICO</span>
             <div className="font-mono font-bold">{scenario.fico}</div>
           </div>
           <div>
-            <span className="text-gray-400 text-xs">Type</span>
+            <span className="text-ink-subtle text-xs">Type</span>
             <div className="font-bold uppercase text-xs">{scenario.loan_type}</div>
           </div>
           <div className="border-l border-gray-700 pl-4 flex items-center gap-4">
@@ -451,7 +451,7 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
 function Field({ label, value, onChange, type = 'text', placeholder, disabled, suffix, step }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
+      <label className="block text-xs font-medium text-ink-subtle mb-1">{label}</label>
       <div className="relative">
         <input
           type={type}
@@ -460,9 +460,9 @@ function Field({ label, value, onChange, type = 'text', placeholder, disabled, s
           placeholder={placeholder}
           disabled={disabled}
           step={step}
-          className="w-full rounded border-gray-300 text-sm focus:ring-cyan-500 focus:border-cyan-500 disabled:bg-gray-50 disabled:text-gray-400"
+          className="w-full rounded border-gray-300 text-sm focus:ring-cyan-500 focus:border-cyan-500 disabled:bg-surface-alt disabled:text-ink-subtle"
         />
-        {suffix && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">{suffix}</span>}
+        {suffix && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-ink-subtle">{suffix}</span>}
       </div>
     </div>
   );
@@ -474,9 +474,9 @@ function DollarField({ label, value, onChange, disabled }) {
 
   return (
     <div>
-      <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
+      <label className="block text-xs font-medium text-ink-subtle mb-1">{label}</label>
       <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">$</span>
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-ink-subtle">$</span>
         <input
           type={focused ? 'number' : 'text'}
           value={display}
@@ -484,7 +484,7 @@ function DollarField({ label, value, onChange, disabled }) {
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           disabled={disabled}
-          className="w-full pl-7 rounded border-gray-300 text-sm font-mono focus:ring-cyan-500 focus:border-cyan-500 disabled:bg-gray-50 disabled:text-gray-400"
+          className="w-full pl-7 rounded border-gray-300 text-sm font-mono focus:ring-cyan-500 focus:border-cyan-500 disabled:bg-surface-alt disabled:text-ink-subtle"
         />
       </div>
     </div>
@@ -494,7 +494,7 @@ function DollarField({ label, value, onChange, disabled }) {
 function SelectField({ label, value, options, onChange }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
+      <label className="block text-xs font-medium text-ink-subtle mb-1">{label}</label>
       <select
         value={value}
         onChange={e => onChange(e.target.value)}

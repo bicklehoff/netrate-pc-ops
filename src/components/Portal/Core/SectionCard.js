@@ -17,7 +17,7 @@ export default function SectionCard({
   const [open, setOpen] = useState(defaultOpen);
 
   return (
-    <div className={`bg-white rounded-xl border border-gray-200 shadow-sm ${className}`}>
+    <div className={`bg-white rounded-nr-xl border border-gray-200 shadow-nr-sm ${className}`}>
       {/* Header */}
       <button
         type="button"
@@ -25,8 +25,8 @@ export default function SectionCard({
         className="w-full flex items-center justify-between px-6 py-4 text-left"
       >
         <div className="flex items-center gap-2">
-          {icon && <span className="text-gray-400">{icon}</span>}
-          <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">
+          {icon && <span className="text-ink-subtle">{icon}</span>}
+          <h3 className="text-sm font-semibold text-ink uppercase tracking-wider">
             {title}
           </h3>
           {badge && (
@@ -42,7 +42,7 @@ export default function SectionCard({
             </div>
           )}
           <svg
-            className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+            className={`w-4 h-4 text-ink-subtle transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"

@@ -136,7 +136,7 @@ export default function MloNav() {
               className={`flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors whitespace-nowrap ${
                 active
                   ? 'text-brand bg-white/10 border-l-2 border-brand'
-                  : 'text-gray-400 hover:text-white hover:bg-white/5 border-l-2 border-transparent'
+                  : 'text-ink-subtle hover:text-white hover:bg-white/5 border-l-2 border-transparent'
               }`}
               title={item.label}
             >
@@ -151,7 +151,7 @@ export default function MloNav() {
       <div className="py-4 border-t border-white/10">
         <button
           onClick={() => signOut({ callbackUrl: '/portal/mlo/login' })}
-          className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-500 hover:text-red-400 hover:bg-white/5 transition-colors whitespace-nowrap w-full"
+          className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-ink-subtle hover:text-red-400 hover:bg-white/5 transition-colors whitespace-nowrap w-full"
           title="Sign Out"
         >
           <span className="flex-shrink-0">

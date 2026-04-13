@@ -65,18 +65,18 @@ export default function BorrowerSection({ loan, updateLoanField }) {
       <SectionCard title="Borrower" icon="👤" defaultOpen={true}>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           <div>
-            <span className="block text-xs text-gray-400">Name</span>
-            <span className="text-sm font-medium text-gray-800">
+            <span className="block text-xs text-ink-subtle">Name</span>
+            <span className="text-sm font-medium text-ink">
               {borrower.first_name} {borrower.last_name}
             </span>
           </div>
           <div>
-            <span className="block text-xs text-gray-400">Email</span>
-            <span className="text-sm text-gray-800">{borrower.email}</span>
+            <span className="block text-xs text-ink-subtle">Email</span>
+            <span className="text-sm text-ink">{borrower.email}</span>
           </div>
           <div>
-            <span className="block text-xs text-gray-400">Phone</span>
-            <span className="text-sm text-gray-800">
+            <span className="block text-xs text-ink-subtle">Phone</span>
+            <span className="text-sm text-ink">
               {borrower.phone || '—'}
               {borrower.phone_verified && (
                 <span className="ml-1 text-green-500 text-xs">✓ verified</span>
@@ -86,15 +86,15 @@ export default function BorrowerSection({ loan, updateLoanField }) {
 
           {/* SSN with reveal */}
           <div className="col-span-2">
-            <span className="block text-xs text-gray-400 mb-0.5">SSN</span>
+            <span className="block text-xs text-ink-subtle mb-0.5">SSN</span>
             <div className="flex items-center gap-2">
               {ssnRevealed ? (
-                <span className="font-mono text-sm text-gray-900 bg-yellow-50 px-2 py-0.5 rounded border border-yellow-200">
+                <span className="font-mono text-sm text-ink bg-yellow-50 px-2 py-0.5 rounded border border-yellow-200">
                   {ssnRevealed}
                 </span>
               ) : (
                 <>
-                  <span className="text-sm text-gray-700 font-mono">
+                  <span className="text-sm text-ink-mid font-mono">
                     ···-··-{borrower.ssn_last_four}
                   </span>
                   <button
@@ -110,8 +110,8 @@ export default function BorrowerSection({ loan, updateLoanField }) {
           </div>
 
           <div>
-            <span className="block text-xs text-gray-400">Member Since</span>
-            <span className="text-sm text-gray-800">
+            <span className="block text-xs text-ink-subtle">Member Since</span>
+            <span className="text-sm text-ink">
               {new Date(borrower.created_at).toLocaleDateString('en-US', {
                 month: 'short', day: 'numeric', year: 'numeric',
               })}
@@ -132,7 +132,7 @@ export default function BorrowerSection({ loan, updateLoanField }) {
                 className={`px-3 py-2 text-sm border-b-2 transition-colors ${
                   activeBorrowerTab === i
                     ? 'border-brand text-brand font-medium'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                    : 'border-transparent text-ink-subtle hover:text-ink-mid'
                 }`}
               >
                 {lb.borrowerType === 'co_borrower' ? 'Co-Borrower' : lb.borrowerType}
@@ -147,34 +147,34 @@ export default function BorrowerSection({ loan, updateLoanField }) {
             return (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                 <div>
-                  <span className="block text-xs text-gray-400">Relationship</span>
-                  <span className="text-gray-800 capitalize">{lb.relationship || '—'}</span>
+                  <span className="block text-xs text-ink-subtle">Relationship</span>
+                  <span className="text-ink capitalize">{lb.relationship || '—'}</span>
                 </div>
                 <div>
-                  <span className="block text-xs text-gray-400">Marital Status</span>
-                  <span className="text-gray-800 capitalize">{lb.maritalStatus || '—'}</span>
+                  <span className="block text-xs text-ink-subtle">Marital Status</span>
+                  <span className="text-ink capitalize">{lb.maritalStatus || '—'}</span>
                 </div>
                 <div>
-                  <span className="block text-xs text-gray-400">Employment</span>
-                  <span className="text-gray-800 capitalize">{lb.employment_status || '—'}</span>
+                  <span className="block text-xs text-ink-subtle">Employment</span>
+                  <span className="text-ink capitalize">{lb.employment_status || '—'}</span>
                 </div>
                 {lb.employer_name && (
                   <div>
-                    <span className="block text-xs text-gray-400">Employer</span>
-                    <span className="text-gray-800">{lb.employer_name}</span>
+                    <span className="block text-xs text-ink-subtle">Employer</span>
+                    <span className="text-ink">{lb.employer_name}</span>
                   </div>
                 )}
                 {lb.monthly_base_income && (
                   <div>
-                    <span className="block text-xs text-gray-400">Monthly Income</span>
-                    <span className="text-gray-800">
+                    <span className="block text-xs text-ink-subtle">Monthly Income</span>
+                    <span className="text-ink">
                       ${Number(lb.monthly_base_income).toLocaleString()}
                     </span>
                   </div>
                 )}
                 <div className="col-span-2">
-                  <span className="block text-xs text-gray-400">Current Address</span>
-                  <span className="text-gray-800">{formatAddress(lb.currentAddress)}</span>
+                  <span className="block text-xs text-ink-subtle">Current Address</span>
+                  <span className="text-ink">{formatAddress(lb.currentAddress)}</span>
                 </div>
               </div>
             );
@@ -261,18 +261,18 @@ export default function BorrowerSection({ loan, updateLoanField }) {
       <SectionCard title="Address" icon="📍" defaultOpen={false}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
           <div>
-            <span className="block text-xs text-gray-400 mb-0.5">Current Address</span>
-            <span className="text-gray-800">{formatAddress(loan.currentAddress)}</span>
+            <span className="block text-xs text-ink-subtle mb-0.5">Current Address</span>
+            <span className="text-ink">{formatAddress(loan.currentAddress)}</span>
             {(loan.addressYears || loan.addressMonths) && (
-              <span className="block text-xs text-gray-400 mt-0.5">
+              <span className="block text-xs text-ink-subtle mt-0.5">
                 {loan.addressYears ? `${loan.addressYears}y` : ''}{' '}
                 {loan.addressMonths ? `${loan.addressMonths}m` : ''}
               </span>
             )}
           </div>
           <div>
-            <span className="block text-xs text-gray-400 mb-0.5">Mailing Address</span>
-            <span className="text-gray-800">{formatAddress(loan.mailingAddress)}</span>
+            <span className="block text-xs text-ink-subtle mb-0.5">Mailing Address</span>
+            <span className="text-ink">{formatAddress(loan.mailingAddress)}</span>
           </div>
         </div>
       </SectionCard>

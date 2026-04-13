@@ -75,7 +75,7 @@ function SmsInbox() {
         {/* Search */}
         <div className="p-3 border-b border-gray-100">
           <div className="relative">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-subtle" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             <input
@@ -95,7 +95,7 @@ function SmsInbox() {
               <div className="w-6 h-6 border-2 border-gray-300 border-t-brand rounded-full animate-spin" />
             </div>
           ) : threads.length === 0 ? (
-            <div className="text-center py-12 text-gray-400 text-sm">
+            <div className="text-center py-12 text-ink-subtle text-sm">
               No messages yet
             </div>
           ) : (
@@ -103,7 +103,7 @@ function SmsInbox() {
               <button
                 key={thread.contact_id || thread.phone}
                 onClick={() => setSelectedThread(thread)}
-                className={`w-full text-left px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors ${
+                className={`w-full text-left px-4 py-3 border-b border-gray-50 hover:bg-surface-alt transition-colors ${
                   selectedThread?.contact_id === thread.contact_id &&
                   selectedThread?.phone === thread.phone
                     ? 'bg-brand/5 border-l-2 border-l-brand'
@@ -112,22 +112,22 @@ function SmsInbox() {
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">
+                    <p className="text-sm font-medium text-ink truncate">
                       {thread.contact_name || thread.phone || 'Unknown'}
                     </p>
-                    <p className="text-xs text-gray-500 truncate mt-0.5">
+                    <p className="text-xs text-ink-subtle truncate mt-0.5">
                       {thread.last_direction === 'outbound' && (
-                        <span className="text-gray-400">You: </span>
+                        <span className="text-ink-subtle">You: </span>
                       )}
                       {thread.last_message}
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                    <span className="text-[11px] text-gray-400">
+                    <span className="text-[11px] text-ink-subtle">
                       {formatRelativeTime(thread.last_message_at)}
                     </span>
                     {thread.message_count > 0 && (
-                      <span className="text-[10px] text-gray-400">
+                      <span className="text-[10px] text-ink-subtle">
                         {thread.message_count}
                       </span>
                     )}
@@ -151,10 +151,10 @@ function SmsInbox() {
                 </span>
               </div>
               <div>
-                <p className="text-sm font-semibold text-gray-900">
+                <p className="text-sm font-semibold text-ink">
                   {selectedThread.contact_name || 'Unknown Contact'}
                 </p>
-                <p className="text-xs text-gray-500">{selectedThread.phone}</p>
+                <p className="text-xs text-ink-subtle">{selectedThread.phone}</p>
               </div>
               {selectedThread.contact_id && (
                 <a
@@ -175,7 +175,7 @@ function SmsInbox() {
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-gray-400">
+          <div className="flex-1 flex items-center justify-center text-ink-subtle">
             <div className="text-center">
               <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -231,14 +231,14 @@ function CallHistory() {
               className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
                 dirFilter === f.value
                   ? 'bg-brand text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  : 'bg-gray-100 text-ink-mid hover:bg-gray-200'
               }`}
             >
               {f.label}
             </button>
           ))}
         </div>
-        <span className="text-xs text-gray-400 ml-auto">{total} calls</span>
+        <span className="text-xs text-ink-subtle ml-auto">{total} calls</span>
       </div>
 
       {/* Call list */}
@@ -248,10 +248,10 @@ function CallHistory() {
             <div className="w-6 h-6 border-2 border-gray-300 border-t-brand rounded-full animate-spin" />
           </div>
         ) : calls.length === 0 ? (
-          <div className="text-center py-12 text-gray-400 text-sm">No calls found</div>
+          <div className="text-center py-12 text-ink-subtle text-sm">No calls found</div>
         ) : (
           <table className="w-full">
-            <thead className="sticky top-0 bg-gray-50 text-xs text-gray-500 uppercase tracking-wider">
+            <thead className="sticky top-0 bg-surface-alt text-xs text-ink-subtle uppercase tracking-wider">
               <tr>
                 <th className="text-left px-4 py-2 font-medium">Contact</th>
                 <th className="text-left px-4 py-2 font-medium">Direction</th>
@@ -264,7 +264,7 @@ function CallHistory() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {calls.map((call) => (
-                <tr key={call.id} className="hover:bg-gray-50 transition-colors">
+                <tr key={call.id} className="hover:bg-surface-alt transition-colors">
                   <td className="px-4 py-3">
                     {call.contact ? (
                       <a
@@ -274,7 +274,7 @@ function CallHistory() {
                         {call.contact.first_name} {call.contact.last_name}
                       </a>
                     ) : (
-                      <span className="text-sm text-gray-400">Unknown</span>
+                      <span className="text-sm text-ink-subtle">Unknown</span>
                     )}
                   </td>
                   <td className="px-4 py-3">
@@ -295,7 +295,7 @@ function CallHistory() {
                       {call.direction}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 font-mono">
+                  <td className="px-4 py-3 text-sm text-ink-mid font-mono">
                     {call.direction === 'inbound' ? call.from_number : call.to_number}
                   </td>
                   <td className="px-4 py-3">
@@ -303,18 +303,18 @@ function CallHistory() {
                       call.status === 'completed' ? 'bg-green-50 text-green-700' :
                       call.status === 'no-answer' ? 'bg-yellow-50 text-yellow-700' :
                       call.status === 'busy' ? 'bg-red-50 text-red-700' :
-                      'bg-gray-100 text-gray-600'
+                      'bg-gray-100 text-ink-mid'
                     }`}>
                       {call.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">
+                  <td className="px-4 py-3 text-sm text-ink-mid">
                     {formatDuration(call.duration)}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-500">
+                  <td className="px-4 py-3 text-sm text-ink-subtle">
                     {formatDateTime(call.started_at)}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-500 max-w-[200px] truncate">
+                  <td className="px-4 py-3 text-sm text-ink-subtle max-w-[200px] truncate">
                     {call.notes?.[0]?.content || '—'}
                   </td>
                 </tr>
@@ -330,17 +330,17 @@ function CallHistory() {
           <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1}
-            className="text-sm text-gray-600 hover:text-brand disabled:text-gray-300"
+            className="text-sm text-ink-mid hover:text-brand disabled:text-gray-300"
           >
             ← Previous
           </button>
-          <span className="text-xs text-gray-400">
+          <span className="text-xs text-ink-subtle">
             Page {page} of {totalPages}
           </span>
           <button
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page === totalPages}
-            className="text-sm text-gray-600 hover:text-brand disabled:text-gray-300"
+            className="text-sm text-ink-mid hover:text-brand disabled:text-gray-300"
           >
             Next →
           </button>
@@ -355,9 +355,9 @@ export default function MessagesPage() {
   const [tab, setTab] = useState('sms');
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+    <div className="flex flex-col h-full bg-white rounded-nr-xl border border-gray-200 shadow-nr-sm overflow-hidden">
       {/* Tab bar */}
-      <div className="flex border-b border-gray-200 bg-gray-50">
+      <div className="flex border-b border-gray-200 bg-surface-alt">
         {[
           { id: 'sms', label: 'Messages', icon: (
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -376,7 +376,7 @@ export default function MessagesPage() {
             className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
               tab === t.id
                 ? 'text-brand border-brand bg-white'
-                : 'text-gray-500 border-transparent hover:text-gray-700 hover:bg-gray-100'
+                : 'text-ink-subtle border-transparent hover:text-ink-mid hover:bg-gray-100'
             }`}
           >
             {t.icon}

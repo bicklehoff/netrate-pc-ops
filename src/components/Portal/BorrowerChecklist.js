@@ -59,7 +59,7 @@ export default function BorrowerChecklist({ loan }) {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+      <div className="bg-white rounded-nr-xl border border-gray-200 p-6 shadow-nr-sm">
         <div className="animate-pulse space-y-3">
           <div className="h-5 bg-gray-200 rounded w-48" />
           <div className="h-8 bg-gray-100 rounded" />
@@ -74,9 +74,9 @@ export default function BorrowerChecklist({ loan }) {
   const progressPercent = summary.total > 0 ? Math.round((summary.received / summary.total) * 100) : 0;
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-      <h2 className="text-lg font-semibold text-gray-900 mb-1">Your Document Checklist</h2>
-      <p className="text-sm text-gray-500 mb-4">
+    <div className="bg-white rounded-nr-xl border border-gray-200 p-6 shadow-nr-sm">
+      <h2 className="text-lg font-semibold text-ink mb-1">Your Document Checklist</h2>
+      <p className="text-sm text-ink-subtle mb-4">
         {summary.needed > 0
           ? `${summary.needed} item${summary.needed !== 1 ? 's' : ''} still needed`
           : 'All documents received!'}
@@ -86,10 +86,10 @@ export default function BorrowerChecklist({ loan }) {
       {summary.total > 0 && (
         <div className="mb-5">
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-xs font-medium text-gray-500">
+            <span className="text-xs font-medium text-ink-subtle">
               {summary.received} of {summary.total} received
             </span>
-            <span className="text-xs font-medium text-gray-500">{progressPercent}%</span>
+            <span className="text-xs font-medium text-ink-subtle">{progressPercent}%</span>
           </div>
           <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
             <div
@@ -109,7 +109,7 @@ export default function BorrowerChecklist({ loan }) {
       )}
 
       {checklist.length === 0 ? (
-        <p className="text-gray-400 text-sm">No documents requested yet. We&apos;ll let you know when we need anything.</p>
+        <p className="text-ink-subtle text-sm">No documents requested yet. We&apos;ll let you know when we need anything.</p>
       ) : (
         <div className="space-y-4">
           {/* Still Needed */}
@@ -129,9 +129,9 @@ export default function BorrowerChecklist({ loan }) {
                         !
                       </span>
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-gray-800">{item.label}</p>
+                        <p className="text-sm font-medium text-ink">{item.label}</p>
                         {item.notes && (
-                          <p className="text-xs text-gray-500 mt-0.5">{item.notes}</p>
+                          <p className="text-xs text-ink-subtle mt-0.5">{item.notes}</p>
                         )}
                         {item.rejectedReason && (
                           <p className="text-xs text-red-600 mt-0.5">{item.rejectedReason}</p>
@@ -178,9 +178,9 @@ export default function BorrowerChecklist({ loan }) {
                       ✓
                     </span>
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-gray-700">{item.label}</p>
+                      <p className="text-sm font-medium text-ink-mid">{item.label}</p>
                       {item.fileName && (
-                        <p className="text-xs text-gray-400 mt-0.5">{item.fileName}</p>
+                        <p className="text-xs text-ink-subtle mt-0.5">{item.fileName}</p>
                       )}
                     </div>
                   </div>
@@ -212,7 +212,7 @@ export default function BorrowerChecklist({ loan }) {
             {uploading === 'general' ? 'Uploading...' : 'Upload additional document'}
           </span>
         </label>
-        <p className="text-xs text-gray-400 mt-1">PDF, PNG, or JPG accepted</p>
+        <p className="text-xs text-ink-subtle mt-1">PDF, PNG, or JPG accepted</p>
       </div>
     </div>
   );

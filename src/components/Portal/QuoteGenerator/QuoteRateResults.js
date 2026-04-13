@@ -128,21 +128,21 @@ export default function QuoteRateResults({ pricing, selectedRates, onSelectRates
     selectedRates.some(s => s.rate === r.rate && s.lender === r.lender && s.program === r.program);
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+    <div className="bg-white rounded-nr-xl border border-gray-200 shadow-nr-sm">
       {/* Header */}
       <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-bold text-gray-900">
+          <h3 className="text-sm font-bold text-ink">
             {viewMode === 'programs'
               ? `${programGroups.length} Eligible Programs`
               : `${results.length} Rates`
             }
           </h3>
-          <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-2 flex-wrap">
+          <p className="text-xs text-ink-subtle mt-0.5 flex items-center gap-2 flex-wrap">
             Effective: {pricing?.effectiveDate || 'N/A'} | All prices after LLPA adjustments
             {borrowerPaid && <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded font-medium">BORROWER-PAID (no comp)</span>}
             {escrowsWaived && <span className="px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded font-medium">ESCROWS WAIVED</span>}
-            <span className="relative group cursor-help text-gray-400 hover:text-gray-600">
+            <span className="relative group cursor-help text-ink-subtle hover:text-ink-mid">
               ℹ
               <span className="absolute bottom-full left-0 mb-1 w-64 p-2 bg-gray-900 text-white text-[10px] rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 leading-relaxed">
                 By default, all eligible products for your selected loan type are shown. Check &quot;First-Time Buyer&quot; to also include HomeReady and Home Possible products.
@@ -154,13 +154,13 @@ export default function QuoteRateResults({ pricing, selectedRates, onSelectRates
           <div className="flex bg-gray-100 rounded-lg p-0.5">
             <button
               onClick={() => setViewMode('programs')}
-              className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${viewMode === 'programs' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}
+              className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${viewMode === 'programs' ? 'bg-white text-ink shadow-nr-sm' : 'text-ink-subtle'}`}
             >
               Programs
             </button>
             <button
               onClick={() => setViewMode('all')}
-              className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${viewMode === 'all' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}
+              className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${viewMode === 'all' ? 'bg-white text-ink shadow-nr-sm' : 'text-ink-subtle'}`}
             >
               All Rates
             </button>
@@ -172,7 +172,7 @@ export default function QuoteRateResults({ pricing, selectedRates, onSelectRates
           >
             {loading ? 'Pricing...' : 'Re-price'}
           </button>
-          <span className="text-xs text-gray-400">{selectedRates.length}/3</span>
+          <span className="text-xs text-ink-subtle">{selectedRates.length}/3</span>
         </div>
       </div>
 
@@ -204,16 +204,16 @@ export default function QuoteRateResults({ pricing, selectedRates, onSelectRates
               <div key={g.program}>
                 {/* Program header row */}
                 <div
-                  className="px-6 py-3 flex items-center justify-between hover:bg-gray-50 cursor-pointer transition-colors"
+                  className="px-6 py-3 flex items-center justify-between hover:bg-surface-alt cursor-pointer transition-colors"
                   onClick={() => toggleProgram(g.program)}
                 >
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-gray-900 truncate">{g.program}</div>
-                    <div className="text-xs text-gray-500 capitalize">{g.lender} | {g.investor} {g.tier} | {g.rates.length} rates</div>
+                    <div className="text-sm font-medium text-ink truncate">{g.program}</div>
+                    <div className="text-xs text-ink-subtle capitalize">{g.lender} | {g.investor} {g.tier} | {g.rates.length} rates</div>
                   </div>
                   <div className="flex items-center gap-4 ml-4">
                     <div className="text-right">
-                      <div className="text-xs text-gray-400">PAR</div>
+                      <div className="text-xs text-ink-subtle">PAR</div>
                       <div className="text-sm font-mono font-bold">{par?.rate?.toFixed(3)}%</div>
                     </div>
                     {g.chargeSweet && (
@@ -229,8 +229,8 @@ export default function QuoteRateResults({ pricing, selectedRates, onSelectRates
                       </div>
                     )}
                     <div className="text-right">
-                      <div className="text-xs text-gray-400">Best (adj.)</div>
-                      <div className={`text-sm font-mono font-bold ${best?.finalPrice > 100 ? 'text-green-600' : 'text-gray-900'}`}>
+                      <div className="text-xs text-ink-subtle">Best (adj.)</div>
+                      <div className={`text-sm font-mono font-bold ${best?.finalPrice > 100 ? 'text-green-600' : 'text-ink'}`}>
                         {best?.finalPrice?.toFixed(3)}
                       </div>
                     </div>
@@ -239,20 +239,20 @@ export default function QuoteRateResults({ pricing, selectedRates, onSelectRates
                       className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors ${
                         isSelected(par || best)
                           ? 'bg-cyan-600 text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-cyan-50 hover:text-cyan-700'
+                          : 'bg-gray-100 text-ink-mid hover:bg-cyan-50 hover:text-cyan-700'
                       }`}
                     >
                       {isSelected(par || best) ? 'Selected' : 'Select PAR'}
                     </button>
-                    <span className="text-gray-400 text-xs">{expanded ? '\u25B2' : '\u25BC'}</span>
+                    <span className="text-ink-subtle text-xs">{expanded ? '\u25B2' : '\u25BC'}</span>
                   </div>
                 </div>
 
                 {/* Expanded rates */}
                 {expanded && (
-                  <div className="bg-gray-50 px-6 pb-3">
+                  <div className="bg-surface-alt px-6 pb-3">
                     <table className="w-full text-xs">
-                      <thead className="text-gray-400">
+                      <thead className="text-ink-subtle">
                         <tr>
                           <th className="w-8 py-1"></th>
                           <th className="py-1 text-left">Rate</th>
@@ -304,7 +304,7 @@ export default function QuoteRateResults({ pricing, selectedRates, onSelectRates
         <>
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
-              <thead className="bg-gray-50 text-gray-500">
+              <thead className="bg-surface-alt text-ink-subtle">
                 <tr>
                   <th className="w-8 px-2 py-2"></th>
                   <th className="px-3 py-2 text-left">Rate</th>
@@ -325,7 +325,7 @@ export default function QuoteRateResults({ pricing, selectedRates, onSelectRates
                     <tr
                       key={i}
                       onClick={() => toggleRate(r)}
-                      className={`cursor-pointer transition-colors ${selected ? 'bg-cyan-50' : 'hover:bg-gray-50'} ${isPar ? 'font-medium' : ''}`}
+                      className={`cursor-pointer transition-colors ${selected ? 'bg-cyan-50' : 'hover:bg-surface-alt'} ${isPar ? 'font-medium' : ''}`}
                     >
                       <td className="px-2 py-2 text-center">
                         <input type="checkbox" checked={selected} readOnly className="w-3.5 h-3.5 rounded border-gray-300 text-cyan-600" />
@@ -369,7 +369,7 @@ export default function QuoteRateResults({ pricing, selectedRates, onSelectRates
             {selectedRates.map((s, i) => (
               <div key={i} className="px-3 py-1.5 bg-gray-800 rounded-lg border border-gray-700 text-xs text-white">
                 <span className="font-mono font-bold">{s.rate.toFixed(3)}%</span>
-                <span className="text-gray-400 ml-1.5">| {s.program?.split(' ').slice(0, 3).join(' ')}</span>
+                <span className="text-ink-subtle ml-1.5">| {s.program?.split(' ').slice(0, 3).join(' ')}</span>
               </div>
             ))}
           </div>

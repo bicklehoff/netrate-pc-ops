@@ -60,11 +60,11 @@ export default function DocumentList({ loan }) {
   };
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-      <h2 className="text-lg font-semibold text-gray-900 mb-4">Documents</h2>
+    <div className="bg-white rounded-nr-xl border border-gray-200 p-6 shadow-nr-sm">
+      <h2 className="text-lg font-semibold text-ink mb-4">Documents</h2>
 
       {documents.length === 0 ? (
-        <p className="text-gray-400 text-sm">No documents requested yet.</p>
+        <p className="text-ink-subtle text-sm">No documents requested yet.</p>
       ) : (
         <div className="space-y-3">
           {/* Requested Documents (need upload) */}
@@ -79,9 +79,9 @@ export default function DocumentList({ loan }) {
                   className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0"
                 >
                   <div>
-                    <span className="text-sm font-medium text-gray-800">{doc.label}</span>
+                    <span className="text-sm font-medium text-ink">{doc.label}</span>
                     {doc.notes && (
-                      <p className="text-xs text-gray-500 mt-0.5">{doc.notes}</p>
+                      <p className="text-xs text-ink-subtle mt-0.5">{doc.notes}</p>
                     )}
                   </div>
                   <label className="cursor-pointer">
@@ -108,7 +108,7 @@ export default function DocumentList({ loan }) {
           {/* Uploaded / Processed Documents */}
           {uploadedDocs.length > 0 && (
             <div>
-              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+              <h3 className="text-xs font-semibold text-ink-subtle uppercase tracking-wider mb-2">
                 Submitted
               </h3>
               {uploadedDocs.map((doc) => (
@@ -117,12 +117,12 @@ export default function DocumentList({ loan }) {
                   className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0"
                 >
                   <div>
-                    <span className="text-sm font-medium text-gray-800">{doc.label}</span>
+                    <span className="text-sm font-medium text-ink">{doc.label}</span>
                     {doc.fileName && (
-                      <p className="text-xs text-gray-400 mt-0.5">{doc.fileName}</p>
+                      <p className="text-xs text-ink-subtle mt-0.5">{doc.fileName}</p>
                     )}
                   </div>
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${DOC_STATUS_COLORS[doc.status] || 'bg-gray-100 text-gray-600'}`}>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${DOC_STATUS_COLORS[doc.status] || 'bg-gray-100 text-ink-mid'}`}>
                     {DOC_STATUS_LABELS[doc.status] || doc.status}
                   </span>
                 </div>
@@ -153,7 +153,7 @@ export default function DocumentList({ loan }) {
             {uploading === 'new' ? 'Uploading...' : 'Upload additional document'}
           </span>
         </label>
-        <p className="text-xs text-gray-400 mt-1">PDF, PNG, or JPG — 10 MB max</p>
+        <p className="text-xs text-ink-subtle mt-1">PDF, PNG, or JPG — 10 MB max</p>
       </div>
 
       {uploadError && (

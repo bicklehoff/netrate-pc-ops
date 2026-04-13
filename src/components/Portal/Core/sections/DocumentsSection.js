@@ -122,10 +122,10 @@ export default function DocumentsSection({ loan, onRefresh }) {
       >
         {/* Request form */}
         {docForm.open && (
-          <div className="bg-gray-50 rounded-lg p-4 mb-4 border border-gray-200">
+          <div className="bg-surface-alt rounded-lg p-4 mb-4 border border-gray-200">
             <div className="grid grid-cols-2 gap-3 mb-3">
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Type</label>
+                <label className="block text-xs font-medium text-ink-mid mb-1">Type</label>
                 <select
                   value={docForm.docType}
                   onChange={(e) => setDocForm({ ...docForm, docType: e.target.value })}
@@ -137,7 +137,7 @@ export default function DocumentsSection({ loan, onRefresh }) {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Label</label>
+                <label className="block text-xs font-medium text-ink-mid mb-1">Label</label>
                 <input
                   type="text"
                   value={docForm.label}
@@ -148,7 +148,7 @@ export default function DocumentsSection({ loan, onRefresh }) {
               </div>
             </div>
             <div className="mb-3">
-              <label className="block text-xs font-medium text-gray-600 mb-1">Notes (optional)</label>
+              <label className="block text-xs font-medium text-ink-mid mb-1">Notes (optional)</label>
               <input
                 type="text"
                 value={docForm.notes}
@@ -167,7 +167,7 @@ export default function DocumentsSection({ loan, onRefresh }) {
               </button>
               <button
                 onClick={() => setDocForm({ open: false, docType: 'pay_stub', label: '', notes: '' })}
-                className="px-4 py-2 text-gray-600 text-sm hover:text-gray-800"
+                className="px-4 py-2 text-ink-mid text-sm hover:text-ink"
               >
                 Cancel
               </button>
@@ -177,7 +177,7 @@ export default function DocumentsSection({ loan, onRefresh }) {
 
         {/* Document list */}
         {documents.length === 0 ? (
-          <p className="text-gray-400 text-sm">No documents yet.</p>
+          <p className="text-ink-subtle text-sm">No documents yet.</p>
         ) : (
           <div className="space-y-2">
             {documents.map((doc) => (
@@ -186,22 +186,22 @@ export default function DocumentsSection({ loan, onRefresh }) {
                 className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0"
               >
                 <div className="flex-1">
-                  <span className="text-sm font-medium text-gray-800">{doc.label}</span>
+                  <span className="text-sm font-medium text-ink">{doc.label}</span>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${DOC_STATUS_COLORS[doc.status]}`}>
                       {DOC_STATUS_LABELS[doc.status] || doc.status}
                     </span>
                     {doc.file_name && (
-                      <span className="text-xs text-gray-400">{doc.file_name}</span>
+                      <span className="text-xs text-ink-subtle">{doc.file_name}</span>
                     )}
                     {doc.requestedBy && (
-                      <span className="text-xs text-gray-400">
+                      <span className="text-xs text-ink-subtle">
                         by {doc.requestedBy.first_name} {doc.requestedBy.last_name}
                       </span>
                     )}
                   </div>
                   {doc.notes && (
-                    <p className="text-xs text-gray-500 mt-0.5">{doc.notes}</p>
+                    <p className="text-xs text-ink-subtle mt-0.5">{doc.notes}</p>
                   )}
                 </div>
                 <div className="flex items-center gap-2">

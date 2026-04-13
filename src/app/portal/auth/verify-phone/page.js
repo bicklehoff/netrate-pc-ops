@@ -58,17 +58,17 @@ export default function VerifyPhonePage() {
         </svg>
       </div>
 
-      <h1 className="text-2xl font-bold text-gray-900 mb-2 text-center">
+      <h1 className="text-2xl font-bold text-ink mb-2 text-center">
         Verify your identity
       </h1>
-      <p className="text-gray-500 mb-8 text-center">
+      <p className="text-ink-subtle mb-8 text-center">
         We sent a 6-digit code to your phone number on file.
         Enter it below to access your loan dashboard.
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="code" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="code" className="block text-sm font-medium text-ink-mid mb-1">
             Verification code
           </label>
           <input
@@ -99,7 +99,7 @@ export default function VerifyPhonePage() {
         </button>
       </form>
 
-      <p className="text-center text-gray-400 text-sm mt-6">
+      <p className="text-center text-ink-subtle text-sm mt-6">
         Didn&apos;t receive a code?{' '}
         <button
           onClick={handleResend}
@@ -108,7 +108,7 @@ export default function VerifyPhonePage() {
           Resend code
         </button>
       </p>
-      <p className="text-center text-gray-400 text-xs mt-2">
+      <p className="text-center text-ink-subtle text-xs mt-2">
         Code expires after 10 minutes. 3 incorrect attempts will lock for 15 minutes.
       </p>
     </div>

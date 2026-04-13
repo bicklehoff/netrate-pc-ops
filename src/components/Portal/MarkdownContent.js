@@ -8,29 +8,29 @@ import remarkGfm from 'remark-gfm';
 
 const components = {
   h1: ({ children }) => (
-    <h1 className="text-3xl font-bold text-gray-900 mb-6 pb-3 border-b border-gray-200">
+    <h1 className="text-3xl font-bold text-ink mb-6 pb-3 border-b border-gray-200">
       {children}
     </h1>
   ),
   h2: ({ children }) => (
-    <h2 className="text-2xl font-bold text-gray-900 mt-10 mb-4">{children}</h2>
+    <h2 className="text-2xl font-bold text-ink mt-10 mb-4">{children}</h2>
   ),
   h3: ({ children }) => (
-    <h3 className="text-xl font-semibold text-gray-800 mt-8 mb-3">{children}</h3>
+    <h3 className="text-xl font-semibold text-ink mt-8 mb-3">{children}</h3>
   ),
   h4: ({ children }) => (
-    <h4 className="text-lg font-semibold text-gray-700 mt-6 mb-2">{children}</h4>
+    <h4 className="text-lg font-semibold text-ink-mid mt-6 mb-2">{children}</h4>
   ),
   p: ({ children }) => (
-    <p className="text-gray-700 leading-relaxed mb-4">{children}</p>
+    <p className="text-ink-mid leading-relaxed mb-4">{children}</p>
   ),
   ul: ({ children }) => (
-    <ul className="list-disc list-outside ml-6 mb-4 space-y-1.5 text-gray-700">
+    <ul className="list-disc list-outside ml-6 mb-4 space-y-1.5 text-ink-mid">
       {children}
     </ul>
   ),
   ol: ({ children }) => (
-    <ol className="list-decimal list-outside ml-6 mb-4 space-y-1.5 text-gray-700">
+    <ol className="list-decimal list-outside ml-6 mb-4 space-y-1.5 text-ink-mid">
       {children}
     </ol>
   ),
@@ -66,11 +66,11 @@ const components = {
     return null;
   },
   strong: ({ children }) => (
-    <strong className="font-semibold text-gray-900">{children}</strong>
+    <strong className="font-semibold text-ink">{children}</strong>
   ),
-  em: ({ children }) => <em className="italic text-gray-600">{children}</em>,
+  em: ({ children }) => <em className="italic text-ink-mid">{children}</em>,
   blockquote: ({ children }) => (
-    <blockquote className="border-l-4 border-brand/30 bg-brand/5 pl-4 py-2 my-4 rounded-r-lg text-gray-700 italic">
+    <blockquote className="border-l-4 border-brand/30 bg-brand/5 pl-4 py-2 my-4 rounded-r-lg text-ink-mid italic">
       {children}
     </blockquote>
   ),
@@ -86,7 +86,7 @@ const components = {
     </a>
   ),
   code: ({ children }) => (
-    <code className="bg-gray-100 text-gray-800 text-sm px-1.5 py-0.5 rounded font-mono">
+    <code className="bg-gray-100 text-ink text-sm px-1.5 py-0.5 rounded font-mono">
       {children}
     </code>
   ),
@@ -103,19 +103,19 @@ const components = {
     </div>
   ),
   thead: ({ children }) => (
-    <thead className="bg-gray-50 border-b border-gray-200">{children}</thead>
+    <thead className="bg-surface-alt border-b border-gray-200">{children}</thead>
   ),
   tbody: ({ children }) => <tbody className="divide-y divide-gray-100">{children}</tbody>,
   tr: ({ children }) => (
-    <tr className="hover:bg-gray-50 transition-colors">{children}</tr>
+    <tr className="hover:bg-surface-alt transition-colors">{children}</tr>
   ),
   th: ({ children }) => (
-    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+    <th className="px-4 py-2.5 text-left text-xs font-semibold text-ink-mid uppercase tracking-wider">
       {children}
     </th>
   ),
   td: ({ children }) => (
-    <td className="px-4 py-2.5 text-gray-700">{children}</td>
+    <td className="px-4 py-2.5 text-ink-mid">{children}</td>
   ),
 };
 
