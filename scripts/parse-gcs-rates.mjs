@@ -201,10 +201,14 @@ async function parseKeystone(files) {
   console.log(`  Downloading ${xlsxFile.filename}...`);
   const buf = await downloadBuffer(xlsxFile.path);
   const result = keystoneParser.parseRates(buf);
-  console.log(`  Parsed: ${result.programs.length} programs`);
+  // Keystone parser doesn't extract sheetDate — derive from filename (e.g. 80220_04142026_0942191440.xlsx)
+  const dateMatch = xlsxFile.filename.match(/(\d{2})(\d{2})(\d{4})/);
+  const fallbackDate = dateMatch ? `${dateMatch[3]}-${dateMatch[1]}-${dateMatch[2]}` : new Date().toISOString().slice(0, 10);
+  const sheetDate = result.sheetDate || fallbackDate;
+  console.log(`  Parsed: ${result.programs.length} programs, date: ${sheetDate}`);
   return {
     lenderId: 'keystone',
-    sheetDate: result.sheetDate,
+    sheetDate,
     programs: result.programs,
     llpas: result.llpas || null,
     loanAmountAdj: result.loanAmountAdj || null,
@@ -247,10 +251,14 @@ async function parseAmWest(files) {
   console.log(`  Downloading ${xlsxFile.filename}...`);
   const buf = await downloadBuffer(xlsxFile.path);
   const result = amwestParser.parseRates(buf);
-  console.log(`  Parsed: ${result.programs.length} programs, date: ${result.sheetDate}`);
+  // AmWest parser doesn't always extract sheetDate — derive from filename
+  const dateMatch = xlsxFile.filename.match(/(\d{2})(\d{2})(\d{4})/);
+  const fallbackDate = dateMatch ? `${dateMatch[3]}-${dateMatch[1]}-${dateMatch[2]}` : new Date().toISOString().slice(0, 10);
+  const sheetDate = result.sheetDate || fallbackDate;
+  console.log(`  Parsed: ${result.programs.length} programs, date: ${sheetDate}`);
   return {
     lenderId: 'amwest',
-    sheetDate: result.sheetDate,
+    sheetDate,
     programs: result.programs,
     llpas: result.llpas,
     loanAmountAdj: result.loanAmountAdj,
