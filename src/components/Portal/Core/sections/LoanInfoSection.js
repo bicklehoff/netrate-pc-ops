@@ -44,11 +44,13 @@ const OCCUPANCY_OPTIONS = [
 ];
 
 const PROPERTY_TYPE_OPTIONS = [
-  { value: 'single_family', label: 'Single Family' },
-  { value: 'condo', label: 'Condo' },
-  { value: 'townhouse', label: 'Townhouse' },
-  { value: 'multi_unit', label: 'Multi-Unit (2-4)' },
-  { value: 'manufactured', label: 'Manufactured' },
+  { value: 'SFH-Detached', label: 'SFH-Detached' },
+  { value: 'SFH-Attached', label: 'SFH-Attached' },
+  { value: 'Condo', label: 'Condo' },
+  { value: 'Townhome', label: 'Townhome' },
+  { value: 'Multi-Family', label: 'Multi-Family (2-4)' },
+  { value: 'Manufactured', label: 'Manufactured' },
+  { value: 'PUD', label: 'PUD' },
 ];
 
 function formatAddress(addr) {

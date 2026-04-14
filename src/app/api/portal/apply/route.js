@@ -297,7 +297,7 @@ export async function POST(request) {
       `;
 
       const cbLbData = {
-        marital_status: body.maritalStatus || null,
+        marital_status: cb.maritalStatus || null,
         current_address: safeJson(cb.currentAddress) ? JSON.stringify(cb.currentAddress) : null,
         address_years: safeInt(cb.addressYears),
         address_months: safeInt(cb.addressMonths),

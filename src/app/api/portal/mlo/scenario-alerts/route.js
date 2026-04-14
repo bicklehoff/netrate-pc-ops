@@ -91,7 +91,7 @@ export async function PATCH(request) {
       await sql`
         UPDATE saved_scenarios
         SET alert_status = ${action === 'pause' ? 'paused' : 'active'}, updated_at = NOW()
-        WHERE id = ANY(${ids})
+        WHERE id = ANY(${ids}) AND mlo_id = ${session.user.id}
       `;
       return NextResponse.json({ success: true, action, count: ids.length });
     }
