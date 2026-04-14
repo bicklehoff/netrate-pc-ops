@@ -44,6 +44,7 @@ export const authOptions = {
           name: `${mlo.first_name} ${mlo.last_name}`,
           role: mlo.role,
           userType: 'mlo',
+          organizationId: mlo.organization_id,
         };
       },
     }),
@@ -61,6 +62,7 @@ export const authOptions = {
         token.id = user.id;
         token.role = user.role;
         token.userType = user.userType;
+        token.organizationId = user.organizationId;
       }
       return token;
     },
@@ -71,6 +73,7 @@ export const authOptions = {
         session.user.id = token.id;
         session.user.role = token.role;
         session.user.userType = token.userType;
+        session.user.organizationId = token.organizationId;
       }
       return session;
     },
