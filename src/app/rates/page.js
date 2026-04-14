@@ -44,7 +44,7 @@ export default async function RatesPage({ searchParams }) {
         </p>
       </div>
       <div className="bg-[#F5F7FA] min-h-screen">
-      <div className="max-w-3xl mx-auto px-4 py-8">
+      <div className="max-w-6xl mx-auto px-4 py-8">
       <RateTool defaultState={defaultState} prefill={Object.keys(prefill).length ? prefill : null} brpToken={brpToken} />
 
       {/* Strike Rate / Rate Alert signup */}

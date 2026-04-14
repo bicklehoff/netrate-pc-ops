@@ -64,29 +64,33 @@ export default function RateTool({ defaultState, prefill, brpToken }) {
         <p className="text-sm text-cyan-100">Rates effective {apiDate || 'today'}</p>
       </div>
 
-      {/* Two-Column Layout */}
-      <div className="flex flex-col lg:flex-row gap-6 p-4 sm:p-6">
-
-        {/* LEFT: Scenario Form (sticky) */}
-        <div className="w-full lg:w-[400px] lg:shrink-0">
-          <div className="lg:sticky lg:top-4">
-            <ScenarioForm scenario={scenario} onChange={handleScenarioChange} onSubmit={fetchRates} loading={apiLoading} />
+      {/* Layout shifts: centered form → two-column after rates load */}
+      {!apiResults?.length && !apiLoading ? (
+        /* ── Pre-rates: centered single-column form ── */
+        <div className="max-w-3xl mx-auto p-4 sm:p-6">
+          <ScenarioForm scenario={scenario} onChange={handleScenarioChange} onSubmit={fetchRates} loading={apiLoading} />
+        </div>
+      ) : (
+        /* ── Post-rates: two-column (form left, results right) ── */
+        <div className="flex flex-col lg:flex-row gap-6 p-4 sm:p-6">
+          <div className="w-full lg:w-[400px] lg:shrink-0">
+            <div className="lg:sticky lg:top-4">
+              <ScenarioForm scenario={scenario} onChange={handleScenarioChange} onSubmit={fetchRates} loading={apiLoading} />
+            </div>
+          </div>
+          <div className="flex-1 min-w-0">
+            <RateResults
+              scenario={scenario}
+              apiResults={apiResults}
+              loading={apiLoading}
+              onSaveScenario={() => setShowSaveModal(true)}
+              brpToken={brpToken}
+            />
+            <RateEducation />
+            <LeadCapture scenario={scenario} />
           </div>
         </div>
-
-        {/* RIGHT: Results + Education + Lead */}
-        <div className="flex-1 min-w-0">
-          <RateResults
-            scenario={scenario}
-            apiResults={apiResults}
-            loading={apiLoading}
-            onSaveScenario={() => setShowSaveModal(true)}
-            brpToken={brpToken}
-          />
-          <RateEducation />
-          <LeadCapture scenario={scenario} />
-        </div>
-      </div>
+      )}
 
       {/* Save Scenario Modal */}
       {showSaveModal && (
