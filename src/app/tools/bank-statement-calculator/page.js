@@ -249,6 +249,7 @@ export default function BankStatementCalculator() {
   // Loan scenario
   const [purchasePrice, setPurchasePrice] = useState(500000);
   const [downPayment, setDownPayment] = useState(100000);
+  const [manualPtsOverride, setManualPtsOverride] = useState({}); // { [rate]: points override }
   const [fico, setFico] = useState(740);
   const [propertyType, setPropertyType] = useState('sfr');
   const [state, setState] = useState('CO');
@@ -277,8 +278,21 @@ export default function BankStatementCalculator() {
   const expRate = statementType === 'personal' ? 0 : expensePct / 100;
   const monthlyQualIncome = monthlyDeposits * (1 - expRate);
   const annualQualIncome = monthlyQualIncome * 12;
-  const loanAmount = purchasePrice - downPayment;
+  const loanAmount = Math.max(0, purchasePrice - downPayment);
   const ltv = purchasePrice > 0 ? (loanAmount / purchasePrice) * 100 : 0;
+
+  // Sync down payment when purchase price changes
+  const setPurchasePriceAndSync = (val) => {
+    setPurchasePrice(val);
+    if (downPayment > val) setDownPayment(val);
+  };
+  const setDownPaymentFromLoan = (loan) => {
+    setDownPayment(Math.max(0, purchasePrice - loan));
+  };
+  const setDownPaymentFromLtv = (ltvVal) => {
+    const loan = purchasePrice * (ltvVal / 100);
+    setDownPayment(Math.max(0, Math.round(purchasePrice - loan)));
+  };
   const ltvIdx = getLtvBandIdx(ltv);
   const compCap = purpose === 'purchase' ? COMP_CAP_PURCHASE : COMP_CAP_REFI;
   const compDollar = Math.min(loanAmount * COMP_RATE, compCap);
@@ -293,11 +307,6 @@ export default function BankStatementCalculator() {
   const purpAdj = purpose === 'cashout' ? (getStackedAdj(CASHOUT_ADJ, ltvIdx) || 0) : 0;
   const loanAmtAdj = getLoanAmtAdj(loanAmount);
 
-  // Slider bounds
-  const dpMin = Math.round(purchasePrice * 0.15 / 1000) * 1000;
-  const dpMax = Math.round(purchasePrice * 0.50 / 1000) * 1000;
-  const dpPct = dpMax > dpMin ? ((downPayment - dpMin) / (dpMax - dpMin) * 100).toFixed(1) : 0;
-
   // Ineligible if FICO/LTV combo returns null
   const isEligible = ficoLtvAdj !== null;
 
@@ -310,9 +319,12 @@ export default function BankStatementCalculator() {
     const dtiAdj = dti > 45 && dti <= 50 ? (getStackedAdj(DTI_45_50_ADJ, ltvIdx) || 0) : 0;
     const rawAdj = base + ficoLtvAdj + bankStmtAdj + propAdj + purpAdj + loanAmtAdj + dtiAdj;
     const adjPrice = Math.min(rawAdj, MAX_PREMIUM_CAP);
-    const netPrice = adjPrice - compPts;
+    // Manual points override: if set, use it instead of calculated net
+    const hasOverride = manualPtsOverride[rate] !== undefined && manualPtsOverride[rate] !== '';
+    const overridePts = hasOverride ? parseFloat(manualPtsOverride[rate]) : 0;
+    const netPrice = hasOverride ? (100 + overridePts) : (adjPrice - compPts);
     const netDollar = (netPrice - 100) / 100 * loanAmount;
-    return { rate, base, pi, pitia, dti, adjPrice, netPrice, netDollar, ficoLtvAdj, bankStmtAdj, propAdj, purpAdj, loanAmtAdj, dtiAdj };
+    return { rate, base, pi, pitia, dti, adjPrice, netPrice, netDollar, ficoLtvAdj, bankStmtAdj, propAdj, purpAdj, loanAmtAdj, dtiAdj, hasOverride };
   });
 
   const parRow = rows.reduce((best, r) => Math.abs(r.netPrice - 100) < Math.abs(best.netPrice - 100) ? r : best, rows[0]);
@@ -374,35 +386,23 @@ export default function BankStatementCalculator() {
               <label className={labelCls}>Purchase Price</label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
-                <input type="number" value={purchasePrice} onChange={e => setPurchasePrice(+e.target.value || 0)} step={5000} className={inputCls + ' pl-6'} />
+                <input type="number" value={purchasePrice} onChange={e => setPurchasePriceAndSync(+e.target.value || 0)} step={5000} className={inputCls + ' pl-6'} />
               </div>
             </div>
-            <div className="mb-4">
-              <div className="flex justify-between items-baseline mb-1">
-                <label className={labelCls}>Down Payment</label>
-                <span className="text-base font-bold text-brand tabular-nums">
-                  {fmtD(downPayment)} <span className="text-xs font-medium text-gray-400">({(downPayment / purchasePrice * 100).toFixed(1)}%)</span>
-                </span>
+            <div className="mb-3">
+              <label className={labelCls}>Down Payment</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                <input type="number" value={downPayment} onChange={e => setDownPayment(+e.target.value || 0)} step={1000} className={inputCls + ' pl-6'} />
               </div>
-              <input type="range" min={dpMin} max={dpMax} step={1000}
-                value={Math.min(Math.max(downPayment, dpMin), dpMax)}
-                onChange={e => setDownPayment(+e.target.value)}
-                className="w-full h-1.5 rounded-full outline-none cursor-pointer appearance-none
-                  [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5
-                  [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white
-                  [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-brand
-                  [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:cursor-pointer"
-                style={{ background: `linear-gradient(to right, #2E6BA8 0%, #2E6BA8 ${dpPct}%, #e5e7eb ${dpPct}%, #e5e7eb 100%)` }} />
-              <div className="flex justify-between text-[11px] text-gray-400 mt-1">
-                <span>15% — {fmtD(dpMin)}</span><span>50% — {fmtD(dpMax)}</span>
-              </div>
+              <p className="text-[11px] text-gray-400 mt-1">{purchasePrice > 0 ? (downPayment / purchasePrice * 100).toFixed(1) + '% down' : ''}</p>
             </div>
             <div className="grid grid-cols-2 gap-2 mb-3">
-              <div><label className={labelCls}>Loan Amount <span className="text-gray-300 normal-case font-normal tracking-normal">auto</span></label>
+              <div><label className={labelCls}>Loan Amount</label>
                 <div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
-                  <input type="text" readOnly value={loanAmount.toLocaleString()} className={inputCls + ' pl-6 bg-gray-50 text-gray-500 cursor-default'} /></div></div>
-              <div><label className={labelCls}>LTV <span className="text-gray-300 normal-case font-normal tracking-normal">auto</span></label>
-                <input type="text" readOnly value={ltv.toFixed(1) + '%'} className={inputCls + ' bg-gray-50 text-gray-500 cursor-default'} /></div>
+                  <input type="number" value={loanAmount} onChange={e => setDownPaymentFromLoan(+e.target.value || 0)} step={1000} className={inputCls + ' pl-6'} /></div></div>
+              <div><label className={labelCls}>LTV %</label>
+                <input type="number" value={parseFloat(ltv.toFixed(1))} onChange={e => setDownPaymentFromLtv(+e.target.value || 0)} step={0.5} min={0} max={100} className={inputCls} /></div>
             </div>
             <div className="grid grid-cols-2 gap-2 mb-3">
               <div><label className={labelCls}>FICO Score</label>
@@ -576,7 +576,7 @@ export default function BankStatementCalculator() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b-2 border-gray-100">
-                      {['Rate', 'Monthly P&I', 'PITIA', 'DTI', 'Points / Credit', 'Net Cost'].map(h => (
+                      {['Rate', 'P&I', 'PITIA', 'DTI', 'Override Pts', 'Points', 'Net Cost'].map(h => (
                         <th key={h} className="text-left text-[11px] font-semibold text-gray-400 uppercase tracking-wider py-2 px-2 first:pl-0">{h}</th>
                       ))}
                     </tr>
@@ -587,11 +587,11 @@ export default function BankStatementCalculator() {
                       return displayRows.map(row => {
                         const markers = [];
                         if (!shown43 && row.dti > 43) { shown43 = true; markers.push(
-                          <tr key="dti43"><td colSpan={6} className="bg-amber-50 text-amber-700 text-[11px] font-semibold px-2 py-1.5 border-y border-amber-200">
+                          <tr key="dti43"><td colSpan={7} className="bg-amber-50 text-amber-700 text-[11px] font-semibold px-2 py-1.5 border-y border-amber-200">
                             ▲ DTI 43% — preferred threshold
                           </td></tr>); }
                         if (!shown50 && row.dti > 50) { shown50 = true; markers.push(
-                          <tr key="dti50"><td colSpan={6} className="bg-red-50 text-red-600 text-[11px] font-semibold px-2 py-1.5 border-y border-red-200">
+                          <tr key="dti50"><td colSpan={7} className="bg-red-50 text-red-600 text-[11px] font-semibold px-2 py-1.5 border-y border-red-200">
                             ▲ DTI 50% maximum — rates below this line exceed max DTI
                           </td></tr>); }
                         const isPar = row.rate === parRow.rate;
@@ -605,15 +605,22 @@ export default function BankStatementCalculator() {
                               <span className="font-bold text-gray-900 tabular-nums">{row.rate.toFixed(3)}%</span>
                               {isPar && <span className="ml-1 text-green-600 text-[10px] font-bold">★ par</span>}
                             </td>
-                            <td className="py-2.5 px-2 tabular-nums text-gray-700">{fmtD(row.pi)}/mo</td>
-                            <td className="py-2.5 px-2 tabular-nums text-gray-700">{fmtD(row.pitia)}/mo</td>
+                            <td className="py-2.5 px-2 tabular-nums text-gray-700">{fmtD(row.pi)}</td>
+                            <td className="py-2.5 px-2 tabular-nums text-gray-700">{fmtD(row.pitia)}</td>
                             <td className="py-2.5 px-2">
                               <span className={`font-bold tabular-nums ${row.dti <= 43 ? 'text-green-600' : row.dti <= 50 ? 'text-amber-500' : 'text-red-500'}`}>
                                 {row.dti.toFixed(1)}%
                               </span>
                             </td>
+                            <td className="py-1 px-1" onClick={e => e.stopPropagation()}>
+                              <input type="number" step={0.125}
+                                value={manualPtsOverride[row.rate] ?? ''}
+                                onChange={e => setManualPtsOverride(prev => ({ ...prev, [row.rate]: e.target.value }))}
+                                placeholder="auto"
+                                className="w-16 border border-gray-200 rounded px-1.5 py-1 text-xs text-center tabular-nums bg-white focus:border-brand focus:ring-1 focus:ring-brand/10 outline-none" />
+                            </td>
                             <td className="py-2.5 px-2">
-                              <span className={`text-xs font-semibold px-2 py-0.5 rounded-md tabular-nums ${isCredit ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
+                              <span className={`text-xs font-semibold px-2 py-0.5 rounded-md tabular-nums ${row.hasOverride ? 'bg-blue-50 text-blue-700' : isCredit ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
                                 {fmtPts(ptsDiff)}
                               </span>
                             </td>
