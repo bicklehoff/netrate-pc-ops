@@ -75,6 +75,7 @@ export async function loadRateDataFromDB() {
           tier: price.tier,
           occupancy: price.occupancy,
           isHighBalance: price.is_high_balance,
+          isJumbo: /\bjumbo\b/i.test(price.display_name),
           isStreamline: price.is_streamline,
           isBuydown: price.is_buydown,
           isInterestOnly: price.is_interest_only,
