@@ -117,7 +117,7 @@ export default function OverviewSection({ loan, updateLoanField, updateDates }) 
   const dates = loan.dates || {};
   const mi = getMilestoneIndex(loan.status);
   const borrower = loan.borrower || {};
-  const coBorrowers = loan.loanBorrowers?.filter(lb => lb.borrowerType !== 'primary') || [];
+  const coBorrowers = loan.loan_borrowers?.filter(lb => lb.borrower_type !== 'primary') || [];
   const alerts = computeAlerts(loan, dates);
   const addr = fmtAddr(loan.property_address);
 
@@ -183,7 +183,7 @@ export default function OverviewSection({ loan, updateLoanField, updateDates }) 
           <EF label="Rate" value={loan.interest_rate} type="text" onSave={v => save({ interest_rate: v })} />
           <RF label="LTV" value={ltv} />
           <EF label="FICO" value={loan.credit_score} type="text" onSave={v => save({ credit_score: v })} />
-          <RF label="Mo. Pmt" value={fmt$(loan.monthlyPayment)} />
+          <RF label="Mo. Pmt" value={fmt$(loan.monthly_payment)} />
           <EF label="Closing" value={dates.estimated_closing || dates.closing_date} type="date" onSave={v => saveDates({ estimated_closing: v })} />
           <div><div className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none mb-0.5">Lock Exp</div>
             <div className={`text-xs font-semibold leading-tight ${lockClass || 'text-slate-300'}`}>{dates.lock_expiration ? fmtDate(dates.lock_expiration) : '—'}</div></div>

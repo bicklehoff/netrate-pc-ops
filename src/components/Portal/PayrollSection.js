@@ -92,12 +92,12 @@ export default function PayrollSection({ loan }) {
 
   if (!loan || loan.status !== 'funded') return null;
 
-  const hasCD = !!loan.cdWorkDriveFileId;
-  const extraction = loan.cdExtractedData;
+  const hasCD = !!loan.cd_work_drive_file_id;
+  const extraction = loan.cd_extracted_data;
   const isExtracted = extraction?.status === 'success';
   const extractionFailed = extraction?.status === 'error';
-  const isApproved = !!loan.cdApprovedAt;
-  const isSent = !!loan.payrollSentAt;
+  const isApproved = !!loan.cd_approved_at;
+  const isSent = !!loan.payroll_sent_at;
 
   // ─── Upload CD ───────────────────────────────────────────
   const handleUpload = async (file) => {
@@ -247,8 +247,8 @@ export default function PayrollSection({ loan }) {
 
   // ─── Download CD ──────────────────────────────────────────
   const handleDownloadCD = () => {
-    if (!loan.cdWorkDriveFileId) return;
-    window.open(`/api/portal/mlo/loans/${loan.id}/files?download=${loan.cdWorkDriveFileId}`, '_blank');
+    if (!loan.cd_work_drive_file_id) return;
+    window.open(`/api/portal/mlo/loans/${loan.id}/files?download=${loan.cd_work_drive_file_id}`, '_blank');
   };
 
   // ─── Header subtitle ─────────────────────────────────────
@@ -263,7 +263,7 @@ export default function PayrollSection({ loan }) {
     : isApproved && !isSent
     ? 'CD verified — ready to send to payroll'
     : isSent
-    ? `Sent to payroll on ${formatDate(loan.payrollSentAt)}`
+    ? `Sent to payroll on ${formatDate(loan.payroll_sent_at)}`
     : 'Processing...';
 
   // ─── Build comparison rows for review phase ───────────────
@@ -823,7 +823,7 @@ export default function PayrollSection({ loan }) {
               <span className="text-xl">✅</span>
               <div>
                 <p className="text-sm font-semibold text-green-800">CD Data Approved</p>
-                <p className="text-xs text-green-600">{formatDate(loan.cdApprovedAt)}</p>
+                <p className="text-xs text-green-600">{formatDate(loan.cd_approved_at)}</p>
               </div>
             </div>
 
@@ -914,7 +914,7 @@ export default function PayrollSection({ loan }) {
             <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-4 text-center">
               <div className="text-3xl mb-2">✅</div>
               <p className="text-sm font-semibold text-green-800">Sent to Payroll</p>
-              <p className="text-xs text-green-600 mt-1">{formatDate(loan.payrollSentAt)}</p>
+              <p className="text-xs text-green-600 mt-1">{formatDate(loan.payroll_sent_at)}</p>
             </div>
 
             {/* Payroll details — what was sent + what came back */}

@@ -18,7 +18,7 @@ export default async function BorrowerDashboardPage() {
 
   const borrowerRows = await sql`
     SELECT first_name, last_name, email FROM borrowers
-    WHERE id = ${session.borrower_id}
+    WHERE id = ${session.borrowerId}
     LIMIT 1
   `;
   const borrower = borrowerRows[0];
@@ -28,7 +28,7 @@ export default async function BorrowerDashboardPage() {
     SELECT lb.loan_id, lb.borrower_type
     FROM loan_borrowers lb
     JOIN loans l ON lb.loan_id = l.id
-    WHERE lb.borrower_id = ${session.borrower_id}
+    WHERE lb.borrower_id = ${session.borrowerId}
     ORDER BY l.created_at DESC
   `;
   const loanIds = loanBorrowers.map((lb) => lb.loan_id);

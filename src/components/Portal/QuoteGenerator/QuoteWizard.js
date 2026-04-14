@@ -119,10 +119,27 @@ export default function QuoteWizard({ prefill }) {
 
   const handlePrice = useCallback(async (computedScenario) => {
     // Merge computed values (loanAmount, ltv from form calc) into scenario
-    const payload = { ...scenario, ...computedScenario };
-    setScenario(payload);
+    const merged = { ...scenario, ...computedScenario };
+    setScenario(merged);
     setLoading(true);
     setError(null);
+
+    // Normalize snake_case state keys to camelCase for the API
+    const payload = {
+      ...merged,
+      borrowerName: merged.borrower_name || merged.borrowerName,
+      borrowerEmail: merged.borrower_email || merged.borrowerEmail,
+      borrowerPhone: merged.borrower_phone || merged.borrowerPhone,
+      loanType: merged.loan_type || merged.loanType,
+      propertyValue: merged.property_value || merged.propertyValue,
+      loanAmount: merged.loan_amount || merged.loanAmount,
+      closingDate: merged.closing_date || merged.closingDate,
+      currentRate: merged.current_rate || merged.currentRate,
+      cashOut: merged.cash_out || merged.cashOut,
+      state: merged.property_state || merged.state,
+      county: merged.property_county || merged.county,
+    };
+
     try {
       const res = await fetch('/api/portal/mlo/quotes', {
         method: 'POST',

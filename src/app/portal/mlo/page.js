@@ -134,7 +134,7 @@ function BulkActionBar({ count, mloList, onBulkUpdate, onBulkDelete, onClear }) 
           {activeAction === 'mlo' && (
             <div className="absolute bottom-full mb-2 left-0 bg-white text-gray-900 rounded-lg shadow-xl border border-gray-200 py-1 min-w-[180px] max-h-64 overflow-y-auto">
               <button
-                onClick={() => applyUpdate({ mlo_id: null })}
+                onClick={() => applyUpdate({ mloId: null })}
                 className="block w-full text-left px-3 py-1.5 text-sm text-gray-400 hover:bg-gray-100 transition-colors"
               >
                 Unassigned
@@ -142,7 +142,7 @@ function BulkActionBar({ count, mloList, onBulkUpdate, onBulkDelete, onClear }) 
               {mloList.map((m) => (
                 <button
                   key={m.id}
-                  onClick={() => applyUpdate({ mlo_id: m.id })}
+                  onClick={() => applyUpdate({ mloId: m.id })}
                   className="block w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 transition-colors"
                 >
                   {m.name}

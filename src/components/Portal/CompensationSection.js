@@ -15,8 +15,8 @@ export default function CompensationSection({ loan }) {
   const [loading, setLoading] = useState(true);
 
   const isFunded = loan?.status === 'funded';
-  const isApproved = !!loan?.cdApprovedAt;
-  const isSent = !!loan?.payrollSentAt;
+  const isApproved = !!loan?.cd_approved_at;
+  const isSent = !!loan?.payroll_sent_at;
 
   useEffect(() => {
     if (!isFunded || !loan?.id) { setLoading(false); return; }
@@ -32,7 +32,7 @@ export default function CompensationSection({ loan }) {
   // Only show once CD is approved (we have comp data)
   if (!isFunded || !isApproved) return null;
 
-  const cd = loan.cdExtractedData?.data || {};
+  const cd = loan.cd_extracted_data?.data || {};
   const tracker = payrollDetails?.trackerResult || {};
   const payload = payrollDetails?.trackerPayload || {};
 

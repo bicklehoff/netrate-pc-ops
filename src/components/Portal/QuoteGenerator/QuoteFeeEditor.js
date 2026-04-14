@@ -164,7 +164,7 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
 
   // ── Payment / CTC calcs ────────────────────────────────────────────────────
   const loanAmount = Number(scenario?.loan_amount) || 0;
-  const downPayment = isPurchase ? (Number(scenario?.property_value)||0) - loan_amount : 0;
+  const downPayment = isPurchase ? (Number(scenario?.property_value)||0) - loanAmount : 0;
   const fixedFees = ['sectionA','sectionB','sectionC','sectionE','sectionG','sectionH']
     .reduce((s,k) => s + (fees?.[k]?.total||0), 0);
   const otherFItems = (fees?.sectionF?.items||[])
