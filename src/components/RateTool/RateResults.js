@@ -166,7 +166,7 @@ export default function RateResults({ scenario, apiResults, loading, onSaveScena
                   className={`border-b border-gray-100 ${isPar ? "bg-cyan-50" : i % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-cyan-50 transition-colors`}>
                   <td className="px-3 py-3">
                     <span className="font-semibold text-gray-800">{r.rate.toFixed(3)}%</span>
-                    {r.program && <div className="text-[10px] text-gray-400 truncate max-w-[180px]">{r.program}</div>}
+                    {debugMode && r.program && <div className="text-[10px] text-gray-400 truncate max-w-[180px]">{r.program}</div>}
                   </td>
                   {debugMode && (
                     <td className="px-2 py-3">
