@@ -10,7 +10,7 @@ function formatDollar(n) {
 }
 
 /** Calculate monthly P&I from rate, loan amount, and term */
-function calcMonthlyPI(rate, loan_amount, termYears = 30) {
+function calcMonthlyPI(rate, loanAmount, termYears = 30) {
   if (!rate || !loanAmount) return null;
   const r = rate / 100 / 12;
   const n = termYears * 12;

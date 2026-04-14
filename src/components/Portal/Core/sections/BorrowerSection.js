@@ -33,8 +33,8 @@ export default function BorrowerSection({ loan, updateLoanField }) {
   const [activeBorrowerTab, setActiveBorrowerTab] = useState(0);
 
   const borrower = loan.borrower;
-  const loanBorrowers = (loan.loanBorrowers || []).filter(
-    (lb) => lb.borrowerType !== 'primary'
+  const loanBorrowers = (loan.loan_borrowers || []).filter(
+    (lb) => lb.borrower_type !== 'primary'
   );
 
   if (!borrower) return null;
@@ -135,7 +135,7 @@ export default function BorrowerSection({ loan, updateLoanField }) {
                     : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
               >
-                {lb.borrowerType === 'co_borrower' ? 'Co-Borrower' : lb.borrowerType}
+                {lb.borrower_type === 'co_borrower' ? 'Co-Borrower' : lb.borrower_type}
                 {lb.ordinal > 0 && ` ${lb.ordinal + 1}`}
               </button>
             ))}
@@ -152,7 +152,7 @@ export default function BorrowerSection({ loan, updateLoanField }) {
                 </div>
                 <div>
                   <span className="block text-xs text-gray-400">Marital Status</span>
-                  <span className="text-gray-800 capitalize">{lb.maritalStatus || '—'}</span>
+                  <span className="text-gray-800 capitalize">{lb.marital_status || '—'}</span>
                 </div>
                 <div>
                   <span className="block text-xs text-gray-400">Employment</span>
@@ -174,7 +174,7 @@ export default function BorrowerSection({ loan, updateLoanField }) {
                 )}
                 <div className="col-span-2">
                   <span className="block text-xs text-gray-400">Current Address</span>
-                  <span className="text-gray-800">{formatAddress(lb.currentAddress)}</span>
+                  <span className="text-gray-800">{formatAddress(lb.current_address)}</span>
                 </div>
               </div>
             );
@@ -190,43 +190,43 @@ export default function BorrowerSection({ loan, updateLoanField }) {
             value={loan.employment_status}
             type="select"
             options={EMPLOYMENT_OPTIONS}
-            onSave={save('employment_status')}
+            onSave={save('employmentStatus')}
           />
           <EditableField
             label="Employer"
             value={loan.employer_name}
             type="text"
-            onSave={save('employer_name')}
+            onSave={save('employerName')}
           />
           <EditableField
             label="Position / Title"
             value={loan.position_title}
             type="text"
-            onSave={save('position_title')}
+            onSave={save('positionTitle')}
           />
           <EditableField
             label="Years in Position"
             value={loan.years_in_position}
             type="text"
-            onSave={save('years_in_position')}
+            onSave={save('yearsInPosition')}
           />
           <EditableField
             label="Monthly Base Income"
             value={loan.monthly_base_income}
             type="currency"
-            onSave={save('monthly_base_income')}
+            onSave={save('monthlyBaseIncome')}
           />
           <EditableField
             label="Other Monthly Income"
             value={loan.other_monthly_income}
             type="currency"
-            onSave={save('other_monthly_income')}
+            onSave={save('otherMonthlyIncome')}
           />
           <EditableField
             label="Other Income Source"
             value={loan.other_income_source}
             type="text"
-            onSave={save('other_income_source')}
+            onSave={save('otherIncomeSource')}
           />
           <EditableField
             label="Marital Status"
@@ -239,7 +239,7 @@ export default function BorrowerSection({ loan, updateLoanField }) {
             label="Housing Expense"
             value={loan.present_housing_expense}
             type="currency"
-            onSave={save('present_housing_expense')}
+            onSave={save('presentHousingExpense')}
           />
           <EditableField
             label="# Dependents"
@@ -262,17 +262,17 @@ export default function BorrowerSection({ loan, updateLoanField }) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
           <div>
             <span className="block text-xs text-gray-400 mb-0.5">Current Address</span>
-            <span className="text-gray-800">{formatAddress(loan.currentAddress)}</span>
-            {(loan.addressYears || loan.addressMonths) && (
+            <span className="text-gray-800">{formatAddress(loan.current_address)}</span>
+            {(loan.address_years || loan.address_months) && (
               <span className="block text-xs text-gray-400 mt-0.5">
-                {loan.addressYears ? `${loan.addressYears}y` : ''}{' '}
-                {loan.addressMonths ? `${loan.addressMonths}m` : ''}
+                {loan.address_years ? `${loan.address_years}y` : ''}{' '}
+                {loan.address_months ? `${loan.address_months}m` : ''}
               </span>
             )}
           </div>
           <div>
             <span className="block text-xs text-gray-400 mb-0.5">Mailing Address</span>
-            <span className="text-gray-800">{formatAddress(loan.mailingAddress)}</span>
+            <span className="text-gray-800">{formatAddress(loan.mailing_address)}</span>
           </div>
         </div>
       </SectionCard>

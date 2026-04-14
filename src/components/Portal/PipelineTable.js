@@ -359,10 +359,10 @@ function ExpandedDetail({ loan }) {
         <DetailField label="Email" value={loan.borrower_email} />
         <DetailField label="Phone" value={loan.borrower_phone} />
         <DetailField label="FICO" value={loan.credit_score} />
-        {loan.coBorrowers?.length > 0 && (
+        {loan.co_borrowers?.length > 0 && (
           <div className="pt-1">
             <span className="text-[10px] uppercase tracking-wider text-gray-400 block mb-1">Co-Borrowers</span>
-            {loan.coBorrowers.map((cb, i) => (
+            {loan.co_borrowers.map((cb, i) => (
               <div key={i} className="text-xs text-gray-600 mb-1">{cb.name}{cb.email ? ` · ${cb.email}` : ''}</div>
             ))}
           </div>

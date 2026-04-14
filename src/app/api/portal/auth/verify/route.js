@@ -28,7 +28,7 @@ export async function POST(request) {
     }
 
     // Check if phone is already verified
-    const needsSmsVerification = borrower.phone && !borrower.phoneVerified;
+    const needsSmsVerification = borrower.phone && !borrower.phone_verified;
 
     // Create session (partial if SMS needed, full if phone already verified or no phone)
     await createBorrowerSession(borrower.id, {
