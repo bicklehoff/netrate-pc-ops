@@ -1,3 +1,4 @@
+import { validateTwilioSignature, twilioForbiddenResponse } from "@/lib/twilio-validate";
 // Dialer SMS Incoming Webhook — Receives inbound SMS from Twilio
 // Twilio POSTs here when someone texts your Twilio phone number.
 // Stores the message and returns TwiML (empty response = no auto-reply).
@@ -9,6 +10,9 @@ import { normalizePhone } from '@/lib/normalize-phone';
 
 export async function POST(req) {
   const formData = await req.formData();
+  const params = Object.fromEntries(formData.entries());
+  const { valid } = validateTwilioSignature(req, params);
+  if (!valid) return twilioForbiddenResponse();
   const from = formData.get('From');         // Sender's phone
   const to = formData.get('To');             // Your Twilio number
   const body = formData.get('Body');

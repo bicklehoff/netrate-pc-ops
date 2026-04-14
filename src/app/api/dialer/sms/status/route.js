@@ -1,3 +1,4 @@
+import { validateTwilioSignature, twilioForbiddenResponse } from "@/lib/twilio-validate";
 // Dialer SMS Status Callback — Receives SMS delivery status updates
 // Twilio POSTs here as messages progress: queued → sent → delivered (or failed/undelivered)
 
@@ -5,6 +6,9 @@ import sql from '@/lib/db';
 
 export async function POST(req) {
   const formData = await req.formData();
+  const params = Object.fromEntries(formData.entries());
+  const { valid } = validateTwilioSignature(req, params);
+  if (!valid) return twilioForbiddenResponse();
   const messageSid = formData.get('MessageSid');
   const messageStatus = formData.get('MessageStatus'); // queued, sent, delivered, undelivered, failed
 

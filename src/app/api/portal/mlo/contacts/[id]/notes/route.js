@@ -9,7 +9,7 @@ import sql from '@/lib/db';
 export async function POST(req, { params }) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.userType === 'mlo') {
+    if (!session || session.user.userType !== 'mlo') {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

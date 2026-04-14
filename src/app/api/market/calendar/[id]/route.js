@@ -30,6 +30,6 @@ export async function DELETE(request, { params }) {
     return NextResponse.json({ ok: true, deleted: id });
   } catch (error) {
     console.error('Calendar DELETE error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

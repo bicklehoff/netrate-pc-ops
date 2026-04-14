@@ -1,9 +1,13 @@
+import { validateTwilioSignature, twilioForbiddenResponse } from "@/lib/twilio-validate";
 // Dialer Call Complete — Handles post-dial action for incoming calls
 // Twilio POSTs here after the <Dial> in the incoming call TwiML completes.
 // If the call wasn't answered (DialCallStatus != completed), route to voicemail.
 
 export async function POST(req) {
   const formData = await req.formData();
+  const params = Object.fromEntries(formData.entries());
+  const { valid } = validateTwilioSignature(req, params);
+  if (!valid) return twilioForbiddenResponse();
   const dialStatus = formData.get('DialCallStatus'); // completed, no-answer, busy, failed, canceled
 
   // If the call was answered and completed normally, just hang up

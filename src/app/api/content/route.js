@@ -49,7 +49,7 @@ export async function GET(request) {
     return cached200({ pages: rows, count: rows.length });
   } catch (error) {
     console.error('Content GET error:', error);
-    return NextResponse.json({ error: 'Internal error', detail: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }
 
@@ -111,6 +111,6 @@ export async function POST(request) {
     return NextResponse.json({ ok: true, slug: rows[0].slug, status: rows[0].status });
   } catch (error) {
     console.error('Content POST error:', error);
-    return NextResponse.json({ error: 'Failed to save content', detail: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to save content' }, { status: 500 });
   }
 }

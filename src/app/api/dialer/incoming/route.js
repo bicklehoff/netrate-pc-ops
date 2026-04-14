@@ -1,3 +1,4 @@
+import { validateTwilioSignature, twilioForbiddenResponse } from "@/lib/twilio-validate";
 // Dialer Incoming Call Webhook — Routes inbound calls to MLO browser clients
 // Twilio POSTs here when someone calls your Twilio phone number.
 // Returns TwiML that rings the appropriate MLO's browser client.
@@ -10,6 +11,9 @@ import { normalizePhone } from '@/lib/normalize-phone';
 
 export async function POST(req) {
   const formData = await req.formData();
+  const params = Object.fromEntries(formData.entries());
+  const { valid } = validateTwilioSignature(req, params);
+  if (!valid) return twilioForbiddenResponse();
   const from = formData.get('From');       // Caller's phone number
   const to = formData.get('To');           // Your Twilio number
   const callSid = formData.get('CallSid');

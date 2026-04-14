@@ -47,7 +47,7 @@ export async function GET(request) {
     return Response.json({ tickets: result });
   } catch (error) {
     console.error('Tickets API error:', error);
-    return Response.json({ error: error.message, tickets: [] }, { status: 500 });
+    return Response.json({ error: 'Internal server error', tickets: [] }, { status: 500 });
   }
 }
 
