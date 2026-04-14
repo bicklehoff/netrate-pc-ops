@@ -194,6 +194,7 @@ export async function priceScenario(body) {
 
       if (loanClassification) {
         if (loanClassification === 'conforming' && program.isHighBalance) continue;
+        if (loanClassification === 'conforming' && program.isJumbo) continue;
         if (loanClassification === 'jumbo') continue;
       }
 
