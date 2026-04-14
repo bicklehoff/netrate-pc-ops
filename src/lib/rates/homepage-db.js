@@ -10,6 +10,7 @@ import sql from '@/lib/db';
 import { priceRate } from './pricing-v2';
 import { getDbLenderAdj } from './db-adj-loader';
 import { DEFAULT_SCENARIO } from './defaults';
+import { calculateMonthlyPI as calculatePI, calculateAPR } from '@/lib/mortgage-math';
 
 const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -20,27 +21,6 @@ const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'S
 // 30-minute TTL as safety net; ISR already caches the rendered pages.
 let homepageCache = { data: null, sheetDate: null, fetchedAt: 0 }; // cache busted on deploy (cleared 2026-04-02)
 const HOMEPAGE_CACHE_TTL = 30 * 60 * 1000; // 30 minutes
-
-function calculatePI(rate, amount, termYears = 30) {
-  const monthlyRate = rate / 100 / 12;
-  const n = termYears * 12;
-  if (monthlyRate === 0) return amount / n;
-  return amount * (monthlyRate * Math.pow(1 + monthlyRate, n)) / (Math.pow(1 + monthlyRate, n) - 1);
-}
-
-function calculateAPR(noteRate, loanAmount, financeCharges, termYears = 30) {
-  const monthlyPayment = calculatePI(noteRate, loanAmount, termYears);
-  const amountFinanced = loanAmount - Math.max(0, financeCharges);
-  if (amountFinanced >= loanAmount) return noteRate;
-  let low = noteRate;
-  let high = noteRate + 5;
-  for (let i = 0; i < 100; i++) {
-    const mid = (low + high) / 2;
-    if (calculatePI(mid, amountFinanced, termYears) < monthlyPayment) low = mid;
-    else high = mid;
-  }
-  return Math.round(((low + high) / 2) * 100) / 100;
-}
 
 /**
  * Price a single product type using the DB-driven engine.

@@ -2,13 +2,11 @@
  * NetRate Mortgage — Rate Math Helpers
  * Pure functions, no UI dependencies.
  *
- * This file used to contain a full pricing engine (priceRates, calculateLLPA)
- * that ran against static JSON rate data. That engine was deleted when the DB
- * became the source of truth — see src/lib/rates/pricing-v2.js for the math
- * and src/lib/rates/price-scenario.js for the entry point.
- *
- * Only pure math helpers remain here.
+ * calculatePI and calculateAPR re-exported from the canonical mortgage-math.js.
+ * getFicoBand and getLtvBandIndex remain here (used by pricing engine and components).
  */
+
+export { calculateMonthlyPI as calculatePI, calculateAPR } from '@/lib/mortgage-math';
 
 export function getFicoBand(fico) {
   if (fico >= 800) return ">=800";
@@ -33,33 +31,4 @@ export function getLtvBandIndex(ltv) {
   if (ltv <= 90) return 6;
   if (ltv <= 95) return 7;
   return 8;
-}
-
-export function calculatePI(rate, loanAmount, termYears = 30) {
-  const r = rate / 100 / 12;
-  const n = termYears * 12;
-  if (r === 0) return loanAmount / n;
-  return loanAmount * r / (1 - Math.pow(1 + r, -n));
-}
-
-/**
- * Calculate APR using binary search.
- * APR = the rate at which P&I on (loanAmount - netFinanceCharges) equals
- * the P&I at the note rate on loanAmount.
- */
-export function calculateAPR(noteRate, loanAmount, netFinanceCharges, termYears = 30) {
-  if (netFinanceCharges <= 0) return noteRate; // credit exceeds fees — APR ≈ note rate
-  const targetPayment = calculatePI(noteRate, loanAmount, termYears);
-  const adjustedLoan = loanAmount - netFinanceCharges;
-  if (adjustedLoan <= 0) return noteRate;
-  let lo = noteRate;
-  let hi = noteRate + 5;
-  for (let i = 0; i < 100; i++) {
-    const mid = (lo + hi) / 2;
-    const payment = calculatePI(mid, adjustedLoan, termYears);
-    if (payment < targetPayment) lo = mid;
-    else hi = mid;
-    if (Math.abs(hi - lo) < 0.0001) break;
-  }
-  return Math.round(((lo + hi) / 2) * 1000) / 1000;
 }
