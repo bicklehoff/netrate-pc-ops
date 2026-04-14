@@ -25,7 +25,6 @@ const MAX_PREMIUM_CAP = 103.045;
 const SHEET_DATE = 'April 14, 2026';
 
 // FICO × LTV (HCLTV) grid — Rocket NQM LLPAs
-// LTV bands: [≤60, 60-65, 65-70, 70-75, 75-80, 80-85, >85]
 const LTV_BANDS = [60, 65, 70, 75, 80, 85, 100];
 const FICO_LTV = [
   { min: 780, max: 999, adj: [-0.750, -0.625, -0.500, -0.375, -0.125, 1.625, 3.250] },
@@ -37,17 +36,12 @@ const FICO_LTV = [
   { min: 660, max: 679, adj: [ 0.750,  1.000,  1.625,  2.500,  3.625, null,  null] },
 ];
 
-// Stacked LLPAs by LTV band [≤60, 60-65, 65-70, 70-75, 75-80, 80-85, >85]
 const BANK_STMT_ADJ =  [0.125, 0.125, 0.125, 0.125, 0.375, 0.500, 0.625];
 const CASHOUT_ADJ =    [0.375, 0.500, 0.750, 1.000, 1.500, null,  null];
 const CONDO_ADJ =      [0.000, 0.250, 0.250, 0.375, 0.500, 0.625, null];
 const MULTI_ADJ =      [0.500, 0.500, 0.500, 0.500, 0.750, 1.500, null];
-// Investment & Second Home adjustments — available but not wired to occupancy toggle yet
-// const INVEST_ADJ =  [0.125, 0.250, 0.500, 0.750, null,  null,  null];
-// const SECOND_ADJ =  [0.125, 0.250, 0.250, 0.500, 0.500, 0.875, null];
 const DTI_45_50_ADJ =  [0.250, 0.250, 0.500, 0.625, 1.000, 1.500, 2.000];
 
-// Loan amount ladder
 const LOAN_AMT_TIERS = [
   { min: 125000, max: 149999, adj: 0.750 },
   { min: 150000, max: 199999, adj: 0.750 },
@@ -64,6 +58,63 @@ const LOAN_AMT_TIERS = [
 const COMP_RATE = 0.02;
 const COMP_CAP_PURCHASE = 4595;
 const COMP_CAP_REFI = 3595;
+
+// Default fee templates by state
+const DEFAULT_FEES = {
+  CO: [
+    { label: 'Appraisal', amount: 650, section: 'B' },
+    { label: 'Credit Report', amount: 65, section: 'B' },
+    { label: 'Flood Certification', amount: 14, section: 'B' },
+    { label: 'Tax Service', amount: 80, section: 'B' },
+    { label: "Lender's Title Policy", amount: 800, section: 'C' },
+    { label: 'Settlement / Closing Fee', amount: 450, section: 'C' },
+    { label: 'Recording Fees', amount: 75, section: 'E' },
+    { label: 'Prepaid Interest (15 days)', amount: 0, section: 'F' },
+    { label: 'Homeowners Insurance (12 mo)', amount: 0, section: 'F' },
+    { label: 'Property Taxes (6 mo escrow)', amount: 0, section: 'G' },
+    { label: 'Insurance Escrow (3 mo)', amount: 0, section: 'G' },
+  ],
+  CA: [
+    { label: 'Appraisal', amount: 750, section: 'B' },
+    { label: 'Credit Report', amount: 65, section: 'B' },
+    { label: 'Flood Certification', amount: 14, section: 'B' },
+    { label: 'Tax Service', amount: 80, section: 'B' },
+    { label: "Lender's Title Policy", amount: 1200, section: 'C' },
+    { label: 'Escrow / Settlement Fee', amount: 600, section: 'C' },
+    { label: 'Recording Fees', amount: 125, section: 'E' },
+    { label: 'Transfer Tax', amount: 0, section: 'E' },
+    { label: 'Prepaid Interest (15 days)', amount: 0, section: 'F' },
+    { label: 'Homeowners Insurance (12 mo)', amount: 0, section: 'F' },
+    { label: 'Property Taxes (6 mo escrow)', amount: 0, section: 'G' },
+    { label: 'Insurance Escrow (3 mo)', amount: 0, section: 'G' },
+  ],
+  TX: [
+    { label: 'Appraisal', amount: 650, section: 'B' },
+    { label: 'Credit Report', amount: 65, section: 'B' },
+    { label: 'Flood Certification', amount: 14, section: 'B' },
+    { label: 'Tax Service', amount: 80, section: 'B' },
+    { label: "Lender's Title Policy", amount: 900, section: 'C' },
+    { label: 'Settlement / Closing Fee', amount: 500, section: 'C' },
+    { label: 'Recording Fees', amount: 100, section: 'E' },
+    { label: 'Prepaid Interest (15 days)', amount: 0, section: 'F' },
+    { label: 'Homeowners Insurance (12 mo)', amount: 0, section: 'F' },
+    { label: 'Property Taxes (6 mo escrow)', amount: 0, section: 'G' },
+    { label: 'Insurance Escrow (3 mo)', amount: 0, section: 'G' },
+  ],
+  OR: [
+    { label: 'Appraisal', amount: 650, section: 'B' },
+    { label: 'Credit Report', amount: 65, section: 'B' },
+    { label: 'Flood Certification', amount: 14, section: 'B' },
+    { label: 'Tax Service', amount: 80, section: 'B' },
+    { label: "Lender's Title Policy", amount: 750, section: 'C' },
+    { label: 'Escrow / Settlement Fee', amount: 450, section: 'C' },
+    { label: 'Recording Fees', amount: 86, section: 'E' },
+    { label: 'Prepaid Interest (15 days)', amount: 0, section: 'F' },
+    { label: 'Homeowners Insurance (12 mo)', amount: 0, section: 'F' },
+    { label: 'Property Taxes (6 mo escrow)', amount: 0, section: 'G' },
+    { label: 'Insurance Escrow (3 mo)', amount: 0, section: 'G' },
+  ],
+};
 
 // ── Helpers ──
 function getLtvBandIdx(ltv) {
@@ -85,6 +136,56 @@ function calcPI(loan, annualRate) {
 }
 function fmtD(n) { return '$' + Math.round(n).toLocaleString(); }
 function fmtPts(n) { return (n >= 0 ? '+' : '') + n.toFixed(3) + ' pts'; }
+
+// ── Comma-formatted numeric input ──
+function NumericInput({ value, onChange, prefix = '$', step, min, max, className = '', small = false }) {
+  const [editing, setEditing] = useState(false);
+  const [raw, setRaw] = useState('');
+  const fmt = (n) => Math.round(n).toLocaleString();
+
+  return (
+    <div className="relative">
+      {prefix && <span className={`absolute left-${small ? '2' : '3'} top-1/2 -translate-y-1/2 text-gray-400 ${small ? 'text-xs' : 'text-sm'}`}>{prefix}</span>}
+      <input
+        type={editing ? 'number' : 'text'}
+        value={editing ? raw : fmt(value)}
+        onFocus={() => { setEditing(true); setRaw(String(value || '')); }}
+        onBlur={() => { setEditing(false); }}
+        onChange={e => {
+          setRaw(e.target.value);
+          const v = parseFloat(e.target.value) || 0;
+          const clamped = max !== undefined ? Math.min(v, max) : v;
+          onChange(min !== undefined ? Math.max(clamped, min) : clamped);
+        }}
+        step={step}
+        className={`${inputCls} ${prefix ? (small ? 'pl-5' : 'pl-6') : ''} ${small ? 'text-xs' : ''} ${className}`}
+      />
+    </div>
+  );
+}
+
+// Decimal numeric input (for FICO, LTV, etc.)
+function DecimalInput({ value, onChange, step = 0.5, min, max, className = '', decimals = 1 }) {
+  const [editing, setEditing] = useState(false);
+  const [raw, setRaw] = useState('');
+
+  return (
+    <input
+      type={editing ? 'number' : 'text'}
+      value={editing ? raw : (typeof value === 'number' ? value.toFixed(decimals) : value)}
+      onFocus={() => { setEditing(true); setRaw(String(value || '')); }}
+      onBlur={() => setEditing(false)}
+      onChange={e => {
+        setRaw(e.target.value);
+        const v = parseFloat(e.target.value) || 0;
+        const clamped = max !== undefined ? Math.min(v, max) : v;
+        onChange(min !== undefined ? Math.max(clamped, min) : clamped);
+      }}
+      step={step}
+      className={`${inputCls} ${className}`}
+    />
+  );
+}
 
 // ── Design system classes ──
 const labelCls = 'block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1';
@@ -142,11 +243,21 @@ function DTIGauge({ dti }) {
   );
 }
 
+// ── Fee section labels ──
+const FEE_SECTIONS = {
+  B: 'Services You Cannot Shop For',
+  C: 'Services You Can Shop For',
+  E: 'Taxes & Government Fees',
+  F: 'Prepaids',
+  G: 'Initial Escrow at Closing',
+};
+
 // ── PDF Component ──
-function BankStatementLoanPDF({ borrowerName, loanAmount, ltv, fico, propertyType, purpose, stateName,
-  monthlyDeposits, statementType, expensePct, monthlyQualIncome, annualQualIncome,
-  activeRow, monthlyTaxes, monthlyInsurance, monthlyHoa, debt1Label, debt1Amount, debt2Label, debt2Amount, dti,
-  Document, Page, View, Text, StyleSheet }) {
+function BankStatementLoanPDF(props) {
+  const { borrowerName, purchasePrice, propertyAddress, loanAmount, ltv, propertyType, purpose, stateName,
+    statementType, selectedPdfRows,
+    fees, feeTotal, rebateDollar, cashToClose,
+    Document, Page, View, Text, StyleSheet } = props;
   const B = '#2E6BA8', BD = '#24578C', GO = '#059669', INK = '#1A1F2E', IM = '#4A5C6E', IS = '#7A8E9E', SL = '#f2f4f6', W = '#ffffff';
   const s = StyleSheet.create({
     page: { padding: 40, fontFamily: 'Helvetica', fontSize: 9, color: INK, backgroundColor: W },
@@ -160,7 +271,7 @@ function BankStatementLoanPDF({ borrowerName, loanAmount, ltv, fico, propertyTyp
     badge: { backgroundColor: SL, borderRadius: 10, paddingVertical: 3, paddingHorizontal: 10 },
     badgeText: { fontSize: 7, fontFamily: 'Helvetica-Bold', color: IS, textTransform: 'uppercase', letterSpacing: 1 },
     infoBar: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 },
-    cardRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
+    cardRow: { flexDirection: 'row', gap: 10, marginBottom: 14 },
     card: { flex: 1, backgroundColor: SL, borderRadius: 8, padding: 10 },
     cardLabel: { fontSize: 7, textTransform: 'uppercase', letterSpacing: 1.5, color: IS, marginBottom: 2 },
     cardValue: { fontSize: 16, fontFamily: 'Helvetica-Bold', color: INK },
@@ -175,11 +286,28 @@ function BankStatementLoanPDF({ borrowerName, loanAmount, ltv, fico, propertyTyp
     footer: { position: 'absolute', bottom: 24, left: 40, right: 40, flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 0.5, borderTopColor: IS + '30', paddingTop: 6 },
     footerText: { fontSize: 7, color: IS },
     disclaimer: { fontSize: 7, color: IS, lineHeight: 1.5, marginTop: 10 },
+    rateTableRow: { flexDirection: 'row', paddingVertical: 5, borderBottomWidth: 0.5, borderBottomColor: SL },
+    rateTableCell: { fontSize: 9, color: INK },
+    rateTableCellBold: { fontSize: 9.5, fontFamily: 'Helvetica-Bold', color: INK },
+    rateTableHeader: { fontSize: 7, fontFamily: 'Helvetica-Bold', color: IS, textTransform: 'uppercase', letterSpacing: 1 },
+    feeRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 2 },
+    feeLabel: { fontSize: 8, color: IM },
+    feeValue: { fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: INK },
+    feeSectionLabel: { fontSize: 7, fontFamily: 'Helvetica-Bold', color: BD, textTransform: 'uppercase', letterSpacing: 1, marginTop: 8, marginBottom: 3 },
+    cashToCloseBar: { flexDirection: 'row', justifyContent: 'space-between', backgroundColor: BD, borderRadius: 8, paddingVertical: 8, paddingHorizontal: 12, marginTop: 10 },
+    cashToCloseLabel: { fontSize: 10, fontFamily: 'Helvetica-Bold', color: W },
+    cashToCloseValue: { fontSize: 14, fontFamily: 'Helvetica-Bold', color: W },
   });
   const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-  const totalDebts = (activeRow?.pitia || 0) + debt1Amount + debt2Amount;
   const propLabel = { sfr: 'Single Family', condo: 'Condo', '2unit': '2-Unit', '3-4unit': '3-4 Unit' }[propertyType] || propertyType;
   const purpLabel = { purchase: 'Purchase', refinance: 'Rate/Term Refi', cashout: 'Cash-Out Refi' }[purpose] || purpose;
+
+  // Group fees by section
+  const feesBySection = {};
+  fees.forEach(f => {
+    if (!feesBySection[f.section]) feesBySection[f.section] = [];
+    feesBySection[f.section].push(f);
+  });
 
   return (
     <Document>
@@ -202,6 +330,7 @@ function BankStatementLoanPDF({ borrowerName, loanAmount, ltv, fico, propertyTyp
           <View>
             <Text style={{ fontSize: 12, fontFamily: 'Helvetica-Bold', color: INK }}>{borrowerName || 'Borrower'}</Text>
             <Text style={{ fontSize: 9, color: IM, marginTop: 2 }}>{purpLabel} | {propLabel} | {stateName}</Text>
+            {propertyAddress ? <Text style={{ fontSize: 9, color: IM, marginTop: 1 }}>{propertyAddress}</Text> : null}
           </View>
           <View style={{ alignItems: 'flex-end' }}>
             <View style={s.badge}><Text style={s.badgeText}>{statementType} Bank Statements</Text></View>
@@ -209,30 +338,73 @@ function BankStatementLoanPDF({ borrowerName, loanAmount, ltv, fico, propertyTyp
           </View>
         </View>
         <View style={s.cardRow}>
+          <View style={s.card}><Text style={s.cardLabel}>Purchase Price</Text><Text style={s.cardValue}>{fmtD(purchasePrice)}</Text></View>
+          <View style={s.card}><Text style={s.cardLabel}>Down Payment</Text><Text style={s.cardValue}>{fmtD(purchasePrice - loanAmount)} ({(100 - ltv).toFixed(0)}%)</Text></View>
           <View style={s.card}><Text style={s.cardLabel}>Loan Amount</Text><Text style={s.cardValue}>{fmtD(loanAmount)}</Text></View>
-          <View style={s.card}><Text style={s.cardLabel}>Rate</Text><Text style={s.cardValue}>{activeRow?.rate.toFixed(3)}%</Text></View>
-          <View style={[s.card, { borderLeftWidth: 3, borderLeftColor: GO }]}><Text style={s.cardLabel}>Monthly Payment</Text><Text style={s.cardValueGreen}>{fmtD(activeRow?.pitia || 0)}</Text></View>
         </View>
-        <Text style={s.sectionTitle}>Loan Details</Text>
-        {[['Purchase Price / Value', fmtD(loanAmount + (loanAmount / (ltv / 100) - loanAmount))], ['Down Payment', fmtD(loanAmount / (ltv / 100) - loanAmount)], ['LTV', ltv.toFixed(1) + '%'], ['FICO', String(fico)]].map(([l, v]) => (
-          <View key={l} style={s.row}><Text style={s.rowLabel}>{l}</Text><Text style={s.rowValue}>{v}</Text></View>
-        ))}
-        <Text style={s.sectionTitle}>Income</Text>
-        {[['Avg Monthly Deposits', fmtD(monthlyDeposits)], ['Expense Factor', expensePct + '%' + (statementType === 'personal' ? ' (personal — no deduction)' : '')], ['Monthly Qualifying Income', fmtD(monthlyQualIncome)], ['Annual Qualifying Income', fmtD(annualQualIncome)]].map(([l, v]) => (
-          <View key={l} style={s.row}><Text style={s.rowLabel}>{l}</Text><Text style={s.rowValue}>{v}</Text></View>
-        ))}
-        <Text style={s.sectionTitle}>Monthly Payment Breakdown</Text>
-        {[['Principal & Interest', fmtD(activeRow?.pi || 0)], ['Property Taxes', fmtD(monthlyTaxes)], ['Insurance', fmtD(monthlyInsurance)], ...(monthlyHoa > 0 ? [['HOA', fmtD(monthlyHoa)]] : []), ['Total PITIA', fmtD(activeRow?.pitia || 0)], ...(debt1Amount > 0 ? [[debt1Label || 'Debt 1', fmtD(debt1Amount)]] : []), ...(debt2Amount > 0 ? [[debt2Label || 'Debt 2', fmtD(debt2Amount)]] : [])].map(([l, v]) => (
-          <View key={l} style={s.row}><Text style={s.rowLabel}>{l}</Text><Text style={s.rowValue}>{v}</Text></View>
-        ))}
-        <View style={s.totalBar}>
-          <Text style={s.totalLabel}>DTI: {dti.toFixed(1)}% ({fmtD(totalDebts)} / {fmtD(monthlyQualIncome)})</Text>
-          <Text style={s.totalValue}>{fmtD(activeRow?.pitia || 0)}/mo</Text>
+
+        {/* Rate Options Table */}
+        <Text style={s.sectionTitle}>Rate Options</Text>
+        <View style={[s.rateTableRow, { borderBottomWidth: 1, borderBottomColor: IS + '40' }]}>
+          <Text style={[s.rateTableHeader, { width: '16%' }]}>Rate</Text>
+          <Text style={[s.rateTableHeader, { width: '18%' }]}>P&I</Text>
+          <Text style={[s.rateTableHeader, { width: '18%' }]}>PITIA</Text>
+          <Text style={[s.rateTableHeader, { width: '12%' }]}>DTI</Text>
+          <Text style={[s.rateTableHeader, { width: '18%' }]}>Points</Text>
+          <Text style={[s.rateTableHeader, { width: '18%' }]}>Rebate/Cost</Text>
         </View>
-        <Text style={s.sectionTitle}>Pricing</Text>
-        {[['Net Price', (activeRow?.netPrice || 100).toFixed(3)], ['Rebate / Cost', activeRow?.netDollar >= 0 ? fmtD(activeRow.netDollar) + ' rebate' : fmtD(Math.abs(activeRow?.netDollar || 0)) + ' cost']].map(([l, v]) => (
-          <View key={l} style={s.row}><Text style={s.rowLabel}>{l}</Text><Text style={s.rowValue}>{v}</Text></View>
+        {selectedPdfRows.map((row, i) => (
+          <View key={i} style={[s.rateTableRow, i === 0 ? { backgroundColor: SL } : {}]}>
+            <Text style={[s.rateTableCellBold, { width: '16%' }]}>{row.rate.toFixed(3)}%</Text>
+            <Text style={[s.rateTableCell, { width: '18%' }]}>{fmtD(row.pi)}</Text>
+            <Text style={[s.rateTableCell, { width: '18%' }]}>{fmtD(row.pitia)}</Text>
+            <Text style={[s.rateTableCell, { width: '12%' }]}>{row.dti.toFixed(1)}%</Text>
+            <Text style={[s.rateTableCell, { width: '18%' }]}>{fmtPts(row.netPrice - 100)}</Text>
+            <Text style={[s.rateTableCellBold, { width: '18%', color: row.netDollar >= 0 ? GO : '#dc2626' }]}>
+              {row.netDollar >= 0 ? fmtD(row.netDollar) + ' rebate' : fmtD(Math.abs(row.netDollar)) + ' cost'}
+            </Text>
+          </View>
         ))}
+
+        {/* Fees breakdown */}
+        <Text style={s.sectionTitle}>Estimated Closing Costs</Text>
+        {Object.entries(FEE_SECTIONS).map(([code, title]) => {
+          const items = feesBySection[code];
+          if (!items || items.length === 0) return null;
+          const sectionTotal = items.reduce((s, f) => s + f.amount, 0);
+          return (
+            <View key={code}>
+              <Text style={s.feeSectionLabel}>{code}. {title}</Text>
+              {items.map((f, i) => (
+                <View key={i} style={s.feeRow}>
+                  <Text style={s.feeLabel}>{f.label}</Text>
+                  <Text style={s.feeValue}>{fmtD(f.amount)}</Text>
+                </View>
+              ))}
+              <View style={[s.feeRow, { borderTopWidth: 0.5, borderTopColor: SL, marginTop: 2 }]}>
+                <Text style={[s.feeLabel, { fontFamily: 'Helvetica-Bold' }]}>Subtotal</Text>
+                <Text style={s.feeValue}>{fmtD(sectionTotal)}</Text>
+              </View>
+            </View>
+          );
+        })}
+        <View style={[s.feeRow, { marginTop: 6, paddingTop: 4, borderTopWidth: 1, borderTopColor: IS + '40' }]}>
+          <Text style={[s.feeLabel, { fontFamily: 'Helvetica-Bold', fontSize: 9 }]}>Total Closing Costs</Text>
+          <Text style={[s.feeValue, { fontSize: 10 }]}>{fmtD(feeTotal)}</Text>
+        </View>
+        {rebateDollar > 0 && (
+          <View style={s.feeRow}>
+            <Text style={[s.feeLabel, { color: GO }]}>Lender Credit (Rebate)</Text>
+            <Text style={[s.feeValue, { color: GO }]}>-{fmtD(rebateDollar)}</Text>
+          </View>
+        )}
+
+        {/* Cash to Close */}
+        <View style={s.cashToCloseBar}>
+          <Text style={s.cashToCloseLabel}>Estimated Cash to Close</Text>
+          <Text style={s.cashToCloseValue}>{fmtD(cashToClose)}</Text>
+        </View>
+
         <Text style={s.disclaimer}>This quote is for estimation purposes only. Rates, terms and conditions subject to change without notice. Not a commitment to lend. Bank statement income is subject to lender underwriting review. Rocket Pro TPO NQM program, {SHEET_DATE}.</Text>
         <View style={s.footer} fixed>
           <Text style={s.footerText}>NetRate Mortgage LLC | NMLS #1111861 | Equal Housing Lender</Text>
@@ -249,11 +421,12 @@ export default function BankStatementCalculator() {
   // Loan scenario
   const [purchasePrice, setPurchasePrice] = useState(500000);
   const [downPayment, setDownPayment] = useState(100000);
-  const [manualPtsOverride, setManualPtsOverride] = useState({}); // { [rate]: points override }
+  const [manualPtsOverride, setManualPtsOverride] = useState({});
   const [fico, setFico] = useState(740);
   const [propertyType, setPropertyType] = useState('sfr');
   const [state, setState] = useState('CO');
   const [purpose, setPurpose] = useState('purchase');
+  const [propertyAddress, setPropertyAddress] = useState('');
   // Income
   const [statementType, setStatementType] = useState('business');
   const [monthlyDeposits, setMonthlyDeposits] = useState(25000);
@@ -271,8 +444,12 @@ export default function BankStatementCalculator() {
   const [debt2Amount, setDebt2Amount] = useState(0);
   // UI
   const [selectedRate, setSelectedRate] = useState(null);
+  const [pdfRates, setPdfRates] = useState(new Set()); // rates selected for PDF
   const [pdfLoading, setPdfLoading] = useState(false);
   const [borrowerName, setBorrowerName] = useState('');
+  // Fees
+  const [fees, setFees] = useState(() => DEFAULT_FEES.CO.map(f => ({ ...f })));
+  // fees state is initialized inline and reset on state change
 
   // ── Derived ──
   const expRate = statementType === 'personal' ? 0 : expensePct / 100;
@@ -281,7 +458,23 @@ export default function BankStatementCalculator() {
   const loanAmount = Math.max(0, purchasePrice - downPayment);
   const ltv = purchasePrice > 0 ? (loanAmount / purchasePrice) * 100 : 0;
 
-  // Sync down payment when purchase price changes
+  // Update dynamic fee amounts when inputs change
+  useEffect(() => {
+    setFees(prev => prev.map(f => {
+      if (f.label.startsWith('Prepaid Interest')) return { ...f, amount: Math.round(loanAmount * 0.0002 * 15) }; // ~rate/365*15 approx
+      if (f.label.startsWith('Homeowners Insurance')) return { ...f, amount: Math.round(monthlyInsurance * 12) };
+      if (f.label.startsWith('Property Taxes') && f.section === 'G') return { ...f, amount: Math.round(monthlyTaxes * 6) };
+      if (f.label.startsWith('Insurance Escrow')) return { ...f, amount: Math.round(monthlyInsurance * 3) };
+      return f;
+    }));
+  }, [loanAmount, monthlyInsurance, monthlyTaxes]);
+
+  // Reset fees when state changes
+  useEffect(() => {
+    const template = DEFAULT_FEES[state] || DEFAULT_FEES.CO;
+    setFees(template.map(f => ({ ...f })));
+  }, [state]);
+
   const setPurchasePriceAndSync = (val) => {
     setPurchasePrice(val);
     if (downPayment > val) setDownPayment(val);
@@ -307,7 +500,6 @@ export default function BankStatementCalculator() {
   const purpAdj = purpose === 'cashout' ? (getStackedAdj(CASHOUT_ADJ, ltvIdx) || 0) : 0;
   const loanAmtAdj = getLoanAmtAdj(loanAmount);
 
-  // Ineligible if FICO/LTV combo returns null
   const isEligible = ficoLtvAdj !== null;
 
   const rows = RATES.map(({ rate, base }) => {
@@ -319,7 +511,6 @@ export default function BankStatementCalculator() {
     const dtiAdj = dti > 45 && dti <= 50 ? (getStackedAdj(DTI_45_50_ADJ, ltvIdx) || 0) : 0;
     const rawAdj = base + ficoLtvAdj + bankStmtAdj + propAdj + purpAdj + loanAmtAdj + dtiAdj;
     const adjPrice = Math.min(rawAdj, MAX_PREMIUM_CAP);
-    // Manual points override: if set, use it instead of calculated net
     const hasOverride = manualPtsOverride[rate] !== undefined && manualPtsOverride[rate] !== '';
     const overridePts = hasOverride ? parseFloat(manualPtsOverride[rate]) : 0;
     const netPrice = hasOverride ? (100 + overridePts) : (adjPrice - compPts);
@@ -330,9 +521,50 @@ export default function BankStatementCalculator() {
   const parRow = rows.reduce((best, r) => Math.abs(r.netPrice - 100) < Math.abs(best.netPrice - 100) ? r : best, rows[0]);
   const displayRows = rows.filter(r => Math.abs(r.netPrice - 100) < 3.5 && r.dti < 999);
 
-  useEffect(() => { setSelectedRate(parRow.rate); }, [loanAmount, fico, propertyType, purpose, monthlyDeposits, statementType, expensePct, monthlyTaxes, monthlyInsurance, monthlyHoa, debt1Amount, debt2Amount]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Only auto-select rate on loan scenario changes — NOT on housing expense / debt changes
+  useEffect(() => { setSelectedRate(parRow.rate); }, [loanAmount, fico, propertyType, purpose, monthlyDeposits, statementType, expensePct]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const activeRow = rows.find(r => r.rate === selectedRate) || parRow;
+
+  // Fee totals
+  const feeTotal = fees.reduce((s, f) => s + f.amount, 0);
+  const rebateDollar = activeRow.netDollar > 0 ? activeRow.netDollar : 0;
+  const costDollar = activeRow.netDollar < 0 ? Math.abs(activeRow.netDollar) : 0;
+  const cashToClose = downPayment + feeTotal + costDollar - rebateDollar;
+
+  // Toggle PDF rate selection (max 3)
+  const togglePdfRate = (rate) => {
+    setPdfRates(prev => {
+      const next = new Set(prev);
+      if (next.has(rate)) { next.delete(rate); }
+      else if (next.size < 3) { next.add(rate); }
+      return next;
+    });
+  };
+
+  const selectedPdfRows = rows.filter(r => pdfRates.has(r.rate));
+
+  // Update a fee amount by index — no re-sort, just update in place
+  const updateFee = (index, newAmount) => {
+    setFees(prev => {
+      const next = [...prev];
+      next[index] = { ...next[index], amount: newAmount };
+      return next;
+    });
+  };
+  const addFee = (section) => {
+    setFees(prev => [...prev, { label: 'Custom Fee', amount: 0, section }]);
+  };
+  const removeFee = (index) => {
+    setFees(prev => prev.filter((_, i) => i !== index));
+  };
+  const updateFeeLabel = (index, label) => {
+    setFees(prev => {
+      const next = [...prev];
+      next[index] = { ...next[index], label };
+      return next;
+    });
+  };
 
   const guidelines = [
     { pass: activeRow.dti <= 43, warn: activeRow.dti <= 50, text: `DTI ${activeRow.dti.toFixed(1)}% — max 50%, preferred under 43%` },
@@ -344,15 +576,17 @@ export default function BankStatementCalculator() {
   ];
 
   const handleDownloadPDF = async () => {
+    if (selectedPdfRows.length === 0) return alert('Select 1-3 rates for the PDF using the checkboxes in the rate table.');
     setPdfLoading(true);
     try {
       const rpdf = await import('@react-pdf/renderer');
       const blob = await rpdf.pdf(
         BankStatementLoanPDF({
-          borrowerName, loanAmount, ltv, fico, propertyType, purpose, stateName: state,
+          borrowerName, purchasePrice, propertyAddress, loanAmount, ltv, fico, propertyType, purpose, stateName: state,
           monthlyDeposits, statementType, expensePct, monthlyQualIncome, annualQualIncome,
-          activeRow, monthlyTaxes, monthlyInsurance, monthlyHoa,
-          debt1Label, debt1Amount, debt2Label, debt2Amount, dti: activeRow.dti,
+          selectedPdfRows, monthlyTaxes, monthlyInsurance, monthlyHoa,
+          debt1Label, debt1Amount, debt2Label, debt2Amount,
+          fees, feeTotal, rebateDollar, cashToClose,
           Document: rpdf.Document, Page: rpdf.Page, View: rpdf.View, Text: rpdf.Text, StyleSheet: rpdf.StyleSheet,
         })
       ).toBlob();
@@ -384,25 +618,18 @@ export default function BankStatementCalculator() {
             <SectionLabel>Loan Scenario</SectionLabel>
             <div className="mb-3">
               <label className={labelCls}>Purchase Price</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
-                <input type="number" value={purchasePrice} onChange={e => setPurchasePriceAndSync(+e.target.value || 0)} step={5000} className={inputCls + ' pl-6'} />
-              </div>
+              <NumericInput value={purchasePrice} onChange={setPurchasePriceAndSync} step={5000} />
             </div>
             <div className="mb-3">
               <label className={labelCls}>Down Payment</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
-                <input type="number" value={downPayment} onChange={e => setDownPayment(+e.target.value || 0)} step={1000} className={inputCls + ' pl-6'} />
-              </div>
+              <NumericInput value={downPayment} onChange={setDownPayment} step={1000} />
               <p className="text-[11px] text-gray-400 mt-1">{purchasePrice > 0 ? (downPayment / purchasePrice * 100).toFixed(1) + '% down' : ''}</p>
             </div>
             <div className="grid grid-cols-2 gap-2 mb-3">
               <div><label className={labelCls}>Loan Amount</label>
-                <div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
-                  <input type="number" value={loanAmount} onChange={e => setDownPaymentFromLoan(+e.target.value || 0)} step={1000} className={inputCls + ' pl-6'} /></div></div>
+                <NumericInput value={loanAmount} onChange={setDownPaymentFromLoan} step={1000} /></div>
               <div><label className={labelCls}>LTV %</label>
-                <input type="number" value={parseFloat(ltv.toFixed(1))} onChange={e => setDownPaymentFromLtv(+e.target.value || 0)} step={0.5} min={0} max={100} className={inputCls} /></div>
+                <DecimalInput value={parseFloat(ltv.toFixed(1))} onChange={setDownPaymentFromLtv} step={0.5} min={0} max={97} /></div>
             </div>
             <div className="grid grid-cols-2 gap-2 mb-3">
               <div><label className={labelCls}>FICO Score</label>
@@ -441,11 +668,8 @@ export default function BankStatementCalculator() {
             </div>
             <div className="mb-3">
               <label className={labelCls}>Average Monthly Deposits</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
-                <input type="number" value={monthlyDeposits} onChange={e => setMonthlyDeposits(+e.target.value || 0)} step={1000} className={inputCls + ' pl-6'} />
-              </div>
-              <p className="text-[11px] text-gray-400 mt-1">Total deposits ÷ 12 months from statements</p>
+              <NumericInput value={monthlyDeposits} onChange={setMonthlyDeposits} step={1000} />
+              <p className="text-[11px] text-gray-400 mt-1">Total deposits / 12 months from statements</p>
             </div>
             {statementType === 'business' && (
               <>
@@ -487,16 +711,13 @@ export default function BankStatementCalculator() {
             <SectionLabel>Monthly Housing Expenses</SectionLabel>
             <div className="grid grid-cols-2 gap-2 mb-2">
               <div><label className={labelCls}>Property Taxes</label>
-                <div className="relative"><span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">$</span>
-                  <input type="number" value={monthlyTaxes} onChange={e => setMonthlyTaxes(+e.target.value || 0)} step={25} className={inputCls + ' pl-5 text-xs'} /></div>
-                <p className="text-[10px] text-gray-400 mt-0.5">Annual ÷ 12</p></div>
+                <NumericInput value={monthlyTaxes} onChange={setMonthlyTaxes} step={25} small />
+                <p className="text-[10px] text-gray-400 mt-0.5">Annual / 12</p></div>
               <div><label className={labelCls}>Insurance</label>
-                <div className="relative"><span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">$</span>
-                  <input type="number" value={monthlyInsurance} onChange={e => setMonthlyInsurance(+e.target.value || 0)} step={10} className={inputCls + ' pl-5 text-xs'} /></div></div>
+                <NumericInput value={monthlyInsurance} onChange={setMonthlyInsurance} step={10} small /></div>
             </div>
             <div><label className={labelCls}>HOA (if any)</label>
-              <div className="relative"><span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">$</span>
-                <input type="number" value={monthlyHoa} onChange={e => setMonthlyHoa(+e.target.value || 0)} step={25} className={inputCls + ' pl-5 text-xs'} /></div></div>
+              <NumericInput value={monthlyHoa} onChange={setMonthlyHoa} step={25} small /></div>
           </div>
 
           {/* Debts */}
@@ -506,10 +727,7 @@ export default function BankStatementCalculator() {
               {[[debt1Label, debt1Amount, setDebt1Label, setDebt1Amount], [debt2Label, debt2Amount, setDebt2Label, setDebt2Amount]].map(([label, amt, setLabel, setAmt], i) => (
                 <div key={i} className="grid grid-cols-[1fr_100px] gap-2">
                   <input type="text" value={label} onChange={e => setLabel(e.target.value)} placeholder={`Debt ${i + 1} label`} className={inputCls + ' text-xs'} />
-                  <div className="relative">
-                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">$</span>
-                    <input type="number" value={amt || ''} onChange={e => setAmt(+e.target.value || 0)} placeholder="0" className={inputCls + ' pl-5 text-xs'} />
-                  </div>
+                  <NumericInput value={amt} onChange={setAmt} step={25} small />
                 </div>
               ))}
             </div>
@@ -519,7 +737,7 @@ export default function BankStatementCalculator() {
           </div>
         </div>
 
-        {/* ── CENTER: Payments + Rates ── */}
+        {/* ── CENTER: Payments + Rates + Fees ── */}
         <div className="flex flex-col gap-4">
           {/* Payment breakdown */}
           <div className={cardCls}>
@@ -556,7 +774,7 @@ export default function BankStatementCalculator() {
                 <div className="text-[11px] text-gray-500 mt-0.5">
                   DTI: <span className={`font-bold ${activeRow.dti <= 43 ? 'text-green-600' : activeRow.dti <= 50 ? 'text-amber-500' : 'text-red-500'}`}>
                     {activeRow.dti.toFixed(1)}%
-                  </span> ({fmtD(activeRow.pitia + totalOtherDebts)} obligations ÷ {fmtD(monthlyQualIncome)} income)
+                  </span> ({fmtD(activeRow.pitia + totalOtherDebts)} obligations / {fmtD(monthlyQualIncome)} income)
                 </div>
               </div>
               <span className="text-2xl font-bold text-brand tabular-nums">{fmtD(activeRow.pitia)}</span>
@@ -566,7 +784,7 @@ export default function BankStatementCalculator() {
           {/* Rate table */}
           <div className={cardCls}>
             <SectionLabel>Rate Options · Rocket Pro NQM 30yr · 30-Day Lock</SectionLabel>
-            <p className="text-[11px] text-gray-400 mb-3">Click any row to update the payment breakdown and DTI gauge.</p>
+            <p className="text-[11px] text-gray-400 mb-3">Click a row to update payment. Check up to 3 rates for the PDF.</p>
             {!isEligible ? (
               <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700 font-medium">
                 This FICO/LTV combination is not eligible for the Rocket NQM program. Try increasing the down payment or check FICO requirements.
@@ -576,8 +794,9 @@ export default function BankStatementCalculator() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b-2 border-gray-100">
+                      <th className="w-8 py-2 px-1"><span className="sr-only">PDF</span></th>
                       {['Rate', 'P&I', 'PITIA', 'DTI', 'Override Pts', 'Points', 'Net Cost'].map(h => (
-                        <th key={h} className="text-left text-[11px] font-semibold text-gray-400 uppercase tracking-wider py-2 px-2 first:pl-0">{h}</th>
+                        <th key={h} className="text-left text-[11px] font-semibold text-gray-400 uppercase tracking-wider py-2 px-2">{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -587,23 +806,29 @@ export default function BankStatementCalculator() {
                       return displayRows.map(row => {
                         const markers = [];
                         if (!shown43 && row.dti > 43) { shown43 = true; markers.push(
-                          <tr key="dti43"><td colSpan={7} className="bg-amber-50 text-amber-700 text-[11px] font-semibold px-2 py-1.5 border-y border-amber-200">
-                            ▲ DTI 43% — preferred threshold
+                          <tr key="dti43"><td colSpan={8} className="bg-amber-50 text-amber-700 text-[11px] font-semibold px-2 py-1.5 border-y border-amber-200">
+                            DTI 43% — preferred threshold
                           </td></tr>); }
                         if (!shown50 && row.dti > 50) { shown50 = true; markers.push(
-                          <tr key="dti50"><td colSpan={7} className="bg-red-50 text-red-600 text-[11px] font-semibold px-2 py-1.5 border-y border-red-200">
-                            ▲ DTI 50% maximum — rates below this line exceed max DTI
+                          <tr key="dti50"><td colSpan={8} className="bg-red-50 text-red-600 text-[11px] font-semibold px-2 py-1.5 border-y border-red-200">
+                            DTI 50% maximum — rates below this line exceed max DTI
                           </td></tr>); }
                         const isPar = row.rate === parRow.rate;
                         const isSelected = row.rate === selectedRate;
+                        const isPdfSelected = pdfRates.has(row.rate);
                         const ptsDiff = row.netPrice - 100;
                         const isCredit = ptsDiff >= 0;
                         return [...markers,
                           <tr key={row.rate} onClick={() => setSelectedRate(row.rate)}
                             className={`cursor-pointer transition-colors border-b border-gray-50 ${isSelected ? 'bg-brand/5' : isPar ? 'bg-green-50/50' : 'hover:bg-gray-50'}`}>
-                            <td className="py-2.5 px-2 pl-0">
+                            <td className="py-1 px-1" onClick={e => e.stopPropagation()}>
+                              <input type="checkbox" checked={isPdfSelected} onChange={() => togglePdfRate(row.rate)}
+                                disabled={!isPdfSelected && pdfRates.size >= 3}
+                                className="rounded border-gray-300 text-brand focus:ring-brand w-4 h-4" />
+                            </td>
+                            <td className="py-2.5 px-2">
                               <span className="font-bold text-gray-900 tabular-nums">{row.rate.toFixed(3)}%</span>
-                              {isPar && <span className="ml-1 text-green-600 text-[10px] font-bold">★ par</span>}
+                              {isPar && <span className="ml-1 text-green-600 text-[10px] font-bold">par</span>}
                             </td>
                             <td className="py-2.5 px-2 tabular-nums text-gray-700">{fmtD(row.pi)}</td>
                             <td className="py-2.5 px-2 tabular-nums text-gray-700">{fmtD(row.pitia)}</td>
@@ -636,7 +861,66 @@ export default function BankStatementCalculator() {
                 </table>
               </div>
             )}
-            <p className="text-[11px] text-gray-400 mt-3">★ = closest to par after comp and adjustments. Rebate = credit toward closing costs.</p>
+            {pdfRates.size > 0 && (
+              <div className="mt-2 text-xs text-brand font-medium">{pdfRates.size}/3 rates selected for PDF</div>
+            )}
+            <p className="text-[11px] text-gray-400 mt-2">par = closest to par after comp and adjustments. Rebate = credit toward closing costs.</p>
+          </div>
+
+          {/* Fees */}
+          <div className={cardCls}>
+            <SectionLabel>Estimated Closing Costs</SectionLabel>
+            <p className="text-[11px] text-gray-400 mb-3">Edit any fee. Prepaids and escrow auto-calculate from your inputs above.</p>
+            {Object.entries(FEE_SECTIONS).map(([code, title]) => {
+              const sectionFees = fees.map((f, i) => ({ ...f, _idx: i })).filter(f => f.section === code);
+              if (sectionFees.length === 0) return null;
+              const sectionTotal = sectionFees.reduce((s, f) => s + f.amount, 0);
+              return (
+                <div key={code} className="mb-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{code}. {title}</span>
+                    <button onClick={() => addFee(code)} className="text-[10px] text-brand hover:underline font-semibold">+ Add</button>
+                  </div>
+                  {sectionFees.map(f => (
+                    <div key={f._idx} className="flex items-center gap-1 mb-0.5">
+                      <input type="text" value={f.label} onChange={e => updateFeeLabel(f._idx, e.target.value)}
+                        className="flex-1 border-0 border-b border-transparent hover:border-gray-200 focus:border-brand px-1 py-0.5 text-xs text-gray-600 bg-transparent outline-none" />
+                      <div className="w-20">
+                        <NumericInput value={f.amount} onChange={v => updateFee(f._idx, v)} step={10} small />
+                      </div>
+                      <button onClick={() => removeFee(f._idx)} className="text-gray-300 hover:text-red-400 text-sm px-1" title="Remove">x</button>
+                    </div>
+                  ))}
+                  <div className="flex justify-between text-xs font-semibold text-gray-500 border-t border-gray-100 pt-1 mt-1 px-1">
+                    <span>Subtotal</span><span className="tabular-nums">{fmtD(sectionTotal)}</span>
+                  </div>
+                </div>
+              );
+            })}
+            <div className="border-t-2 border-gray-200 pt-2 mt-2 space-y-1">
+              <div className="flex justify-between text-sm font-bold text-gray-900 px-1">
+                <span>Total Closing Costs</span><span className="tabular-nums">{fmtD(feeTotal)}</span>
+              </div>
+              {rebateDollar > 0 && (
+                <div className="flex justify-between text-sm font-semibold text-green-600 px-1">
+                  <span>Lender Credit (Rebate)</span><span className="tabular-nums">-{fmtD(rebateDollar)}</span>
+                </div>
+              )}
+              {costDollar > 0 && (
+                <div className="flex justify-between text-sm font-semibold text-red-600 px-1">
+                  <span>Discount Points (Cost)</span><span className="tabular-nums">+{fmtD(costDollar)}</span>
+                </div>
+              )}
+              <div className="flex justify-between items-center bg-brand/10 rounded-lg px-3 py-2 mt-1">
+                <span className="text-sm font-bold text-brand">Estimated Cash to Close</span>
+                <span className="text-lg font-bold text-brand tabular-nums">{fmtD(cashToClose)}</span>
+              </div>
+              <div className="text-[10px] text-gray-400 px-1">
+                Down payment {fmtD(downPayment)} + closing costs {fmtD(feeTotal)}
+                {costDollar > 0 ? ` + discount ${fmtD(costDollar)}` : ''}
+                {rebateDollar > 0 ? ` - rebate ${fmtD(rebateDollar)}` : ''}
+              </div>
+            </div>
           </div>
 
           {/* Pricing math */}
@@ -652,7 +936,7 @@ export default function BankStatementCalculator() {
                 { label: `Loan amount adj (${fmtD(loanAmount)})`, val: fmtPts(loanAmtAdj), color: loanAmtAdj >= 0 ? 'text-red-500' : 'text-green-600' },
                 ...(activeRow.dtiAdj > 0 ? [{ label: `DTI 45-50% adj`, val: fmtPts(activeRow.dtiAdj), color: 'text-red-500' }] : []),
                 { label: 'Adj price (capped at ' + MAX_PREMIUM_CAP.toFixed(3) + ')', val: activeRow.adjPrice.toFixed(4), color: 'text-gray-900 font-semibold' },
-                { label: `Broker comp (${fmtD(compDollar)} / ${fmtD(loanAmount)})`, val: '−' + compPts.toFixed(3) + ' pts', color: 'text-red-500' },
+                { label: `Broker comp (${fmtD(compDollar)} / ${fmtD(loanAmount)})`, val: '-' + compPts.toFixed(3) + ' pts', color: 'text-red-500' },
               ].map(({ label, val, color }) => (
                 <div key={label} className="flex justify-between items-center py-2 border-b border-gray-50">
                   <span className="text-gray-500">{label}</span>
@@ -660,9 +944,9 @@ export default function BankStatementCalculator() {
                 </div>
               ))}
               <div className="flex justify-between items-center pt-2">
-                <span className="font-bold text-gray-900">Net price → {activeRow.netDollar >= 0 ? 'Rebate to borrower' : 'Discount (borrower pays)'}</span>
+                <span className="font-bold text-gray-900">Net price {activeRow.netDollar >= 0 ? '(Rebate)' : '(Cost)'}</span>
                 <span className={`font-bold tabular-nums text-base ${activeRow.netDollar >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {activeRow.netPrice.toFixed(4)} → {activeRow.netDollar >= 0 ? fmtD(activeRow.netDollar) : fmtD(Math.abs(activeRow.netDollar))}
+                  {activeRow.netPrice.toFixed(4)} = {activeRow.netDollar >= 0 ? fmtD(activeRow.netDollar) : fmtD(Math.abs(activeRow.netDollar))}
                 </span>
               </div>
             </div>
@@ -676,7 +960,7 @@ export default function BankStatementCalculator() {
             <DTIGauge dti={activeRow.dti} />
             <div className="text-[11px] text-gray-400 mt-1 border-t border-gray-100 pt-2">
               <span className="font-semibold text-brand tabular-nums">{fmtD(activeRow.pitia + totalOtherDebts)}</span>
-              <span className="text-gray-300 mx-1">÷</span>
+              <span className="text-gray-300 mx-1">/</span>
               <span className="font-semibold text-brand tabular-nums">{fmtD(monthlyQualIncome)}</span>
             </div>
           </div>
@@ -697,7 +981,7 @@ export default function BankStatementCalculator() {
             <SectionLabel>Income Summary</SectionLabel>
             <div className="text-center space-y-1">
               <div className="text-sm font-bold text-gray-900 tabular-nums">{fmtD(monthlyDeposits)}/mo deposits</div>
-              {statementType === 'business' && <div className="text-xs text-gray-400">× {100 - expensePct}% net of expenses</div>}
+              {statementType === 'business' && <div className="text-xs text-gray-400">x {100 - expensePct}% net of expenses</div>}
               <div className="text-lg font-bold text-go tabular-nums">{fmtD(monthlyQualIncome)}/mo</div>
               <div className="text-[11px] text-gray-400">{fmtD(annualQualIncome)}/yr qualifying</div>
             </div>
@@ -707,11 +991,18 @@ export default function BankStatementCalculator() {
             <SectionLabel>Generate Quote</SectionLabel>
             <div className="mb-2">
               <input type="text" value={borrowerName} onChange={e => setBorrowerName(e.target.value)}
-                placeholder="Borrower name for PDF" className={inputCls + ' text-xs'} />
+                placeholder="Borrower name" className={inputCls + ' text-xs'} />
             </div>
-            <button onClick={handleDownloadPDF} disabled={pdfLoading || !isEligible}
+            <div className="mb-2">
+              <input type="text" value={propertyAddress} onChange={e => setPropertyAddress(e.target.value)}
+                placeholder="Property address" className={inputCls + ' text-xs'} />
+            </div>
+            {pdfRates.size === 0 && (
+              <p className="text-[10px] text-amber-600 mb-2">Select 1-3 rates from the table first</p>
+            )}
+            <button onClick={handleDownloadPDF} disabled={pdfLoading || !isEligible || pdfRates.size === 0}
               className="w-full bg-go text-white rounded-nr-md py-2.5 font-bold text-sm hover:bg-go-dark transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-              {pdfLoading ? 'Generating...' : 'Download PDF'}
+              {pdfLoading ? 'Generating...' : `Download PDF (${pdfRates.size} rate${pdfRates.size !== 1 ? 's' : ''})`}
             </button>
           </div>
 
