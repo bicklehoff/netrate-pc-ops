@@ -2,18 +2,22 @@
 // PATCH /api/portal/mlo/loans/:id/tasks/:taskId — Update a task
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import sql from '@/lib/db';
+import { requireMloSession, unauthorizedResponse } from '@/lib/require-mlo-session';
 
 export async function PATCH(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const { session, orgId } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
+
+    const { id, taskId } = await params;
+
+    // Verify loan belongs to this org
+    const loanRows = await sql`SELECT id FROM loans WHERE id = ${id} AND organization_id = ${orgId} LIMIT 1`;
+    if (loanRows.length === 0) {
+      return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
     }
 
-    const { taskId } = await params;
     const body = await request.json();
 
     const data = {};
@@ -29,8 +33,8 @@ export async function PATCH(request, { params }) {
     const cols = Object.keys(data);
     const vals = Object.values(data);
     const setFragments = cols.map((c, i) => `"${c}" = $${i + 1}`);
-    const q = `UPDATE loan_tasks SET ${setFragments.join(', ')}, updated_at = NOW() WHERE id = $${cols.length + 1} RETURNING *`;
-    const taskRows = await sql(q, [...vals, taskId]);
+    const q = `UPDATE loan_tasks SET ${setFragments.join(', ')}, updated_at = NOW() WHERE id = $${cols.length + 1} AND loan_id = $${cols.length + 2} RETURNING *`;
+    const taskRows = await sql(q, [...vals, taskId, id]);
 
     return NextResponse.json({ task: taskRows[0] });
   } catch (error) {

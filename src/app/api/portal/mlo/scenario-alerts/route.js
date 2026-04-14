@@ -3,20 +3,17 @@
 // PATCH /api/portal/mlo/scenario-alerts — approve/decline queue items
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import sql from '@/lib/db';
 import { sendEmail } from '@/lib/resend';
 import { scenarioAlertTemplate } from '@/lib/email-templates/borrower';
+import { requireMloSession, unauthorizedResponse } from '@/lib/require-mlo-session';
 
 const SITE_URL = process.env.NEXTAUTH_URL || 'https://www.netratemortgage.com';
 
 export async function GET(request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session, orgId } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
 
     const { searchParams } = new URL(request.url);
     const statusFilter = searchParams.get('status');
@@ -32,7 +29,8 @@ export async function GET(request) {
           (SELECT COUNT(*)::int FROM scenario_alert_queue WHERE scenario_id = ss.id) AS alert_queue_count
         FROM saved_scenarios ss
         LEFT JOIN leads l ON l.id = ss.lead_id
-        WHERE (${searchPattern}::text IS NULL OR l.name ILIKE ${searchPattern} OR l.email ILIKE ${searchPattern})
+        WHERE ss.organization_id = ${orgId}
+          AND (${searchPattern}::text IS NULL OR l.name ILIKE ${searchPattern} OR l.email ILIKE ${searchPattern})
         ORDER BY ss.created_at DESC
       `;
 
@@ -70,10 +68,8 @@ export async function GET(request) {
 
 export async function PATCH(request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session, orgId, mloId } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
 
     const body = await request.json();
     const { ids, action, mloNotes } = body;
@@ -91,7 +87,7 @@ export async function PATCH(request) {
       await sql`
         UPDATE saved_scenarios
         SET alert_status = ${action === 'pause' ? 'paused' : 'active'}, updated_at = NOW()
-        WHERE id = ANY(${ids}) AND mlo_id = ${session.user.id}
+        WHERE id = ANY(${ids}) AND mlo_id = ${mloId} AND organization_id = ${orgId}
       `;
       return NextResponse.json({ success: true, action, count: ids.length });
     }
@@ -117,7 +113,7 @@ export async function PATCH(request) {
         if (action === 'decline') {
           await sql`
             UPDATE scenario_alert_queue
-            SET status = 'declined', reviewed_by = ${session.user.id}, reviewed_at = NOW(), mlo_notes = ${mloNotes || null}
+            SET status = 'declined', reviewed_by = ${mloId}, reviewed_at = NOW(), mlo_notes = ${mloNotes || null}
             WHERE id = ${id}
           `;
           results.declined++;
@@ -164,7 +160,7 @@ export async function PATCH(request) {
         // Update queue item
         await sql`
           UPDATE scenario_alert_queue
-          SET status = 'sent', reviewed_by = ${session.user.id}, reviewed_at = NOW(),
+          SET status = 'sent', reviewed_by = ${mloId}, reviewed_at = NOW(),
             sent_at = NOW(), mlo_notes = ${mloNotes || null}
           WHERE id = ${id}
         `;
@@ -174,7 +170,7 @@ export async function PATCH(request) {
           UPDATE saved_scenarios
           SET last_sent_at = NOW(), last_pricing_data = ${JSON.stringify(item.pricing_data)}::jsonb,
             send_count = send_count + 1, updated_at = NOW()
-          WHERE id = ${item.scenario_ref_id}
+          WHERE id = ${item.scenario_ref_id} AND organization_id = ${orgId}
         `;
 
         results.sent++;

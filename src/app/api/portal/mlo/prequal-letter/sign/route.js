@@ -3,16 +3,13 @@
 // Receives PDF blob + signer info, creates Zoho Sign request for MLO e-signature.
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { createSigningRequest } from '@/lib/zoho-sign';
+import { requireMloSession, unauthorizedResponse } from '@/lib/require-mlo-session';
 
 export async function POST(request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
 
     const formData = await request.formData();
     const file = formData.get('file');

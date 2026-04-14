@@ -4,24 +4,24 @@
 // DELETE /api/portal/mlo/hecm-scenarios/[id]
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import sql from '@/lib/db';
+import { requireMloSession } from '@/lib/require-mlo-session';
 
-async function getAuthedMloId() {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.userType !== 'mlo') return null;
-  return session.user.id;
+async function getAuthedIds() {
+  const { session, orgId, mloId } = await requireMloSession();
+  if (!session) return null;
+  return { mloId, orgId };
 }
 
 export async function GET(request, { params }) {
   try {
-    const mloId = await getAuthedMloId();
-    if (!mloId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authed = await getAuthedIds();
+    if (!authed) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const { mloId, orgId } = authed;
 
     const { id } = await params;
     const rows = await sql`
-      SELECT * FROM hecm_scenarios WHERE id = ${id} AND mlo_id = ${mloId} LIMIT 1
+      SELECT * FROM hecm_scenarios WHERE id = ${id} AND mlo_id = ${mloId} AND organization_id = ${orgId} LIMIT 1
     `;
 
     if (!rows[0]) {
@@ -37,8 +37,9 @@ export async function GET(request, { params }) {
 
 export async function PUT(request, { params }) {
   try {
-    const mloId = await getAuthedMloId();
-    if (!mloId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authed = await getAuthedIds();
+    if (!authed) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const { mloId, orgId } = authed;
 
     const { id } = await params;
     const body = await request.json();
@@ -46,7 +47,7 @@ export async function PUT(request, { params }) {
 
     // Verify ownership
     const existing = await sql`
-      SELECT * FROM hecm_scenarios WHERE id = ${id} AND mlo_id = ${mloId} LIMIT 1
+      SELECT * FROM hecm_scenarios WHERE id = ${id} AND mlo_id = ${mloId} AND organization_id = ${orgId} LIMIT 1
     `;
     if (!existing[0]) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
@@ -60,7 +61,7 @@ export async function PUT(request, { params }) {
         input_state = ${inputState ? JSON.stringify(inputState) : JSON.stringify(existing[0].input_state)}::jsonb,
         results = ${results !== undefined ? (results ? JSON.stringify(results) : null) : (existing[0].results ? JSON.stringify(existing[0].results) : null)}::jsonb,
         updated_at = NOW()
-      WHERE id = ${id}
+      WHERE id = ${id} AND organization_id = ${orgId}
       RETURNING *
     `;
 
@@ -73,20 +74,21 @@ export async function PUT(request, { params }) {
 
 export async function DELETE(request, { params }) {
   try {
-    const mloId = await getAuthedMloId();
-    if (!mloId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authed = await getAuthedIds();
+    if (!authed) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const { mloId, orgId } = authed;
 
     const { id } = await params;
 
     // Verify ownership
     const existing = await sql`
-      SELECT id FROM hecm_scenarios WHERE id = ${id} AND mlo_id = ${mloId} LIMIT 1
+      SELECT id FROM hecm_scenarios WHERE id = ${id} AND mlo_id = ${mloId} AND organization_id = ${orgId} LIMIT 1
     `;
     if (!existing[0]) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
 
-    await sql`DELETE FROM hecm_scenarios WHERE id = ${id}`;
+    await sql`DELETE FROM hecm_scenarios WHERE id = ${id} AND organization_id = ${orgId}`;
 
     return NextResponse.json({ success: true });
   } catch (err) {

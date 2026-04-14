@@ -6,26 +6,23 @@
  */
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import sql from '@/lib/db';
+import { requireMloSession, unauthorizedResponse } from '@/lib/require-mlo-session';
 
 export async function GET(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session, orgId, mloId } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
 
     const { id } = await params;
 
-    const rows = await sql`SELECT * FROM borrower_quotes WHERE id = ${id} LIMIT 1`;
+    const rows = await sql`SELECT * FROM borrower_quotes WHERE id = ${id} AND organization_id = ${orgId} LIMIT 1`;
     const quote = rows[0];
 
     if (!quote) {
       return NextResponse.json({ error: 'Quote not found' }, { status: 404 });
     }
-    if (quote.mlo_id !== session.user.id) {
+    if (quote.mlo_id !== mloId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
@@ -38,20 +35,18 @@ export async function GET(request, { params }) {
 
 export async function PATCH(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session, orgId, mloId } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
 
     const { id } = await params;
     const body = await request.json();
 
     // Verify ownership
-    const existing = await sql`SELECT mlo_id, status FROM borrower_quotes WHERE id = ${id} LIMIT 1`;
+    const existing = await sql`SELECT mlo_id, status FROM borrower_quotes WHERE id = ${id} AND organization_id = ${orgId} LIMIT 1`;
     if (!existing[0]) {
       return NextResponse.json({ error: 'Quote not found' }, { status: 404 });
     }
-    if (existing[0].mlo_id !== session.user.id) {
+    if (existing[0].mlo_id !== mloId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
@@ -127,7 +122,8 @@ export async function PATCH(request, { params }) {
     setClauses.push('updated_at = NOW()');
     values.push(id);
 
-    const query = `UPDATE borrower_quotes SET ${setClauses.join(', ')} WHERE id = $${values.length} RETURNING *`;
+    values.push(orgId);
+    const query = `UPDATE borrower_quotes SET ${setClauses.join(', ')} WHERE id = $${values.length - 1} AND organization_id = $${values.length} RETURNING *`;
     const quoteRows = await sql(query, values);
 
     return NextResponse.json({ quote: quoteRows[0] });

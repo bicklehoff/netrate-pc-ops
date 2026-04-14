@@ -3,16 +3,13 @@
 // Dispatches lead/loan-agnostic actions: portal invite, needs list, email
 // Auth: MLO session required
 
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { sendPortalInvite, sendNeedsList, sendContactEmail } from '@/lib/borrower-actions';
+import { requireMloSession, unauthorizedResponse } from '@/lib/require-mlo-session';
 
 export async function POST(req, { params }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session, mloId } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
 
     const { id } = await params;
     const body = await req.json();
@@ -20,7 +17,7 @@ export async function POST(req, { params }) {
 
     switch (action) {
       case 'send_portal_invite': {
-        const result = await sendPortalInvite(id, session.user.id);
+        const result = await sendPortalInvite(id, mloId);
         return Response.json(result);
       }
 
@@ -29,7 +26,7 @@ export async function POST(req, { params }) {
         if (!documents?.length) {
           return Response.json({ error: 'documents[] is required' }, { status: 400 });
         }
-        const result = await sendNeedsList(id, documents, session.user.id);
+        const result = await sendNeedsList(id, documents, mloId);
         return Response.json(result);
       }
 
@@ -38,7 +35,7 @@ export async function POST(req, { params }) {
         if (!subject || !emailBody) {
           return Response.json({ error: 'subject and emailBody are required' }, { status: 400 });
         }
-        const result = await sendContactEmail(id, { subject, body: emailBody }, session.user.id);
+        const result = await sendContactEmail(id, { subject, body: emailBody }, mloId);
         return Response.json(result);
       }
 

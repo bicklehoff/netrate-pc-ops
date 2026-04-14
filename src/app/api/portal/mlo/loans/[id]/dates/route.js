@@ -5,9 +5,8 @@
 // Used by ProcessingSection for click-to-edit date fields.
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import sql from '@/lib/db';
+import { requireMloSession, unauthorizedResponse } from '@/lib/require-mlo-session';
 
 // camelCase → snake_case date column mapping
 const DATE_FIELD_MAP = {
@@ -30,20 +29,18 @@ const INT_FIELDS = { lockTerm: 'lock_term' };
 
 export async function GET(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session, orgId, mloId } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
 
     const { id } = await params;
 
-    const loanRows = await sql`SELECT id, mlo_id FROM loans WHERE id = ${id} LIMIT 1`;
+    const loanRows = await sql`SELECT id, mlo_id FROM loans WHERE id = ${id} AND organization_id = ${orgId} LIMIT 1`;
     if (loanRows.length === 0) {
       return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
     }
     const loan = loanRows[0];
     const isAdmin = session.user.role === 'admin';
-    if (!isAdmin && loan.mlo_id !== session.user.id) {
+    if (!isAdmin && loan.mlo_id !== mloId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
@@ -58,21 +55,19 @@ export async function GET(request, { params }) {
 
 export async function PATCH(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session, orgId, mloId } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
 
     const { id } = await params;
     const body = await request.json();
 
-    const loanRows = await sql`SELECT id, mlo_id FROM loans WHERE id = ${id} LIMIT 1`;
+    const loanRows = await sql`SELECT id, mlo_id FROM loans WHERE id = ${id} AND organization_id = ${orgId} LIMIT 1`;
     if (loanRows.length === 0) {
       return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
     }
     const loan = loanRows[0];
     const isAdmin = session.user.role === 'admin';
-    if (!isAdmin && loan.mlo_id !== session.user.id) {
+    if (!isAdmin && loan.mlo_id !== mloId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
@@ -120,7 +115,7 @@ export async function PATCH(request, { params }) {
     // Audit event
     await sql`
       INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, new_value, details, created_at)
-      VALUES (gen_random_uuid(), ${id}, 'field_updated', 'mlo', ${session.user.id},
+      VALUES (gen_random_uuid(), ${id}, 'field_updated', 'mlo', ${mloId},
               ${JSON.stringify(updateData)},
               ${JSON.stringify({ fields: changedFields, source: 'processing_checklist' })},
               NOW())

@@ -6,8 +6,6 @@
 // Expanded PATCH accepts all editable fields + MCR-aware status→date auto-capture.
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { enrichPropertyAddress } from '@/lib/geocode';
 import sql from '@/lib/db';
 import { getBallInCourt, EMAIL_TRIGGERS } from '@/lib/loan-states';
@@ -15,6 +13,7 @@ import { sendEmail } from '@/lib/resend';
 import { statusChangeTemplate } from '@/lib/email-templates/borrower';
 import { checkApplicationGate } from '@/lib/application-gate';
 import { updateContactFromLoanStatus } from '@/lib/contact-status';
+import { requireMloSession, unauthorizedResponse } from '@/lib/require-mlo-session';
 
 // Status → loan_dates column mapping for MCR-aware auto-date capture
 const STATUS_DATE_MAP = {
@@ -86,15 +85,13 @@ const INT_FIELDS = ['loanTerm', 'numUnits', 'yearsInPosition', 'numBorrowers', '
 
 export async function GET(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session, orgId } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
 
     const { id } = await params;
 
     // ─── Main loan ───
-    const loans = await sql`SELECT * FROM loans WHERE id = ${id} LIMIT 1`;
+    const loans = await sql`SELECT * FROM loans WHERE id = ${id} AND organization_id = ${orgId} LIMIT 1`;
     const loan = loans[0];
     if (!loan) {
       return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
@@ -238,21 +235,19 @@ export async function GET(request, { params }) {
 
 export async function PATCH(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session, orgId, mloId } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
 
     const { id } = await params;
     const body = await request.json();
     const isAdmin = session.user.role === 'admin';
 
-    const loans = await sql`SELECT * FROM loans WHERE id = ${id} LIMIT 1`;
+    const loans = await sql`SELECT * FROM loans WHERE id = ${id} AND organization_id = ${orgId} LIMIT 1`;
     const loan = loans[0];
     if (!loan) {
       return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
     }
-    if (!isAdmin && loan.mlo_id !== session.user.id) {
+    if (!isAdmin && loan.mlo_id !== mloId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
@@ -272,7 +267,7 @@ export async function PATCH(request, { params }) {
       // Create audit event
       await sql`
         INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, old_value, new_value, created_at)
-        VALUES (gen_random_uuid(), ${id}, 'status_change', 'mlo', ${session.user.id}, ${loan.status}, ${body.status}, NOW())
+        VALUES (gen_random_uuid(), ${id}, 'status_change', 'mlo', ${mloId}, ${loan.status}, ${body.status}, NOW())
       `;
 
       // MCR-aware: auto-capture date on loan_dates when status changes
@@ -324,7 +319,7 @@ export async function PATCH(request, { params }) {
     if (body.note) {
       await sql`
         INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, new_value, created_at)
-        VALUES (gen_random_uuid(), ${id}, 'note_added', 'mlo', ${session.user.id}, ${body.note}, NOW())
+        VALUES (gen_random_uuid(), ${id}, 'note_added', 'mlo', ${mloId}, ${body.note}, NOW())
       `;
 
       return NextResponse.json({ success: true });
@@ -338,7 +333,7 @@ export async function PATCH(request, { params }) {
 
       await sql`
         INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, old_value, new_value, details, created_at)
-        VALUES (gen_random_uuid(), ${id}, 'field_updated', 'mlo', ${session.user.id}, ${loan.mlo_id}, ${body.mloId}, ${JSON.stringify({ field: 'mloId' })}, NOW())
+        VALUES (gen_random_uuid(), ${id}, 'field_updated', 'mlo', ${mloId}, ${loan.mlo_id}, ${body.mloId}, ${JSON.stringify({ field: 'mloId' })}, NOW())
       `;
 
       return NextResponse.json({ loan: updatedRows[0] });
@@ -397,7 +392,7 @@ export async function PATCH(request, { params }) {
 
       await sql`
         INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, new_value, details, created_at)
-        VALUES (gen_random_uuid(), ${id}, 'field_updated', 'mlo', ${session.user.id},
+        VALUES (gen_random_uuid(), ${id}, 'field_updated', 'mlo', ${mloId},
                 ${JSON.stringify(fieldUpdates)},
                 ${JSON.stringify({ fields: fieldDetails, source: 'core_inline_edit' })},
                 NOW())

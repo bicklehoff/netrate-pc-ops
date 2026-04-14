@@ -3,16 +3,13 @@
 // POST /api/portal/mlo/accounts — Create account
 // Auth: MLO session required
 
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import sql from '@/lib/db';
+import { requireMloSession, unauthorizedResponse } from '@/lib/require-mlo-session';
 
 export async function GET(req) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session, orgId } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
 
     const { searchParams } = new URL(req.url);
     const q = searchParams.get('q') || '';
@@ -28,14 +25,15 @@ export async function GET(req) {
         ) AS account_contacts,
         (SELECT COUNT(*)::int FROM account_contacts WHERE account_id = a.id) AS contact_count
       FROM accounts a
-      WHERE (${pattern}::text IS NULL OR a.name ILIKE ${pattern})
+      WHERE a.organization_id = ${orgId}
+        AND (${pattern}::text IS NULL OR a.name ILIKE ${pattern})
         AND (${industry}::text IS NULL OR a.industry = ${industry})
       ORDER BY a.name ASC
     `;
 
     // Industry counts for filter badges
     const industryCounts = await sql`
-      SELECT industry, COUNT(*)::int AS count FROM accounts GROUP BY industry
+      SELECT industry, COUNT(*)::int AS count FROM accounts WHERE organization_id = ${orgId} GROUP BY industry
     `;
 
     return Response.json({
@@ -53,10 +51,8 @@ export async function GET(req) {
 
 export async function POST(req) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session, orgId } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
 
     const body = await req.json();
     const { name, phone, website, industry, address, city, state, zipCode, notes, contacts } = body;
@@ -67,9 +63,9 @@ export async function POST(req) {
 
     // Create account
     const accountRows = await sql`
-      INSERT INTO accounts (name, phone, website, industry, address, city, state, zip_code, notes, created_at, updated_at)
+      INSERT INTO accounts (organization_id, name, phone, website, industry, address, city, state, zip_code, notes, created_at, updated_at)
       VALUES (
-        ${name}, ${phone || null}, ${website || null}, ${industry || 'other'},
+        ${orgId}, ${name}, ${phone || null}, ${website || null}, ${industry || 'other'},
         ${address || null}, ${city || null}, ${state || null}, ${zipCode || null},
         ${notes || null}, NOW(), NOW()
       )

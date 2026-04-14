@@ -10,30 +10,29 @@
 export const maxDuration = 30;
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import sql from '@/lib/db';
 import { listFolder, uploadFile, downloadFile, deleteResource, createLoanFolder } from '@/lib/zoho-workdrive';
 import { put } from '@vercel/blob';
 import { PDFDocument } from 'pdf-lib';
 import { sendSms } from '@/lib/twilio-voice';
+import { requireMloSession } from '@/lib/require-mlo-session';
 
-async function verifyMloAccess(loanId, session) {
-  if (!session || session.user.userType !== 'mlo') return null;
-  const rows = await sql`SELECT * FROM loans WHERE id = ${loanId} LIMIT 1`;
+async function verifyMloAccess(loanId, session, orgId, mloId) {
+  if (!session) return null;
+  const rows = await sql`SELECT * FROM loans WHERE id = ${loanId} AND organization_id = ${orgId} LIMIT 1`;
   const loan = rows[0];
   if (!loan) return null;
   const isAdmin = session.user.role === 'admin';
-  if (!isAdmin && loan.mlo_id !== session.user.id) return null;
+  if (!isAdmin && loan.mlo_id !== mloId) return null;
   return loan;
 }
 
 // ─── List folder contents or get download URL ─────────────────
 export async function GET(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
+    const { session, orgId, mloId } = await requireMloSession();
     const { id } = await params;
-    const loan = await verifyMloAccess(id, session);
+    const loan = await verifyMloAccess(id, session, orgId, mloId);
     if (!loan) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -105,9 +104,9 @@ export async function GET(request, { params }) {
 // ─── Upload file to subfolder ─────────────────────────────────
 export async function PUT(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
+    const { session, orgId, mloId } = await requireMloSession();
     const { id } = await params;
-    const loan = await verifyMloAccess(id, session);
+    const loan = await verifyMloAccess(id, session, orgId, mloId);
     if (!loan) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -217,7 +216,7 @@ export async function PUT(request, { params }) {
     // Create document record
     const docRows = await sql`
       INSERT INTO documents (id, loan_id, doc_type, label, status, requested_by, file_url, file_name, file_size, uploaded_at, created_at)
-      VALUES (gen_random_uuid(), ${id}, ${docType}, ${uploadFileName}, 'uploaded', ${session.user.id}, ${fileUrl}, ${uploadFileName}, ${file.size}, NOW(), NOW())
+      VALUES (gen_random_uuid(), ${id}, ${docType}, ${uploadFileName}, 'uploaded', ${mloId}, ${fileUrl}, ${uploadFileName}, ${file.size}, NOW(), NOW())
       RETURNING *
     `;
     const doc = docRows[0];
@@ -225,7 +224,7 @@ export async function PUT(request, { params }) {
     // Audit
     await sql`
       INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, new_value, details, created_at)
-      VALUES (gen_random_uuid(), ${id}, 'doc_uploaded', 'mlo', ${session.user.id}, ${uploadFileName},
+      VALUES (gen_random_uuid(), ${id}, 'doc_uploaded', 'mlo', ${mloId}, ${uploadFileName},
               ${JSON.stringify({ documentId: doc.id, fileName: uploadFileName, originalName: file.name, folder: targetFolder, storageType })},
               NOW())
     `;
@@ -259,9 +258,9 @@ export async function PUT(request, { params }) {
 // ─── Delete file ──────────────────────────────────────────────
 export async function DELETE(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
+    const { session, orgId, mloId } = await requireMloSession();
     const { id } = await params;
-    const loan = await verifyMloAccess(id, session);
+    const loan = await verifyMloAccess(id, session, orgId, mloId);
     if (!loan) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -279,7 +278,7 @@ export async function DELETE(request, { params }) {
     // Audit
     await sql`
       INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, new_value, details, created_at)
-      VALUES (gen_random_uuid(), ${id}, 'doc_deleted', 'mlo', ${session.user.id}, ${`Deleted: ${fileName || fileId}`},
+      VALUES (gen_random_uuid(), ${id}, 'doc_deleted', 'mlo', ${mloId}, ${`Deleted: ${fileName || fileId}`},
               ${JSON.stringify({ action: 'delete', workDriveFileId: fileId })}, NOW())
     `;
 

@@ -12,32 +12,29 @@
  */
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import sql from '@/lib/db';
 import { sendEmail } from '@/lib/resend';
 import { quoteTemplate } from '@/lib/email-templates/borrower';
 import { put } from '@vercel/blob';
 import crypto from 'crypto';
+import { requireMloSession, unauthorizedResponse } from '@/lib/require-mlo-session';
 
 export const maxDuration = 30;
 
 export async function POST(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session, orgId, mloId } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
 
     const { id } = await params;
 
     // Load quote
-    const quoteRows = await sql`SELECT * FROM borrower_quotes WHERE id = ${id} LIMIT 1`;
+    const quoteRows = await sql`SELECT * FROM borrower_quotes WHERE id = ${id} AND organization_id = ${orgId} LIMIT 1`;
     const quote = quoteRows[0];
     if (!quote) {
       return NextResponse.json({ error: 'Quote not found' }, { status: 404 });
     }
-    if (quote.mlo_id !== session.user.id) {
+    if (quote.mlo_id !== mloId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
@@ -91,16 +88,16 @@ export async function POST(request, { params }) {
 
     // Ensure borrower exists for portal access
     const borrowerRows = await sql`
-      SELECT * FROM borrowers WHERE email = ${borrowerEmail.toLowerCase().trim()} LIMIT 1
+      SELECT * FROM borrowers WHERE email = ${borrowerEmail.toLowerCase().trim()} AND organization_id = ${orgId} LIMIT 1
     `;
     let borrower = borrowerRows[0];
 
     if (!borrower) {
       const { encrypt } = await import('@/lib/encryption');
       const created = await sql`
-        INSERT INTO borrowers (email, first_name, last_name, phone, ssn_encrypted, dob_encrypted, ssn_last_four, created_at, updated_at)
+        INSERT INTO borrowers (organization_id, email, first_name, last_name, phone, ssn_encrypted, dob_encrypted, ssn_last_four, created_at, updated_at)
         VALUES (
-          ${borrowerEmail.toLowerCase().trim()}, ${firstName},
+          ${orgId}, ${borrowerEmail.toLowerCase().trim()}, ${firstName},
           ${borrowerName.split(' ').slice(1).join(' ') || 'Unknown'},
           ${quote.borrower_phone || null},
           ${encrypt('000000000')}, ${encrypt('1900-01-01')}, '0000',
@@ -156,7 +153,7 @@ export async function POST(request, { params }) {
         pdf_generated_at = ${pdfUrl ? now : null},
         expires_at = ${new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)},
         updated_at = NOW()
-      WHERE id = ${id}
+      WHERE id = ${id} AND organization_id = ${orgId}
       RETURNING *
     `;
 

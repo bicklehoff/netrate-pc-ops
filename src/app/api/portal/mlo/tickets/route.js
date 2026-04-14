@@ -2,13 +2,12 @@
 // GET  /api/portal/mlo/tickets?product=&status=&type=&priority=
 // POST /api/portal/mlo/tickets  { title, description, product, ticketType, priority, assignedTo }
 
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import sql from '@/lib/db';
+import { requireMloSession, unauthorizedResponse } from '@/lib/require-mlo-session';
 
 export async function GET(request) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  const { session, orgId } = await requireMloSession();
+  if (!session) return unauthorizedResponse();
 
   const { searchParams } = new URL(request.url);
   const product = searchParams.get('product');
@@ -30,7 +29,8 @@ export async function GET(request) {
           'entry_type', te.entry_type, 'created_at', te.created_at
         ) FROM ticket_entries te WHERE te.ticket_id = t.id ORDER BY te.created_at DESC LIMIT 1) AS latest_entry
       FROM tickets t
-      WHERE (${effectiveProduct}::text IS NULL OR t.product = ${effectiveProduct})
+      WHERE t.organization_id = ${orgId}
+        AND (${effectiveProduct}::text IS NULL OR t.product = ${effectiveProduct})
         AND (${effectiveStatus}::text IS NULL OR t.status = ${effectiveStatus})
         AND (${effectiveType}::text IS NULL OR t.ticket_type = ${effectiveType})
         AND (${effectivePriority}::text IS NULL OR t.priority = ${effectivePriority})
@@ -52,8 +52,8 @@ export async function GET(request) {
 }
 
 export async function POST(request) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  const { session, orgId, mloId } = await requireMloSession();
+  if (!session) return unauthorizedResponse();
 
   const body = await request.json();
   const { title, description, product, ticketType, priority, assignedTo } = body;
@@ -71,10 +71,10 @@ export async function POST(request) {
   if (priority && !validPriorities.includes(priority)) return Response.json({ error: 'Invalid priority' }, { status: 400 });
 
   const ticketRows = await sql`
-    INSERT INTO tickets (title, description, product, ticket_type, priority, status, created_by, assigned_to, created_at, updated_at)
+    INSERT INTO tickets (organization_id, title, description, product, ticket_type, priority, status, created_by, assigned_to, created_at, updated_at)
     VALUES (
-      ${title.trim()}, ${description?.trim() || null}, ${product}, ${ticketType},
-      ${priority || 'medium'}, 'open', ${session.user.id}, ${assignedTo || null},
+      ${orgId}, ${title.trim()}, ${description?.trim() || null}, ${product}, ${ticketType},
+      ${priority || 'medium'}, 'open', ${mloId}, ${assignedTo || null},
       NOW(), NOW()
     )
     RETURNING *

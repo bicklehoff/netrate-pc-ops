@@ -2,21 +2,18 @@
 // GET /api/portal/mlo/contacts/:contactId/loans
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import sql from '@/lib/db';
+import { requireMloSession, unauthorizedResponse } from '@/lib/require-mlo-session';
 
 export async function GET(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session, orgId } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
 
     const { id: contactId } = await params;
 
     const contactRows = await sql`
-      SELECT id, first_name, last_name, borrower_id FROM contacts WHERE id = ${contactId} LIMIT 1
+      SELECT id, first_name, last_name, borrower_id FROM contacts WHERE id = ${contactId} AND organization_id = ${orgId} LIMIT 1
     `;
     const contact = contactRows[0];
 
@@ -34,7 +31,7 @@ export async function GET(request, { params }) {
           m.first_name AS mlo_first_name, m.last_name AS mlo_last_name, m.nmls AS mlo_nmls
         FROM loans l
         LEFT JOIN mlos m ON m.id = l.mlo_id
-        WHERE l.contact_id = ${contactId} OR l.borrower_id = ${contact.borrower_id}
+        WHERE (l.contact_id = ${contactId} OR l.borrower_id = ${contact.borrower_id}) AND l.organization_id = ${orgId}
         ORDER BY l.created_at DESC
       `;
     } else {
@@ -45,7 +42,7 @@ export async function GET(request, { params }) {
           m.first_name AS mlo_first_name, m.last_name AS mlo_last_name, m.nmls AS mlo_nmls
         FROM loans l
         LEFT JOIN mlos m ON m.id = l.mlo_id
-        WHERE l.contact_id = ${contactId}
+        WHERE l.contact_id = ${contactId} AND l.organization_id = ${orgId}
         ORDER BY l.created_at DESC
       `;
     }

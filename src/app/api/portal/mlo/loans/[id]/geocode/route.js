@@ -2,14 +2,13 @@
 // Validate and enrich the loan's property address via Google Geocoding
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import sql from '@/lib/db';
 import { enrichPropertyAddress } from '@/lib/geocode';
+import { requireMloSession } from '@/lib/require-mlo-session';
 
 export async function POST(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
+    const { session, orgId } = await requireMloSession();
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -17,7 +16,7 @@ export async function POST(request, { params }) {
     const { id } = await params;
     const body = await request.json().catch(() => ({}));
 
-    const loanRows = await sql`SELECT * FROM loans WHERE id = ${id} LIMIT 1`;
+    const loanRows = await sql`SELECT * FROM loans WHERE id = ${id} AND organization_id = ${orgId} LIMIT 1`;
     const loan = loanRows[0];
 
     if (!loan) {

@@ -6,30 +6,29 @@
 // Auth: MLO session
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import sql from '@/lib/db';
 import { uploadFile } from '@/lib/zoho-workdrive';
 import { extractApprovalData } from '@/lib/approval-extractor';
+import { requireMloSession } from '@/lib/require-mlo-session';
 
 export const maxDuration = 120; // Claude extraction on multi-page approval PDFs
 
-async function verifyMloAccess(loanId, session) {
-  if (!session || session.user.userType !== 'mlo') return null;
-  const rows = await sql`SELECT * FROM loans WHERE id = ${loanId} LIMIT 1`;
+async function verifyMloAccess(loanId, session, orgId, mloId) {
+  if (!session) return null;
+  const rows = await sql`SELECT * FROM loans WHERE id = ${loanId} AND organization_id = ${orgId} LIMIT 1`;
   const loan = rows[0];
   if (!loan) return null;
   const isAdmin = session.user.role === 'admin';
-  if (!isAdmin && loan.mlo_id !== session.user.id) return null;
+  if (!isAdmin && loan.mlo_id !== mloId) return null;
   return loan;
 }
 
 // ─── List conditions ────────────────────────────────────────
 export async function GET(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
+    const { session, orgId, mloId } = await requireMloSession();
     const { id } = await params;
-    const loan = await verifyMloAccess(id, session);
+    const loan = await verifyMloAccess(id, session, orgId, mloId);
     if (!loan) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -48,9 +47,9 @@ export async function GET(request, { params }) {
 // ─── Create condition OR confirm approval extraction ────────
 export async function POST(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
+    const { session, orgId, mloId } = await requireMloSession();
     const { id } = await params;
-    const loan = await verifyMloAccess(id, session);
+    const loan = await verifyMloAccess(id, session, orgId, mloId);
     if (!loan) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -157,7 +156,7 @@ export async function POST(request, { params }) {
       // Audit
       await sql`
         INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, details, created_at)
-        VALUES (gen_random_uuid(), ${id}, 'approval_conditions_created', 'mlo', ${session.user.id},
+        VALUES (gen_random_uuid(), ${id}, 'approval_conditions_created', 'mlo', ${mloId},
                 ${JSON.stringify({ documentId, conditionsCreated: createdCount, conditionsDeleted: deletedCount, loanDataUpdated: !!extractedLoanData })},
                 NOW())
       `;
@@ -186,7 +185,7 @@ export async function POST(request, { params }) {
     // Audit
     await sql`
       INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, details, created_at)
-      VALUES (gen_random_uuid(), ${id}, 'condition_created', 'mlo', ${session.user.id},
+      VALUES (gen_random_uuid(), ${id}, 'condition_created', 'mlo', ${mloId},
               ${JSON.stringify({ conditionId: condition.id, title, conditionType, stage: stage || 'prior_to_close' })},
               NOW())
     `;
@@ -201,9 +200,9 @@ export async function POST(request, { params }) {
 // ─── Update condition(s) — single or batch ─────────────────
 export async function PATCH(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
+    const { session, orgId, mloId } = await requireMloSession();
     const { id } = await params;
-    const loan = await verifyMloAccess(id, session);
+    const loan = await verifyMloAccess(id, session, orgId, mloId);
     if (!loan) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -244,7 +243,7 @@ export async function PATCH(request, { params }) {
 
       await sql`
         INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, details, created_at)
-        VALUES (gen_random_uuid(), ${id}, 'conditions_batch_updated', 'mlo', ${session.user.id},
+        VALUES (gen_random_uuid(), ${id}, 'conditions_batch_updated', 'mlo', ${mloId},
                 ${JSON.stringify({ count: updated })}, NOW())
       `;
 
@@ -285,7 +284,7 @@ export async function PATCH(request, { params }) {
       const existingNotes = Array.isArray(existing.internal_notes) ? existing.internal_notes : [];
       updateData.internal_notes = JSON.stringify([
         ...existingNotes,
-        { note: notes, author: session.user.id, timestamp: new Date().toISOString() },
+        { note: notes, author: mloId, timestamp: new Date().toISOString() },
       ]);
     }
 
@@ -303,7 +302,7 @@ export async function PATCH(request, { params }) {
       // Audit
       await sql`
         INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, details, created_at)
-        VALUES (gen_random_uuid(), ${id}, 'condition_updated', 'mlo', ${session.user.id},
+        VALUES (gen_random_uuid(), ${id}, 'condition_updated', 'mlo', ${mloId},
                 ${JSON.stringify({ conditionId, changes: Object.keys(updateData), newStatus: status || undefined })},
                 NOW())
       `;
@@ -321,9 +320,9 @@ export async function PATCH(request, { params }) {
 // ─── Upload approval PDF + auto-extract ────────────────────
 export async function PUT(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
+    const { session, orgId, mloId } = await requireMloSession();
     const { id } = await params;
-    const loan = await verifyMloAccess(id, session);
+    const loan = await verifyMloAccess(id, session, orgId, mloId);
     if (!loan) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -369,7 +368,7 @@ export async function PUT(request, { params }) {
     try {
       const docRows = await sql`
         INSERT INTO documents (id, loan_id, doc_type, label, status, requested_by, file_url, file_name, file_size, uploaded_at, created_at)
-        VALUES (gen_random_uuid(), ${id}, 'approval', ${file.name.replace(/\.[^.]+$/, '')}, 'uploaded', ${session.user.id}, ${fileUrl}, ${file.name}, ${file.size}, NOW(), NOW())
+        VALUES (gen_random_uuid(), ${id}, 'approval', ${file.name.replace(/\.[^.]+$/, '')}, 'uploaded', ${mloId}, ${fileUrl}, ${file.name}, ${file.size}, NOW(), NOW())
         RETURNING *
       `;
       doc = docRows[0];
@@ -404,7 +403,7 @@ export async function PUT(request, { params }) {
     // Audit
     await sql`
       INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, details, created_at)
-      VALUES (gen_random_uuid(), ${id}, 'approval_uploaded', 'mlo', ${session.user.id},
+      VALUES (gen_random_uuid(), ${id}, 'approval_uploaded', 'mlo', ${mloId},
               ${JSON.stringify({ documentId: doc.id, fileName: file.name, extractionStatus: extraction.status, conditionsFound: extraction.data?.conditions?.length || 0 })},
               NOW())
     `.catch(() => {});

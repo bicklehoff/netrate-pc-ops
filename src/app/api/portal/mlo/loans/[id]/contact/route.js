@@ -2,20 +2,17 @@
 // GET /api/portal/mlo/loans/:id/contact
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import sql from '@/lib/db';
+import { requireMloSession, unauthorizedResponse } from '@/lib/require-mlo-session';
 
 export async function GET(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session, orgId } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
 
     const { id } = await params;
 
-    const loanRows = await sql`SELECT borrower_id FROM loans WHERE id = ${id} LIMIT 1`;
+    const loanRows = await sql`SELECT borrower_id FROM loans WHERE id = ${id} AND organization_id = ${orgId} LIMIT 1`;
     const loan = loanRows[0];
 
     if (!loan?.borrower_id) {
@@ -23,7 +20,7 @@ export async function GET(request, { params }) {
     }
 
     const contactRows = await sql`
-      SELECT id FROM contacts WHERE borrower_id = ${loan.borrower_id} LIMIT 1
+      SELECT id FROM contacts WHERE borrower_id = ${loan.borrower_id} AND organization_id = ${orgId} LIMIT 1
     `;
 
     return NextResponse.json({ contact_id: contactRows[0]?.id || null });

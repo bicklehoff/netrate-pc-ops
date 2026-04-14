@@ -6,21 +6,18 @@
 // Auth: MLO or Admin required (NextAuth session)
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import sql from '@/lib/db';
 import { encrypt, ssnLastFour } from '@/lib/encryption';
 import { parseMismoXml } from '@/lib/mismo-parser';
 import { createLoanFolder } from '@/lib/zoho-workdrive';
+import { requireMloSession, unauthorizedResponse } from '@/lib/require-mlo-session';
 
 // ─── POST: Preview (parse only, no DB writes) ──────────────
 
 export async function POST(request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
 
     const xmlString = await extractXmlFromRequest(request);
     const result = parseMismoXml(xmlString);
@@ -56,15 +53,13 @@ export async function POST(request) {
 
 export async function PUT(request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session, orgId, mloId } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
 
     const formData = await request.formData();
     const file = formData.get('file');
     const statusOverride = formData.get('status') || 'processing';
-    const mloId = formData.get('mloId') || null;
+    const assignMloId = formData.get('mloId') || null;
 
     if (!file || typeof file === 'string') {
       return NextResponse.json({ error: 'No XML file provided' }, { status: 400 });
@@ -89,14 +84,14 @@ export async function PUT(request) {
     }
 
     // ─── Create/Update Primary Borrower ───────────────────
-    const borrower = await upsertBorrowerFromImport(primary);
+    const borrower = await upsertBorrowerFromImport(primary, orgId);
 
     // ─── Create Loan Record ───────────────────────────────
     const loanData = result.loan;
     const propAddress = result.property?.address || null;
 
     const loanRows = await sql`
-      INSERT INTO loans (id, borrower_id, mlo_id, status, ball_in_court, purpose, occupancy,
+      INSERT INTO loans (id, organization_id, borrower_id, mlo_id, status, ball_in_court, purpose, occupancy,
         loan_type, lender_name, loan_number, loan_amount, interest_rate, loan_term,
         property_address, property_type, num_units, purchase_price, estimated_value,
         current_address, address_years, address_months, marital_status,
@@ -104,7 +99,7 @@ export async function PUT(request) {
         monthly_base_income, other_monthly_income, other_income_source,
         present_housing_expense, declarations, num_borrowers, application_step, submitted_at,
         created_at, updated_at)
-      VALUES (gen_random_uuid(), ${borrower.id}, ${mloId}, ${statusOverride}, 'mlo',
+      VALUES (gen_random_uuid(), ${orgId}, ${borrower.id}, ${assignMloId || mloId}, ${statusOverride}, 'mlo',
         ${loanData.purpose}, ${loanData.occupancy},
         ${loanData.loanType}, ${loanData.lenderName}, ${loanData.loanNumber},
         ${loanData.loanAmount}, ${loanData.interestRate}, ${loanData.loanTerm},
@@ -151,7 +146,7 @@ export async function PUT(request) {
     for (const cb of result.coBorrowers) {
       if (!cb.firstName || !cb.lastName) continue;
 
-      const cbBorrower = await upsertBorrowerFromImport(cb);
+      const cbBorrower = await upsertBorrowerFromImport(cb, orgId);
 
       const cbLBRows = await sql`
         INSERT INTO loan_borrowers (id, loan_id, borrower_id, borrower_type, ordinal,
@@ -181,23 +176,23 @@ export async function PUT(request) {
     await create1003LoanModels(loan.id, result);
 
     // ─── Create Contacts for All Borrowers ─────────────────
-    await upsertContactFromBorrower(borrower, primary, 'xml_import');
+    await upsertContactFromBorrower(borrower, primary, 'xml_import', orgId);
 
     for (const cb of result.coBorrowers) {
       if (!cb.firstName || !cb.lastName) continue;
       const cbBorrowerRows = await sql`
-        SELECT * FROM borrowers WHERE first_name = ${cb.firstName} AND last_name = ${cb.lastName}
+        SELECT * FROM borrowers WHERE first_name = ${cb.firstName} AND last_name = ${cb.lastName} AND organization_id = ${orgId}
         ORDER BY created_at DESC LIMIT 1
       `;
       if (cbBorrowerRows[0]) {
-        await upsertContactFromBorrower(cbBorrowerRows[0], cb, 'xml_import');
+        await upsertContactFromBorrower(cbBorrowerRows[0], cb, 'xml_import', orgId);
       }
     }
 
     // ─── Audit Trail ──────────────────────────────────────
     await sql`
       INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, old_value, new_value, details, created_at)
-      VALUES (gen_random_uuid(), ${loan.id}, 'status_change', 'mlo', ${session.user.id}, NULL, ${statusOverride},
+      VALUES (gen_random_uuid(), ${loan.id}, 'status_change', 'mlo', ${mloId}, NULL, ${statusOverride},
               ${JSON.stringify({ source: 'mismo_xml_import', numBorrowers: result.borrowers.length, loanNumber: loanData.loanNumber, lenderName: loanData.lenderName })},
               NOW())
     `;
@@ -254,7 +249,7 @@ async function extractXmlFromRequest(request) {
   return await request.text();
 }
 
-async function upsertBorrowerFromImport({ firstName, lastName, email, phone, ssn, dob }) {
+async function upsertBorrowerFromImport({ firstName, lastName, email, phone, ssn, dob }, orgId) {
   const borrowerEmail = email
     ? email.toLowerCase().trim()
     : `${(firstName || 'unknown').toLowerCase()}.${(lastName || 'unknown').toLowerCase()}.import.${Date.now()}@placeholder.netrate.local`;
@@ -273,30 +268,30 @@ async function upsertBorrowerFromImport({ firstName, lastName, email, phone, ssn
   const dobEncrypted = dob ? encrypt(String(dob)) : encrypt('1900-01-01');
 
   // Check if borrower exists by email
-  const existingRows = await sql`SELECT * FROM borrowers WHERE email = ${borrowerEmail} LIMIT 1`;
+  const existingRows = await sql`SELECT * FROM borrowers WHERE email = ${borrowerEmail} AND organization_id = ${orgId} LIMIT 1`;
 
   if (existingRows.length > 0) {
     const existing = existingRows[0];
     const updatedRows = await sql`
       UPDATE borrowers SET first_name = ${firstName || existing.first_name}, last_name = ${lastName || existing.last_name},
         phone = ${phone || existing.phone}, dob_encrypted = ${dobEncrypted}, ssn_encrypted = ${ssnEncrypted}, ssn_last_four = ${lastFour}, updated_at = NOW()
-      WHERE email = ${borrowerEmail} RETURNING *
+      WHERE email = ${borrowerEmail} AND organization_id = ${orgId} RETURNING *
     `;
     return updatedRows[0];
   } else {
     const newRows = await sql`
-      INSERT INTO borrowers (id, email, first_name, last_name, phone, dob_encrypted, ssn_encrypted, ssn_last_four, created_at, updated_at)
-      VALUES (gen_random_uuid(), ${borrowerEmail}, ${firstName || 'Unknown'}, ${lastName || 'Unknown'}, ${phone || null}, ${dobEncrypted}, ${ssnEncrypted}, ${lastFour}, NOW(), NOW())
+      INSERT INTO borrowers (id, organization_id, email, first_name, last_name, phone, dob_encrypted, ssn_encrypted, ssn_last_four, created_at, updated_at)
+      VALUES (gen_random_uuid(), ${orgId}, ${borrowerEmail}, ${firstName || 'Unknown'}, ${lastName || 'Unknown'}, ${phone || null}, ${dobEncrypted}, ${ssnEncrypted}, ${lastFour}, NOW(), NOW())
       RETURNING *
     `;
     return newRows[0];
   }
 }
 
-async function upsertContactFromBorrower(borrower, rawData, source) {
+async function upsertContactFromBorrower(borrower, rawData, source, orgId) {
   try {
     // Check if Contact already exists for this borrower
-    const existingRows = await sql`SELECT * FROM contacts WHERE borrower_id = ${borrower.id} LIMIT 1`;
+    const existingRows = await sql`SELECT * FROM contacts WHERE borrower_id = ${borrower.id} AND organization_id = ${orgId} LIMIT 1`;
 
     if (existingRows.length > 0) {
       const contact = existingRows[0];
@@ -310,7 +305,7 @@ async function upsertContactFromBorrower(borrower, rawData, source) {
 
     // Check by email to avoid duplicates
     if (rawData.email) {
-      const emailRows = await sql`SELECT * FROM contacts WHERE email = ${rawData.email.toLowerCase().trim()} LIMIT 1`;
+      const emailRows = await sql`SELECT * FROM contacts WHERE email = ${rawData.email.toLowerCase().trim()} AND organization_id = ${orgId} LIMIT 1`;
       if (emailRows.length > 0) {
         const contact = emailRows[0];
         const updatedRows = await sql`
@@ -324,8 +319,8 @@ async function upsertContactFromBorrower(borrower, rawData, source) {
 
     // Create new Contact
     const newRows = await sql`
-      INSERT INTO contacts (id, first_name, last_name, email, phone, source, tags, borrower_id, created_at, updated_at)
-      VALUES (gen_random_uuid(), ${rawData.firstName || 'Unknown'}, ${rawData.lastName || 'Unknown'},
+      INSERT INTO contacts (id, organization_id, first_name, last_name, email, phone, source, tags, borrower_id, created_at, updated_at)
+      VALUES (gen_random_uuid(), ${orgId}, ${rawData.firstName || 'Unknown'}, ${rawData.lastName || 'Unknown'},
               ${rawData.email ? rawData.email.toLowerCase().trim() : null}, ${rawData.phone || null},
               ${source}, ${['borrower']}, ${borrower.id}, NOW(), NOW())
       RETURNING *

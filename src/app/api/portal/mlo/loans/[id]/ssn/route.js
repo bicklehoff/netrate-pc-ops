@@ -4,17 +4,14 @@
 // This is the ONLY way to access the full SSN.
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import sql from '@/lib/db';
 import { decrypt } from '@/lib/encryption';
+import { requireMloSession, unauthorizedResponse } from '@/lib/require-mlo-session';
 
 export async function POST(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session, orgId, mloId } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
 
     const { id } = await params;
 
@@ -22,7 +19,7 @@ export async function POST(request, { params }) {
       SELECT l.*, b.id AS b_id, b.ssn_encrypted AS b_ssn_encrypted
       FROM loans l
       LEFT JOIN borrowers b ON b.id = l.borrower_id
-      WHERE l.id = ${id} LIMIT 1
+      WHERE l.id = ${id} AND l.organization_id = ${orgId} LIMIT 1
     `;
     const loan = loanRows[0];
 
@@ -31,7 +28,7 @@ export async function POST(request, { params }) {
     }
 
     const isAdmin = session.user.role === 'admin';
-    if (!isAdmin && loan.mlo_id !== session.user.id) {
+    if (!isAdmin && loan.mlo_id !== mloId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
@@ -45,7 +42,7 @@ export async function POST(request, { params }) {
     // Create audit trail — this is a sensitive operation
     await sql`
       INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, details, created_at)
-      VALUES (gen_random_uuid(), ${id}, 'ssn_revealed', 'mlo', ${session.user.id},
+      VALUES (gen_random_uuid(), ${id}, 'ssn_revealed', 'mlo', ${mloId},
               ${JSON.stringify({ borrowerId: loan.b_id, ip: request.headers.get('x-forwarded-for') || 'unknown', userAgent: request.headers.get('user-agent') || 'unknown' })},
               NOW())
     `;

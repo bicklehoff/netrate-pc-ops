@@ -5,9 +5,8 @@
 // This is an on-demand snapshot — David triggers it when ready to reconcile/file.
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import sql from '@/lib/db';
+import { requireMloSession } from '@/lib/require-mlo-session';
 
 // ─── QM Auto-Classification ───────────────────────────────────
 function deriveQmStatus(loanType) {
@@ -53,9 +52,9 @@ function mapStatusToMcrEvent(status, actionTaken) {
 // ─── POST: Push MCR snapshot to TrackerPortal ─────────────────
 export async function POST() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo' || session.user.role !== 'admin') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 401 });
+    const { session, orgId, mloId } = await requireMloSession();
+    if (!session || session.user.role !== 'admin') {
+      return Response.json({ error: 'Admin access required' }, { status: 401 });
     }
 
     const now = new Date();
@@ -69,6 +68,7 @@ export async function POST() {
       LEFT JOIN borrowers b ON l.borrower_id = b.id
       LEFT JOIN mlos m ON l.mlo_id = m.id
       WHERE l.status != 'draft'
+        AND l.organization_id = ${orgId}
       ORDER BY l.created_at ASC
     `;
 
@@ -155,7 +155,7 @@ export async function POST() {
       return sql`
         INSERT INTO loan_events (loan_id, event_type, actor_type, actor_id, new_value, details, created_at)
         VALUES (
-          ${loanId}, 'mcr_pushed', 'admin', ${session.user.id}, ${payload.eventType},
+          ${loanId}, 'mcr_pushed', 'admin', ${mloId}, ${payload.eventType},
           ${JSON.stringify({ mcrPayload: payload, pushedAt: now.toISOString() })}::jsonb,
           NOW()
         )
@@ -181,9 +181,9 @@ export async function POST() {
 // ─── GET: Preview what would be pushed ────────────────────────
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo' || session.user.role !== 'admin') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 401 });
+    const { session, orgId } = await requireMloSession();
+    if (!session || session.user.role !== 'admin') {
+      return Response.json({ error: 'Admin access required' }, { status: 401 });
     }
 
     const loans = await sql`
@@ -193,6 +193,7 @@ export async function GET() {
       LEFT JOIN borrowers b ON l.borrower_id = b.id
       LEFT JOIN mlos m ON l.mlo_id = m.id
       WHERE l.status != 'draft'
+        AND l.organization_id = ${orgId}
       ORDER BY l.created_at ASC
     `;
 
