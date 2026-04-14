@@ -10,6 +10,7 @@ import sql from '@/lib/db';
 import { priceScenario } from '@/lib/rates/price-scenario';
 import { checkEligibility } from '@/lib/quotes/eligibility';
 import { buildFeeBreakdown } from '@/lib/quotes/fee-builder';
+import { calculateMonthlyPI } from '@/lib/mortgage-math';
 import { requireMloSession, unauthorizedResponse } from '@/lib/require-mlo-session';
 
 export async function GET(request) {
@@ -143,7 +144,7 @@ export async function POST(request) {
     const primaryRate = topScenarios[0];
     const fhaEffective = primaryRate?.effectiveLoanAmount || loanAmount;
     const monthlyPI = primaryRate
-      ? calculateMonthlyPI(fhaEffective, primaryRate.rate, body.term || 30)
+      ? calculateMonthlyPI(primaryRate.rate, fhaEffective, body.term || 30)
       : null;
     const monthlyTax = fees?.monthlyTax || 0;
     const monthlyInsurance = fees?.monthlyInsurance || 0;
@@ -289,7 +290,7 @@ function pickTopScenarios(results, n) {
       investor: r.investor,
       tier: r.tier,
       lockDays: 30,
-      monthlyPI: calculateMonthlyPI(r.effectiveLoanAmount || r.baseLoanAmount, r.rate, 30),
+      monthlyPI: calculateMonthlyPI(r.rate, r.effectiveLoanAmount || r.baseLoanAmount, 30),
       rebateDollars: r.rebateDollars || 0,
       discountDollars: r.discountDollars || 0,
       compDollars: r.compDollars || 0,
@@ -300,11 +301,3 @@ function pickTopScenarios(results, n) {
     }));
 }
 
-function calculateMonthlyPI(principal, annualRate, termYears) {
-  const monthlyRate = annualRate / 100 / 12;
-  const numPayments = termYears * 12;
-  if (monthlyRate === 0) return Math.round(principal / numPayments);
-  const payment = principal * (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) /
-    (Math.pow(1 + monthlyRate, numPayments) - 1);
-  return Math.round(payment * 100) / 100;
-}

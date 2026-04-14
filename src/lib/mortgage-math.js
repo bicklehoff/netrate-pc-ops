@@ -33,6 +33,34 @@ export function calculateLTV(loanAmount, propertyValue) {
 }
 
 /**
+ * Calculate APR using binary search.
+ * APR = the rate at which P&I on (loanAmount - netFinanceCharges) equals
+ * the P&I at the note rate on loanAmount.
+ * @param {number} noteRate - Annual note rate as percentage (e.g. 6.5)
+ * @param {number} loanAmount - Loan amount in dollars
+ * @param {number} netFinanceCharges - Net finance charges (fees minus credits)
+ * @param {number} termYears - Loan term in years (default 30)
+ * @returns {number} APR as percentage, rounded to 3 decimals
+ */
+export function calculateAPR(noteRate, loanAmount, netFinanceCharges, termYears = 30) {
+  if (!noteRate || !loanAmount) return noteRate || 0;
+  if (netFinanceCharges <= 0) return noteRate; // credit exceeds fees — APR ≈ note rate
+  const adjustedLoan = loanAmount - netFinanceCharges;
+  if (adjustedLoan <= 0) return noteRate;
+  const targetPayment = calculateMonthlyPI(noteRate, loanAmount, termYears);
+  let lo = noteRate;
+  let hi = noteRate + 5;
+  for (let i = 0; i < 100; i++) {
+    const mid = (lo + hi) / 2;
+    const payment = calculateMonthlyPI(mid, adjustedLoan, termYears);
+    if (payment < targetPayment) lo = mid;
+    else hi = mid;
+    if (Math.abs(hi - lo) < 0.0001) break;
+  }
+  return Math.round(((lo + hi) / 2) * 1000) / 1000;
+}
+
+/**
  * Format a number as currency.
  * @param {number} value
  * @returns {string} Formatted string (e.g. "$1,234.56")
