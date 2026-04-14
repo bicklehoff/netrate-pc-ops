@@ -17,7 +17,7 @@ export async function POST(request) {
     const formData = await request.formData();
     const file = formData.get('file');
     const mloName = formData.get('mloName');
-    const mloEmail = formData.get('mloEmail');
+    const mloEmail = session.user.email; // Always use session email, not client-supplied
     const borrowerNames = formData.get('borrowerNames');
     // loanId available for future use (storing signed docs against loans)
     // const loanId = formData.get('loanId');

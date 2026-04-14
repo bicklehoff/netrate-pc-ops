@@ -25,14 +25,14 @@ export async function GET(request) {
   // Auth: Vercel cron (Bearer) or CLAW_API_KEY
   const authHeader = request.headers.get('authorization') || '';
   const apiKey = request.headers.get('x-api-key') || '';
-  const urlKey = new URL(request.url).searchParams.get('key') || '';
+  // REMOVED: URL query param key acceptance (leaks in server logs)
 
   const cronSecret = process.env.CRON_SECRET;
   const clawKey = process.env.CLAW_API_KEY;
 
   const authorized =
     (cronSecret && authHeader === `Bearer ${cronSecret}`) ||
-    (clawKey && (apiKey === clawKey || urlKey === clawKey));
+    (clawKey && apiKey === clawKey);
 
   if (!authorized && process.env.NODE_ENV === 'production') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

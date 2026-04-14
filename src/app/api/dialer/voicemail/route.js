@@ -1,3 +1,4 @@
+import { validateTwilioSignature, twilioForbiddenResponse } from "@/lib/twilio-validate";
 // Dialer Voicemail — Handles voicemail recording completion
 // Twilio POSTs here after a caller leaves a voicemail.
 // Saves the recording URL to the call log.
@@ -7,6 +8,9 @@ import { buildVoicemailTwiml } from '@/lib/twilio-voice';
 
 export async function POST(req) {
   const formData = await req.formData();
+  const params = Object.fromEntries(formData.entries());
+  const { valid } = validateTwilioSignature(req, params);
+  if (!valid) return twilioForbiddenResponse();
   const callSid = formData.get('CallSid');
   const recordingUrl = formData.get('RecordingUrl');
 

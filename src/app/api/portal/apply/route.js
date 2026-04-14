@@ -131,7 +131,7 @@ export async function POST(request) {
   try {
     // ─── Rate Limiting ─────────────────────────────────────────
     const headersList = await headers();
-    const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim()
+    const ip = headersList.get('x-forwarded-for')?.split(',').pop()?.trim()
       || headersList.get('x-real-ip') || 'unknown';
     const rateCheck = checkRateLimit(ip);
     if (!rateCheck.allowed) {

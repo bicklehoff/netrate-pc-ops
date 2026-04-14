@@ -1,3 +1,4 @@
+import { validateTwilioSignature, twilioForbiddenResponse } from "@/lib/twilio-validate";
 // Dialer Voice Webhook — Handles outbound call routing
 // Twilio POSTs here when a browser client initiates a call via device.connect().
 // Returns TwiML that tells Twilio to dial the destination number.
@@ -10,6 +11,9 @@ import { normalizePhone } from '@/lib/normalize-phone';
 
 export async function POST(req) {
   const formData = await req.formData();
+  const params = Object.fromEntries(formData.entries());
+  const { valid } = validateTwilioSignature(req, params);
+  if (!valid) return twilioForbiddenResponse();
   const to = formData.get('To');
   const from = formData.get('From');        // client:mlo-<uuid>
   const callSid = formData.get('CallSid');

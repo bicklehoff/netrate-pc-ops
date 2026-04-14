@@ -10,7 +10,7 @@ import sql from '@/lib/db';
 export async function GET(req, { params }) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.userType === 'mlo') {
+    if (!session || session.user.userType !== 'mlo') {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -107,7 +107,7 @@ export async function GET(req, { params }) {
 export async function PATCH(req, { params }) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.userType === 'mlo') {
+    if (!session || session.user.userType !== 'mlo') {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

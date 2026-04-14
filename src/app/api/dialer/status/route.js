@@ -1,3 +1,4 @@
+import { validateTwilioSignature, twilioForbiddenResponse } from "@/lib/twilio-validate";
 // Dialer Status Callback — Receives call status updates from Twilio
 // Twilio POSTs here as calls progress through states:
 // initiated → ringing → in-progress → completed (or failed/busy/no-answer)
@@ -7,6 +8,9 @@ import sql from '@/lib/db';
 
 export async function POST(req) {
   const formData = await req.formData();
+  const params = Object.fromEntries(formData.entries());
+  const { valid } = validateTwilioSignature(req, params);
+  if (!valid) return twilioForbiddenResponse();
   const callSid = formData.get('CallSid');
   const callStatus = formData.get('CallStatus');       // initiated, ringing, in-progress, completed, failed, busy, no-answer, canceled
   const duration = formData.get('CallDuration');         // Only present on completed

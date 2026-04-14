@@ -1,3 +1,4 @@
+import { validateTwilioSignature, twilioForbiddenResponse } from "@/lib/twilio-validate";
 // Dialer Recording Status — Receives recording completion events from Twilio
 // Twilio POSTs here when a call recording is ready.
 // Updates the call_logs with the recording URL.
@@ -6,6 +7,9 @@ import sql from '@/lib/db';
 
 export async function POST(req) {
   const formData = await req.formData();
+  const params = Object.fromEntries(formData.entries());
+  const { valid } = validateTwilioSignature(req, params);
+  if (!valid) return twilioForbiddenResponse();
   const callSid = formData.get('CallSid');
   const recordingUrl = formData.get('RecordingUrl');
   const recordingStatus = formData.get('RecordingStatus'); // completed, failed

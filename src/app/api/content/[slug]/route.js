@@ -40,7 +40,7 @@ export async function GET(request, { params }) {
     return response;
   } catch (error) {
     console.error('Content GET slug error:', error);
-    return NextResponse.json({ error: 'Internal error', detail: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }
 
@@ -108,7 +108,7 @@ export async function PUT(request, { params }) {
     return NextResponse.json({ ok: true, slug: rows[0].slug, status: rows[0].status });
   } catch (error) {
     console.error('Content PUT error:', error);
-    return NextResponse.json({ error: 'Failed to update content', detail: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to update content' }, { status: 500 });
   }
 }
 
@@ -132,6 +132,6 @@ export async function DELETE(request, { params }) {
     return NextResponse.json({ ok: true, deleted: slug });
   } catch (error) {
     console.error('Content DELETE error:', error);
-    return NextResponse.json({ error: 'Failed to delete content', detail: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to delete content' }, { status: 500 });
   }
 }

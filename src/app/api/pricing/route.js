@@ -47,7 +47,7 @@ export async function POST(request) {
   } catch (err) {
     console.error('Pricing API error:', err);
     return NextResponse.json(
-      { error: 'Pricing engine error', detail: err.message },
+      { error: 'Pricing engine error' },
       { status: 500 }
     );
   }
@@ -57,7 +57,6 @@ export async function GET() {
   return NextResponse.json({
     engine: 'NetRate Pricing Engine v2',
     endpoint: 'POST /api/pricing',
-    lenders: ['everstream', 'tls', 'keystone', 'swmc', 'amwest', 'windsor'],
-    comp: { rate: '2%', capRefi: 3595, capPurchase: 3595, type: 'lender-paid' },
+    status: 'active',
   });
 }

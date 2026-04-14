@@ -121,6 +121,6 @@ export async function GET(request) {
     return NextResponse.json({ ok: true, date: today, rates: result, inserted, updated });
   } catch (error) {
     console.error('[cron/mnd-scrape] error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

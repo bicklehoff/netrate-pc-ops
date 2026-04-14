@@ -11,7 +11,7 @@ import { normalizePhone } from '@/lib/normalize-phone';
 export async function GET(req) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.userType === 'mlo') {
+    if (!session || session.user.userType !== 'mlo') {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -129,7 +129,7 @@ export async function GET(req) {
 export async function POST(req) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.userType === 'mlo') {
+    if (!session || session.user.userType !== 'mlo') {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
