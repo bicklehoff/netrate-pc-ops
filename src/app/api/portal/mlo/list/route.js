@@ -3,20 +3,18 @@
 // Auth: MLO or Admin required.
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import sql from '@/lib/db';
+import { requireMloSession, unauthorizedResponse } from '@/lib/require-mlo-session';
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session, orgId } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
 
     const mlos = await sql`
       SELECT id, first_name, last_name, email, role
       FROM mlos
+      WHERE organization_id = ${orgId}
       ORDER BY first_name ASC
     `;
 

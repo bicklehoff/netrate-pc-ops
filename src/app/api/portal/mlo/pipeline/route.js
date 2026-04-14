@@ -7,18 +7,15 @@
 // editable fields (loan_number, lender_name, mlo_id).
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import sql from '@/lib/db';
 import { getBallInCourt } from '@/lib/loan-states';
+import { requireMloSession, unauthorizedResponse } from '@/lib/require-mlo-session';
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
+    const { session, orgId } = await requireMloSession();
 
-    if (!session || session.user.userType !== 'mlo') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    if (!session) return unauthorizedResponse();
 
     // Main loan query with borrower + mlo + dates JOINed
     const loans = await sql`
@@ -42,6 +39,7 @@ export async function GET() {
       LEFT JOIN borrowers b ON l.borrower_id = b.id
       LEFT JOIN mlos m ON l.mlo_id = m.id
       LEFT JOIN loan_dates ld ON ld.loan_id = l.id
+      WHERE l.organization_id = ${orgId}
       ORDER BY l.updated_at DESC
     `;
 
@@ -186,10 +184,8 @@ export async function GET() {
 
 export async function PATCH(request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session, orgId, mloId } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
 
     const body = await request.json();
     const { loanIds, updates } = body;
@@ -214,14 +210,14 @@ export async function PATCH(request) {
     const isAdmin = session.user.role === 'admin';
 
     // Verify access to all loans
-    const loans = await sql`SELECT * FROM loans WHERE id = ANY(${loanIds})`;
+    const loans = await sql`SELECT * FROM loans WHERE id = ANY(${loanIds}) AND organization_id = ${orgId}`;
 
     if (loans.length !== loanIds.length) {
       return NextResponse.json({ error: 'One or more loans not found' }, { status: 404 });
     }
 
     if (!isAdmin) {
-      const unauthorized = loans.find((l) => l.mlo_id !== session.user.id);
+      const unauthorized = loans.find((l) => l.mlo_id !== mloId);
       if (unauthorized) {
         return NextResponse.json({ error: 'Unauthorized access to one or more loans' }, { status: 403 });
       }
@@ -257,7 +253,7 @@ export async function PATCH(request) {
       for (const event of events) {
         await sql`
           INSERT INTO loan_events (loan_id, event_type, actor_type, actor_id, old_value, new_value, details)
-          VALUES (${loan.id}, ${event.event_type}, 'mlo', ${session.user.id}, ${event.old_value}, ${event.new_value}, ${event.details})
+          VALUES (${loan.id}, ${event.event_type}, 'mlo', ${mloId}, ${event.old_value}, ${event.new_value}, ${event.details})
         `;
       }
 
@@ -277,10 +273,8 @@ export async function PATCH(request) {
 
 export async function DELETE(request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session, orgId } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
 
     if (session.user.role !== 'admin') {
       return NextResponse.json({ error: 'Admin access required for delete' }, { status: 403 });
@@ -298,7 +292,7 @@ export async function DELETE(request) {
     await sql`DELETE FROM loan_events WHERE loan_id = ANY(${loanIds})`.catch(() => {});
     await sql`DELETE FROM documents WHERE loan_id = ANY(${loanIds})`.catch(() => {});
 
-    const result = await sql`DELETE FROM loans WHERE id = ANY(${loanIds})`;
+    const result = await sql`DELETE FROM loans WHERE id = ANY(${loanIds}) AND organization_id = ${orgId}`;
 
     return NextResponse.json({ success: true, deletedCount: result.length });
   } catch (error) {

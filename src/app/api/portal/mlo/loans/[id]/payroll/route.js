@@ -10,35 +10,34 @@
 export const maxDuration = 30;
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import sql from '@/lib/db';
 import { uploadFile, createLoanFolder } from '@/lib/zoho-workdrive';
 import { extractCdData } from '@/lib/cd-extractor';
+import { requireMloSession } from '@/lib/require-mlo-session';
 
-async function verifyMloAccess(loanId, session) {
-  if (!session || session.user.userType !== 'mlo') return null;
+async function verifyMloAccess(loanId, session, orgId, mloId) {
+  if (!session) return null;
   const rows = await sql`
     SELECT l.*, b.id AS b_id, b.first_name AS b_first_name, b.last_name AS b_last_name, b.email AS b_email,
            m.id AS m_id, m.first_name AS m_first_name, m.last_name AS m_last_name, m.email AS m_email, m.nmls AS m_nmls
     FROM loans l
     LEFT JOIN borrowers b ON b.id = l.borrower_id
     LEFT JOIN mlos m ON m.id = l.mlo_id
-    WHERE l.id = ${loanId} LIMIT 1
+    WHERE l.id = ${loanId} AND l.organization_id = ${orgId} LIMIT 1
   `;
   const loan = rows[0];
   if (!loan) return null;
   const isAdmin = session.user.role === 'admin';
-  if (!isAdmin && loan.mlo_id !== session.user.id) return null;
+  if (!isAdmin && loan.mlo_id !== mloId) return null;
   return loan;
 }
 
 // ─── GET: Payroll + extraction status ───────────────────────
 export async function GET(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
+    const { session, orgId, mloId } = await requireMloSession();
     const { id } = await params;
-    const loan = await verifyMloAccess(id, session);
+    const loan = await verifyMloAccess(id, session, orgId, mloId);
     if (!loan) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -49,7 +48,7 @@ export async function GET(request, { params }) {
       relatedLoans = await sql`
         SELECT id, status, loan_number, lender_name, loan_type, loan_amount, purpose, created_at
         FROM loans
-        WHERE borrower_id = ${loan.borrower_id} AND id != ${id} AND status NOT IN ('settled', 'cancelled')
+        WHERE borrower_id = ${loan.borrower_id} AND id != ${id} AND organization_id = ${orgId} AND status NOT IN ('settled', 'cancelled')
         ORDER BY created_at DESC
       `;
     }
@@ -93,9 +92,9 @@ export async function GET(request, { params }) {
 // ─── PUT: Upload CD + trigger extraction ────────────────────
 export async function PUT(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
+    const { session, orgId, mloId } = await requireMloSession();
     const { id } = await params;
-    const loan = await verifyMloAccess(id, session);
+    const loan = await verifyMloAccess(id, session, orgId, mloId);
     if (!loan) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -156,7 +155,7 @@ export async function PUT(request, { params }) {
     // Audit: CD uploaded
     await sql`
       INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, new_value, details, created_at)
-      VALUES (gen_random_uuid(), ${id}, 'cd_uploaded', 'mlo', ${session.user.id}, ${file.name},
+      VALUES (gen_random_uuid(), ${id}, 'cd_uploaded', 'mlo', ${mloId}, ${file.name},
               ${JSON.stringify({ workDriveFileId: uploaded.id, fileName: file.name, fileSize: file.size, folder: 'CLOSING', replacedPrevious: !!loan.cd_work_drive_file_id })},
               NOW())
     `;
@@ -190,7 +189,7 @@ export async function PUT(request, { params }) {
       relatedLoans = await sql`
         SELECT id, status, loan_number, lender_name, loan_type, loan_amount, purpose, created_at
         FROM loans
-        WHERE borrower_id = ${loan.borrower_id} AND id != ${id} AND status NOT IN ('settled', 'cancelled')
+        WHERE borrower_id = ${loan.borrower_id} AND id != ${id} AND organization_id = ${orgId} AND status NOT IN ('settled', 'cancelled')
         ORDER BY created_at DESC
       `;
     }
@@ -212,9 +211,9 @@ export async function PUT(request, { params }) {
 // ─── PATCH: Approve or dispute extracted CD data ────────────
 export async function PATCH(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
+    const { session, orgId, mloId } = await requireMloSession();
     const { id } = await params;
-    const loan = await verifyMloAccess(id, session);
+    const loan = await verifyMloAccess(id, session, orgId, mloId);
     if (!loan) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -234,7 +233,7 @@ export async function PATCH(request, { params }) {
       const cd = loan.cd_extracted_data.data;
 
       // Build loan update fields from CD extraction
-      const loanUpdate = { cd_approved_at: now, cd_approved_by: session.user.id };
+      const loanUpdate = { cd_approved_at: now, cd_approved_by: mloId };
       if (cd.loanAmount != null) loanUpdate.loan_amount = cd.loanAmount;
       if (cd.interestRate != null) loanUpdate.interest_rate = cd.interestRate;
       if (cd.loanTerm != null) loanUpdate.loan_term = cd.loanTerm;
@@ -319,7 +318,7 @@ export async function PATCH(request, { params }) {
       const fieldsUpdated = cols.filter(k => k !== 'cd_approved_at' && k !== 'cd_approved_by');
       await sql`
         INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, new_value, details, created_at)
-        VALUES (gen_random_uuid(), ${id}, 'cd_approved', 'mlo', ${session.user.id}, 'approved',
+        VALUES (gen_random_uuid(), ${id}, 'cd_approved', 'mlo', ${mloId}, 'approved',
                 ${JSON.stringify({ extractedData: cd, fieldsUpdated, ...(nicknameUpdate ? { nicknameUpdate } : {}), ...(personsCreated.length > 0 ? { personsCreated } : {}), ...(notes ? { notes } : {}) })},
                 NOW())
       `;
@@ -340,7 +339,7 @@ export async function PATCH(request, { params }) {
 
       await sql`
         INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, new_value, details, created_at)
-        VALUES (gen_random_uuid(), ${id}, 'cd_disputed', 'mlo', ${session.user.id}, 'disputed',
+        VALUES (gen_random_uuid(), ${id}, 'cd_disputed', 'mlo', ${mloId}, 'disputed',
                 ${JSON.stringify({ reason: notes || 'MLO disputed extracted CD data' })}, NOW())
       `;
 
@@ -357,9 +356,9 @@ export async function PATCH(request, { params }) {
 // ─── POST: Send to Payroll ──────────────────────────────────
 export async function POST(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
+    const { session, orgId, mloId } = await requireMloSession();
     const { id } = await params;
-    const loan = await verifyMloAccess(id, session);
+    const loan = await verifyMloAccess(id, session, orgId, mloId);
     if (!loan) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -386,7 +385,7 @@ export async function POST(request, { params }) {
       FROM loans l
       LEFT JOIN borrowers b ON b.id = l.borrower_id
       LEFT JOIN mlos m ON m.id = l.mlo_id
-      WHERE l.id = ${id} LIMIT 1
+      WHERE l.id = ${id} AND l.organization_id = ${orgId} LIMIT 1
     `;
     const freshLoan = freshRows[0];
 
@@ -421,7 +420,7 @@ export async function POST(request, { params }) {
       fundingDate: freshLoan.funding_date?.toISOString?.()?.split('T')[0] || (freshLoan.funding_date ? String(freshLoan.funding_date).split('T')[0] : null),
       loName: freshLoan.m_first_name ? `${freshLoan.m_first_name} ${freshLoan.m_last_name}` : null,
       loNmls: freshLoan.m_nmls || null,
-      confirmedBy: freshLoan.m_first_name ? freshLoan.m_first_name.toLowerCase() : session.user.id,
+      confirmedBy: freshLoan.m_first_name ? freshLoan.m_first_name.toLowerCase() : mloId,
       confirmedAt: freshLoan.cd_approved_at?.toISOString?.() || now.toISOString(),
       cdWorkDriveFileId: freshLoan.cd_work_drive_file_id || null,
     };
@@ -451,8 +450,8 @@ export async function POST(request, { params }) {
 
     await sql`
       INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, new_value, details, created_at)
-      VALUES (gen_random_uuid(), ${id}, 'payroll_sent', 'mlo', ${session.user.id}, 'Sent to payroll',
-              ${JSON.stringify({ trackerPayload, trackerResult, sentAt: now.toISOString(), sentBy: session.user.id })},
+      VALUES (gen_random_uuid(), ${id}, 'payroll_sent', 'mlo', ${mloId}, 'Sent to payroll',
+              ${JSON.stringify({ trackerPayload, trackerResult, sentAt: now.toISOString(), sentBy: mloId })},
               NOW())
     `;
 

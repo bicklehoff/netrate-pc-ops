@@ -6,22 +6,19 @@
 // Downloads file from source, uploads to target folder, deletes original.
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import sql from '@/lib/db';
 import { downloadFile, uploadFile, deleteResource } from '@/lib/zoho-workdrive';
+import { requireMloSession, unauthorizedResponse } from '@/lib/require-mlo-session';
 
 const VALID_FOLDERS = ['FLOOR', 'SUBMITTED', 'EXTRA', 'CLOSING'];
 
 export async function POST(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session, orgId, mloId } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
 
     const { id } = await params;
-    const loanRows = await sql`SELECT * FROM loans WHERE id = ${id} LIMIT 1`;
+    const loanRows = await sql`SELECT * FROM loans WHERE id = ${id} AND organization_id = ${orgId} LIMIT 1`;
     const loan = loanRows[0];
 
     if (!loan) {
@@ -29,7 +26,7 @@ export async function POST(request, { params }) {
     }
 
     const isAdmin = session.user.role === 'admin';
-    if (!isAdmin && loan.mlo_id !== session.user.id) {
+    if (!isAdmin && loan.mlo_id !== mloId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
@@ -92,7 +89,7 @@ export async function POST(request, { params }) {
     // Audit
     await sql`
       INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, details, created_at)
-      VALUES (gen_random_uuid(), ${id}, 'doc_moved', 'mlo', ${session.user.id},
+      VALUES (gen_random_uuid(), ${id}, 'doc_moved', 'mlo', ${mloId},
               ${JSON.stringify({ fileName: name, targetFolder, originalFileId: fileId, newFileId: uploaded?.id || null })},
               NOW())
     `;

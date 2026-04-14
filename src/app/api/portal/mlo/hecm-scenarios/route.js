@@ -3,21 +3,19 @@
 // POST /api/portal/mlo/hecm-scenarios — creates a new scenario
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import sql from '@/lib/db';
+import { requireMloSession, unauthorizedResponse } from '@/lib/require-mlo-session';
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session, orgId, mloId } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
 
     const scenarios = await sql`
       SELECT id, borrower_name, reference_number, home_value, created_at, updated_at
       FROM hecm_scenarios
-      WHERE mlo_id = ${session.user.id}
+      WHERE mlo_id = ${mloId}
+        AND organization_id = ${orgId}
       ORDER BY updated_at DESC
     `;
 
@@ -30,10 +28,8 @@ export async function GET() {
 
 export async function POST(request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session, orgId, mloId } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
 
     const body = await request.json();
     const { inputState, results } = body;
@@ -43,9 +39,9 @@ export async function POST(request) {
     }
 
     const rows = await sql`
-      INSERT INTO hecm_scenarios (mlo_id, borrower_name, reference_number, home_value, input_state, results, created_at, updated_at)
+      INSERT INTO hecm_scenarios (organization_id, mlo_id, borrower_name, reference_number, home_value, input_state, results, created_at, updated_at)
       VALUES (
-        ${session.user.id}, ${inputState.borrowerName || 'Untitled'},
+        ${orgId}, ${mloId}, ${inputState.borrowerName || 'Untitled'},
         ${inputState.referenceNumber || null}, ${inputState.homeValue || null},
         ${JSON.stringify(inputState)}::jsonb, ${results ? JSON.stringify(results) : null}::jsonb,
         NOW(), NOW()

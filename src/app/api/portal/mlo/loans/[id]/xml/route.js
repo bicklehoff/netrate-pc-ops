@@ -6,16 +6,15 @@
 // POST body: { lender?: string } — Exports, saves snapshot to Blob, creates LoanDocument record
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import sql from '@/lib/db';
 import { decrypt } from '@/lib/encryption';
 import { put } from '@vercel/blob';
 import { buildMismoXml } from '@/lib/mismo-builder';
+import { requireMloSession, unauthorizedResponse } from '@/lib/require-mlo-session';
 
 // Fetch full loan with all 1003 relations
-async function fetchFullLoan(id) {
-  const loanRows = await sql`SELECT * FROM loans WHERE id = ${id} LIMIT 1`;
+async function fetchFullLoan(id, orgId) {
+  const loanRows = await sql`SELECT * FROM loans WHERE id = ${id} AND organization_id = ${orgId} LIMIT 1`;
   const loan = loanRows[0];
   if (!loan) return null;
 
@@ -117,13 +116,11 @@ function serializeLoan(loan) {
 // ─── GET: Download XML (no snapshot) ──────────────────────
 export async function GET(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session, orgId, mloId } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
 
     const { id } = await params;
-    const loan = await fetchFullLoan(id);
+    const loan = await fetchFullLoan(id, orgId);
 
     if (!loan) {
       return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
@@ -141,7 +138,7 @@ export async function GET(request, { params }) {
     // Audit event
     await sql`
       INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, details, created_at)
-      VALUES (gen_random_uuid(), ${id}, 'xml_export', 'mlo', ${session.user.id},
+      VALUES (gen_random_uuid(), ${id}, 'xml_export', 'mlo', ${mloId},
               ${JSON.stringify({ action: 'download', format: 'MISMO_3.4' })}, NOW())
     `;
 
@@ -161,16 +158,14 @@ export async function GET(request, { params }) {
 // ─── POST: Export + Snapshot (save to Blob + create Document) ──
 export async function POST(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session, orgId, mloId } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
 
     const { id } = await params;
     const body = await request.json().catch(() => ({}));
     const lender = body.lender || null;
 
-    const loan = await fetchFullLoan(id);
+    const loan = await fetchFullLoan(id, orgId);
 
     if (!loan) {
       return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
@@ -198,8 +193,8 @@ export async function POST(request, { params }) {
       INSERT INTO documents (id, loan_id, doc_type, label, status, file_url, file_name, file_size, uploaded_at, requested_by, notes, created_at)
       VALUES (gen_random_uuid(), ${id}, 'submission_package',
               ${`Submission Package${lender ? ` — ${lender}` : ''} (${new Date().toLocaleDateString('en-US')})`},
-              'uploaded', ${blob.url}, ${filename}, ${Buffer.byteLength(xml, 'utf-8')}, NOW(), ${session.user.id},
-              ${JSON.stringify({ format: 'MISMO_3.4', lender, exportedBy: session.user.id, exportDate: new Date().toISOString(), borrowerCount: (loan.loanBorrowers || []).length, snapshotType: 'submission_package' })},
+              'uploaded', ${blob.url}, ${filename}, ${Buffer.byteLength(xml, 'utf-8')}, NOW(), ${mloId},
+              ${JSON.stringify({ format: 'MISMO_3.4', lender, exportedBy: mloId, exportDate: new Date().toISOString(), borrowerCount: (loan.loanBorrowers || []).length, snapshotType: 'submission_package' })},
               NOW())
       RETURNING *
     `;
@@ -208,7 +203,7 @@ export async function POST(request, { params }) {
     // Audit event
     await sql`
       INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, new_value, details, created_at)
-      VALUES (gen_random_uuid(), ${id}, 'xml_export', 'mlo', ${session.user.id},
+      VALUES (gen_random_uuid(), ${id}, 'xml_export', 'mlo', ${mloId},
               ${JSON.stringify({ documentId: doc.id, blobUrl: blob.url, lender })},
               ${JSON.stringify({ action: 'submission_snapshot', format: 'MISMO_3.4', lender, filename })},
               NOW())

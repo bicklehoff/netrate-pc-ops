@@ -5,9 +5,8 @@
 // MLO picks which prior loan to use as template.
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import sql from '@/lib/db';
+import { requireMloSession, unauthorizedResponse } from '@/lib/require-mlo-session';
 
 // Fields to copy from the source loan (deal-specific financial data)
 const COPY_FIELDS = [
@@ -30,10 +29,8 @@ const COPY_BORROWER_FIELDS = [
 
 export async function POST(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session, orgId, mloId } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
 
     const { id: contactId } = await params;
     const body = await request.json();
@@ -42,7 +39,7 @@ export async function POST(request, { params }) {
     // Load contact
     const contactRows = await sql`
       SELECT id, borrower_id, first_name, last_name, email, phone
-      FROM contacts WHERE id = ${contactId} LIMIT 1
+      FROM contacts WHERE id = ${contactId} AND organization_id = ${orgId} LIMIT 1
     `;
     const contact = contactRows[0];
 
@@ -59,7 +56,7 @@ export async function POST(request, { params }) {
     let sourceBorrowerData = {};
 
     if (sourceLoanId) {
-      const sourceLoanRows = await sql`SELECT * FROM loans WHERE id = ${sourceLoanId} LIMIT 1`;
+      const sourceLoanRows = await sql`SELECT * FROM loans WHERE id = ${sourceLoanId} AND organization_id = ${orgId} LIMIT 1`;
       const sourceLoan = sourceLoanRows[0];
 
       if (!sourceLoan) {
@@ -93,8 +90,8 @@ export async function POST(request, { params }) {
     // Insert base loan, then UPDATE with source data
     let newLoan;
     const baseInsert = await sql`
-      INSERT INTO loans (borrower_id, contact_id, mlo_id, status, ball_in_court, application_step, num_borrowers, created_at, updated_at)
-      VALUES (${contact.borrower_id}, ${contact.id}, ${session.user.id}, 'draft', 'mlo', 1, 1, NOW(), NOW())
+      INSERT INTO loans (organization_id, borrower_id, contact_id, mlo_id, status, ball_in_court, application_step, num_borrowers, created_at, updated_at)
+      VALUES (${orgId}, ${contact.borrower_id}, ${contact.id}, ${mloId}, 'draft', 'mlo', 1, 1, NOW(), NOW())
       RETURNING *
     `;
     newLoan = baseInsert[0];
@@ -153,7 +150,7 @@ export async function POST(request, { params }) {
     await sql`
       INSERT INTO loan_events (loan_id, event_type, actor_type, actor_id, new_value, details, created_at)
       VALUES (
-        ${newLoan.id}, 'loan_cloned_from_contact', 'mlo', ${session.user.id},
+        ${newLoan.id}, 'loan_cloned_from_contact', 'mlo', ${mloId},
         'New deal created from contact',
         ${JSON.stringify({
           contactId: contact.id,

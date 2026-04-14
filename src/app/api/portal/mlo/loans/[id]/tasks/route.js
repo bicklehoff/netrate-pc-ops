@@ -3,18 +3,22 @@
 // POST /api/portal/mlo/loans/:id/tasks — Create a task
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import sql from '@/lib/db';
+import { requireMloSession, unauthorizedResponse } from '@/lib/require-mlo-session';
 
 export async function GET(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session, orgId } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
 
     const { id } = await params;
+
+    // Verify loan belongs to this org
+    const loanRows = await sql`SELECT id FROM loans WHERE id = ${id} AND organization_id = ${orgId} LIMIT 1`;
+    if (loanRows.length === 0) {
+      return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
+    }
+
     const tasks = await sql`
       SELECT * FROM loan_tasks WHERE loan_id = ${id} ORDER BY created_at ASC
     `;
@@ -27,17 +31,22 @@ export async function GET(request, { params }) {
 
 export async function POST(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session, orgId, mloId } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
 
     const { id } = await params;
+
+    // Verify loan belongs to this org
+    const loanRows = await sql`SELECT id FROM loans WHERE id = ${id} AND organization_id = ${orgId} LIMIT 1`;
+    if (loanRows.length === 0) {
+      return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
+    }
+
     const body = await request.json();
 
     const taskRows = await sql`
       INSERT INTO loan_tasks (id, loan_id, title, priority, completed_at, created_by_id, created_at, updated_at)
-      VALUES (gen_random_uuid(), ${id}, ${body.title}, ${body.priority || 'normal'}, ${body.completedAt || null}, ${session.user.id}, NOW(), NOW())
+      VALUES (gen_random_uuid(), ${id}, ${body.title}, ${body.priority || 'normal'}, ${body.completedAt || null}, ${mloId}, NOW(), NOW())
       RETURNING *
     `;
 

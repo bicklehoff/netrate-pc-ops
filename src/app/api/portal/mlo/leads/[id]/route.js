@@ -3,28 +3,25 @@
 // PATCH /api/portal/mlo/leads/:id — update status or notes
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import sql from '@/lib/db';
+import { requireMloSession, unauthorizedResponse } from '@/lib/require-mlo-session';
 
 const VALID_STATUSES = ['new', 'contacted', 'qualified', 'quoted', 'converted', 'closed'];
 
 export async function GET(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session, orgId } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
 
     const { id } = await params;
     const [leadRows, leadQuotes, borrowerQuotes] = await Promise.all([
-      sql`SELECT * FROM leads WHERE id = ${id} LIMIT 1`,
+      sql`SELECT * FROM leads WHERE id = ${id} AND organization_id = ${orgId} LIMIT 1`,
       sql`SELECT * FROM lead_quotes WHERE lead_id = ${id} ORDER BY created_at DESC LIMIT 10`,
       sql`
         SELECT id, purpose, loan_amount, loan_type, state, fico, ltv, status,
           monthly_payment, version, sent_at, viewed_at, created_at
         FROM borrower_quotes
-        WHERE lead_id = ${id}
+        WHERE lead_id = ${id} AND organization_id = ${orgId}
         ORDER BY created_at DESC LIMIT 10
       `,
     ]);
@@ -49,15 +46,13 @@ export async function GET(request, { params }) {
 
 export async function PATCH(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session, orgId } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
 
     const { id } = await params;
     const body = await request.json();
 
-    const leadRows = await sql`SELECT * FROM leads WHERE id = ${id} LIMIT 1`;
+    const leadRows = await sql`SELECT * FROM leads WHERE id = ${id} AND organization_id = ${orgId} LIMIT 1`;
     const lead = leadRows[0];
     if (!lead) {
       return NextResponse.json({ error: 'Lead not found' }, { status: 404 });
@@ -130,7 +125,8 @@ export async function PATCH(request, { params }) {
     setClauses.push('updated_at = NOW()');
     values.push(id);
 
-    const query = `UPDATE leads SET ${setClauses.join(', ')} WHERE id = $${values.length} RETURNING *`;
+    values.push(orgId);
+    const query = `UPDATE leads SET ${setClauses.join(', ')} WHERE id = $${values.length - 1} AND organization_id = $${values.length} RETURNING *`;
     const updated = await sql(query, values);
 
     // Fetch quotes separately

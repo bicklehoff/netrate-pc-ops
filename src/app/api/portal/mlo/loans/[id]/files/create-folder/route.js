@@ -6,17 +6,14 @@
 // and links it to the loan record.
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import sql from '@/lib/db';
 import { createLoanFolder } from '@/lib/zoho-workdrive';
+import { requireMloSession, unauthorizedResponse } from '@/lib/require-mlo-session';
 
 export async function POST(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session, orgId, mloId } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
 
     const { id } = await params;
 
@@ -24,7 +21,7 @@ export async function POST(request, { params }) {
       SELECT l.*, b.first_name AS b_first_name, b.last_name AS b_last_name
       FROM loans l
       LEFT JOIN borrowers b ON b.id = l.borrower_id
-      WHERE l.id = ${id} LIMIT 1
+      WHERE l.id = ${id} AND l.organization_id = ${orgId} LIMIT 1
     `;
     const loan = loanRows[0];
 
@@ -33,7 +30,7 @@ export async function POST(request, { params }) {
     }
 
     const isAdmin = session.user.role === 'admin';
-    if (!isAdmin && loan.mlo_id !== session.user.id) {
+    if (!isAdmin && loan.mlo_id !== mloId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
@@ -61,7 +58,7 @@ export async function POST(request, { params }) {
     // Audit
     await sql`
       INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, details, created_at)
-      VALUES (gen_random_uuid(), ${id}, 'workdrive_folder_created', 'mlo', ${session.user.id},
+      VALUES (gen_random_uuid(), ${id}, 'workdrive_folder_created', 'mlo', ${mloId},
               ${JSON.stringify({ folderId: folder.rootFolderId, subfolders: folder.subfolders })}, NOW())
     `;
 

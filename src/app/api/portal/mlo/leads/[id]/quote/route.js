@@ -3,21 +3,18 @@
 // Auth: MLO session required
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import sql from '@/lib/db';
 import { priceScenario } from '@/lib/rates/price-scenario';
+import { requireMloSession, unauthorizedResponse } from '@/lib/require-mlo-session';
 
 export async function POST(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session, orgId } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
 
     const { id } = await params;
 
-    const leadRows = await sql`SELECT * FROM leads WHERE id = ${id} LIMIT 1`;
+    const leadRows = await sql`SELECT * FROM leads WHERE id = ${id} AND organization_id = ${orgId} LIMIT 1`;
     const lead = leadRows[0];
     if (!lead) {
       return NextResponse.json({ error: 'Lead not found' }, { status: 404 });
@@ -88,7 +85,7 @@ export async function POST(request, { params }) {
 
     // Update lead status to 'quoted' if it was new/contacted/qualified
     if (['new', 'contacted', 'qualified'].includes(lead.status)) {
-      await sql`UPDATE leads SET status = 'quoted', updated_at = NOW() WHERE id = ${id}`;
+      await sql`UPDATE leads SET status = 'quoted', updated_at = NOW() WHERE id = ${id} AND organization_id = ${orgId}`;
     }
 
     return NextResponse.json({

@@ -3,16 +3,13 @@
 // PATCH /api/portal/mlo/contacts/:id — Update contact fields
 // Auth: MLO session required
 
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import sql from '@/lib/db';
+import { requireMloSession, unauthorizedResponse } from '@/lib/require-mlo-session';
 
 export async function GET(req, { params }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session, orgId } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
 
     const { id } = await params;
 
@@ -22,7 +19,7 @@ export async function GET(req, { params }) {
         json_build_object('id', m.id, 'first_name', m.first_name, 'last_name', m.last_name, 'email', m.email) AS assigned_mlo
       FROM contacts c
       LEFT JOIN mlos m ON m.id = c.assigned_mlo_id
-      WHERE c.id = ${id}
+      WHERE c.id = ${id} AND c.organization_id = ${orgId}
       LIMIT 1
     `;
     const contact = contactRows[0];
@@ -49,7 +46,7 @@ export async function GET(req, { params }) {
               ) FILTER (WHERE l.id IS NOT NULL), '[]') AS loans
             FROM borrowers b
             LEFT JOIN loans l ON l.borrower_id = b.id
-            WHERE b.id = ${contact.borrower_id}
+            WHERE b.id = ${contact.borrower_id} AND b.organization_id = ${orgId}
             GROUP BY b.id
           `
         : [],
@@ -57,7 +54,7 @@ export async function GET(req, { params }) {
       sql`
         SELECT id, name, status, source, source_detail, loan_purpose, loan_amount,
           property_state, credit_score, created_at
-        FROM leads WHERE contact_id = ${id}
+        FROM leads WHERE contact_id = ${id} AND organization_id = ${orgId}
         ORDER BY created_at DESC LIMIT 10
       `,
       // Contact notes
@@ -68,13 +65,13 @@ export async function GET(req, { params }) {
           (SELECT json_build_object('content', cn.content, 'disposition', cn.disposition, 'created_at', cn.created_at)
            FROM call_notes cn WHERE cn.call_log_id = cl.id ORDER BY cn.created_at DESC LIMIT 1) AS latest_note
         FROM call_logs cl
-        WHERE cl.contact_id = ${id}
+        WHERE cl.contact_id = ${id} AND cl.organization_id = ${orgId}
         ORDER BY cl.started_at DESC LIMIT 20
       `,
       // SMS messages
       sql`
         SELECT id, direction, body, status, sent_at
-        FROM sms_messages WHERE contact_id = ${id}
+        FROM sms_messages WHERE contact_id = ${id} AND organization_id = ${orgId}
         ORDER BY sent_at DESC LIMIT 20
       `,
     ]);
@@ -106,10 +103,8 @@ export async function GET(req, { params }) {
 
 export async function PATCH(req, { params }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session, orgId } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
 
     const { id } = await params;
     const body = await req.json();
@@ -166,7 +161,7 @@ export async function PATCH(req, { params }) {
 
     if (body.email) {
       const emailVal = body.email.toLowerCase().trim();
-      const existing = await sql`SELECT id FROM contacts WHERE email = ${emailVal} AND id != ${id} LIMIT 1`;
+      const existing = await sql`SELECT id FROM contacts WHERE email = ${emailVal} AND id != ${id} AND organization_id = ${orgId} LIMIT 1`;
       if (existing[0]) {
         return Response.json({ error: 'A contact with this email already exists' }, { status: 409 });
       }
@@ -179,7 +174,8 @@ export async function PATCH(req, { params }) {
     setClauses.push('updated_at = NOW()');
     values.push(id);
 
-    const query = `UPDATE contacts SET ${setClauses.join(', ')} WHERE id = $${values.length} RETURNING *`;
+    values.push(orgId);
+    const query = `UPDATE contacts SET ${setClauses.join(', ')} WHERE id = $${values.length - 1} AND organization_id = $${values.length} RETURNING *`;
     const contactRows = await sql(query, values);
 
     return Response.json({ success: true, contact: contactRows[0] });

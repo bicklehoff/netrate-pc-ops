@@ -4,21 +4,18 @@
 // PATCH /api/portal/mlo/loans/:id/docs — Update document status (accept/reject)
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import sql from '@/lib/db';
 import { put } from '@vercel/blob';
 import { getBallInCourt } from '@/lib/loan-states';
 import { uploadFile, getSubfolderForDocType } from '@/lib/zoho-workdrive';
 import { sendEmail } from '@/lib/resend';
 import { docRequestTemplate } from '@/lib/email-templates/borrower';
+import { requireMloSession, unauthorizedResponse } from '@/lib/require-mlo-session';
 
 export async function POST(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session, orgId, mloId } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
 
     const { id } = await params;
     const { docType, label, notes } = await request.json();
@@ -27,21 +24,21 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: 'docType and label are required' }, { status: 400 });
     }
 
-    const loanRows = await sql`SELECT * FROM loans WHERE id = ${id} LIMIT 1`;
+    const loanRows = await sql`SELECT * FROM loans WHERE id = ${id} AND organization_id = ${orgId} LIMIT 1`;
     const loan = loanRows[0];
     if (!loan) {
       return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
     }
 
     const isAdmin = session.user.role === 'admin';
-    if (!isAdmin && loan.mlo_id !== session.user.id) {
+    if (!isAdmin && loan.mlo_id !== mloId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
     // Create the document request
     const docRows = await sql`
       INSERT INTO documents (id, loan_id, doc_type, label, status, requested_by, notes, created_at)
-      VALUES (gen_random_uuid(), ${id}, ${docType}, ${label}, 'requested', ${session.user.id}, ${notes || null}, NOW())
+      VALUES (gen_random_uuid(), ${id}, ${docType}, ${label}, 'requested', ${mloId}, ${notes || null}, NOW())
       RETURNING *
     `;
     const document = docRows[0];
@@ -54,7 +51,7 @@ export async function POST(request, { params }) {
     // Create audit event
     await sql`
       INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, new_value, details, created_at)
-      VALUES (gen_random_uuid(), ${id}, 'doc_requested', 'mlo', ${session.user.id}, ${label},
+      VALUES (gen_random_uuid(), ${id}, 'doc_requested', 'mlo', ${mloId}, ${label},
               ${JSON.stringify({ docType, documentId: document.id })}, NOW())
     `;
 
@@ -84,21 +81,19 @@ export async function POST(request, { params }) {
 // ─── MLO File Upload ──────────────────────────────────────────
 export async function PUT(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session, orgId, mloId } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
 
     const { id } = await params;
 
-    const loanRows = await sql`SELECT * FROM loans WHERE id = ${id} LIMIT 1`;
+    const loanRows = await sql`SELECT * FROM loans WHERE id = ${id} AND organization_id = ${orgId} LIMIT 1`;
     const loan = loanRows[0];
     if (!loan) {
       return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
     }
 
     const isAdmin = session.user.role === 'admin';
-    if (!isAdmin && loan.mlo_id !== session.user.id) {
+    if (!isAdmin && loan.mlo_id !== mloId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
@@ -149,7 +144,7 @@ export async function PUT(request, { params }) {
     // Create document record
     const docRows = await sql`
       INSERT INTO documents (id, loan_id, doc_type, label, status, requested_by, file_url, file_name, file_size, uploaded_at, created_at)
-      VALUES (gen_random_uuid(), ${id}, ${docType}, ${label}, 'uploaded', ${session.user.id}, ${fileUrl}, ${file.name}, ${file.size}, NOW(), NOW())
+      VALUES (gen_random_uuid(), ${id}, ${docType}, ${label}, 'uploaded', ${mloId}, ${fileUrl}, ${file.name}, ${file.size}, NOW(), NOW())
       RETURNING *
     `;
     const doc = docRows[0];
@@ -157,7 +152,7 @@ export async function PUT(request, { params }) {
     // Audit trail
     await sql`
       INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, new_value, details, created_at)
-      VALUES (gen_random_uuid(), ${id}, 'doc_uploaded', 'mlo', ${session.user.id}, ${label},
+      VALUES (gen_random_uuid(), ${id}, 'doc_uploaded', 'mlo', ${mloId}, ${label},
               ${JSON.stringify({ documentId: doc.id, fileName: file.name, storageType })}, NOW())
     `;
 
@@ -170,10 +165,8 @@ export async function PUT(request, { params }) {
 
 export async function PATCH(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session, orgId, mloId } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
 
     const { id } = await params;
     const { documentId, status, notes } = await request.json();
@@ -188,7 +181,7 @@ export async function PATCH(request, { params }) {
     }
 
     // Get document with loan info
-    const docRows = await sql`SELECT d.*, l.mlo_id, l.status AS loan_status FROM documents d JOIN loans l ON l.id = d.loan_id WHERE d.id = ${documentId} AND d.loan_id = ${id} LIMIT 1`;
+    const docRows = await sql`SELECT d.*, l.mlo_id, l.status AS loan_status FROM documents d JOIN loans l ON l.id = d.loan_id WHERE d.id = ${documentId} AND d.loan_id = ${id} AND l.organization_id = ${orgId} LIMIT 1`;
     const document = docRows[0];
 
     if (!document) {
@@ -196,7 +189,7 @@ export async function PATCH(request, { params }) {
     }
 
     const isAdmin = session.user.role === 'admin';
-    if (!isAdmin && document.mlo_id !== session.user.id) {
+    if (!isAdmin && document.mlo_id !== mloId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 

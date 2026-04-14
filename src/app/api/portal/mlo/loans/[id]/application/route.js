@@ -8,17 +8,14 @@
 //         DELETE is a separate route at /application/[itemType]/[itemId].
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import sql from '@/lib/db';
+import { requireMloSession, unauthorizedResponse } from '@/lib/require-mlo-session';
 
 // ─── GET: Full 1003 application data ───
 export async function GET(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session, orgId } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
 
     const { id } = await params;
 
@@ -26,7 +23,7 @@ export async function GET(request, { params }) {
     const loans = await sql`
       SELECT id, amortization_type, title_held_as, estate_held_in,
              arm_index, arm_margin, arm_initial_cap, arm_periodic_cap, arm_lifetime_cap, arm_adjustment_period
-      FROM loans WHERE id = ${id} LIMIT 1
+      FROM loans WHERE id = ${id} AND organization_id = ${orgId} LIMIT 1
     `;
     if (loans.length === 0) {
       return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
@@ -89,10 +86,8 @@ export async function GET(request, { params }) {
 // section: 'borrower' | 'employment' | 'income' | 'declaration' | 'transaction' | 'loanDetails'
 export async function PUT(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session, orgId, mloId } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
 
     const { id } = await params;
     const body = await request.json();
@@ -103,7 +98,7 @@ export async function PUT(request, { params }) {
     }
 
     // Verify loan exists
-    const loanRows = await sql`SELECT id FROM loans WHERE id = ${id} LIMIT 1`;
+    const loanRows = await sql`SELECT id FROM loans WHERE id = ${id} AND organization_id = ${orgId} LIMIT 1`;
     if (loanRows.length === 0) {
       return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
     }
@@ -367,7 +362,7 @@ export async function PUT(request, { params }) {
     // Audit
     await sql`
       INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, new_value, details, created_at)
-      VALUES (gen_random_uuid(), ${id}, 'field_updated', 'mlo', ${session.user.id},
+      VALUES (gen_random_uuid(), ${id}, 'field_updated', 'mlo', ${mloId},
               ${JSON.stringify({ section, loanBorrowerId, itemId })},
               ${JSON.stringify({ source: '1003_application', section })},
               NOW())
@@ -383,16 +378,14 @@ export async function PUT(request, { params }) {
 // ─── POST: Add repeating items (assets, liabilities, REOs) ───
 export async function POST(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session, orgId, mloId } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
 
     const { id } = await params;
     const body = await request.json();
     const { itemType, data } = body;
 
-    const loanRows = await sql`SELECT id FROM loans WHERE id = ${id} LIMIT 1`;
+    const loanRows = await sql`SELECT id FROM loans WHERE id = ${id} AND organization_id = ${orgId} LIMIT 1`;
     if (loanRows.length === 0) {
       return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
     }
@@ -436,7 +429,7 @@ export async function POST(request, { params }) {
 
     await sql`
       INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, new_value, details, created_at)
-      VALUES (gen_random_uuid(), ${id}, 'field_updated', 'mlo', ${session.user.id},
+      VALUES (gen_random_uuid(), ${id}, 'field_updated', 'mlo', ${mloId},
               ${JSON.stringify({ itemType, itemId: result.id })},
               ${JSON.stringify({ source: '1003_application', action: 'add', itemType })},
               NOW())
@@ -452,10 +445,8 @@ export async function POST(request, { params }) {
 // ─── DELETE: Remove repeating items ───
 export async function DELETE(request, { params }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session, mloId } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
 
     const { id } = await params;
     const { searchParams } = new URL(request.url);
@@ -482,7 +473,7 @@ export async function DELETE(request, { params }) {
 
     await sql`
       INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, new_value, details, created_at)
-      VALUES (gen_random_uuid(), ${id}, 'field_updated', 'mlo', ${session.user.id},
+      VALUES (gen_random_uuid(), ${id}, 'field_updated', 'mlo', ${mloId},
               ${JSON.stringify({ itemType, itemId })},
               ${JSON.stringify({ source: '1003_application', action: 'delete', itemType })},
               NOW())

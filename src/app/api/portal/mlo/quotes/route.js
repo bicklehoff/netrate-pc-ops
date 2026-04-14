@@ -6,19 +6,16 @@
  */
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import sql from '@/lib/db';
 import { priceScenario } from '@/lib/rates/price-scenario';
 import { checkEligibility } from '@/lib/quotes/eligibility';
 import { buildFeeBreakdown } from '@/lib/quotes/fee-builder';
+import { requireMloSession, unauthorizedResponse } from '@/lib/require-mlo-session';
 
 export async function GET(request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session, orgId, mloId } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
 
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
@@ -33,7 +30,8 @@ export async function GET(request) {
         state, fico, ltv, term, status, monthly_payment, version,
         sent_at, viewed_at, created_at, updated_at
       FROM borrower_quotes
-      WHERE mlo_id = ${session.user.id}
+      WHERE mlo_id = ${mloId}
+        AND organization_id = ${orgId}
         AND (${status}::text IS NULL OR status = ${status})
         AND (${contactId}::uuid IS NULL OR contact_id = ${contactId})
         AND (${loanId}::uuid IS NULL OR loan_id = ${loanId})
@@ -51,10 +49,8 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.userType !== 'mlo') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { session, orgId, mloId } = await requireMloSession();
+    if (!session) return unauthorizedResponse();
 
     const body = await request.json();
 
@@ -169,32 +165,32 @@ export async function POST(request) {
 
     if (resolvedLeadId) {
       const existingLead = await sql`
-        SELECT id FROM leads WHERE id = ${resolvedLeadId} AND mlo_id = ${session.user.id} LIMIT 1
+        SELECT id FROM leads WHERE id = ${resolvedLeadId} AND mlo_id = ${mloId} AND organization_id = ${orgId} LIMIT 1
       `;
       if (!existingLead[0]) resolvedLeadId = null;
     }
 
     if (!resolvedLeadId && body.borrowerEmail) {
       const existingByEmail = await sql`
-        SELECT id FROM leads WHERE email = ${body.borrowerEmail} AND mlo_id = ${session.user.id} LIMIT 1
+        SELECT id FROM leads WHERE email = ${body.borrowerEmail} AND mlo_id = ${mloId} AND organization_id = ${orgId} LIMIT 1
       `;
       if (existingByEmail[0]) {
         resolvedLeadId = existingByEmail[0].id;
       } else {
         const newLead = await sql`
           INSERT INTO leads (
-            email, phone, name, first_name, last_name, source, status,
+            organization_id, email, phone, name, first_name, last_name, source, status,
             loan_purpose, loan_amount, property_value, property_state, property_county,
             credit_score, mlo_id, created_at, updated_at
           ) VALUES (
-            ${body.borrowerEmail}, ${body.borrowerPhone || null},
+            ${orgId}, ${body.borrowerEmail}, ${body.borrowerPhone || null},
             ${body.borrowerName || body.borrowerEmail},
             ${body.borrowerName ? body.borrowerName.split(' ')[0] : null},
             ${body.borrowerName ? body.borrowerName.split(' ').slice(1).join(' ') || null : null},
             'quote_generator', 'quoted',
             ${body.purpose}, ${loanAmount}, ${safePropertyValue},
             ${pricingInput.state}, ${pricingInput.county || null},
-            ${body.fico}, ${session.user.id},
+            ${body.fico}, ${mloId},
             NOW(), NOW()
           )
           RETURNING id
@@ -218,14 +214,14 @@ export async function POST(request) {
             lastQuotedAt: new Date().toISOString(),
           })}::jsonb,
           updated_at = NOW()
-        WHERE id = ${resolvedLeadId}
+        WHERE id = ${resolvedLeadId} AND organization_id = ${orgId}
       `;
     }
 
     // Create quote record
     const quoteRows = await sql`
       INSERT INTO borrower_quotes (
-        id, mlo_id, contact_id, lead_id, loan_id,
+        id, organization_id, mlo_id, contact_id, lead_id, loan_id,
         borrower_name, borrower_email, borrower_phone,
         purpose, property_value, loan_amount, ltv, fico,
         state, county, property_type, occupancy, loan_type, term,
@@ -233,7 +229,7 @@ export async function POST(request) {
         scenarios, fee_breakdown, monthly_payment,
         status, version, created_at, updated_at
       ) VALUES (
-        gen_random_uuid(), ${session.user.id},
+        gen_random_uuid(), ${orgId}, ${mloId},
         ${body.contactId || null}, ${resolvedLeadId}, ${body.loanId || null},
         ${body.borrowerName || null}, ${body.borrowerEmail || null}, ${body.borrowerPhone || null},
         ${body.purpose}, ${safePropertyValue}, ${loanAmount}, ${ltv}, ${body.fico},

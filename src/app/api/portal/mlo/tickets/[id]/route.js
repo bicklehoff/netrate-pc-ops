@@ -3,17 +3,16 @@
 // PATCH  /api/portal/mlo/tickets/:id  { status, priority, assignedTo, title, description }
 // DELETE /api/portal/mlo/tickets/:id
 
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import sql from '@/lib/db';
+import { requireMloSession, unauthorizedResponse } from '@/lib/require-mlo-session';
 
 export async function GET(request, { params }) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  const { session, orgId } = await requireMloSession();
+  if (!session) return unauthorizedResponse();
 
   const { id } = await params;
 
-  const ticketRows = await sql`SELECT * FROM tickets WHERE id = ${id} LIMIT 1`;
+  const ticketRows = await sql`SELECT * FROM tickets WHERE id = ${id} AND organization_id = ${orgId} LIMIT 1`;
   const ticket = ticketRows[0];
   if (!ticket) return Response.json({ error: 'Ticket not found' }, { status: 404 });
 
@@ -23,13 +22,13 @@ export async function GET(request, { params }) {
 }
 
 export async function PATCH(request, { params }) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  const { session, orgId, mloId } = await requireMloSession();
+  if (!session) return unauthorizedResponse();
 
   const { id } = await params;
   const body = await request.json();
 
-  const ticketRows = await sql`SELECT * FROM tickets WHERE id = ${id} LIMIT 1`;
+  const ticketRows = await sql`SELECT * FROM tickets WHERE id = ${id} AND organization_id = ${orgId} LIMIT 1`;
   const ticket = ticketRows[0];
   if (!ticket) return Response.json({ error: 'Ticket not found' }, { status: 404 });
 
@@ -47,7 +46,7 @@ export async function PATCH(request, { params }) {
     if (body.assignedTo !== ticket.assigned_to) {
       autoEntries.push({
         content: `Assigned to ${body.assignedTo || 'unassigned'}`,
-        authorId: session.user.id,
+        authorId: mloId,
         authorLabel: `${session.user.firstName} ${session.user.lastName}`,
         entryType: 'assignment',
       });
@@ -65,7 +64,7 @@ export async function PATCH(request, { params }) {
     }
     autoEntries.push({
       content: `Status changed: ${ticket.status} → ${body.status}`,
-      authorId: session.user.id,
+      authorId: mloId,
       authorLabel: `${session.user.firstName} ${session.user.lastName}`,
       entryType: 'status_change',
     });
@@ -79,7 +78,8 @@ export async function PATCH(request, { params }) {
   values.push(id);
 
   // Update ticket
-  const query = `UPDATE tickets SET ${setClauses.join(', ')} WHERE id = $${values.length} RETURNING *`;
+  values.push(orgId);
+  const query = `UPDATE tickets SET ${setClauses.join(', ')} WHERE id = $${values.length - 1} AND organization_id = $${values.length} RETURNING *`;
   const updated = await sql(query, values);
 
   // Create auto-entries
@@ -97,8 +97,8 @@ export async function PATCH(request, { params }) {
 }
 
 export async function DELETE(request, { params }) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  const { session, orgId } = await requireMloSession();
+  if (!session) return unauthorizedResponse();
 
   // Admin only
   if (session.user.role !== 'admin') {
@@ -107,7 +107,7 @@ export async function DELETE(request, { params }) {
 
   const { id } = await params;
   await sql`DELETE FROM ticket_entries WHERE ticket_id = ${id}`;
-  await sql`DELETE FROM tickets WHERE id = ${id}`;
+  await sql`DELETE FROM tickets WHERE id = ${id} AND organization_id = ${orgId}`;
 
   return Response.json({ success: true });
 }

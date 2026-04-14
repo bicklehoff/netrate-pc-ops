@@ -4,21 +4,18 @@
 // Query params: ?status=, ?mloId=, ?q=
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import sql from '@/lib/db';
+import { requireMloSession, unauthorizedResponse } from '@/lib/require-mlo-session';
 
 export async function GET(request) {
   try {
-    const session = await getServerSession(authOptions);
+    const { session, orgId } = await requireMloSession();
 
-    if (!session || session.user.userType !== 'mlo') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    if (!session) return unauthorizedResponse();
 
     const { searchParams } = new URL(request.url);
     const statusFilter = searchParams.get('status');
-    const mloId = searchParams.get('mloId');
+    const filterMloId = searchParams.get('mloId');
     const q = searchParams.get('q');
 
     const effectiveStatus = (statusFilter && statusFilter !== 'all') ? statusFilter : null;
@@ -29,8 +26,9 @@ export async function GET(request) {
         json_build_object('id', c.id, 'first_name', c.first_name, 'last_name', c.last_name, 'status', c.status) AS contact
       FROM leads l
       LEFT JOIN contacts c ON c.id = l.contact_id
-      WHERE (${effectiveStatus}::text IS NULL OR l.status = ${effectiveStatus})
-        AND (${mloId}::uuid IS NULL OR l.mlo_id = ${mloId})
+      WHERE l.organization_id = ${orgId}
+        AND (${effectiveStatus}::text IS NULL OR l.status = ${effectiveStatus})
+        AND (${filterMloId}::uuid IS NULL OR l.mlo_id = ${filterMloId})
         AND (${pattern}::text IS NULL OR l.name ILIKE ${pattern} OR l.email ILIKE ${pattern} OR l.phone LIKE ${pattern})
       ORDER BY l.created_at DESC
     `;
