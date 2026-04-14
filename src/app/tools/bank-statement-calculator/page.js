@@ -254,18 +254,25 @@ const FEE_SECTIONS = {
 
 // ── PDF Component ──
 function BankStatementLoanPDF(props) {
-  const { borrowerName, purchasePrice, propertyAddress, loanAmount, ltv, propertyType, purpose, stateName,
-    statementType, selectedPdfRows,
-    fees, feeTotal, rebateDollar, cashToClose,
-    Document, Page, View, Text, StyleSheet } = props;
-  const B = '#2E6BA8', BD = '#24578C', GO = '#059669', INK = '#1A1F2E', IM = '#4A5C6E', IS = '#7A8E9E', SL = '#f2f4f6', W = '#ffffff';
+  const { borrowerName, purchasePrice, propertyAddress, loanAmount, ltv, selectedPdfRows,
+    fees, feeTotal, stateName,
+    Document, Page, View, Text, StyleSheet, Svg, Rect } = props;
+  // Design tokens matching live site
+  const BRAND = '#024c4f';       // primary teal
+  // BRAND_D '#013638' available for dark teal accents
+  const ACCENT = '#2E6BA8';      // blue accent (rate bar)
+  const YELLOW = '#FFC220';      // yellow accent
+  const GO = '#059669';
+  const INK = '#1A1F2E';
+  const IM = '#4A5C6E';
+  const IS = '#7A8E9E';
+  const SL = '#f2f4f6';
+  const W = '#ffffff';
   const s = StyleSheet.create({
     page: { padding: 40, fontFamily: 'Helvetica', fontSize: 9, color: INK, backgroundColor: W },
     headerRow: { flexDirection: 'row', justifyContent: 'space-between', paddingBottom: 12, borderBottomWidth: 0.5, borderBottomColor: IS + '30', marginBottom: 16 },
     logoBlock: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    logoIcon: { width: 28, height: 28, backgroundColor: B, borderRadius: 6, justifyContent: 'center', alignItems: 'center' },
-    logoIconText: { fontFamily: 'Helvetica-Bold', fontSize: 15, color: W, textAlign: 'center', marginTop: 3 },
-    companyName: { fontSize: 16, fontFamily: 'Helvetica-Bold', color: BD },
+    wordmark: { flexDirection: 'row', alignItems: 'baseline' },
     subtitle: { fontSize: 7, letterSpacing: 2, textTransform: 'uppercase', color: IS, marginTop: 1 },
     headerDetail: { fontSize: 8, color: IS, marginTop: 1 },
     badge: { backgroundColor: SL, borderRadius: 10, paddingVertical: 3, paddingHorizontal: 10 },
@@ -275,14 +282,10 @@ function BankStatementLoanPDF(props) {
     card: { flex: 1, backgroundColor: SL, borderRadius: 8, padding: 10 },
     cardLabel: { fontSize: 7, textTransform: 'uppercase', letterSpacing: 1.5, color: IS, marginBottom: 2 },
     cardValue: { fontSize: 16, fontFamily: 'Helvetica-Bold', color: INK },
-    cardValueGreen: { fontSize: 16, fontFamily: 'Helvetica-Bold', color: GO },
-    sectionTitle: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: BD, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 6, marginTop: 12 },
+    sectionTitle: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: BRAND, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 6, marginTop: 12 },
     row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3, borderBottomWidth: 0.5, borderBottomColor: SL },
     rowLabel: { fontSize: 9, color: IM },
     rowValue: { fontSize: 9.5, fontFamily: 'Helvetica-Bold', color: INK },
-    totalBar: { flexDirection: 'row', justifyContent: 'space-between', backgroundColor: GO, borderRadius: 8, paddingVertical: 8, paddingHorizontal: 12, marginTop: 8 },
-    totalLabel: { fontSize: 10, fontFamily: 'Helvetica-Bold', color: W },
-    totalValue: { fontSize: 14, fontFamily: 'Helvetica-Bold', color: W },
     footer: { position: 'absolute', bottom: 24, left: 40, right: 40, flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 0.5, borderTopColor: IS + '30', paddingTop: 6 },
     footerText: { fontSize: 7, color: IS },
     disclaimer: { fontSize: 7, color: IS, lineHeight: 1.5, marginTop: 10 },
@@ -293,14 +296,10 @@ function BankStatementLoanPDF(props) {
     feeRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 2 },
     feeLabel: { fontSize: 8, color: IM },
     feeValue: { fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: INK },
-    feeSectionLabel: { fontSize: 7, fontFamily: 'Helvetica-Bold', color: BD, textTransform: 'uppercase', letterSpacing: 1, marginTop: 8, marginBottom: 3 },
-    cashToCloseBar: { flexDirection: 'row', justifyContent: 'space-between', backgroundColor: BD, borderRadius: 8, paddingVertical: 8, paddingHorizontal: 12, marginTop: 10 },
-    cashToCloseLabel: { fontSize: 10, fontFamily: 'Helvetica-Bold', color: W },
-    cashToCloseValue: { fontSize: 14, fontFamily: 'Helvetica-Bold', color: W },
+    feeSectionLabel: { fontSize: 7, fontFamily: 'Helvetica-Bold', color: BRAND, textTransform: 'uppercase', letterSpacing: 1, marginTop: 8, marginBottom: 3 },
   });
   const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-  const propLabel = { sfr: 'Single Family', condo: 'Condo', '2unit': '2-Unit', '3-4unit': '3-4 Unit' }[propertyType] || propertyType;
-  const purpLabel = { purchase: 'Purchase', refinance: 'Rate/Term Refi', cashout: 'Cash-Out Refi' }[purpose] || purpose;
+  // propLabel/purpLabel available via props if needed in future
 
   // Group fees by section
   const feesBySection = {};
@@ -309,107 +308,207 @@ function BankStatementLoanPDF(props) {
     feesBySection[f.section].push(f);
   });
 
+  // Per-rate cash to close breakdown
+  const rateBreakdowns = selectedPdfRows.map(row => {
+    const rebate = row.netDollar > 0 ? row.netDollar : 0;
+    const cost = row.netDollar < 0 ? Math.abs(row.netDollar) : 0;
+    const ctc = (purchasePrice - loanAmount) + feeTotal + cost - rebate;
+    return { ...row, rebate, cost, ctc };
+  });
+
+  // Shared footer
+  const Footer = () => (
+    <View style={s.footer} fixed>
+      <Text style={s.footerText}>NetRate Mortgage LLC | NMLS #1111861 | Equal Housing Lender</Text>
+      <Text style={s.footerText}>357 S McCaslin Blvd #200, Louisville, CO 80027</Text>
+    </View>
+  );
+
+  // Logo mark — 4-bar chart matching layout.js
+  const LogoMark = () => (
+    <Svg width="30" height="30" viewBox="0 0 44 44">
+      <Rect width="44" height="44" rx="8" fill={W} stroke="rgba(26,31,46,0.12)" />
+      <Rect x="9" y="24" width="5" height="11" rx="1" fill={YELLOW} />
+      <Rect x="17" y="21" width="5" height="14" rx="1" fill={YELLOW} />
+      <Rect x="25" y="12" width="5" height="23" rx="1" fill={ACCENT} />
+      <Rect x="33" y="26" width="5" height="9" rx="1" fill={YELLOW} />
+    </Svg>
+  );
+
+  // Header is inlined on each page for different sizing
+
+  // Column width for rate columns
+  const rCol = `${Math.floor(68 / rateBreakdowns.length)}%`;
+  const PREPAID_DAYS = 15;
+
+  // Fee group totals for summary on page 1
+  const lenderAndThirdParty = fees.filter(f => f.section === 'B').reduce((s, f) => s + f.amount, 0);
+  const titleAndRecording = fees.filter(f => f.section === 'C' || f.section === 'E').reduce((s, f) => s + f.amount, 0);
+  const prepaidsEscrowOther = fees.filter(f => f.section === 'F' || f.section === 'G').reduce((s, f) => s + f.amount, 0);
+
+  // Table row helper — clean alternating style like the Turner quote
+  const TRow = ({ label, values, bold, border, bg }) => (
+    <View style={{ flexDirection: 'row', paddingVertical: 4, paddingHorizontal: 6,
+      ...(border ? { borderTopWidth: 1, borderTopColor: INK, borderBottomWidth: 0.5, borderBottomColor: IS + '40' } : { borderBottomWidth: 0.5, borderBottomColor: SL }),
+      ...(bg ? { backgroundColor: SL } : {}) }}>
+      <Text style={{ width: '40%', fontSize: bold ? 9.5 : 9, fontFamily: bold ? 'Helvetica-Bold' : 'Helvetica', color: INK }}>{label}</Text>
+      {values.map((v, i) => (
+        <Text key={i} style={{ width: rCol, textAlign: 'right', fontSize: bold ? 10 : 9, fontFamily: bold ? 'Helvetica-Bold' : 'Helvetica',
+          color: typeof v === 'object' ? v.color : INK }}>
+          {typeof v === 'object' ? v.text : v}
+        </Text>
+      ))}
+    </View>
+  );
+
+  // Section header row (bold label with rate columns)
+  const SectionHead = ({ label }) => (
+    <View style={{ flexDirection: 'row', paddingVertical: 5, paddingHorizontal: 6, marginTop: 14, borderBottomWidth: 1, borderBottomColor: INK }}>
+      <Text style={{ width: '40%', fontSize: 10, fontFamily: 'Helvetica-Bold', color: INK }}>{label}</Text>
+      {rateBreakdowns.map((rb, i) => (
+        <Text key={i} style={{ width: rCol, textAlign: 'right', fontSize: 10, fontFamily: 'Helvetica-Bold', color: INK }}>{rb.rate.toFixed(3)}%</Text>
+      ))}
+    </View>
+  );
+
   return (
     <Document>
+      {/* ── PAGE 1: Everything by Rate (matching Turner quote format) ── */}
       <Page size="LETTER" style={s.page}>
-        <View style={s.headerRow}>
-          <View style={s.logoBlock}>
-            <View style={s.logoIcon}><Text style={s.logoIconText}>N</Text></View>
-            <View>
-              <Text style={s.companyName}>NetRate Mortgage</Text>
-              <Text style={s.subtitle}>Bank Statement Loan Quote</Text>
+        {/* Header — NetRate Mortgage branding */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+          <View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+              <LogoMark />
+              <View style={s.wordmark}>
+                <Text style={{ fontSize: 14, fontFamily: 'Helvetica-Bold', color: INK }}>Net</Text>
+                <Text style={{ fontSize: 14, fontFamily: 'Helvetica-Bold', color: BRAND }}>Rate</Text>
+                <Text style={{ fontSize: 14, fontFamily: 'Helvetica-Bold', color: IM, marginLeft: 2 }}>Mortgage</Text>
+              </View>
+            </View>
+            <Text style={{ fontSize: 8, color: IM }}>357 S McCaslin Blvd., #200, Louisville, CO 80027</Text>
+          </View>
+          <View style={{ alignItems: 'flex-end' }}>
+            <Text style={{ fontSize: 8, color: IM }}>Phone and Text: 303-444-5251</Text>
+            <Text style={{ fontSize: 8, color: ACCENT, marginTop: 1 }}>david@netratemortgage.com</Text>
+          </View>
+        </View>
+
+        {/* Borrower + Date */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6, borderBottomWidth: 0.5, borderBottomColor: SL, paddingBottom: 6 }}>
+          <View>
+            <Text style={{ fontSize: 9, color: IM }}>Prepared for: <Text style={{ fontFamily: 'Helvetica-Bold', color: INK }}>{borrowerName || 'Borrower'}</Text></Text>
+            {propertyAddress ? <Text style={{ fontSize: 8, color: IM, marginTop: 1 }}>{propertyAddress}</Text> : null}
+          </View>
+          <View style={{ flexDirection: 'row', gap: 16 }}>
+            <Text style={{ fontSize: 8, color: IM }}>Date Prepared</Text>
+            <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', color: INK }}>{today}</Text>
+          </View>
+        </View>
+
+        {/* ── Loan Information ── */}
+        <SectionHead label="Loan Information" />
+        <TRow label="Lender (Credit) or Charge for Rate" values={rateBreakdowns.map(rb => ({
+          text: rb.netDollar >= 0 ? '(' + fmtD(rb.netDollar) + ')' : fmtD(Math.abs(rb.netDollar)),
+          color: rb.netDollar >= 0 ? GO : '#dc2626'
+        }))} />
+        <TRow label="Purchase Price" values={rateBreakdowns.map(() => fmtD(purchasePrice))} bg />
+        <TRow label="Down Payment" values={rateBreakdowns.map(() => fmtD(purchasePrice - loanAmount))} />
+        <TRow label="Loan Amount" values={rateBreakdowns.map(() => fmtD(loanAmount))} bg />
+        <TRow label="LTV" values={rateBreakdowns.map(() => ltv.toFixed(1) + '%')} />
+        <TRow label="Term in Years" values={rateBreakdowns.map(() => '30')} bg />
+        <TRow label="FICO" values={rateBreakdowns.map(() => String(props.fico || ''))} />
+
+        {/* ── Monthly Payment ── */}
+        <SectionHead label="Monthly Payment Information" />
+        <TRow label="Principal and Interest" values={rateBreakdowns.map(rb => fmtD(rb.pi))} />
+        <TRow label="Taxes" values={rateBreakdowns.map(() => fmtD(props.monthlyTaxes))} bg />
+        <TRow label="Insurance" values={rateBreakdowns.map(() => fmtD(props.monthlyInsurance))} />
+        {props.monthlyHoa > 0 && <TRow label="HOA" values={rateBreakdowns.map(() => fmtD(props.monthlyHoa))} bg />}
+        <TRow label="Total Payment" values={rateBreakdowns.map(rb => fmtD(rb.pitia))} bold border />
+
+        {/* ── Fees Summary ── */}
+        <SectionHead label="Fees Information (See Page 2)" />
+        <TRow label="Lender Fees and Third Party Fees (A+B)" values={rateBreakdowns.map(() => fmtD(lenderAndThirdParty))} />
+        <TRow label="Title Fees and Recording Fees (C+E)" values={rateBreakdowns.map(() => fmtD(titleAndRecording))} bg />
+        <TRow label="Prepaids, Escrow, and Other (F+G)" values={rateBreakdowns.map(() => fmtD(prepaidsEscrowOther))} />
+        <TRow label="Daily Interest (funding to end of month)" values={rateBreakdowns.map(rb => {
+          const daily = loanAmount * (rb.rate / 100) / 365;
+          return fmtD(daily * PREPAID_DAYS);
+        })} bg />
+        <TRow label="Total of All Loan Fees" values={rateBreakdowns.map(rb => {
+          const dailyTotal = loanAmount * (rb.rate / 100) / 365 * PREPAID_DAYS;
+          return fmtD(feeTotal + dailyTotal);
+        })} bold border />
+
+        {/* ── Cash to Close ── */}
+        <SectionHead label="Cash to Close for Rate" />
+        <TRow label="Down Payment" values={rateBreakdowns.map(() => fmtD(purchasePrice - loanAmount))} />
+        <TRow label="Total Loan Charges (A+B+C+E+F+G)" values={rateBreakdowns.map(rb => {
+          const dailyTotal = loanAmount * (rb.rate / 100) / 365 * PREPAID_DAYS;
+          return fmtD(feeTotal + dailyTotal);
+        })} bg />
+        <TRow label="Lender (Credit) or Charge" values={rateBreakdowns.map(rb => ({
+          text: rb.netDollar >= 0 ? '(' + fmtD(rb.netDollar) + ')' : fmtD(Math.abs(rb.netDollar)),
+          color: rb.netDollar >= 0 ? GO : '#dc2626'
+        }))} />
+        <TRow label="Total Cash to Close" values={rateBreakdowns.map(rb => {
+          const dailyTotal = loanAmount * (rb.rate / 100) / 365 * PREPAID_DAYS;
+          const totalFees = feeTotal + dailyTotal;
+          const credit = rb.netDollar >= 0 ? rb.netDollar : 0;
+          const charge = rb.netDollar < 0 ? Math.abs(rb.netDollar) : 0;
+          return fmtD((purchasePrice - loanAmount) + totalFees + charge - credit);
+        })} bold border />
+
+        <Text style={s.disclaimer}>This quote is for estimation purposes only. Rates, terms and conditions subject to change without notice. Not a commitment to lend. Bank statement income is subject to lender underwriting review. Rocket Pro TPO NQM program, {SHEET_DATE}.</Text>
+        <Footer />
+      </Page>
+
+      {/* ── PAGE 2: Itemized Fees (Loan Estimate format) ── */}
+      <Page size="LETTER" style={s.page}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 14 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <LogoMark />
+            <View style={s.wordmark}>
+              <Text style={{ fontSize: 12, fontFamily: 'Helvetica-Bold', color: INK }}>Net</Text>
+              <Text style={{ fontSize: 12, fontFamily: 'Helvetica-Bold', color: BRAND }}>Rate</Text>
+              <Text style={{ fontSize: 12, fontFamily: 'Helvetica-Bold', color: IM, marginLeft: 2 }}>Mortgage</Text>
             </View>
           </View>
-          <View style={{ alignItems: 'flex-end' }}>
-            <Text style={s.headerDetail}>David Burson | NMLS #641790</Text>
-            <Text style={s.headerDetail}>NetRate Mortgage LLC | NMLS #1111861</Text>
-            <Text style={s.headerDetail}>303-444-5251 | david@netratemortgage.com</Text>
-          </View>
-        </View>
-        <View style={s.infoBar}>
-          <View>
-            <Text style={{ fontSize: 12, fontFamily: 'Helvetica-Bold', color: INK }}>{borrowerName || 'Borrower'}</Text>
-            <Text style={{ fontSize: 9, color: IM, marginTop: 2 }}>{purpLabel} | {propLabel} | {stateName}</Text>
-            {propertyAddress ? <Text style={{ fontSize: 9, color: IM, marginTop: 1 }}>{propertyAddress}</Text> : null}
-          </View>
-          <View style={{ alignItems: 'flex-end' }}>
-            <View style={s.badge}><Text style={s.badgeText}>{statementType} Bank Statements</Text></View>
-            <Text style={{ fontSize: 8, color: IS, marginTop: 4 }}>Prepared {today}</Text>
-          </View>
-        </View>
-        <View style={s.cardRow}>
-          <View style={s.card}><Text style={s.cardLabel}>Purchase Price</Text><Text style={s.cardValue}>{fmtD(purchasePrice)}</Text></View>
-          <View style={s.card}><Text style={s.cardLabel}>Down Payment</Text><Text style={s.cardValue}>{fmtD(purchasePrice - loanAmount)} ({(100 - ltv).toFixed(0)}%)</Text></View>
-          <View style={s.card}><Text style={s.cardLabel}>Loan Amount</Text><Text style={s.cardValue}>{fmtD(loanAmount)}</Text></View>
+          <Text style={{ fontSize: 8, color: IM }}>{borrowerName || 'Borrower'} | {fmtD(loanAmount)} | {today}</Text>
         </View>
 
-        {/* Rate Options Table */}
-        <Text style={s.sectionTitle}>Rate Options</Text>
-        <View style={[s.rateTableRow, { borderBottomWidth: 1, borderBottomColor: IS + '40' }]}>
-          <Text style={[s.rateTableHeader, { width: '16%' }]}>Rate</Text>
-          <Text style={[s.rateTableHeader, { width: '18%' }]}>P&I</Text>
-          <Text style={[s.rateTableHeader, { width: '18%' }]}>PITIA</Text>
-          <Text style={[s.rateTableHeader, { width: '12%' }]}>DTI</Text>
-          <Text style={[s.rateTableHeader, { width: '18%' }]}>Points</Text>
-          <Text style={[s.rateTableHeader, { width: '18%' }]}>Rebate/Cost</Text>
-        </View>
-        {selectedPdfRows.map((row, i) => (
-          <View key={i} style={[s.rateTableRow, i === 0 ? { backgroundColor: SL } : {}]}>
-            <Text style={[s.rateTableCellBold, { width: '16%' }]}>{row.rate.toFixed(3)}%</Text>
-            <Text style={[s.rateTableCell, { width: '18%' }]}>{fmtD(row.pi)}</Text>
-            <Text style={[s.rateTableCell, { width: '18%' }]}>{fmtD(row.pitia)}</Text>
-            <Text style={[s.rateTableCell, { width: '12%' }]}>{row.dti.toFixed(1)}%</Text>
-            <Text style={[s.rateTableCell, { width: '18%' }]}>{fmtPts(row.netPrice - 100)}</Text>
-            <Text style={[s.rateTableCellBold, { width: '18%', color: row.netDollar >= 0 ? GO : '#dc2626' }]}>
-              {row.netDollar >= 0 ? fmtD(row.netDollar) + ' rebate' : fmtD(Math.abs(row.netDollar)) + ' cost'}
-            </Text>
-          </View>
-        ))}
+        <Text style={{ fontSize: 10, fontFamily: 'Helvetica-Bold', color: INK, marginBottom: 8 }}>Loan Costs (Loan Estimate Page 2 A-J)</Text>
 
-        {/* Fees breakdown */}
-        <Text style={s.sectionTitle}>Estimated Closing Costs</Text>
+        {/* Itemized fees by section — matching Turner format */}
         {Object.entries(FEE_SECTIONS).map(([code, title]) => {
           const items = feesBySection[code];
           if (!items || items.length === 0) return null;
-          const sectionTotal = items.reduce((s, f) => s + f.amount, 0);
+          const sectionTotal = items.reduce((sum, f) => sum + f.amount, 0);
           return (
-            <View key={code}>
-              <Text style={s.feeSectionLabel}>{code}. {title}</Text>
+            <View key={code} wrap={false}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5, paddingHorizontal: 6, marginTop: 10, borderBottomWidth: 1, borderBottomColor: INK }}>
+                <Text style={{ fontSize: 9.5, fontFamily: 'Helvetica-Bold', color: INK }}>{title} ({code})</Text>
+                <Text style={{ fontSize: 9.5, fontFamily: 'Helvetica-Bold', color: INK }}>{fmtD(sectionTotal)}</Text>
+              </View>
               {items.map((f, i) => (
-                <View key={i} style={s.feeRow}>
-                  <Text style={s.feeLabel}>{f.label}</Text>
-                  <Text style={s.feeValue}>{fmtD(f.amount)}</Text>
+                <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3, paddingHorizontal: 6, borderBottomWidth: 0.5, borderBottomColor: SL }}>
+                  <Text style={{ fontSize: 9, color: IM }}>{f.label}</Text>
+                  <Text style={{ fontSize: 9, color: INK }}>{fmtD(f.amount)}</Text>
                 </View>
               ))}
-              <View style={[s.feeRow, { borderTopWidth: 0.5, borderTopColor: SL, marginTop: 2 }]}>
-                <Text style={[s.feeLabel, { fontFamily: 'Helvetica-Bold' }]}>Subtotal</Text>
-                <Text style={s.feeValue}>{fmtD(sectionTotal)}</Text>
-              </View>
             </View>
           );
         })}
-        <View style={[s.feeRow, { marginTop: 6, paddingTop: 4, borderTopWidth: 1, borderTopColor: IS + '40' }]}>
-          <Text style={[s.feeLabel, { fontFamily: 'Helvetica-Bold', fontSize: 9 }]}>Total Closing Costs</Text>
-          <Text style={[s.feeValue, { fontSize: 10 }]}>{fmtD(feeTotal)}</Text>
-        </View>
-        {rebateDollar > 0 && (
-          <View style={s.feeRow}>
-            <Text style={[s.feeLabel, { color: GO }]}>Lender Credit (Rebate)</Text>
-            <Text style={[s.feeValue, { color: GO }]}>-{fmtD(rebateDollar)}</Text>
-          </View>
-        )}
 
-        {/* Cash to Close */}
-        <View style={s.cashToCloseBar}>
-          <Text style={s.cashToCloseLabel}>Estimated Cash to Close</Text>
-          <Text style={s.cashToCloseValue}>{fmtD(cashToClose)}</Text>
+        {/* Total */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, paddingHorizontal: 6, marginTop: 14, borderTopWidth: 1.5, borderTopColor: INK, borderBottomWidth: 1, borderBottomColor: INK }}>
+          <Text style={{ fontSize: 10, fontFamily: 'Helvetica-Bold', color: INK }}>Total of Loan Charges and Other Fees</Text>
+          <Text style={{ fontSize: 10, fontFamily: 'Helvetica-Bold', color: INK }}>{fmtD(feeTotal)}</Text>
         </View>
 
-        <Text style={s.disclaimer}>This quote is for estimation purposes only. Rates, terms and conditions subject to change without notice. Not a commitment to lend. Bank statement income is subject to lender underwriting review. Rocket Pro TPO NQM program, {SHEET_DATE}.</Text>
-        <View style={s.footer} fixed>
-          <Text style={s.footerText}>NetRate Mortgage LLC | NMLS #1111861 | Equal Housing Lender</Text>
-          <Text style={s.footerText}>357 S McCaslin Blvd #200, Louisville, CO 80027</Text>
-        </View>
+        <Text style={[s.disclaimer, { marginTop: 20 }]}>Closing costs are estimates based on typical fees for {stateName}. Actual amounts may vary by county, title company, and loan amount. Daily interest is calculated from the funding date to the end of the month. All figures subject to final underwriting approval.</Text>
+        <Footer />
       </Page>
     </Document>
   );
@@ -587,7 +686,7 @@ export default function BankStatementCalculator() {
           selectedPdfRows, monthlyTaxes, monthlyInsurance, monthlyHoa,
           debt1Label, debt1Amount, debt2Label, debt2Amount,
           fees, feeTotal, rebateDollar, cashToClose,
-          Document: rpdf.Document, Page: rpdf.Page, View: rpdf.View, Text: rpdf.Text, StyleSheet: rpdf.StyleSheet,
+          Document: rpdf.Document, Page: rpdf.Page, View: rpdf.View, Text: rpdf.Text, StyleSheet: rpdf.StyleSheet, Svg: rpdf.Svg, Rect: rpdf.Rect,
         })
       ).toBlob();
       const url = URL.createObjectURL(blob);
