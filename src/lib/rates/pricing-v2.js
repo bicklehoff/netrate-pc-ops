@@ -126,16 +126,12 @@ function getFicoLtvRawValue(creditScore, ltv, loanPurpose, llpaGrids) {
     : loanPurpose === 'purchase' ? llpaGrids.purchase
     : llpaGrids.refinance;
 
-  if (!grid) {
-    // FHA grids may not be split by purpose — try the grid directly
-    // (FHA ficoPriceAdj is a flat FICO→LTV grid, not purpose-split)
-    const ficoBand = getFicoBand(creditScore);
-    const ficoRow = grid?.[ficoBand];
-    if (!ficoRow) return 0;
-  }
+  // If no purpose-specific grid, try llpaGrids as a flat grid
+  // (FHA ficoPriceAdj is a flat FICO→LTV grid, not purpose-split)
+  const effectiveGrid = grid || llpaGrids;
 
   const ficoBand = getFicoBand(creditScore);
-  const ficoRow = grid[ficoBand];
+  const ficoRow = effectiveGrid[ficoBand];
   if (!ficoRow) return 0;
 
   for (const [bandKey, value] of Object.entries(ficoRow)) {
@@ -532,8 +528,8 @@ export function priceRate(rateEntry, product, scenario, lenderAdj, brokerConfig,
         if (pf.productGroup === 'secondHome' && scenarioOccupancy !== 'secondHome') continue;
         if (pf.productGroup === 'investment' && scenarioOccupancy !== 'investment') continue;
       }
-      // Occupancy adjustments only for non-primary
-      if (pf.featureName === 'occupancy') continue;
+      // Occupancy adjustments only apply to non-primary residence
+      if (pf.featureName === 'occupancy' && (!scenarioOccupancy || scenarioOccupancy === 'primary')) continue;
 
       const label = pf.featureName === 'ficoAdj' ? `FICO ${pf.ficoMin}-${pf.ficoMax} adj`
         : pf.featureName === 'purposeAdj' ? `${pf.purpose} adj`
