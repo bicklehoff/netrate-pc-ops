@@ -63,7 +63,7 @@ export async function POST(request, { params }) {
 
     const pricing = await priceScenario(pricingInput);
 
-    const lenderFeeUw = pricing.results[0]?.lenderFee || 999;
+    const lenderFeeUw = pricing.results[0]?.lenderFee ?? null;
     const fees = await buildFeeBreakdown({
       state: pricingInput.state,
       county: pricingInput.county,
@@ -71,6 +71,10 @@ export async function POST(request, { params }) {
       lenderFeeUw,
       loanAmount: pricingInput.loanAmount,
       propertyValue: pricingInput.propertyValue,
+      annualRate: pricing.results[0]?.rate ?? null,
+      loanType: pricingInput.loanType,
+      ltv: pricingInput.ltv || Number(quote.ltv),
+      term: pricingInput.term,
     });
 
     return NextResponse.json({

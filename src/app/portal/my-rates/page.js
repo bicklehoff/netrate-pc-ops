@@ -4,19 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { getMatchedCalculators } from '@/lib/calculator-matching';
-
-function formatDollar(n) {
-  return '$' + Number(n || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
-}
-
-/** Calculate monthly P&I from rate, loan amount, and term */
-function calcMonthlyPI(rate, loanAmount, termYears = 30) {
-  if (!rate || !loanAmount) return null;
-  const r = rate / 100 / 12;
-  const n = termYears * 12;
-  if (r === 0) return loanAmount / n;
-  return (loanAmount * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
-}
+import { calculateMonthlyPI as calcMonthlyPI, formatDollar } from '@/lib/mortgage-math';
 
 const PURPOSE_LABELS = { purchase: 'Purchase', refi: 'Refinance', cashout: 'Cash-Out Refi' };
 const LOAN_TYPE_LABELS = { conventional: 'Conventional', fha: 'FHA', va: 'VA', usda: 'USDA', jumbo: 'Jumbo' };
