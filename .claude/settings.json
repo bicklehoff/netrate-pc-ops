@@ -1,3 +1,10 @@
 {
-  "disableAllHooks": true
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hookPath": ".claude/hooks/guard-main-push.sh"
+      }
+    ]
+  }
 }

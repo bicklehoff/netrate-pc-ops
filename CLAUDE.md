@@ -163,6 +163,36 @@ Ask: "Which department should I work as? (Dev, Admin, or Setup)"
 - Conditional hooks (`React Hook called conditionally`) — move hooks before any early return
 - Missing dependencies in useEffect — add to dependency array or suppress with eslint-disable comment
 
+### Concurrent Sessions Protocol
+
+David may run multiple Claude Code sessions against this repo simultaneously. These rules prevent branch collisions, memory loss, and deploy conflicts.
+
+#### Session Types
+- **Main session** (setup/admin): Runs in repo root (`D:\PROJECTS\netrate-pc-ops`). Owns the dev server (port 3000). Can merge PRs (Gates 5-6).
+- **Worktree session** (dev work): Runs via `EnterWorktree`. Has its own branch checkout — no collisions with other sessions. Does NOT run dev servers. Can push branches and create PRs (Gates 0-4) but does NOT merge.
+
+#### Memory in Worktrees
+If your CWD contains `.claude/worktrees/`, auto-memory may not load. At session start, manually read:
+```
+C:\Users\bickl\.claude\projects\D--PROJECTS-netrate-pc-ops\memory\MEMORY.md
+```
+Then read each file it references. This gives you the same operational knowledge as main-directory sessions.
+
+#### Dev Server Ownership
+Only the main session runs `preview_start(name='dev')` on port 3000. Worktree sessions validate changes with `npm run build` only. If a worktree needs `node_modules` for build, create a junction from the worktree root:
+```
+mklink /J node_modules D:\PROJECTS\netrate-pc-ops\node_modules
+```
+
+#### Deploy from Worktrees
+Worktree sessions may execute Gates 0-4 (build, push, PR, preview). Gates 5-6 (merge, production confirm) must happen from the main session or GitHub UI. This prevents worktrees from switching to `main`, which would corrupt the isolation.
+
+#### Deploy Lock
+Before entering Gate 1, check `.claude/deploy.lock`:
+- **If it exists:** Another session is deploying — read it, report the branch and timestamp to David, and wait.
+- **If absent:** Create it with your branch name and ISO timestamp. Delete it after deploy completes or aborts.
+- **Stale locks:** If the timestamp is more than 2 hours old, ask David whether to clear it (session may have crashed).
+
 ---
 
 ## Tech Stack

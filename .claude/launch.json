@@ -6,6 +6,12 @@
       "runtimeExecutable": "C:/Windows/System32/cmd.exe",
       "runtimeArgs": ["/c", "cd /d D:\\PROJECTS\\netrate-pc-ops && npm run dev"],
       "port": 3000
+    },
+    {
+      "name": "dev-alt",
+      "runtimeExecutable": "C:/Windows/System32/cmd.exe",
+      "runtimeArgs": ["/c", "cd /d D:\\PROJECTS\\netrate-pc-ops && npm run dev -- --port 3001"],
+      "port": 3001
     }
   ]
 }
