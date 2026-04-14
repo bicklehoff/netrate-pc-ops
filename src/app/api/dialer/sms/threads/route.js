@@ -17,12 +17,13 @@ export async function GET(req) {
   const q = searchParams.get('q') || '';
 
   try {
-    // Get all SMS messages with contact info, ordered by most recent
+    // Get recent SMS messages with contact info — limit to prevent full table scan
     const messages = await sql`
       SELECT sm.*, c.id AS c_id, c.first_name AS c_first_name, c.last_name AS c_last_name, c.phone AS c_phone
       FROM sms_messages sm
       LEFT JOIN contacts c ON sm.contact_id = c.id
       ORDER BY sm.sent_at DESC
+      LIMIT 5000
     `;
 
     // Group by contact (or by phone number if no contact)

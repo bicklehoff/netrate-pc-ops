@@ -200,7 +200,7 @@ export default function BorrowerChecklist({ loan }) {
             accept=".pdf,.png,.jpg,.jpeg"
             onChange={(e) => {
               if (e.target.files?.[0]) {
-                handleUpload(null, e.target.files[0]);
+                handleUpload('general', e.target.files[0]);
               }
             }}
             disabled={uploading === 'general'}
