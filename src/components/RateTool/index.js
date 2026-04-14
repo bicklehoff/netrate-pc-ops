@@ -59,23 +59,33 @@ export default function RateTool({ defaultState, prefill, brpToken }) {
   return (
     <div>
       {/* Rate Tool Header */}
-      <div className="bg-brand text-white px-5 py-2 rounded-t-lg flex justify-between items-center flex-wrap gap-2">
+      <div className="bg-brand text-white px-5 py-2 rounded-t-xl flex justify-between items-center flex-wrap gap-2">
         <p className="text-cyan-100 text-sm">{LO_CONFIG.name} | NMLS {LO_CONFIG.nmls} | {LO_CONFIG.phone}</p>
         <p className="text-sm text-cyan-100">Rates effective {apiDate || 'today'}</p>
       </div>
 
-      {/* Rate Tool Body */}
-      <div className="px-1">
-        <ScenarioForm scenario={scenario} onChange={handleScenarioChange} onSubmit={fetchRates} loading={apiLoading} />
-        <RateResults
-          scenario={scenario}
-          apiResults={apiResults}
-          loading={apiLoading}
-          onSaveScenario={() => setShowSaveModal(true)}
-          brpToken={brpToken}
-        />
-        <RateEducation />
-        <LeadCapture scenario={scenario} />
+      {/* Two-Column Layout */}
+      <div className="flex flex-col lg:flex-row gap-6 p-4 sm:p-6">
+
+        {/* LEFT: Scenario Form (sticky) */}
+        <div className="w-full lg:w-[400px] lg:shrink-0">
+          <div className="lg:sticky lg:top-4">
+            <ScenarioForm scenario={scenario} onChange={handleScenarioChange} onSubmit={fetchRates} loading={apiLoading} />
+          </div>
+        </div>
+
+        {/* RIGHT: Results + Education + Lead */}
+        <div className="flex-1 min-w-0">
+          <RateResults
+            scenario={scenario}
+            apiResults={apiResults}
+            loading={apiLoading}
+            onSaveScenario={() => setShowSaveModal(true)}
+            brpToken={brpToken}
+          />
+          <RateEducation />
+          <LeadCapture scenario={scenario} />
+        </div>
       </div>
 
       {/* Save Scenario Modal */}
@@ -89,7 +99,7 @@ export default function RateTool({ defaultState, prefill, brpToken }) {
       )}
 
       {/* Disclaimer */}
-      <div className="text-xs text-gray-400 px-5 py-4 border-t border-gray-100 leading-relaxed">
+      <div className="text-xs text-ink-subtle px-5 py-4 border-t border-gray-100 leading-relaxed">
         <p>Rates shown are approximate based on today&apos;s wholesale pricing and standard loan-level adjustments. Actual rates depend on full credit review, property appraisal, and underwriting. Not a commitment to lend. {LO_CONFIG.company} | NMLS {LO_CONFIG.nmls} | {LO_CONFIG.address}</p>
       </div>
     </div>
