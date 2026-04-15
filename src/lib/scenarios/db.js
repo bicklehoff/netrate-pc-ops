@@ -195,9 +195,11 @@ export async function getScenarioById(id, orgId) {
  * @returns {{ scenarios: object[], total: number }}
  */
 export async function listScenarios({
-  orgId, ownerType, mloId, status, leadId, contactId,
+  orgId, ownerType, mloId, status, leadId, contactId, loanId, search,
   limit = 50, offset = 0,
 }) {
+  const searchPattern = search ? `%${search}%` : null;
+
   const scenarios = await sql`
     SELECT s.*,
       (SELECT COALESCE(jsonb_agg(jsonb_build_object(
@@ -217,6 +219,8 @@ export async function listScenarios({
       AND (${status}::text IS NULL OR s.status = ${status})
       AND (${leadId}::uuid IS NULL OR s.lead_id = ${leadId})
       AND (${contactId}::uuid IS NULL OR s.contact_id = ${contactId})
+      AND (${loanId}::uuid IS NULL OR s.loan_id = ${loanId})
+      AND (${searchPattern}::text IS NULL OR s.borrower_name ILIKE ${searchPattern})
     ORDER BY s.created_at DESC
     LIMIT ${limit} OFFSET ${offset}
   `;
@@ -229,6 +233,8 @@ export async function listScenarios({
       AND (${status}::text IS NULL OR status = ${status})
       AND (${leadId}::uuid IS NULL OR lead_id = ${leadId})
       AND (${contactId}::uuid IS NULL OR contact_id = ${contactId})
+      AND (${loanId}::uuid IS NULL OR loan_id = ${loanId})
+      AND (${searchPattern}::text IS NULL OR borrower_name ILIKE ${searchPattern})
   `;
 
   return { scenarios, total: countRows[0]?.total || 0 };

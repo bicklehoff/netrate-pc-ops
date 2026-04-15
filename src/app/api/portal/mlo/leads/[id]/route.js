@@ -14,17 +14,18 @@ export async function GET(request, { params }) {
     if (!session) return unauthorizedResponse();
 
     const { id } = await params;
-    const [leadRows, leadQuotes, borrowerQuotes] = await Promise.all([
+    const [leadRows, leadQuotes, borrowerQuoteScenarios] = await Promise.all([
       sql`SELECT * FROM leads WHERE id = ${id} AND organization_id = ${orgId} LIMIT 1`,
       sql`SELECT * FROM lead_quotes WHERE lead_id = ${id} ORDER BY created_at DESC LIMIT 10`,
       sql`
-        SELECT id, purpose, loan_amount, loan_type, state, fico, ltv, status,
+        SELECT id, loan_purpose AS purpose, loan_amount, loan_type, state, fico, ltv, status,
           monthly_payment, version, sent_at, viewed_at, created_at
-        FROM borrower_quotes
-        WHERE lead_id = ${id} AND organization_id = ${orgId}
+        FROM scenarios
+        WHERE lead_id = ${id} AND organization_id = ${orgId} AND owner_type = 'mlo'
         ORDER BY created_at DESC LIMIT 10
       `,
     ]);
+    const borrowerQuotes = borrowerQuoteScenarios;
 
     const lead = leadRows[0];
     if (!lead) {
