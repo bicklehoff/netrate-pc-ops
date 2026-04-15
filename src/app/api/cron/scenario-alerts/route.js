@@ -44,12 +44,20 @@ export async function GET(request) {
   let skipped = 0;
 
   try {
-    // Find active scenarios — filter for today's schedule in JS (alert_days is a text array)
+    // Find active borrower scenarios — filter for today's schedule in JS (alert_days is a text array)
     const scenarios = await sql`
-      SELECT s.*, l.name AS lead_name, l.email AS lead_email
-      FROM saved_scenarios s
+      SELECT s.*, l.name AS lead_name, l.email AS lead_email,
+        (SELECT COALESCE(jsonb_agg(jsonb_build_object(
+          'rate', sr.rate, 'apr', sr.apr, 'monthlyPI', sr.monthly_pi,
+          'price', sr.final_price, 'lenderName', sr.lender, 'program', sr.program,
+          'rebateDollars', sr.rebate_dollars, 'discountDollars', sr.discount_dollars,
+          'lenderFee', sr.lender_fee
+        ) ORDER BY sr.display_order), '[]'::jsonb)
+         FROM scenario_rates sr WHERE sr.scenario_id = s.id
+        ) AS last_pricing_data
+      FROM scenarios s
       LEFT JOIN leads l ON s.lead_id = l.id
-      WHERE s.alert_status = 'active'
+      WHERE s.alert_status = 'active' AND s.owner_type = 'borrower'
     `;
 
     // Filter to those scheduled for today
@@ -59,22 +67,22 @@ export async function GET(request) {
 
     for (const scenario of dueScenarios) {
       try {
-        const sd = scenario.scenario_data;
-        if (!sd || !sd.loanAmount) {
+        const loanAmt = Number(scenario.loan_amount);
+        if (!loanAmt) {
           skipped++;
           continue;
         }
 
-        // Re-price the scenario
+        // Re-price the scenario (read from normalized columns)
         const pricingInput = {
-          loanAmount: sd.loanAmount,
-          propertyValue: sd.propertyValue,
-          loanPurpose: sd.purpose,
-          loanType: sd.loanType,
-          creditScore: sd.fico,
-          state: sd.state,
-          county: sd.county,
-          term: sd.term,
+          loanAmount: loanAmt,
+          propertyValue: Number(scenario.property_value) || null,
+          loanPurpose: scenario.loan_purpose,
+          loanType: scenario.loan_type,
+          creditScore: scenario.fico,
+          state: scenario.state,
+          county: scenario.county,
+          term: scenario.term,
         };
 
         const result = await priceScenario(pricingInput);
@@ -115,7 +123,7 @@ export async function GET(request) {
 
         // Update last_priced_at on the scenario
         await sql`
-          UPDATE saved_scenarios SET last_priced_at = NOW() WHERE id = ${scenario.id}
+          UPDATE scenarios SET last_priced_at = NOW(), updated_at = NOW() WHERE id = ${scenario.id}
         `;
 
         queued++;

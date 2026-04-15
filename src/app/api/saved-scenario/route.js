@@ -4,6 +4,7 @@ import { priceScenario } from '@/lib/rates/price-scenario';
 import { sendEmail } from '@/lib/resend';
 import { rateAlertWelcomeTemplate } from '@/lib/email-templates/borrower';
 import { calcMonthlyPI } from '@/lib/rates/math';
+import { createScenario } from '@/lib/scenarios/db';
 
 const FREQUENCY_DEFAULTS = {
   daily: ['mon', 'tue', 'wed', 'thu', 'fri'],
@@ -11,6 +12,8 @@ const FREQUENCY_DEFAULTS = {
   '2x_week': ['tue', 'thu'],
   weekly: ['mon'],
 };
+
+const DEFAULT_ORG_ID = '00000000-0000-4000-8000-000000000001';
 
 export async function POST(request) {
   try {
@@ -33,9 +36,10 @@ export async function POST(request) {
     const leadRows = await sql`
       INSERT INTO leads (name, email, phone, source, source_detail, scenario_data, loan_purpose, loan_amount, property_state, property_value, property_county, credit_score)
       VALUES (${name}, ${email.trim().toLowerCase()}, ${phone || null}, 'rate-tool-save', 'saved-scenario', ${JSON.stringify(scenarioData)}, ${scenarioData.purpose || null}, ${scenarioData.loanAmount || null}, ${scenarioData.state || null}, ${scenarioData.propertyValue || null}, ${scenarioData.county || null}, ${scenarioData.fico || null})
-      RETURNING id
+      RETURNING id, organization_id
     `;
     const leadId = leadRows[0].id;
+    const orgId = leadRows[0].organization_id || DEFAULT_ORG_ID;
 
     // Fetch the DB-generated view_token
     const tokenRow = await sql`SELECT view_token::text FROM leads WHERE id::text = ${leadId}`;
@@ -68,6 +72,8 @@ export async function POST(request) {
             apr: r.apr || null,
             monthlyPI: r.monthlyPI || calcMonthlyPI(r.rate, loanAmt, term),
             price: r.finalPrice || r.price || null,
+            finalPrice: r.finalPrice || r.price || null,
+            lender: r.lender || r.lenderName || null,
             lenderName: r.lender || r.lenderName || null,
             program: r.program || null,
             rebateDollars: r.rebateDollars,
@@ -79,13 +85,43 @@ export async function POST(request) {
       }
     }
 
-    // Create saved scenario
-    const scenarioRows = await sql`
-      INSERT INTO saved_scenarios (lead_id, scenario_data, alert_frequency, alert_days, alert_status, last_pricing_data, last_priced_at, updated_at)
-      VALUES (${leadId}, ${JSON.stringify(scenarioData)}, ${freq}, ${days}, 'active', ${initialPricing ? JSON.stringify(initialPricing) : null}, ${initialPricing ? new Date() : null}, NOW())
-      RETURNING id, unsub_token
-    `;
-    const savedScenario = scenarioRows[0];
+    // Create scenario (unified table) with owner_type='borrower'
+    const scenario = await createScenario(
+      {
+        organization_id: orgId,
+        owner_type: 'borrower',
+        source: 'rate-tool',
+        visibility: 'borrower_visible',
+        status: 'active',
+        lead_id: leadId,
+        borrower_name: name,
+        borrower_email: email.trim().toLowerCase(),
+        borrower_phone: phone || null,
+        loan_purpose: scenarioData.purpose || null,
+        loan_type: scenarioData.loanType || null,
+        property_value: scenarioData.propertyValue || null,
+        loan_amount: scenarioData.loanAmount || null,
+        ltv: scenarioData.ltv || null,
+        fico: scenarioData.fico || null,
+        state: scenarioData.state || null,
+        county: scenarioData.county || null,
+        term: scenarioData.term || null,
+        product_type: scenarioData.productType || null,
+        property_type: scenarioData.propertyType || null,
+        current_rate: scenarioData.currentRate || null,
+        current_balance: scenarioData.currentPayoff || scenarioData.currentBalance || null,
+        alert_frequency: freq,
+        alert_days: days,
+        alert_status: 'active',
+        last_priced_at: initialPricing ? new Date() : null,
+      },
+      initialPricing || [],
+      null,
+    );
+
+    // Fetch unsub_token (created by DB default)
+    const tokRow = await sql`SELECT unsub_token FROM scenarios WHERE id = ${scenario.id}`;
+    const unsubToken = tokRow?.[0]?.unsub_token;
 
     // Send welcome email
     const SITE_URL = process.env.NEXTAUTH_URL || 'https://www.netratemortgage.com';
@@ -104,7 +140,7 @@ export async function POST(request) {
         initialRates: initialPricing || [],
         frequency: freq,
         days,
-        unsubscribeLink: `${SITE_URL}/api/saved-scenario/unsubscribe?token=${savedScenario.unsub_token}`,
+        unsubscribeLink: `${SITE_URL}/api/saved-scenario/unsubscribe?token=${unsubToken}`,
         myRatesLink: `${SITE_URL}/portal/my-rates?token=${viewToken}`,
       });
       const emailResult = await sendEmail({
@@ -123,7 +159,7 @@ export async function POST(request) {
 
     return NextResponse.json({
       success: true,
-      scenarioId: savedScenario.id,
+      scenarioId: scenario.id,
       leadId,
       viewToken,
       emailStatus,

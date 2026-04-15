@@ -1,11 +1,14 @@
 // API: Update an existing saved scenario (BRP reprice flow)
 // POST /api/saved-scenario/update { token, scenarioData }
 // Token-based auth — validates borrower owns the scenario, updates it with new inputs + fresh pricing.
+//
+// Reads/writes the unified scenarios table (owner_type='borrower').
 
 import { NextResponse } from 'next/server';
 import sql from '@/lib/db';
 import { priceScenario } from '@/lib/rates/price-scenario';
 import { calcMonthlyPI } from '@/lib/rates/math';
+import { updateScenario, replaceScenarioRates } from '@/lib/scenarios/db';
 
 export async function POST(request) {
   try {
@@ -18,9 +21,9 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Scenario data is required' }, { status: 400 });
     }
 
-    // Validate token → get lead email
+    // Validate token → get lead email + org
     const leads = await sql`
-      SELECT id::text, email, name FROM leads WHERE view_token::text = ${token} LIMIT 1
+      SELECT id::text, email, name, organization_id FROM leads WHERE view_token::text = ${token} LIMIT 1
     `;
     const lead = leads?.[0];
 
@@ -32,11 +35,11 @@ export async function POST(request) {
     const allLeads = await sql`SELECT id FROM leads WHERE email = ${lead.email}`;
     const leadIds = allLeads.map(l => l.id);
 
-    // Find the latest saved scenario for this borrower
+    // Find the latest borrower scenario for this borrower
     const existingRows = await sql`
-      SELECT id, alert_frequency, alert_days
-      FROM saved_scenarios
-      WHERE lead_id = ANY(${leadIds})
+      SELECT id, alert_frequency, alert_days, organization_id
+      FROM scenarios
+      WHERE lead_id = ANY(${leadIds}) AND owner_type = 'borrower'
       ORDER BY created_at DESC
       LIMIT 1
     `;
@@ -45,6 +48,7 @@ export async function POST(request) {
       return NextResponse.json({ error: 'No saved scenario found' }, { status: 404 });
     }
     const existingScenario = existingRows[0];
+    const scenarioOrgId = existingScenario.organization_id;
 
     // Use client-side selected rates if provided, otherwise run server-side pricing
     let pricingData = null;
@@ -73,6 +77,8 @@ export async function POST(request) {
             apr: r.apr || null,
             monthlyPI: r.monthlyPI || calcMonthlyPI(r.rate, loanAmt, term),
             price: r.finalPrice || r.price || null,
+            finalPrice: r.finalPrice || r.price || null,
+            lender: r.lender || r.lenderName || null,
             lenderName: r.lender || r.lenderName || null,
             program: r.program || null,
             rebateDollars: r.rebateDollars,
@@ -84,15 +90,28 @@ export async function POST(request) {
       }
     }
 
-    // Update the scenario with new inputs + pricing
-    await sql`
-      UPDATE saved_scenarios
-      SET scenario_data = ${JSON.stringify(scenarioData)},
-          last_pricing_data = ${pricingData ? JSON.stringify(pricingData) : null},
-          last_priced_at = ${pricingData ? new Date() : null},
-          updated_at = NOW()
-      WHERE id = ${existingScenario.id}
-    `;
+    // Update the scenario with new inputs via DAL
+    await updateScenario(existingScenario.id, scenarioOrgId, {
+      loan_purpose: scenarioData.purpose || null,
+      loan_type: scenarioData.loanType || null,
+      loan_amount: scenarioData.loanAmount || null,
+      property_value: scenarioData.propertyValue || null,
+      ltv: scenarioData.ltv || null,
+      fico: scenarioData.fico || null,
+      state: scenarioData.state || null,
+      county: scenarioData.county || null,
+      term: scenarioData.term || null,
+      product_type: scenarioData.productType || null,
+      property_type: scenarioData.propertyType || null,
+      current_rate: scenarioData.currentRate || null,
+      current_balance: scenarioData.currentPayoff || scenarioData.currentBalance || null,
+      last_priced_at: pricingData ? new Date() : null,
+    });
+
+    // Replace rates if we have fresh pricing
+    if (pricingData && pricingData.length > 0) {
+      await replaceScenarioRates(existingScenario.id, pricingData);
+    }
 
     // Also update the lead record with latest scenario details
     await sql`

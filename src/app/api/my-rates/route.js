@@ -1,9 +1,13 @@
 // API: My Rates — borrower-facing saved scenarios
 // GET /api/my-rates?token=xxx
 // Token-based auth (like quote viewer), no cookie session needed.
+//
+// Reads from the unified scenarios table; responds in legacy saved_scenarios shape
+// via scenarioToSavedShape().
 
 import { NextResponse } from 'next/server';
 import sql from '@/lib/db';
+import { scenarioToSavedShape } from '@/lib/scenarios/transform';
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
@@ -26,15 +30,25 @@ export async function GET(request) {
     const allLeads = await sql`SELECT id FROM leads WHERE email = ${lead.email}`;
     const leadIds = allLeads.map(l => l.id);
 
-    // Fetch the LATEST saved scenario for this borrower (one email = one active scenario)
-    const scenarios = await sql`
-      SELECT id, scenario_data, alert_frequency, alert_days, alert_status,
-             last_pricing_data, last_priced_at, last_sent_at, send_count, created_at
-      FROM saved_scenarios
-      WHERE lead_id = ANY(${leadIds})
-      ORDER BY created_at DESC
+    // Fetch the LATEST borrower scenario with inlined rates
+    const scenarioRows = await sql`
+      SELECT s.*,
+        (SELECT COALESCE(jsonb_agg(jsonb_build_object(
+          'rate', sr.rate, 'final_price', sr.final_price,
+          'rebate_dollars', sr.rebate_dollars, 'discount_dollars', sr.discount_dollars,
+          'lender_fee', sr.lender_fee, 'lender', sr.lender, 'program', sr.program,
+          'monthly_pi', sr.monthly_pi
+        ) ORDER BY sr.display_order), '[]'::jsonb)
+        FROM scenario_rates sr WHERE sr.scenario_id = s.id
+        ) AS rates
+      FROM scenarios s
+      WHERE s.lead_id = ANY(${leadIds}) AND s.owner_type = 'borrower'
+      ORDER BY s.created_at DESC
       LIMIT 1
     `;
+
+    // Shape each scenario into legacy saved_scenarios format
+    const scenarios = scenarioRows.map(s => scenarioToSavedShape({ ...s, rates: s.rates || [] }));
 
     return NextResponse.json({
       name: lead.name,
