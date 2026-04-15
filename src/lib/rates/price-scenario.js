@@ -13,6 +13,7 @@ import { priceRate } from '@/lib/rates/pricing-v2';
 import { getDbLenderAdj } from '@/lib/rates/db-adj-loader';
 import { loadRateDataFromDB } from '@/lib/rates/db-loader';
 import { DEFAULT_SCENARIO, FHA_BASELINE_LIMIT } from '@/lib/rates/defaults';
+import { EMPTY_ADJ } from '@/lib/rates/empty-adj';
 import { classifyLoan, getLoanLimits } from '@/data/county-loan-limits';
 
 const CACHE_TTL_MS = 2 * 60 * 1000;
@@ -146,7 +147,7 @@ export async function priceScenario(body) {
     const lenderAdj = await getDbLenderAdj(lenderId, scenario.loanType);
     // Lenders with no adjustment rules (e.g., TLS — LLPAs baked into product codes)
     // get an empty adj object so pricing can still proceed with zero adjustments.
-    const EMPTY_ADJ = { ficoLtvGrids: { core: { '>15yr': { purchase: {}, refinance: {}, cashout: {} } } }, srp: { core: { withImpounds: {}, withoutImpounds: {} } }, riskBased: {}, loanAmountAdj: {}, investorAdj: {}, productFeatures: [], productLoanAmount: [], eliteFhaFicoLoanAmt: [], eliteFhaPurposeLtv: [] };
+    // EMPTY_ADJ shape lives in ./empty-adj.js so homepage-db.js shares the same fallback.
     const effectiveAdj = lenderAdj || EMPTY_ADJ;
 
     // Pre-load conventional adjustments if FTHB is checked and main type isn't conventional
