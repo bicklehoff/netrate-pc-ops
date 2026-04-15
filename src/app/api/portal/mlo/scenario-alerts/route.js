@@ -63,6 +63,10 @@ export async function GET(request) {
     // Default view: alert queue items
     const effectiveStatus = (statusFilter && statusFilter !== 'all') ? statusFilter : null;
 
+    // Scope enforcement: queue items are org-scoped via their parent scenario.
+    // INNER JOIN + organization_id filter prevents cross-org row leakage — an
+    // MLO in Org A must never see Org B's queue items (which would include
+    // joined borrower PII from the leads table).
     const queueItems = await sql`
       SELECT saq.*,
         json_build_object(
@@ -77,7 +81,10 @@ export async function GET(request) {
           'lead', json_build_object('id', l.id, 'name', l.name, 'email', l.email, 'phone', l.phone)
         ) AS scenario
       FROM scenario_alert_queue saq
-      LEFT JOIN scenarios s ON s.id = saq.scenario_id AND s.owner_type = 'borrower'
+      INNER JOIN scenarios s
+        ON s.id = saq.scenario_id
+        AND s.owner_type = 'borrower'
+        AND s.organization_id = ${orgId}
       LEFT JOIN leads l ON l.id = s.lead_id
       WHERE (${effectiveStatus}::text IS NULL OR saq.status = ${effectiveStatus})
         AND (${searchPattern}::text IS NULL OR l.name ILIKE ${searchPattern} OR l.email ILIKE ${searchPattern})
@@ -121,6 +128,10 @@ export async function PATCH(request) {
 
     for (const id of ids) {
       try {
+        // Scope enforcement: INNER JOIN with org_id filter ensures a queue
+        // item belonging to another org returns zero rows. The subsequent
+        // `if (!item)` check then skips it, preventing cross-org approve/decline
+        // from mutating another org's queue items or triggering their emails.
         const itemRows = await sql`
           SELECT saq.*,
             s.id AS scenario_ref_id, s.unsub_token,
@@ -128,7 +139,10 @@ export async function PATCH(request) {
             s.fico, s.ltv, s.state, s.county, s.term,
             l.id AS lead_ref_id, l.name AS lead_name, l.email AS lead_email, l.view_token AS lead_view_token
           FROM scenario_alert_queue saq
-          LEFT JOIN scenarios s ON s.id = saq.scenario_id AND s.owner_type = 'borrower'
+          INNER JOIN scenarios s
+            ON s.id = saq.scenario_id
+            AND s.owner_type = 'borrower'
+            AND s.organization_id = ${orgId}
           LEFT JOIN leads l ON l.id = s.lead_id
           WHERE saq.id = ${id}
           LIMIT 1
