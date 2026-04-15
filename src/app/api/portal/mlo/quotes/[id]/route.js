@@ -3,11 +3,20 @@
  *
  * GET   /api/portal/mlo/quotes/:id — get full quote with all data
  * PATCH /api/portal/mlo/quotes/:id — update quote fields (scenario, fees, selected rates)
+ *
+ * Reads/writes unified scenarios tables. Responses use scenarioToQuoteShape()
+ * for backward compatibility with the borrower_quotes shape.
  */
 
 import { NextResponse } from 'next/server';
-import sql from '@/lib/db';
 import { requireMloSession, unauthorizedResponse } from '@/lib/require-mlo-session';
+import {
+  getScenarioById,
+  updateScenario,
+  replaceScenarioRates,
+  replaceScenarioFeeItems,
+} from '@/lib/scenarios/db';
+import { scenarioToQuoteShape } from '@/lib/scenarios/transform';
 
 export async function GET(request, { params }) {
   try {
@@ -16,17 +25,15 @@ export async function GET(request, { params }) {
 
     const { id } = await params;
 
-    const rows = await sql`SELECT * FROM borrower_quotes WHERE id = ${id} AND organization_id = ${orgId} LIMIT 1`;
-    const quote = rows[0];
-
-    if (!quote) {
+    const scenario = await getScenarioById(id, orgId);
+    if (!scenario) {
       return NextResponse.json({ error: 'Quote not found' }, { status: 404 });
     }
-    if (quote.mlo_id !== mloId) {
+    if (scenario.mlo_id !== mloId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
-    return NextResponse.json({ quote });
+    return NextResponse.json({ quote: scenarioToQuoteShape(scenario) });
   } catch (err) {
     console.error('Quote GET error:', err);
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
@@ -42,32 +49,28 @@ export async function PATCH(request, { params }) {
     const body = await request.json();
 
     // Verify ownership
-    const existing = await sql`SELECT mlo_id, status FROM borrower_quotes WHERE id = ${id} AND organization_id = ${orgId} LIMIT 1`;
-    if (!existing[0]) {
+    const existing = await getScenarioById(id, orgId);
+    if (!existing) {
       return NextResponse.json({ error: 'Quote not found' }, { status: 404 });
     }
-    if (existing[0].mlo_id !== mloId) {
+    if (existing.mlo_id !== mloId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
-    // Build update data from allowed fields using parameterized queries
-    const setClauses = [];
-    const values = [];
+    // Map legacy camelCase body fields to scenarios snake_case columns
+    const fields = {};
 
-    // Scalar fields
+    // Scalar strings
     const scalarMap = {
       borrowerName: 'borrower_name', borrowerEmail: 'borrower_email', borrowerPhone: 'borrower_phone',
-      purpose: 'purpose', propertyType: 'property_type', occupancy: 'occupancy', loanType: 'loan_type',
+      purpose: 'loan_purpose', propertyType: 'property_type', occupancy: 'occupancy', loanType: 'loan_type',
       state: 'state', county: 'county', currentLender: 'current_lender',
     };
     for (const [bodyKey, dbCol] of Object.entries(scalarMap)) {
-      if (body[bodyKey] !== undefined) {
-        values.push(body[bodyKey]);
-        setClauses.push(`${dbCol} = $${values.length}`);
-      }
+      if (body[bodyKey] !== undefined) fields[dbCol] = body[bodyKey];
     }
 
-    // Decimal fields
+    // Decimals
     const decimalMap = {
       propertyValue: 'property_value', loanAmount: 'loan_amount', ltv: 'ltv', currentRate: 'current_rate',
       currentBalance: 'current_balance', currentPayment: 'current_payment', annualTaxes: 'annual_taxes',
@@ -75,58 +78,50 @@ export async function PATCH(request, { params }) {
       cashToClose: 'cash_to_close', monthlyPayment: 'monthly_payment', monthlySavings: 'monthly_savings',
     };
     for (const [bodyKey, dbCol] of Object.entries(decimalMap)) {
-      if (body[bodyKey] !== undefined) {
-        values.push(Number(body[bodyKey]));
-        setClauses.push(`${dbCol} = $${values.length}`);
-      }
+      if (body[bodyKey] !== undefined) fields[dbCol] = Number(body[bodyKey]);
     }
 
-    // Int fields
+    // Ints
     const intMap = { fico: 'fico', term: 'term', paybackMonths: 'payback_months' };
     for (const [bodyKey, dbCol] of Object.entries(intMap)) {
-      if (body[bodyKey] !== undefined) {
-        values.push(Number(body[bodyKey]));
-        setClauses.push(`${dbCol} = $${values.length}`);
-      }
+      if (body[bodyKey] !== undefined) fields[dbCol] = Number(body[bodyKey]);
     }
 
-    // Date fields
+    // Dates
     if (body.closingDate !== undefined) {
-      values.push(body.closingDate ? new Date(body.closingDate) : null);
-      setClauses.push(`closing_date = $${values.length}`);
+      fields.closing_date = body.closingDate ? new Date(body.closingDate) : null;
     }
     if (body.firstPaymentDate !== undefined) {
-      values.push(body.firstPaymentDate ? new Date(body.firstPaymentDate) : null);
-      setClauses.push(`first_payment_date = $${values.length}`);
+      fields.first_payment_date = body.firstPaymentDate ? new Date(body.firstPaymentDate) : null;
     }
 
-    // JSON fields
-    if (body.scenarios !== undefined) {
-      values.push(JSON.stringify(body.scenarios));
-      setClauses.push(`scenarios = $${values.length}::jsonb`);
-    }
-    if (body.feeBreakdown !== undefined) {
-      values.push(JSON.stringify(body.feeBreakdown));
-      setClauses.push(`fee_breakdown = $${values.length}::jsonb`);
+    // Links
+    if (body.contactId !== undefined) fields.contact_id = body.contactId || null;
+    if (body.leadId !== undefined) fields.lead_id = body.leadId || null;
+    if (body.loanId !== undefined) fields.loan_id = body.loanId || null;
+
+    // Update scalar fields
+    if (Object.keys(fields).length > 0) {
+      await updateScenario(id, orgId, fields);
     }
 
-    // Contact/loan links
-    if (body.contactId !== undefined) { values.push(body.contactId || null); setClauses.push(`contact_id = $${values.length}`); }
-    if (body.leadId !== undefined) { values.push(body.leadId || null); setClauses.push(`lead_id = $${values.length}`); }
-    if (body.loanId !== undefined) { values.push(body.loanId || null); setClauses.push(`loan_id = $${values.length}`); }
+    // Replace rates array (body.scenarios is the legacy name for rate options array)
+    if (body.scenarios !== undefined && Array.isArray(body.scenarios)) {
+      await replaceScenarioRates(id, body.scenarios);
+    }
 
-    if (setClauses.length === 0) {
+    // Replace fee breakdown
+    if (body.feeBreakdown !== undefined && body.feeBreakdown) {
+      await replaceScenarioFeeItems(id, body.feeBreakdown);
+    }
+
+    if (Object.keys(fields).length === 0 && body.scenarios === undefined && body.feeBreakdown === undefined) {
       return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });
     }
 
-    setClauses.push('updated_at = NOW()');
-    values.push(id);
-
-    values.push(orgId);
-    const query = `UPDATE borrower_quotes SET ${setClauses.join(', ')} WHERE id = $${values.length - 1} AND organization_id = $${values.length} RETURNING *`;
-    const quoteRows = await sql(query, values);
-
-    return NextResponse.json({ quote: quoteRows[0] });
+    // Reload and return
+    const updated = await getScenarioById(id, orgId);
+    return NextResponse.json({ quote: scenarioToQuoteShape(updated) });
   } catch (err) {
     console.error('Quote PATCH error:', err);
     return NextResponse.json({ error: 'Internal error', detail: err.message }, { status: 500 });

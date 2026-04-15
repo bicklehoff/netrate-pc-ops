@@ -5,14 +5,16 @@
  *
  * Reads the quote's current scenario, re-runs pricing + eligibility + fees,
  * and returns fresh results (does not save to DB — caller can PATCH if desired).
+ *
+ * Reads from unified scenarios table.
  */
 
 import { NextResponse } from 'next/server';
-import sql from '@/lib/db';
 import { priceScenario } from '@/lib/rates/price-scenario';
 import { checkEligibility } from '@/lib/quotes/eligibility';
 import { buildFeeBreakdown } from '@/lib/quotes/fee-builder';
 import { requireMloSession, unauthorizedResponse } from '@/lib/require-mlo-session';
+import { getScenarioById } from '@/lib/scenarios/db';
 
 export async function POST(request, { params }) {
   try {
@@ -21,12 +23,11 @@ export async function POST(request, { params }) {
 
     const { id } = await params;
 
-    const rows = await sql`SELECT * FROM borrower_quotes WHERE id = ${id} AND organization_id = ${orgId} LIMIT 1`;
-    const quote = rows[0];
-    if (!quote) {
+    const scenario = await getScenarioById(id, orgId);
+    if (!scenario) {
       return NextResponse.json({ error: 'Quote not found' }, { status: 404 });
     }
-    if (quote.mlo_id !== mloId) {
+    if (scenario.mlo_id !== mloId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
@@ -34,16 +35,16 @@ export async function POST(request, { params }) {
     const body = await request.json().catch(() => ({}));
     const lockDays = body.lockDays || 30;
 
-    // Build scenario from current quote fields
+    // Build scenario input from current scenario fields
     const pricingInput = {
-      loanAmount: Number(quote.loan_amount),
-      loanPurpose: quote.purpose,
-      loanType: quote.loan_type || 'conventional',
-      state: quote.state,
-      county: quote.county,
-      creditScore: quote.fico,
-      propertyValue: Number(quote.property_value),
-      term: quote.term || 30,
+      loanAmount: Number(scenario.loan_amount),
+      loanPurpose: scenario.loan_purpose,
+      loanType: scenario.loan_type || 'conventional',
+      state: scenario.state,
+      county: scenario.county,
+      creditScore: scenario.fico,
+      propertyValue: Number(scenario.property_value),
+      term: scenario.term || 30,
       lockDays,
     };
 
@@ -52,7 +53,7 @@ export async function POST(request, { params }) {
       loanType: pricingInput.loanType,
       loanPurpose: pricingInput.loanPurpose,
       creditScore: pricingInput.creditScore,
-      ltv: Number(quote.ltv),
+      ltv: Number(scenario.ltv),
       state: pricingInput.state,
       county: pricingInput.county,
       term: pricingInput.term,
@@ -64,13 +65,13 @@ export async function POST(request, { params }) {
     const fees = await buildFeeBreakdown({
       state: pricingInput.state,
       county: pricingInput.county,
-      purpose: quote.purpose,
+      purpose: scenario.loan_purpose,
       lenderFeeUw,
       loanAmount: pricingInput.loanAmount,
       propertyValue: pricingInput.propertyValue,
       annualRate: pricing.results[0]?.rate ?? null,
       loanType: pricingInput.loanType,
-      ltv: pricingInput.ltv || Number(quote.ltv),
+      ltv: Number(scenario.ltv),
       term: pricingInput.term,
     });
 

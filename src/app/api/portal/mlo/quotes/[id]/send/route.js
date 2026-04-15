@@ -3,12 +3,12 @@
  *
  * POST /api/portal/mlo/quotes/:id/send
  *
- * 1. Load quote from DB
+ * 1. Load scenario from DB (unified scenarios table)
  * 2. Generate PDF server-side via renderToBuffer
  * 3. Upload PDF to Vercel Blob
  * 4. Generate magic link for borrower portal access
  * 5. Send email with PDF attachment + portal link
- * 6. Update quote status to "sent"
+ * 6. Update scenario status to "sent"
  */
 
 import { NextResponse } from 'next/server';
@@ -18,6 +18,8 @@ import { quoteTemplate } from '@/lib/email-templates/borrower';
 import { put } from '@vercel/blob';
 import crypto from 'crypto';
 import { requireMloSession, unauthorizedResponse } from '@/lib/require-mlo-session';
+import { getScenarioById, updateScenario } from '@/lib/scenarios/db';
+import { scenarioToQuoteShape } from '@/lib/scenarios/transform';
 
 export const maxDuration = 30;
 
@@ -28,15 +30,17 @@ export async function POST(request, { params }) {
 
     const { id } = await params;
 
-    // Load quote
-    const quoteRows = await sql`SELECT * FROM borrower_quotes WHERE id = ${id} AND organization_id = ${orgId} LIMIT 1`;
-    const quote = quoteRows[0];
-    if (!quote) {
+    // Load scenario (with rates + fee items)
+    const scenario = await getScenarioById(id, orgId);
+    if (!scenario) {
       return NextResponse.json({ error: 'Quote not found' }, { status: 404 });
     }
-    if (quote.mlo_id !== mloId) {
+    if (scenario.mlo_id !== mloId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
+
+    // Shape into legacy quote format for PDF/email
+    const quote = scenarioToQuoteShape(scenario);
 
     // Require borrower email
     const borrowerEmail = quote.borrower_email;
@@ -145,21 +149,21 @@ export async function POST(request, { params }) {
 
     await sendEmail(emailPayload);
 
-    // Update quote status
+    // Update scenario status
     const now = new Date();
-    const updatedRows = await sql`
-      UPDATE borrower_quotes
-      SET status = 'sent', sent_at = ${now}, pdf_url = ${pdfUrl},
-        pdf_generated_at = ${pdfUrl ? now : null},
-        expires_at = ${new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)},
-        updated_at = NOW()
-      WHERE id = ${id} AND organization_id = ${orgId}
-      RETURNING *
-    `;
+    await updateScenario(id, orgId, {
+      status: 'sent',
+      sent_at: now,
+      pdf_url: pdfUrl,
+      pdf_generated_at: pdfUrl ? now : null,
+      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    });
 
+    // Reload and return
+    const updated = await getScenarioById(id, orgId);
     return NextResponse.json({
       success: true,
-      quote: updatedRows[0],
+      quote: scenarioToQuoteShape(updated),
       pdfUrl,
       quoteLink,
     });

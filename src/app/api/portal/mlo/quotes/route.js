@@ -3,6 +3,10 @@
  *
  * GET  /api/portal/mlo/quotes — list quotes (optional filters: status, contactId, search)
  * POST /api/portal/mlo/quotes — create a new quote (validate → eligibility → price → fees → save draft)
+ *
+ * Reads/writes the unified scenarios tables. MLO quotes are stored with
+ *   owner_type='mlo', source='mlo_quote', visibility='internal'
+ * Response shapes match the legacy borrower_quotes shape via scenarioToQuoteShape().
  */
 
 import { NextResponse } from 'next/server';
@@ -12,6 +16,8 @@ import { checkEligibility } from '@/lib/quotes/eligibility';
 import { buildFeeBreakdown } from '@/lib/quotes/fee-builder';
 import { calculateMonthlyPI } from '@/lib/mortgage-math';
 import { requireMloSession, unauthorizedResponse } from '@/lib/require-mlo-session';
+import { createScenario, listScenarios } from '@/lib/scenarios/db';
+import { scenarioToQuoteShape } from '@/lib/scenarios/transform';
 
 export async function GET(request) {
   try {
@@ -22,24 +28,43 @@ export async function GET(request) {
     const status = searchParams.get('status');
     const contactId = searchParams.get('contactId');
     const loanId = searchParams.get('loanId');
+    const leadId = searchParams.get('leadId');
     const search = searchParams.get('search');
     const limit = Math.min(Number(searchParams.get('limit')) || 50, 200);
-    const searchPattern = search ? `%${search}%` : null;
 
-    const quotes = await sql`
-      SELECT id, borrower_name, borrower_email, purpose, loan_amount, loan_type,
-        state, fico, ltv, term, status, monthly_payment, version,
-        sent_at, viewed_at, created_at, updated_at
-      FROM borrower_quotes
-      WHERE mlo_id = ${mloId}
-        AND organization_id = ${orgId}
-        AND (${status}::text IS NULL OR status = ${status})
-        AND (${contactId}::uuid IS NULL OR contact_id = ${contactId})
-        AND (${loanId}::uuid IS NULL OR loan_id = ${loanId})
-        AND (${searchPattern}::text IS NULL OR borrower_name ILIKE ${searchPattern})
-      ORDER BY created_at DESC
-      LIMIT ${limit}
-    `;
+    const { scenarios } = await listScenarios({
+      orgId,
+      mloId,
+      ownerType: 'mlo',
+      status,
+      contactId,
+      loanId,
+      leadId,
+      search,
+      limit,
+    });
+
+    // The list shape keeps rates[] inline (from the DAL subquery). For
+    // backward compatibility, expose old-shape fields alongside.
+    const quotes = scenarios.map((s) => ({
+      id: s.id,
+      borrower_name: s.borrower_name,
+      borrower_email: s.borrower_email,
+      purpose: s.loan_purpose,
+      loan_amount: s.loan_amount,
+      loan_type: s.loan_type,
+      state: s.state,
+      fico: s.fico,
+      ltv: s.ltv,
+      term: s.term,
+      status: s.status,
+      monthly_payment: s.monthly_payment,
+      version: s.version,
+      sent_at: s.sent_at,
+      viewed_at: s.viewed_at,
+      created_at: s.created_at,
+      updated_at: s.updated_at,
+    }));
 
     return NextResponse.json({ quotes });
   } catch (err) {
@@ -219,35 +244,57 @@ export async function POST(request) {
       `;
     }
 
-    // Create quote record
-    const quoteRows = await sql`
-      INSERT INTO borrower_quotes (
-        id, organization_id, mlo_id, contact_id, lead_id, loan_id,
-        borrower_name, borrower_email, borrower_phone,
-        purpose, property_value, loan_amount, ltv, fico,
-        state, county, property_type, occupancy, loan_type, term,
-        closing_date, current_rate, current_balance, current_payment, current_lender,
-        scenarios, fee_breakdown, monthly_payment,
-        status, version, created_at, updated_at
-      ) VALUES (
-        gen_random_uuid(), ${orgId}, ${mloId},
-        ${body.contactId || null}, ${resolvedLeadId}, ${body.loanId || null},
-        ${body.borrowerName || null}, ${body.borrowerEmail || null}, ${body.borrowerPhone || null},
-        ${body.purpose}, ${safePropertyValue}, ${loanAmount}, ${ltv}, ${body.fico},
-        ${pricingInput.state}, ${pricingInput.county}, ${body.propertyType || null},
-        ${body.occupancy || 'primary'}, ${pricingInput.loanType}, ${pricingInput.term},
-        ${body.closingDate ? new Date(body.closingDate) : null},
-        ${toDecimalOrNull(body.currentRate)}, ${toDecimalOrNull(body.currentBalance)},
-        ${toDecimalOrNull(body.currentPayment)}, ${body.currentLender || null},
-        ${JSON.stringify(topScenarios)}::jsonb, ${JSON.stringify(fees)}::jsonb, ${monthlyPayment},
-        'draft', 1, NOW(), NOW()
-      )
-      RETURNING *
-    `;
-    const quote = quoteRows[0];
+    // Create scenario record (unified table)
+    const scenario = await createScenario(
+      {
+        organization_id: orgId,
+        owner_type: 'mlo',
+        source: 'mlo_quote',
+        visibility: 'internal',
+        status: 'draft',
+        mlo_id: mloId,
+        contact_id: body.contactId || null,
+        lead_id: resolvedLeadId,
+        loan_id: body.loanId || null,
+        borrower_name: body.borrowerName || null,
+        borrower_email: body.borrowerEmail || null,
+        borrower_phone: body.borrowerPhone || null,
+        loan_purpose: body.purpose,
+        property_value: safePropertyValue,
+        loan_amount: loanAmount,
+        ltv,
+        fico: body.fico,
+        state: pricingInput.state,
+        county: pricingInput.county,
+        property_type: body.propertyType || null,
+        occupancy: body.occupancy || 'primary',
+        loan_type: pricingInput.loanType,
+        term: pricingInput.term,
+        product_type: pricingInput.productType,
+        lock_days: pricingInput.lockDays,
+        first_time_buyer: pricingInput.firstTimeBuyer,
+        borrower_paid: pricingInput.borrowerPaid,
+        escrows_waived: pricingInput.escrowsWaived,
+        closing_date: body.closingDate ? new Date(body.closingDate) : null,
+        current_rate: toDecimalOrNull(body.currentRate),
+        current_balance: toDecimalOrNull(body.currentBalance),
+        current_payment: toDecimalOrNull(body.currentPayment),
+        current_lender: body.currentLender || null,
+        monthly_payment: monthlyPayment,
+        monthly_tax: monthlyTax || null,
+        monthly_insurance: monthlyInsurance || null,
+        monthly_mip: monthlyMip || null,
+        version: 1,
+        effective_date: pricing.effectiveDate ? new Date(pricing.effectiveDate) : null,
+        loan_classification: pricing.loanClassification || null,
+        pricing_result_count: pricing.resultCount || null,
+      },
+      topScenarios,
+      fees,
+    );
 
     return NextResponse.json({
-      quote,
+      quote: scenarioToQuoteShape(scenario),
       pricing: {
         effectiveDate: pricing.effectiveDate,
         loanClassification: pricing.loanClassification,
@@ -284,6 +331,7 @@ function pickTopScenarios(results, n) {
     .map(r => ({
       rate: r.rate,
       price: r.finalPrice,
+      finalPrice: r.finalPrice,
       lender: r.lender,
       lenderCode: r.lenderCode || r.lender,
       program: r.program,
@@ -300,4 +348,3 @@ function pickTopScenarios(results, n) {
       breakdown: r.breakdown || [],
     }));
 }
-

@@ -5,10 +5,14 @@
  *
  * Public-ish endpoint — authenticated via magic token (from email link).
  * Tracks viewedAt on first access. Returns quote data for the borrower view.
+ *
+ * Reads from unified scenarios table; responds in legacy borrower_quotes shape.
  */
 
 import { NextResponse } from 'next/server';
 import sql from '@/lib/db';
+import { getScenarioById, updateScenario } from '@/lib/scenarios/db';
+import { scenarioToQuoteShape } from '@/lib/scenarios/transform';
 
 export async function GET(request, { params }) {
   try {
@@ -20,9 +24,9 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    // Validate magic token
+    // Validate magic token — also gives us the borrower's organization scope
     const borrowerRows = await sql`
-      SELECT id, email FROM borrowers
+      SELECT id, email, organization_id FROM borrowers
       WHERE magic_token = ${token} AND magic_expires >= NOW()
       LIMIT 1
     `;
@@ -32,31 +36,31 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: 'Link expired or invalid. Contact your loan officer for a new quote link.' }, { status: 401 });
     }
 
-    // Load quote
-    const quoteRows = await sql`SELECT * FROM borrower_quotes WHERE id = ${id} LIMIT 1`;
-    const quote = quoteRows[0];
-
-    if (!quote) {
+    // Load scenario scoped to borrower's org
+    const scenario = await getScenarioById(id, borrower.organization_id);
+    if (!scenario) {
       return NextResponse.json({ error: 'Quote not found' }, { status: 404 });
     }
 
-    // Verify the borrower email matches the quote
-    if (quote.borrower_email?.toLowerCase() !== borrower.email?.toLowerCase()) {
+    // Verify the borrower email matches the scenario
+    if (scenario.borrower_email?.toLowerCase() !== borrower.email?.toLowerCase()) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
     // Check expiration
-    if (quote.expires_at && new Date(quote.expires_at) < new Date()) {
+    if (scenario.expires_at && new Date(scenario.expires_at) < new Date()) {
       return NextResponse.json({ error: 'This quote has expired. Contact your loan officer for updated pricing.' }, { status: 410 });
     }
 
     // Track first view
-    if (!quote.viewed_at) {
-      await sql`
-        UPDATE borrower_quotes SET viewed_at = NOW(), status = 'viewed', updated_at = NOW()
-        WHERE id = ${id}
-      `;
+    if (!scenario.viewed_at) {
+      await updateScenario(id, borrower.organization_id, {
+        viewed_at: new Date(),
+        status: 'viewed',
+      });
     }
+
+    const quote = scenarioToQuoteShape(scenario);
 
     // Return sanitized quote (no internal IDs)
     return NextResponse.json({
