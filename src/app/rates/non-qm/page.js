@@ -85,6 +85,11 @@ export default function NonQmRatesPage() {
             income. If the property cash-flows, you can qualify &mdash; no tax returns, no W-2s,
             no employment verification required.
           </p>
+          <p className="text-gray-700 mb-4">
+            <Link href="/rates/dscr" className="text-brand hover:underline font-medium">
+              See live DSCR rates &amp; price your scenario →
+            </Link>
+          </p>
 
           <h3 className="text-xl font-semibold text-gray-900 mt-6 mb-2">DSCR Ratio Tiers</h3>
           <div className="overflow-x-auto mb-6">

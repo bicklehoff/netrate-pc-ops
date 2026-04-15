@@ -78,10 +78,18 @@ export async function loadActiveDscrSheet(sql, lender_code = LENDER_CODE) {
  * @param {'purchase'|'nco_refi'|'co_refi'} scenario.loan_purpose
  * @param {string}   scenario.property_type     'sfr'|'pud'|'condo'|'2unit'|...
  * @param {number}   scenario.loan_size         loan amount in dollars
- * @param {number}   scenario.dscr_ratio        e.g. 1.20
+ * @param {number}  [scenario.dscr_ratio]       e.g. 1.20 — required UNLESS dscr_inputs provided
  * @param {number}   scenario.prepay_years      0-5
  * @param {string}  [scenario.prepay_structure] e.g. 'fixed_5', 'no_penalty'
  * @param {string[]} [scenario.features]         e.g. ['io', 'short_term_rental']
+ * @param {object}  [scenario.dscr_inputs]      When present, DSCR is computed per-rate
+ *                                              from these inputs and overrides dscr_ratio.
+ *                                              Required shape: { monthly_rent, monthly_escrow,
+ *                                              monthly_hoa, loan_amount }. The pricer uses each
+ *                                              product's note_rate to compute P&I (fully
+ *                                              amortizing over scenario.term years), derives
+ *                                              PITIA = P&I + escrow + HOA, then DSCR = rent ÷ PITIA.
+ *                                              Each priced row gets pi/pitia/dscr attached.
  * @returns {{ priced: object[], skipped: object[], meta: object }}
  */
 export function priceDscrScenario({ products, rules, sheet }, scenario) {
@@ -89,6 +97,7 @@ export function priceDscrScenario({ products, rules, sheet }, scenario) {
   const skipped = [];
 
   const tiersToPrice = [...ELITE_TIERS, ...CORE_TIERS];
+  const dscrInputs = scenario.dscr_inputs || null;
 
   for (const tier of tiersToPrice) {
     const isCore = CORE_TIERS.includes(tier);
@@ -111,13 +120,32 @@ export function priceDscrScenario({ products, rules, sheet }, scenario) {
 
     // 3. Price each rate in the ladder
     for (const product of candidates) {
-      const result = priceOne(product, tierRules, scenario, { isCore });
+      // Compute DSCR per-rate if rent/escrow inputs were supplied. DSCR depends on
+      // rate (via P&I), so every rung of the ladder can land in a different ratio band.
+      let effectiveScenario = scenario;
+      let paymentAttr = null;
+      if (dscrInputs) {
+        const pi = calcMonthlyPI(dscrInputs.loan_amount, Number(product.note_rate), Number(scenario.term));
+        const pitia = pi + (dscrInputs.monthly_escrow || 0) + (dscrInputs.monthly_hoa || 0);
+        const dscr = pitia > 0 ? (dscrInputs.monthly_rent || 0) / pitia : 0;
+        const dscrRounded = Math.round(dscr * 100) / 100;
+        effectiveScenario = { ...scenario, dscr_ratio: dscrRounded };
+        paymentAttr = { pi, pitia, dscr: dscrRounded };
+      }
+
+      const result = priceOne(product, tierRules, effectiveScenario, { isCore });
       if (result.gated) {
         skipped.push({
           tier, note_rate: Number(product.note_rate),
           reason: result.gate_reason, raw_product_name: product.raw_product_name,
+          ...(paymentAttr && { dscr: paymentAttr.dscr, pitia: paymentAttr.pitia }),
         });
         continue;
+      }
+      if (paymentAttr) {
+        result.row.pi = Math.round(paymentAttr.pi * 100) / 100;
+        result.row.pitia = Math.round(paymentAttr.pitia * 100) / 100;
+        result.row.dscr = paymentAttr.dscr;
       }
       priced.push(result.row);
     }
@@ -135,6 +163,18 @@ export function priceDscrScenario({ products, rules, sheet }, scenario) {
       scenario,
     },
   };
+}
+
+/**
+ * Monthly P&I for a fully-amortizing loan. Standard mortgage formula.
+ * Returns 0 for degenerate inputs so callers don't have to guard.
+ */
+function calcMonthlyPI(loanAmount, annualRatePct, termYears) {
+  if (!loanAmount || !annualRatePct || !termYears) return 0;
+  const r = annualRatePct / 100 / 12;
+  const n = termYears * 12;
+  if (r === 0) return loanAmount / n;
+  return loanAmount * (r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
 }
 
 /**
