@@ -10,6 +10,7 @@ import sql from '@/lib/db';
 import { priceRate } from './pricing-v2';
 import { getDbLenderAdj } from './db-adj-loader';
 import { DEFAULT_SCENARIO } from './defaults';
+import { pickParRate } from './pick-par-rate';
 import { calculateMonthlyPI as calculatePI, calculateAPR } from '@/lib/mortgage-math';
 
 const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -25,8 +26,9 @@ const HOMEPAGE_CACHE_TTL = 30 * 60 * 1000; // 30 minutes
 /**
  * Price a single product type using the DB-driven engine.
  * Queries: active rate sheet → products matching loan type + term → prices at 30-day lock
- * Then runs each through priceRate() with DB adjustments.
- * Returns the par rate (lowest cost to borrower).
+ * Then runs each through priceRate() with DB adjustments, collects the priced
+ * ladder, and hands it to pickParRate() to select the rate a borrower would
+ * actually take (lowest rate at/above par — matches LoanSifter default).
  */
 async function priceProduct(loanType, termYears) {
   const loanAmount = DEFAULT_SCENARIO.loanAmount;
@@ -92,10 +94,13 @@ async function priceProduct(loanType, termYears) {
 
   if (!matchingProducts.length) return null;
 
-  let bestRate = null;
+  // 1. Run every (product × rate) combo through priceRate() and collect the
+  //    ladder. finalPrice is native to pricing (100 = par, >100 = credit to
+  //    borrower, <100 = discount to borrower). We derive it from netCost so
+  //    downstream code stays unit-agnostic.
+  const ladder = [];
 
   for (const product of matchingProducts) {
-    // Get prices for this product from the active sheet
     const prices = await sql`
       SELECT * FROM rate_prices
       WHERE product_id = ${product.id}
@@ -104,53 +109,61 @@ async function priceProduct(loanType, termYears) {
       ORDER BY rate ASC
     `;
 
+    const productObj = {
+      term: termYears,
+      productType: 'fixed',
+      investor: product.agency,
+      tier: product.tier || 'core',
+      name: product.display_name,
+      lenderCode: lenderCode,
+      uwFee: product.origination_fee || product.uw_fee || 999,
+    };
+    const scenarioObj = {
+      creditScore: fico,
+      ltv,
+      loanAmount,
+      loanPurpose: purpose,
+      state: DEFAULT_SCENARIO.state,
+      loanType,
+    };
+
     for (const price of prices) {
       const rate = Number(price.rate);
-      const basePrice = Number(price.price);
-
-      const rateEntry = { rate, price: basePrice };
-      const productObj = {
-        term: termYears,
-        productType: 'fixed',
-        investor: product.agency,
-        tier: product.tier || 'core',
-        name: product.display_name,
-        lenderCode: lenderCode,
-        uwFee: product.origination_fee || product.uw_fee || 999,
-      };
-      const scenarioObj = {
-        creditScore: fico,
-        ltv,
-        loanAmount,
-        loanPurpose: purpose,
-        state: DEFAULT_SCENARIO.state,
-        loanType,
-      };
+      const rateEntry = { rate, price: Number(price.price) };
 
       const result = priceRate(rateEntry, productObj, scenarioObj, lenderAdj, brokerConfig);
-
       if (!result) continue;
 
-      // Par rate = closest to zero net cost to borrower
-      // rebateDollars > 0 means borrower receives money (negative cost)
-      // discountDollars > 0 means borrower pays (positive cost)
       const netCost = (result.discountDollars || 0) - (result.rebateDollars || 0);
-      const absCost = Math.abs(netCost);
-
-      if (!bestRate || absCost < bestRate.absCost || (absCost === bestRate.absCost && rate < bestRate.rate)) {
-        const financeCharges = Math.max(0, netCost);
-        bestRate = {
-          rate,
-          apr: calculateAPR(rate, loanAmount, financeCharges, termYears),
-          payment: Math.round(calculatePI(rate, loanAmount, termYears)),
-          absCost,
-          costDollars: Math.round(netCost),
-        };
-      }
+      const finalPrice = 100 - (netCost * 100 / loanAmount);
+      ladder.push({ rate, finalPrice });
     }
   }
 
-  return bestRate;
+  // 2. Let the shared par picker choose — LoanSifter rule (lowest rate whose
+  //    best outcome is at or above par, fallback to closest-to-par).
+  const picked = pickParRate(ladder);
+  if (!picked) return null;
+
+  if (picked.reason === 'fallback_closest') {
+    console.warn(
+      `[homepage-db] No ${loanType} ${termYears}yr combo at/above par — ` +
+      `fell back to closest-to-par. Check the active rate sheet.`
+    );
+  }
+
+  // 3. Recompute dollar fields from the chosen row. netCost: positive = borrower
+  //    pays (discount), negative = borrower receives (credit/rebate).
+  const netCost = (100 - picked.finalPrice) * loanAmount / 100;
+  const financeCharges = Math.max(0, netCost);
+
+  return {
+    rate: picked.rate,
+    apr: calculateAPR(picked.rate, loanAmount, financeCharges, termYears),
+    payment: Math.round(calculatePI(picked.rate, loanAmount, termYears)),
+    absCost: Math.abs(netCost),
+    costDollars: Math.round(netCost),
+  };
 }
 
 /**
