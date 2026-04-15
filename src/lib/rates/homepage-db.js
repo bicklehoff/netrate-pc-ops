@@ -10,6 +10,7 @@ import sql from '@/lib/db';
 import { priceRate } from './pricing-v2';
 import { getDbLenderAdj } from './db-adj-loader';
 import { DEFAULT_SCENARIO } from './defaults';
+import { EMPTY_ADJ } from './empty-adj';
 import { pickParRate } from './pick-par-rate';
 import { calculateMonthlyPI as calculatePI, calculateAPR } from '@/lib/mortgage-math';
 
@@ -65,9 +66,15 @@ async function priceProduct(loanType, termYears) {
     compCapRefi: Number(activeSheet.max_comp_cap_refi) || 3595,
   };
 
-  // Get DB adjustments for this lender + loan type
+  // Get DB adjustments for this lender + loan type. Some lenders (e.g., TLS,
+  // whose LLPAs are baked into product codes on the sheet) have no rows in
+  // adjustment_rules — for those, fall back to EMPTY_ADJ so pricing proceeds
+  // with zero adjustments instead of silently returning null. Matches the
+  // behavior in price-scenario.js; the previous hard-fail cascaded to the
+  // hardcoded '5.875%' fallback in src/app/page.js:56. See
+  // Work/Dev/audits/D0-VERIFICATION-D3-PRICING-2026-04-15.md.
   const lenderAdj = await getDbLenderAdj(lenderCode, loanType);
-  if (!lenderAdj) return null;
+  const effectiveAdj = lenderAdj || EMPTY_ADJ;
 
   // Find products matching our criteria
   const products = await sql`
@@ -131,7 +138,7 @@ async function priceProduct(loanType, termYears) {
       const rate = Number(price.rate);
       const rateEntry = { rate, price: Number(price.price) };
 
-      const result = priceRate(rateEntry, productObj, scenarioObj, lenderAdj, brokerConfig);
+      const result = priceRate(rateEntry, productObj, scenarioObj, effectiveAdj, brokerConfig);
       if (!result) continue;
 
       const netCost = (result.discountDollars || 0) - (result.rebateDollars || 0);
