@@ -1,11 +1,14 @@
 // API: Reprice a saved scenario on demand
 // POST /api/my-rates/reprice { token, scenarioId }
 // Token-based auth — validates borrower owns the scenario.
+//
+// Reads/writes unified scenarios table.
 
 import { NextResponse } from 'next/server';
 import sql from '@/lib/db';
 import { priceScenario } from '@/lib/rates/price-scenario';
 import { calcMonthlyPI } from '@/lib/rates/math';
+import { updateScenario, replaceScenarioRates } from '@/lib/scenarios/db';
 
 export async function POST(request) {
   try {
@@ -26,9 +29,9 @@ export async function POST(request) {
     // Fetch the scenario and verify ownership via email
     const scenarioRows = await sql`
       SELECT s.*, l.email AS lead_email
-      FROM saved_scenarios s
+      FROM scenarios s
       LEFT JOIN leads l ON s.lead_id = l.id
-      WHERE s.id = ${scenarioId}
+      WHERE s.id = ${scenarioId} AND s.owner_type = 'borrower'
       LIMIT 1
     `;
 
@@ -37,26 +40,25 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Scenario not found' }, { status: 404 });
     }
 
-    const sd = scenario.scenario_data;
-    if (!sd?.loanAmount) {
+    // Rebuild scenario_data-shaped input from columns
+    const loanAmt = Number(scenario.loan_amount);
+    if (!loanAmt) {
       return NextResponse.json({ error: 'Invalid scenario data' }, { status: 400 });
     }
 
-    // Run pricing
     const pricingInput = {
-      loanAmount: sd.loanAmount,
-      propertyValue: sd.propertyValue,
-      loanPurpose: sd.purpose,
-      loanType: sd.loanType,
-      creditScore: sd.fico,
-      state: sd.state,
-      county: sd.county,
-      term: sd.term,
+      loanAmount: loanAmt,
+      propertyValue: Number(scenario.property_value) || null,
+      loanPurpose: scenario.loan_purpose,
+      loanType: scenario.loan_type,
+      creditScore: scenario.fico,
+      state: scenario.state,
+      county: scenario.county,
+      term: scenario.term,
     };
 
     const result = await priceScenario(pricingInput);
-    const loanAmt = sd.loanAmount;
-    const term = sd.term || 30;
+    const term = scenario.term || 30;
     const topRates = (result.results || [])
       .sort((a, b) => a.rate - b.rate)
       .slice(0, 3)
@@ -65,6 +67,8 @@ export async function POST(request) {
         apr: r.apr || null,
         monthlyPI: r.monthlyPI || calcMonthlyPI(r.rate, loanAmt, term),
         price: r.finalPrice || r.price || null,
+        finalPrice: r.finalPrice || r.price || null,
+        lender: r.lender || r.lenderName || null,
         lenderName: r.lender || r.lenderName || null,
         program: r.program || null,
         rebateDollars: r.rebateDollars,
@@ -72,12 +76,11 @@ export async function POST(request) {
         lenderFee: r.lenderFee,
       }));
 
-    // Update scenario with fresh pricing
-    await sql`
-      UPDATE saved_scenarios
-      SET last_pricing_data = ${JSON.stringify(topRates)}, last_priced_at = NOW()
-      WHERE id = ${scenarioId}
-    `;
+    // Replace rates + update last_priced_at
+    await replaceScenarioRates(scenarioId, topRates);
+    await updateScenario(scenarioId, scenario.organization_id, {
+      last_priced_at: new Date(),
+    });
 
     return NextResponse.json({
       success: true,

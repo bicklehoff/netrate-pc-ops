@@ -1,6 +1,9 @@
 // API: MLO Scenario Alert Queue
 // GET  /api/portal/mlo/scenario-alerts — list queue items with filters
 // PATCH /api/portal/mlo/scenario-alerts — approve/decline queue items
+//
+// Queue items live in scenario_alert_queue (operational); each references a
+// scenarios row (owner_type='borrower') via scenario_id.
 
 import { NextResponse } from 'next/server';
 import sql from '@/lib/db';
@@ -21,17 +24,32 @@ export async function GET(request) {
     const view = searchParams.get('view');
     const searchPattern = q ? `%${q}%` : null;
 
-    // Management view: list all saved scenarios
+    // Management view: list all borrower-saved scenarios
     if (view === 'scenarios') {
       const scenarios = await sql`
-        SELECT ss.*,
+        SELECT s.*,
+          jsonb_build_object(
+            'purpose', s.loan_purpose, 'loanAmount', s.loan_amount,
+            'propertyValue', s.property_value, 'loanType', s.loan_type,
+            'fico', s.fico, 'ltv', s.ltv, 'state', s.state, 'county', s.county,
+            'term', s.term, 'productType', s.product_type,
+            'currentRate', s.current_rate, 'currentPayoff', s.current_balance
+          ) AS scenario_data,
+          (SELECT COALESCE(jsonb_agg(jsonb_build_object(
+            'rate', sr.rate, 'price', sr.final_price,
+            'rebateDollars', sr.rebate_dollars, 'discountDollars', sr.discount_dollars,
+            'lenderFee', sr.lender_fee, 'lenderName', sr.lender,
+            'program', sr.program, 'monthlyPI', sr.monthly_pi
+          ) ORDER BY sr.display_order), '[]'::jsonb)
+           FROM scenario_rates sr WHERE sr.scenario_id = s.id
+          ) AS last_pricing_data,
           json_build_object('name', l.name, 'email', l.email, 'phone', l.phone) AS lead,
-          (SELECT COUNT(*)::int FROM scenario_alert_queue WHERE scenario_id = ss.id) AS alert_queue_count
-        FROM saved_scenarios ss
-        LEFT JOIN leads l ON l.id = ss.lead_id
-        WHERE ss.organization_id = ${orgId}
+          (SELECT COUNT(*)::int FROM scenario_alert_queue WHERE scenario_id = s.id) AS alert_queue_count
+        FROM scenarios s
+        LEFT JOIN leads l ON l.id = s.lead_id
+        WHERE s.organization_id = ${orgId} AND s.owner_type = 'borrower'
           AND (${searchPattern}::text IS NULL OR l.name ILIKE ${searchPattern} OR l.email ILIKE ${searchPattern})
-        ORDER BY ss.created_at DESC
+        ORDER BY s.created_at DESC
       `;
 
       return NextResponse.json({
@@ -48,12 +66,19 @@ export async function GET(request) {
     const queueItems = await sql`
       SELECT saq.*,
         json_build_object(
-          'id', ss.id, 'scenario_data', ss.scenario_data, 'unsub_token', ss.unsub_token,
+          'id', s.id,
+          'scenario_data', jsonb_build_object(
+            'purpose', s.loan_purpose, 'loanAmount', s.loan_amount,
+            'propertyValue', s.property_value, 'loanType', s.loan_type,
+            'fico', s.fico, 'ltv', s.ltv, 'state', s.state, 'county', s.county,
+            'term', s.term
+          ),
+          'unsub_token', s.unsub_token,
           'lead', json_build_object('id', l.id, 'name', l.name, 'email', l.email, 'phone', l.phone)
         ) AS scenario
       FROM scenario_alert_queue saq
-      LEFT JOIN saved_scenarios ss ON ss.id = saq.scenario_id
-      LEFT JOIN leads l ON l.id = ss.lead_id
+      LEFT JOIN scenarios s ON s.id = saq.scenario_id AND s.owner_type = 'borrower'
+      LEFT JOIN leads l ON l.id = s.lead_id
       WHERE (${effectiveStatus}::text IS NULL OR saq.status = ${effectiveStatus})
         AND (${searchPattern}::text IS NULL OR l.name ILIKE ${searchPattern} OR l.email ILIKE ${searchPattern})
       ORDER BY saq.created_at DESC
@@ -82,12 +107,12 @@ export async function PATCH(request) {
       return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }
 
-    // Handle pause/resume — these act on SavedScenario, not queue items
+    // Handle pause/resume — these act on the borrower scenario, not queue items
     if (action === 'pause' || action === 'resume') {
       await sql`
-        UPDATE saved_scenarios
+        UPDATE scenarios
         SET alert_status = ${action === 'pause' ? 'paused' : 'active'}, updated_at = NOW()
-        WHERE id = ANY(${ids}) AND mlo_id = ${mloId} AND organization_id = ${orgId}
+        WHERE id = ANY(${ids}) AND owner_type = 'borrower' AND organization_id = ${orgId}
       `;
       return NextResponse.json({ success: true, action, count: ids.length });
     }
@@ -98,11 +123,13 @@ export async function PATCH(request) {
       try {
         const itemRows = await sql`
           SELECT saq.*,
-            ss.id AS scenario_ref_id, ss.scenario_data, ss.unsub_token,
+            s.id AS scenario_ref_id, s.unsub_token,
+            s.loan_purpose, s.loan_amount, s.property_value, s.loan_type,
+            s.fico, s.ltv, s.state, s.county, s.term,
             l.id AS lead_ref_id, l.name AS lead_name, l.email AS lead_email, l.view_token AS lead_view_token
           FROM scenario_alert_queue saq
-          LEFT JOIN saved_scenarios ss ON ss.id = saq.scenario_id
-          LEFT JOIN leads l ON l.id = ss.lead_id
+          LEFT JOIN scenarios s ON s.id = saq.scenario_id AND s.owner_type = 'borrower'
+          LEFT JOIN leads l ON l.id = s.lead_id
           WHERE saq.id = ${id}
           LIMIT 1
         `;
@@ -127,7 +154,6 @@ export async function PATCH(request) {
         }
 
         const firstName = item.lead_name?.split(' ')[0] || 'there';
-        const sd = item.scenario_data;
         const leadViewToken = item.lead_view_token || null;
         const viewLink = leadViewToken
           ? `${SITE_URL}/portal/my-rates?token=${leadViewToken}`
@@ -137,11 +163,11 @@ export async function PATCH(request) {
         const emailData = scenarioAlertTemplate({
           firstName,
           scenarioSummary: {
-            purpose: sd?.purpose,
-            loanAmount: sd?.loanAmount,
-            fico: sd?.fico,
-            ltv: sd?.ltv,
-            state: sd?.state,
+            purpose: item.loan_purpose,
+            loanAmount: item.loan_amount,
+            fico: item.fico,
+            ltv: item.ltv,
+            state: item.state,
           },
           currentRates: item.pricing_data || [],
           previousRates: item.previous_data || [],
@@ -165,11 +191,12 @@ export async function PATCH(request) {
           WHERE id = ${id}
         `;
 
-        // Update saved scenario with latest pricing
+        // Update scenario — bump last_sent_at, send_count (rates already tracked per-send)
         await sql`
-          UPDATE saved_scenarios
-          SET last_sent_at = NOW(), last_pricing_data = ${JSON.stringify(item.pricing_data)}::jsonb,
-            send_count = send_count + 1, updated_at = NOW()
+          UPDATE scenarios
+          SET last_sent_at = NOW(),
+              send_count = COALESCE(send_count, 0) + 1,
+              updated_at = NOW()
           WHERE id = ${item.scenario_ref_id} AND organization_id = ${orgId}
         `;
 

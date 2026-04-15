@@ -22,7 +22,7 @@ export async function POST(request) {
       SELECT l.id, l.name
       FROM leads l
       WHERE l.email = ${normalizedEmail}
-        AND EXISTS (SELECT 1 FROM saved_scenarios ss WHERE ss.lead_id = l.id)
+        AND EXISTS (SELECT 1 FROM scenarios s WHERE s.lead_id = l.id AND s.owner_type = 'borrower')
       LIMIT 1
     `;
 

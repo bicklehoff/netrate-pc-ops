@@ -14,7 +14,7 @@ export async function GET(request) {
 
   try {
     const rows = await sql`
-      SELECT id, alert_status FROM saved_scenarios WHERE unsub_token = ${token} LIMIT 1
+      SELECT id, alert_status FROM scenarios WHERE unsub_token = ${token} LIMIT 1
     `;
 
     if (!rows.length) {
@@ -33,7 +33,7 @@ export async function GET(request) {
     }
 
     await sql`
-      UPDATE saved_scenarios SET alert_status = 'unsubscribed', updated_at = NOW() WHERE id = ${scenario.id}
+      UPDATE scenarios SET alert_status = 'unsubscribed', updated_at = NOW() WHERE id = ${scenario.id}
     `;
 
     return new NextResponse(renderPage('Unsubscribed', 'You have been unsubscribed from rate alerts for this scenario. You will no longer receive updates.'), {
