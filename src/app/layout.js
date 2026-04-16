@@ -4,6 +4,16 @@ import Script from 'next/script';
 import CookieBanner from '@/components/CookieBanner';
 import GlassNav from '@/components/GlassNav';
 import ContactBar from '@/components/ContactBar';
+import {
+  COMPANY_NAME,
+  COMPANY_URL,
+  PRINCIPAL_OFFICER,
+  OFFICE_ADDRESS,
+  COMPANY_NMLS,
+  INDIVIDUAL_NMLS,
+  GBP_REVIEW_RATING,
+  GBP_REVIEW_COUNT,
+} from '@/lib/constants/company';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -17,65 +27,74 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata = {
-  title: 'NetRate Mortgage | Today\'s Rates, Zero Pitch',
-  description: 'See today\'s real mortgage rates with transparent pricing. No sales pitch, no commitment. NetRate Mortgage — Louisville, CO.',
-  keywords: 'mortgage rates, refinance, home loan, Colorado mortgage, NetRate Mortgage',
+  title: `${COMPANY_NAME} | Today\'s Rates, Zero Pitch`,
+  description: `See today\'s real mortgage rates with transparent pricing. No sales pitch, no commitment. ${COMPANY_NAME} — ${OFFICE_ADDRESS.city}, ${OFFICE_ADDRESS.state}.`,
+  keywords: `mortgage rates, refinance, home loan, Colorado mortgage, ${COMPANY_NAME}`,
 };
+
+// areaServed list for Organization + FinancialService. Names must match
+// LICENSED_STATES in src/lib/constants/company.js (those are the states
+// we can legally claim to serve).
+const AREA_SERVED = [
+  { '@type': 'State', name: 'Colorado' },
+  { '@type': 'State', name: 'California' },
+  { '@type': 'State', name: 'Texas' },
+  { '@type': 'State', name: 'Oregon' },
+];
 
 const jsonLd = {
   '@context': 'https://schema.org',
   '@graph': [
     {
       '@type': 'Organization',
-      '@id': 'https://netratemortgage.com/#organization',
-      name: 'NetRate Mortgage',
-      url: 'https://netratemortgage.com',
+      '@id': `${COMPANY_URL}/#organization`,
+      name: COMPANY_NAME,
+      url: COMPANY_URL,
       description:
         'Independent mortgage broker shopping across 11 wholesale lenders to find borrowers the best rate. Direct-to-consumer — no realtor referral fees, no bank markup.',
-      telephone: '303-444-5251',
-      email: 'david@netratemortgage.com',
+      telephone: PRINCIPAL_OFFICER.phone,
+      email: PRINCIPAL_OFFICER.email,
       address: {
         '@type': 'PostalAddress',
-        streetAddress: '357 South McCaslin Blvd., #200',
-        addressLocality: 'Louisville',
-        addressRegion: 'CO',
-        postalCode: '80027',
-        addressCountry: 'US',
+        streetAddress: OFFICE_ADDRESS.street,
+        addressLocality: OFFICE_ADDRESS.city,
+        addressRegion: OFFICE_ADDRESS.state,
+        postalCode: OFFICE_ADDRESS.zip,
+        addressCountry: OFFICE_ADDRESS.country,
       },
-      areaServed: [
-        { '@type': 'State', name: 'Colorado' },
-        { '@type': 'State', name: 'California' },
-        { '@type': 'State', name: 'Texas' },
-        { '@type': 'State', name: 'Oregon' },
-      ],
+      areaServed: AREA_SERVED,
       founder: {
         '@type': 'Person',
-        name: 'David Burson',
+        name: PRINCIPAL_OFFICER.name,
         jobTitle: 'Mortgage Broker',
       },
       foundingDate: '2013',
       numberOfEmployees: { '@type': 'QuantitativeValue', value: 2 },
+      // Google Business Profile reviews — see src/lib/constants/company.js.
+      // Values are stubbed today; GBP API sync is a planned follow-up.
+      aggregateRating: {
+        '@type': 'AggregateRating',
+        ratingValue: GBP_REVIEW_RATING,
+        reviewCount: GBP_REVIEW_COUNT,
+        bestRating: 5,
+        worstRating: 1,
+      },
     },
     {
       '@type': 'FinancialService',
-      '@id': 'https://netratemortgage.com/#financialservice',
-      name: 'NetRate Mortgage',
-      url: 'https://netratemortgage.com',
-      provider: { '@id': 'https://netratemortgage.com/#organization' },
+      '@id': `${COMPANY_URL}/#financialservice`,
+      name: COMPANY_NAME,
+      url: COMPANY_URL,
+      provider: { '@id': `${COMPANY_URL}/#organization` },
       description:
-        'Mortgage brokerage offering refinance and purchase loans. Conventional, FHA, VA, and jumbo. NMLS #641790 (individual) | #1111861 (company). Live rate tool with real wholesale pricing — no application required.',
+        `Mortgage brokerage offering refinance and purchase loans. Conventional, FHA, VA, and jumbo. NMLS #${INDIVIDUAL_NMLS} (individual) | #${COMPANY_NMLS} (company). Live rate tool with real wholesale pricing — no application required.`,
       serviceType: [
         'Mortgage Broker',
         'Refinance',
         'Home Purchase',
         'Cash-Out Refinance',
       ],
-      areaServed: [
-        { '@type': 'State', name: 'Colorado' },
-        { '@type': 'State', name: 'California' },
-        { '@type': 'State', name: 'Texas' },
-        { '@type': 'State', name: 'Oregon' },
-      ],
+      areaServed: AREA_SERVED,
       hasOfferCatalog: {
         '@type': 'OfferCatalog',
         name: 'Loan Programs',
@@ -89,10 +108,10 @@ const jsonLd = {
     },
     {
       '@type': 'WebSite',
-      '@id': 'https://netratemortgage.com/#website',
-      url: 'https://netratemortgage.com',
-      name: 'NetRate Mortgage',
-      publisher: { '@id': 'https://netratemortgage.com/#organization' },
+      '@id': `${COMPANY_URL}/#website`,
+      url: COMPANY_URL,
+      name: COMPANY_NAME,
+      publisher: { '@id': `${COMPANY_URL}/#organization` },
     },
   ],
 };
