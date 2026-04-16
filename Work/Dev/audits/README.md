@@ -1,8 +1,8 @@
 # Site Audit 2026 — Spec
 
-**Status:** Active · D1–D5 ✅ done (D3 + D5 re-verified tonight) · D6 🔄 · D7 ⏳ · D8 🆕 Pass 1 done
-**Current driver:** PC Dev (`silly-montalcini` worktree, session cmo0jf6dum0ktbler)
-**Last updated:** 2026-04-15 (v1.2 — post-D0-re-audit remediations)
+**Status:** Active · D1–D4 ✅ done (D0 re-audits pending for D1/D2/D4) · D5 🔄 half-done · D6 🔄 · D7 ⏳ · D8 🆕 Pass 1 done · D9 🆕 UAD spec drafted
+**Current driver:** PC Dev (`gallant-shannon` worktree)
+**Last updated:** 2026-04-16 (v1.3 — D9 UAD added, D5 downgraded, queue reshaped)
 **Canonical location:** this file
 
 > One audit. One spec. One driver at a time. Everything else defers to this doc.
@@ -127,12 +127,14 @@ Ownership checks, foreign key enforcement, transactional boundaries, PII handlin
 
 - **Shipped:** #55 (data integrity — 7 issues patched), #56 (hide product names from public rate tool — show only in debug mode).
 
-### D5 · Org scoping — ✅ done (re-verified 2026-04-15)
+### D5 · Org scoping — 🔄 half-done (first half re-verified, second half unshipped)
 
-Multi-tenant readiness. Adding `organization_id` to core tables, scoping every MLO API route by org, shared `requireMloSession()` helper.
+Multi-tenant readiness. Two halves: (1) organization_id on existing tables + route scoping, (2) unified identity model (users/roles/loan_users → now superseded by D9 UAD).
 
-- **Shipped:** #58 (Organization schema, org_id on 13 core tables), #59 (org-aware auth, organizationId in MLO session), #60 (scope all 42 MLO API routes by organization_id).
-- **D0 verification (2026-04-15):** re-audit at [`D0-VERIFICATION-D5-ORG-SCOPING-2026-04-15.md`](./D0-VERIFICATION-D5-ORG-SCOPING-2026-04-15.md). Full route inventory (44 routes checked). Found one critical regression: `GET /api/portal/mlo/scenario-alerts` was missing the org filter on its scenarios JOIN, leaking cross-org scenario-alert queue items including joined borrower PII. Introduced in PR #68 after #60's sweep had already run. Resolved in PR #76 — both GET default view and PATCH approve/decline inner SELECT upgraded to `INNER JOIN scenarios s ... AND s.organization_id = ${orgId}`. All other 43 routes verified clean.
+- **First half — shipped and verified:**
+  - #58 (Organization schema, org_id on 13 core tables), #59 (org-aware auth, organizationId in MLO session), #60 (scope all 42 MLO API routes by organization_id).
+  - D0 verification (2026-04-15): re-audit at [`D0-VERIFICATION-D5-ORG-SCOPING-2026-04-15.md`](./D0-VERIFICATION-D5-ORG-SCOPING-2026-04-15.md). Full route inventory (44 routes checked). Found one critical regression: `GET /api/portal/mlo/scenario-alerts` was missing the org filter on its scenarios JOIN, leaking cross-org scenario-alert queue items including joined borrower PII. Introduced in PR #68 after #60's sweep had already run. Resolved in PR #76 — both GET default view and PATCH approve/decline inner SELECT upgraded to `INNER JOIN scenarios s ... AND s.organization_id = ${orgId}`. All other 43 routes verified clean.
+- **Second half — superseded by D9:** Mac's UAB directive (unified users + roles + loan_users, session cmo04p434kxp16tv7) was never actioned by PC. This work is now absorbed into D9 (UAD), which expands the scope from identity-only to the full data architecture (contacts, staff, deals, service providers, pricing unification). D5 will be marked ✅ when D9 Layer 1 ships with org_id on all new tables.
 
 ### D6 · Unified pricing / scenarios — 🔄 in progress
 
@@ -157,8 +159,8 @@ Collapse the separate borrower_quotes, saved_scenarios, and MLO quote storage in
 
 Phase 6 of the original Apr 14 plan. Four PRs (16–19) refreshing pipeline views, lead detail, quote builder, and dashboard cards to match the new design system.
 
-- **Blocked on:** D8 inventory passes covering the MLO portal surface (dim 8 pass #6). Executing D7 PRs before that pass means some D7 changes will be re-touched by D8 remediations. Better to catalog first, remediate once.
-- **Original scope:** PRs 16–19 per portal-rebuild backlog. Specs to be confirmed once D8 pass 6 completes.
+- **Blocked on:** D9 Layer 1 (new Contact/Deal schema) + D8 Pass 6 (MLO portal inventory). The portal redesign should build on the new D9 schema, not the current Borrower/Loan model. Executing D7 PRs before D9 Layer 1 means re-doing the work on a different data model.
+- **Original scope:** PRs 16–19 per portal-rebuild backlog. Specs to be confirmed once D9 Layer 1 ships and D8 Pass 6 completes.
 
 ### D8 · Static data / stale-by-deploy — 🆕 inventory phase
 
@@ -180,6 +182,31 @@ Phase 6 of the original Apr 14 plan. Four PRs (16–19) refreshing pipeline view
 
 Passes 2–8 may run in parallel (see §8). Inventory work does not deploy.
 
+### D9 · Unified Architecture Directive (UAD) — 🆕 spec drafted
+
+**Added 2026-04-16.** The foundational data architecture redesign for all front-of-house systems. Replaces the fragmented identity model (separate borrowers, mlos, contacts, leads tables) with a unified Contact + Deal + Scenario architecture. Absorbs the second half of D5 (UAB identity model) and expands scope to include pricing unification, composable quotes, reference data migration, and application module design.
+
+- **Spec:** [`UAD-SPEC.md`](../UAD-SPEC.md) — full architecture decisions, data model, lifecycle flows, build layers.
+- **MCP decision:** UAB logged as decision `cmo1igp2enjnw46ef` (searchable: "uab", "unified-architecture-baseline").
+
+**Sub-dimensions:**
+
+| ID | Scope | Status |
+|----|-------|--------|
+| D9a · Identity model | Lead → Contact → Deal lifecycle, contact roles (borrower/realtor), staff separation, service provider accounts + contacts | 📋 spec drafted |
+| D9b · Pricing unification | One API entry point, product router, retire homepage-db.js parallel path, all surfaces use same engine | 📋 spec drafted |
+| D9c · Scenario/quote model | Scenarios link to Contact + Deal, composable calc modules, Layer 3 Lite (shareable quote links), borrower scenario save | 📋 spec drafted |
+| D9d · Reference data migration | County limits, closing costs, PLF tables, comp caps → DB tables. D8 inventory findings feed this. | ⏳ waiting on D8 passes |
+| D9e · Application modules | Clean segment model for deal data (borrower identity, employment, assets, property, loan, co-borrower, declarations), clone deal, Application LITE | 📋 spec drafted |
+
+**Build order:** Layer 1 (lead intake + pipeline) first, then stack. See UAD-SPEC.md §10 for full layer breakdown.
+
+**Relationships:**
+- D5 second half (UAB) → absorbed into D9a
+- D8 remediation findings → feed D9d (reference data migration)
+- D7 (MLO Portal UX) → blocked on D9 Layer 1 (portal should build on new schema)
+- D6 (unified pricing) → extended by D9b (unified entry point) and D9c (composable quotes)
+
 ## 7. Queue
 
 Ordered work list. Inventory passes and remediation PRs interleave by default (see §2b). Items at the same indent level may run in parallel per the multi-agent rules (§8).
@@ -192,35 +219,39 @@ Ordered work list. Inventory passes and remediation PRs interleave by default (s
 4. ✅ D3 remediation — homepage-db EMPTY_ADJ fallback (PR #77). Partial fix: closes the silent cascade, but homepage still shows a different par rate than `/api/pricing`. Residual parked to D8 Pass 2.
 5. ❌ D1 / D2 / D4 D0 re-audits — agents hit tool-use budget mid-investigation and terminated without final reports. Need to re-spawn with narrower prompts.
 
-### Next (any session)
+### Next — D9 UAD + D8 inventory (parallel tracks)
 
-1. **Re-spawn D0 re-audits for D1, D2, D4** — narrower per-dimension prompts so each fits in the researcher agent's tool budget. Output: three more `D0-VERIFICATION-*.md` docs alongside D3 and D5's.
-2. **D8 inventory Pass 2 · Homepage + UI components** — now carries three seed findings (see §6 D8). Root-cause candidate: retire `homepage-db.js`'s parallel pricing path and have it call `priceScenario()` like `/api/pricing` does.
-3. **D8 inventory Passes 3–4** — may run in parallel with Pass 2 (different surfaces):
+1. ✅ **D9 UAD spec drafted** — [`UAD-SPEC.md`](../UAD-SPEC.md). 16 architecture decisions, full data model, build layers defined.
+2. **D0 re-audits for D1, D2, D4** — narrower per-dimension prompts so each fits in the researcher agent's tool budget. Output: three more `D0-VERIFICATION-*.md` docs alongside D3 and D5's.
+3. **D8 inventory Passes 2–4** — may run in parallel (different surfaces):
+   - Pass 2 · Homepage + UI components (3 seed findings, see §6 D8)
    - Pass 3 · Marketing pages
    - Pass 4 · Schema.org + SEO markup
-   - Ship-immediately remediations land as they surface; batch candidates get queued.
-
-### Next (still interleaving)
-
-5. **D8 inventory Passes 5–8** — may run in parallel:
-   - Pass 5 · Borrower portal
-   - Pass 6 · MLO portal
+4. **D8 inventory Passes 5–8** — may run in parallel:
+   - Pass 5 · Borrower portal + application flow
+   - Pass 6 · MLO portal (blocks D7)
    - Pass 7 · Scheduled tasks / cron
    - Pass 8 · Reference data files
-   - Remediations ship as they qualify for the ship-immediately bucket.
+   - Ship-immediately remediations land as they surface; batch candidates get queued.
 
-### Batched remediations (after all D8 passes cataloged)
+### After D8 inventory converges
 
-6. **Schema design round** — design `ref_fha_ufmip`, `ref_county_loan_limits`, `ref_comp_defaults` (if needed) against the full set of D8 findings, not just the pricer's. Ship migrations + code wiring as a small number of PRs.
-7. **Single-source rule consolidation** — par-picker consumers, any other duplicated business rules found across passes. Refactor all consumers to use the single source.
+5. **D8 + D9d remediation — reference data migration** — design `ref_fha_ufmip`, `ref_county_loan_limits`, `ref_closing_cost_defaults`, etc. against the full set of D8 findings. D9d absorbs the schema design round.
+6. **D8 remediation — single-source rule consolidation** — par-picker consumers, duplicated business rules found across passes.
+7. **D9b remediation — pricing unification** — retire `homepage-db.js` parallel path, unified pricing entry point with product router.
 
-### After D8 converges
+### D9 Layer 1 build (lead intake — primary goal)
 
-8. **D7 — MLO Portal UX (Phase 6, PRs 16–19)** — now informed by D8 Pass 6 findings.
-9. **D6 wrap-up** — PR 14 (drop old tables, after soak ends ~2026-04-29), Core Non-QM LLPA parser.
-10. **D2 secondary pass** — 12 residual row.camelCase files.
-11. **D1 follow-up** — security audit (plaintext secrets, API key rotation).
+8. **D9 Layer 1** — contacts + staff + deals + deal_participants tables. Lead cleanup, conversion flow, MLO pipeline view. This is what the Claw campaign relays need (backlog #78).
+9. **D9 scenarios update** — replace denormalized borrower strings with contact_id FK. Service provider directory tables.
+
+### After D9 Layer 1
+
+10. **D7 — MLO Portal UX** — redesigned on the new Contact/Deal model. Informed by D8 Pass 6 findings.
+11. **D6 wrap-up** — PR 14 (drop old tables, soak ends ~2026-04-29), Core Non-QM LLPA parser.
+12. **D9 Layers 2–4** — quote composer, borrower portal rebuild, strike rates, lifecycle marketing.
+13. **D2 secondary pass** — 12 residual row.camelCase files.
+14. **D1 follow-up** — security audit (plaintext secrets, API key rotation).
 
 ### Done criteria per item
 
@@ -280,7 +311,7 @@ If any active lender has a null in those columns, the corresponding fallback is 
 
 The audit is declared complete when:
 
-1. All eight dimensions show status ✅ in §6.
+1. All nine dimensions show status ✅ in §6.
 2. Every D8 inventory pass has either (a) no outstanding findings or (b) an explicit "intentionally retained" annotation with rationale.
 3. No borrower-facing surface silently falls back to a stale hardcoded number without an error path that alerts ops.
 4. No business rule appears inline in more than one file (single-source principle).
@@ -294,10 +325,12 @@ After completion, this doc moves to archive status and a fresh `SITE-AUDIT-2027.
 - **2026-04-15 (v1)** — initial spec filed. D1–D5 marked ✅ based on PRs #45–#60 shipped history. D6 marked 🔄 with 3 items pending. D7 marked ⏳. D8 marked 🆕 with Pass 1 (pricer) complete, Passes 2–8 queued. Pricer inventory folded in as cross-references in §9 and filed as sibling doc.
 - **2026-04-15 (v1.1)** — clarified that remediation is part of the audit (not a separate phase), added §2b "Interleave vs batch" defaulting to interleave, reshaped the queue (§7) to interleave inventory + ship-immediately remediations with an explicit batched-remediation block for cross-surface schema design.
 - **2026-04-15 (v1.2)** — post-D0-re-audit update. Ran D0 verification re-audits (§6 header distinguishes claimed-done from re-verified-done). D3 and D5 fully re-audited; D1/D2/D4 agents terminated mid-investigation and will be re-spawned. Two ship-immediately remediations landed: PR #76 (D5 cross-org scenario-alerts leak) and PR #77 (D3 homepage EMPTY_ADJ fallback + shared `empty-adj.js` module). D3 remediation was partial: closed the silent hardcoded-fallback cascade, but homepage-db still diverges from `/api/pricing` for the DEFAULT_SCENARIO (5.875% vs 5.990%). Divergence parked as a seed finding for D8 Pass 2 along with the existing page.js fallback and DSCR-widget inline-picker findings. Queue in §7 reshaped to reflect actual tonight-state and what's next.
+- **2026-04-16 (v1.3)** — D9 (UAD) added as new dimension. Full architecture discussion with David produced 16 architecture decisions covering identity lifecycle (Lead → Contact → Deal), pricing unification, composable quote model, application modules, service provider directory, marketing lifecycle, and portal access. D5 downgraded from ✅ to 🔄 half-done — first half (org_id on existing tables) verified, second half (unified identity model) absorbed into D9. D7 blocked-on updated to include D9 Layer 1 dependency. Queue reshaped: D9 spec + D8 inventory passes are parallel tracks, D9 Layer 1 build (lead intake) is the primary goal, D7 redesigns on top of D9 schema. UAD spec filed at `Work/Dev/UAD-SPEC.md`. UAB MCP decision (`cmo1igp2enjnw46ef`) superseded by broader UAD scope.
 
 ## 12. Appendix — where to find things
 
 - This spec: `Work/Dev/audits/README.md`
+- **UAD spec: `Work/Dev/UAD-SPEC.md`** — unified architecture directive (D9)
 - Pricer inventory (Pass 1): `Work/Dev/audits/PRICER-STATIC-DATA-INVENTORY-2026-04-15.md`
 - Future inventory passes: same folder, dated filenames `<SURFACE>-INVENTORY-<YYYY-MM-DD>.md`
 - PR history: `git log main --oneline` — cross-reference with §6 for dimension mapping
