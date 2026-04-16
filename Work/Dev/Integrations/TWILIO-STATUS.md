@@ -1,15 +1,107 @@
 # Twilio Integration — Status Tracker
 
-**Last Updated:** 2026-04-02
-**Status:** NEW BRAND + NEW CAMPAIGN UNDER REVIEW (Attempt 9)
+**Last Updated:** 2026-04-16 (Port day — routing reconfigured, A2P attachment fixed)
+
+---
+
+## CURRENT STATE (2026-04-16) — Ported Numbers Live, SMS Pending Carrier
+
+### Port status
+Port request submitted 2026-04-09 (PortRequestOnBoard-ACc65dbcde3c13ff402fcf2b68903921d0-1775762155) for Zoho Voice → Twilio on two numbers.
+
+- **Voice port: COMPLETE** — verified via Twilio call log (inbound call from +17204998384 landed on +13034445251 at 2026-04-16 17:29:34Z and executed the TwiML Bin).
+- **SMS port: NOT COMPLETE** — Twilio never saw the test inbound SMS. Carrier SMS routing still at old provider. Normal 24-72h lag after voice cutover.
+
+### Phone number inventory (2026-04-16)
+| Number | PN SID | Role | Voice URL | SMS URL | Messaging Svc |
+|---|---|---|---|---|---|
+| +13034445251 | PNacee4b99c76daebb769cc04a54c326ff | David's business line (ported) | TwiML Bin #1 | TwiML Bin #2 | MG9a4cff... |
+| +17205061311 | PN0f4058c84e1edb4bf1c9442fb0b5d6ce | Jamie's line (ported) | TwiML Bin #1 | TwiML Bin #2 | MG9a4cff... |
+| +17205731236 | PN58ea6d5dc83f2722fcfb591a2feb9dba | NetRate Dialer Line | site dialer | site dialer | MG9a4cff... |
+
+### TwiML Bins created 2026-04-16
+| # | SID | Purpose | URL |
+|---|---|---|---|
+| 1 | EH0e940a80c4ba202f049dc03f83c3eabc | `Fwd-Voice-to-David-Cell` — voice forward | https://handler.twilio.com/twiml/EH0e940a80c4ba202f049dc03f83c3eabc |
+| 2 | EH4079dfa7a980a097203413b2d89079ce | `SMS-AutoReply-Forward-to-David` — SMS auto-reply + forward to cell | https://handler.twilio.com/twiml/EH4079dfa7a980a097203413b2d89079ce |
+
+**Forward destination:** David's cell `+17204998384` (hard-coded in both Bins).
+
+**Why TwiML Bins instead of site webhooks:** Site dialer is under audit/restructure (Site Audit 2026 D9 + portal rebuild). We moved ported numbers off site code so changes to the dialer can't break David/Jamie call routing.
+
+**Bin #1 TwiML:**
+```xml
+<Response>
+  <Dial timeout="25" answerOnBridge="true">
+    <Number>+17204998384</Number>
+  </Dial>
+</Response>
+```
+
+**Bin #2 TwiML:**
+```xml
+<Response>
+  <Message to="+17204998384">From {{From}} to {{To}}: {{Body}}</Message>
+  <Message>Thanks for texting NetRate Mortgage. We got your message and will respond shortly. For immediate help please call.</Message>
+</Response>
+```
+
+### A2P 10DLC — ported numbers reassigned
+Port auto-assigned both ported numbers to the **dead** messaging service `MG0eb6cca59bd54081d648905dbe9ce469` (old Locus brand — brand + campaign were deleted 2026-04-02). Outbound SMS returned **error 30034 "message from unregistered number"**.
+
+**Fix applied 2026-04-16:**
+1. DELETE `/Services/MG0eb6cca.../PhoneNumbers/{pn}` on both ported numbers
+2. POST `/Services/MG9a4cff.../PhoneNumbers` with PhoneNumberSid for both
+
+After move, outbound SMS still returned 30034 — this is **A2P propagation lag at the carrier level**. Expected to clear within minutes to hours per Twilio support docs. If it still returns 30034 after 24h, escalate to Twilio support.
+
+**Current A2P state (verified 2026-04-16):**
+- Active messaging service: `MG9a4cff84c48e6540c709ff5e59f12e39` ("Low Volume Mixed A2P Messaging Service")
+  - `use_inbound_webhook_on_number: true` — service defers inbound to each number's own SmsUrl → our TwiML Bin handles inbound when port completes
+  - Phones: +17205731236, +13034445251, +17205061311
+- Campaign: `QE2c6890da8086d771620e9b13fadeba0b` — status **VERIFIED** ✓
+- Brand: `BN9b673f9a4e57fd7fd349d5edc2418e84` — NetRate Mortgage LLC, VERIFIED
+- Use case: LOW_VOLUME (2000 msg/day cap — plenty of headroom)
+
+> Note: `TWILIO_STATUS.md` line 7-8 called the campaign SID `CM7a8462a7c33e59df8a3ea3b610e0ff4a` but the actual A2P campaign SID on this messaging service per REST API is `QE2c6890da8086d771620e9b13fadeba0b`. The `QE` prefix is the Twilio Compliance Usa2p resource SID (internal); `CM` is the TCR campaign ID reference. Both refer to the same campaign.
+
+### What to test next session (2026-04-17+)
+Run these to confirm carrier-side changes landed:
+
+```bash
+# 1. Retest outbound SMS from Twilio (A2P propagation check)
+#    Expected once propagation completes: status=delivered, no error 30034
+cd /d/PROJECTS/netrate-pc-ops && set -a && . ./.env && set +a && node -e "
+const sid = process.env.TWILIO_ACCOUNT_SID, token = process.env.TWILIO_AUTH_TOKEN;
+const auth = 'Basic ' + Buffer.from(sid + ':' + token).toString('base64');
+fetch('https://api.twilio.com/2010-04-01/Accounts/' + sid + '/Messages.json', {
+  method: 'POST',
+  headers: { Authorization: auth, 'Content-Type': 'application/x-www-form-urlencoded' },
+  body: new URLSearchParams({ From: '+13034445251', To: '+17204998384', Body: 'Retest after A2P propagation' }).toString()
+}).then(r=>r.json()).then(d=>console.log(JSON.stringify(d,null,2)));
+"
+
+# 2. David texts 303-444-5251 from his cell — check Twilio message log
+#    Expected: inbound appears in log, auto-reply + forward fire
+```
+
+If both pass → SMS is fully live on Twilio → safe to cancel Zoho Voice.
+
+### Zoho Voice cancellation — DEFERRED
+Do NOT cancel Zoho Voice yet. Until SMS port completes, inbound texts to 303-444-5251 / 720-506-1311 are still landing at Zoho. Cancelling early would lose client SMS. Re-evaluate after SMS port is confirmed on Twilio.
+
+**Zoho Voice account (for reference):** 17205061311, passcode 0000. Login `david@netratemortgage.com` per recent memory (was david@cmglending.com earlier).
+
+---
+
+## HISTORICAL: NEW BRAND + NEW CAMPAIGN UNDER REVIEW (Attempt 9)
 - Old brand "Locus Companies, LLC" (BN833ac569c1da950777cb4f5eedf3cfc2) deleted. Old campaign (CMd3230a74143a2db28fcf459a27de0604) deleted.
 - New brand: **NetRate Mortgage LLC** — Brand SID: BN9b673f9a4e57fd7fd349d5edc2418e84 | TCR ID: B9DIMGN | Status: Registered
-- New campaign: Campaign SID: CM7a8462a7c33e59df8a3ea3b610e0ff4a | Status: In progress (under review)
-- New messaging service: MG9a4cff84c48e6540c709ff5e59f12e39 (⚠️ different from old MG0eb6cca59bd54081d648905dbe9ce469 — verify phone number is linked and .env is updated)
+- New campaign: Campaign SID: CM7a8462a7c33e59df8a3ea3b610e0ff4a | Status: VERIFIED (as of 2026-04-16)
+- New messaging service: MG9a4cff84c48e6540c709ff5e59f12e39
 - Trust Hub A2P Bundle SID: BUfb70ed0b042c6d1117a4bf33f7003dff
 - Customer Profile SID: BUdcf0050723a1627790403f09f5aec130 (unchanged)
 - Cost: $4.50 brand + $15 campaign vetting = $19.50
-**Last Checked:** 2026-04-02 — Campaign submitted, under review. May take 2-3 weeks.
 
 ---
 
