@@ -111,7 +111,7 @@ export default function ServicesPage() {
           </div>
           <div className="bg-white border border-gray-200 rounded-lg p-4">
             <h3 className="font-semibold text-gray-900 mb-1">Texas</h3>
-            <p className="text-sm text-gray-600">Active and growing. LLC registration in progress for 2026.</p>
+            <p className="text-sm text-gray-600">Licensed with the Texas Department of Savings and Mortgage Lending. Active and growing.</p>
           </div>
           <div className="bg-white border border-gray-200 rounded-lg p-4">
             <h3 className="font-semibold text-gray-900 mb-1">Oregon</h3>

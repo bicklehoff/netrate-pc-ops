@@ -1,7 +1,20 @@
+import {
+  COMPANY_NAME,
+  COMPANY_LEGAL_NAME,
+  COMPANY_NMLS,
+  INDIVIDUAL_NMLS,
+  COMPANY_NMLS_URL,
+  INDIVIDUAL_NMLS_URL,
+  OFFICE_ADDRESS_LINE,
+  PRINCIPAL_OFFICER,
+  COMPANY_URL,
+  STATE_LICENSES,
+} from '@/lib/constants/company';
+
 export const metadata = {
-  title: 'Licensing | NetRate Mortgage',
-  description: 'State licensing information for NetRate Mortgage LLC. NMLS #1111861.',
-  alternates: { canonical: 'https://netratemortgage.com/licensing' },
+  title: `Licensing | ${COMPANY_NAME}`,
+  description: `State licensing information for ${COMPANY_LEGAL_NAME}. NMLS #${COMPANY_NMLS}.`,
+  alternates: { canonical: `${COMPANY_URL}/licensing` },
 };
 
 export default function LicensingPage() {
@@ -12,36 +25,37 @@ export default function LicensingPage() {
       <div className="prose prose-sm prose-gray max-w-none space-y-6 text-gray-600 leading-relaxed">
         <h2 className="text-lg font-semibold text-gray-900">State Licenses</h2>
         <ul className="list-none pl-0 space-y-2">
+          <li><strong>California</strong> &mdash; DFPI {STATE_LICENSES.CA.licenseType} License #{STATE_LICENSES.CA.fileNumber} (California Financing Law)</li>
           <li><strong>Colorado</strong> &mdash; Mortgage Company Registration</li>
-          <li><strong>Oregon</strong> &mdash; Mortgage Lending License #1111861</li>
-          <li><strong>Texas</strong> &mdash; Savings and Mortgage Lending #1111861</li>
+          <li><strong>Oregon</strong> &mdash; Mortgage Lending License #{STATE_LICENSES.OR.licenseNumber}</li>
+          <li><strong>Texas</strong> &mdash; Savings and Mortgage Lending #{STATE_LICENSES.TX.licenseNumber}</li>
         </ul>
 
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-5 mt-6">
           <p className="text-sm text-gray-600">
             <strong className="text-gray-900">Mailing / Registered Address:</strong><br />
-            357 South McCaslin Blvd., #200, Louisville, CO 80027
+            {OFFICE_ADDRESS_LINE}
           </p>
           <p className="text-sm text-gray-600 mt-3">
             <strong className="text-gray-900">Company NMLS:</strong>{' '}
             <a
-              href="https://nmlsconsumeraccess.org/EntityDetails.aspx/COMPANY/1111861"
+              href={COMPANY_NMLS_URL}
               target="_blank"
               rel="noopener noreferrer"
               className="text-brand hover:text-brand-dark"
             >
-              #1111861
+              #{COMPANY_NMLS}
             </a>
           </p>
           <p className="text-sm text-gray-600 mt-1">
-            <strong className="text-gray-900">Individual NMLS (David Burson):</strong>{' '}
+            <strong className="text-gray-900">Individual NMLS ({PRINCIPAL_OFFICER.name}):</strong>{' '}
             <a
-              href="https://nmlsconsumeraccess.org/EntityDetails.aspx/INDIVIDUAL/641790"
+              href={INDIVIDUAL_NMLS_URL}
               target="_blank"
               rel="noopener noreferrer"
               className="text-brand hover:text-brand-dark"
             >
-              #641790
+              #{INDIVIDUAL_NMLS}
             </a>
           </p>
         </div>
@@ -50,9 +64,20 @@ export default function LicensingPage() {
 
         <div className="space-y-5">
           <div>
+            <h3 className="text-sm font-semibold text-gray-900 mb-1">California</h3>
+            <p className="text-sm">
+              {COMPANY_LEGAL_NAME} is licensed by the California {STATE_LICENSES.CA.agency} under the{' '}
+              {STATE_LICENSES.CA.law}. {STATE_LICENSES.CA.licenseType} License #{STATE_LICENSES.CA.fileNumber}.
+              Loans made or arranged pursuant to a California {STATE_LICENSES.CA.law} license. To file a
+              complaint or for more information, visit{' '}
+              <a href={STATE_LICENSES.CA.complaintUrl} target="_blank" rel="noopener noreferrer" className="text-brand hover:text-brand-dark">dfpi.ca.gov</a>{' '}
+              or call {STATE_LICENSES.CA.complaintPhone}.
+            </p>
+          </div>
+          <div>
             <h3 className="text-sm font-semibold text-gray-900 mb-1">Colorado</h3>
             <p className="text-sm">
-              NetRate Mortgage LLC is regulated by the Colorado Division of Real Estate, Department of
+              {COMPANY_LEGAL_NAME} is regulated by the Colorado Division of Real Estate, Department of
               Regulatory Agencies (DORA). To file a complaint or for more information, visit{' '}
               <a href="https://dora.colorado.gov/mortgage" target="_blank" rel="noopener noreferrer" className="text-brand hover:text-brand-dark">dora.colorado.gov/mortgage</a>{' '}
               or call 303-894-2166.
@@ -61,9 +86,9 @@ export default function LicensingPage() {
           <div>
             <h3 className="text-sm font-semibold text-gray-900 mb-1">Oregon</h3>
             <p className="text-sm">
-              NetRate Mortgage LLC is licensed as a Mortgage Lender in Oregon (License #ML-1111861) by the
-              Oregon Division of Financial Regulation. NetRate Mortgage LLC acts as a mortgage broker &mdash;
-              loans are funded by third-party wholesale lenders, not by NetRate Mortgage LLC directly.
+              {COMPANY_LEGAL_NAME} is licensed as a Mortgage Lender in Oregon (License #ML-{COMPANY_NMLS}) by the
+              Oregon Division of Financial Regulation. {COMPANY_LEGAL_NAME} acts as a mortgage broker &mdash;
+              loans are funded by third-party wholesale lenders, not by {COMPANY_LEGAL_NAME} directly.
               For more information, visit{' '}
               <a href="https://dfr.oregon.gov" target="_blank" rel="noopener noreferrer" className="text-brand hover:text-brand-dark">dfr.oregon.gov</a>{' '}
               or call 888-877-4894.
@@ -72,7 +97,7 @@ export default function LicensingPage() {
           <div>
             <h3 className="text-sm font-semibold text-gray-900 mb-1">Texas</h3>
             <p className="text-sm">
-              NetRate Mortgage LLC is licensed by the Texas Department of Savings and Mortgage Lending
+              {COMPANY_LEGAL_NAME} is licensed by the Texas Department of Savings and Mortgage Lending
               (SML). CONSUMERS WISHING TO FILE A COMPLAINT AGAINST A COMPANY OR A RESIDENTIAL MORTGAGE
               LOAN ORIGINATOR SHOULD COMPLETE AND SEND A COMPLAINT FORM TO THE TEXAS DEPARTMENT OF SAVINGS
               AND MORTGAGE LENDING, 2601 NORTH LAMAR, SUITE 201, AUSTIN, TEXAS 78705. COMPLAINT FORMS AND
@@ -90,8 +115,8 @@ export default function LicensingPage() {
 
         <h2 className="text-lg font-semibold text-gray-900 mt-8">Equal Housing Opportunity</h2>
         <p>
-          NetRate Mortgage LLC is an Equal Housing Opportunity company. In accordance
-          with the Equal Housing Opportunity Act, NetRate Mortgage does not discriminate against any applicant
+          {COMPANY_LEGAL_NAME} is an Equal Housing Opportunity company. In accordance
+          with the Equal Housing Opportunity Act, {COMPANY_NAME} does not discriminate against any applicant
           on the basis of race, color, religion, creed, national origin, ancestry, sex, marital status,
           familial status (number and age of children), sexual orientation, age (provided that the applicant
           has the capacity to enter into a binding agreement), medical history, disability, physical condition,

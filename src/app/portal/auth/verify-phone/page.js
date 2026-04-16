@@ -5,6 +5,12 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import {
+  SMS_OTP_LENGTH,
+  SMS_CODE_EXPIRY_MINUTES,
+  SMS_ATTEMPT_LIMIT,
+  SMS_LOCKOUT_MINUTES,
+} from '@/lib/constants/auth';
 
 export default function VerifyPhonePage() {
   const router = useRouter();
@@ -62,7 +68,7 @@ export default function VerifyPhonePage() {
         Verify your identity
       </h1>
       <p className="text-gray-500 mb-8 text-center">
-        We sent a 6-digit code to your phone number on file.
+        We sent a {SMS_OTP_LENGTH}-digit code to your phone number on file.
         Enter it below to access your loan dashboard.
       </p>
 
@@ -109,7 +115,7 @@ export default function VerifyPhonePage() {
         </button>
       </p>
       <p className="text-center text-gray-400 text-xs mt-2">
-        Code expires after 10 minutes. 3 incorrect attempts will lock for 15 minutes.
+        Code expires after {SMS_CODE_EXPIRY_MINUTES} minutes. {SMS_ATTEMPT_LIMIT} incorrect attempts will lock for {SMS_LOCKOUT_MINUTES} minutes.
       </p>
     </div>
   );

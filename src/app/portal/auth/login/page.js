@@ -5,6 +5,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { MAGIC_LINK_EXPIRY_MINUTES } from '@/lib/constants/auth';
 
 function LoginContent() {
   const searchParams = useSearchParams();
@@ -62,7 +63,7 @@ function LoginContent() {
           Click the link to access your loan dashboard.
         </p>
         <p className="text-gray-400 text-sm mt-4">
-          The link expires in 15 minutes. Check your spam folder if you don&apos;t see it.
+          The link expires in {MAGIC_LINK_EXPIRY_MINUTES} minutes. Check your spam folder if you don&apos;t see it.
         </p>
       </div>
     );
