@@ -192,9 +192,9 @@ export async function PATCH(request) {
 
     if (!loanIds || !Array.isArray(loanIds) || loanIds.length === 0) {
       return NextResponse.json({ error: 'loanIds array is required' }, { status: 400 });
+    }
     if (loanIds.length > 200) {
       return NextResponse.json({ error: 'Maximum 200 loans per batch operation' }, { status: 400 });
-    }
     }
     if (!updates || typeof updates !== 'object') {
       return NextResponse.json({ error: 'updates object is required' }, { status: 400 });

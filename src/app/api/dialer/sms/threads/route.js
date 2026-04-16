@@ -3,25 +3,24 @@
 // Returns threads sorted by most recent message, with contact info and last message preview
 // Auth: MLO session required
 
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import sql from '@/lib/db';
+import { requireMloSession, unauthorizedResponse } from '@/lib/require-mlo-session';
 
 export async function GET(req) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return Response.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const { session, orgId } = await requireMloSession();
+  if (!session) return unauthorizedResponse();
 
   const { searchParams } = new URL(req.url);
   const q = searchParams.get('q') || '';
 
   try {
     // Get recent SMS messages with contact info — limit to prevent full table scan
+    // Scoped to the caller's organization to prevent cross-org PII leak.
     const messages = await sql`
       SELECT sm.*, c.id AS c_id, c.first_name AS c_first_name, c.last_name AS c_last_name, c.phone AS c_phone
       FROM sms_messages sm
       LEFT JOIN contacts c ON sm.contact_id = c.id
+      WHERE sm.organization_id = ${orgId}
       ORDER BY sm.sent_at DESC
       LIMIT 5000
     `;
