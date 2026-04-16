@@ -1,8 +1,8 @@
 # Site Audit 2026 — Spec
 
-**Status:** Active · D1–D4 ✅ done (D0 re-audits pending for D1/D2/D4) · D5 🔄 half-done · D6 🔄 · D7 ⏳ · D8 🆕 Pass 1 done · D9 🆕 UAD spec drafted
-**Current driver:** PC Dev (`gallant-shannon` worktree)
-**Last updated:** 2026-04-16 (v1.3 — D9 UAD added, D5 downgraded, queue reshaped)
+**Status:** Active · D1 ✅ re-verified (residuals batched) · D2 ✅ fully closed · D3 ✅ re-verified · D4 ✅ re-verified (PR #80 shipped 2 critical findings) · D5 🔄 half-done · D6 🔄 · D7 ⏳ · D8 🆕 Passes 1/2/6/7/8 done, 3/4/5 queued · D9 🆕 UAD spec drafted
+**Current driver:** PC Dev (`nice-beaver` worktree)
+**Last updated:** 2026-04-16 (v1.4 — batch 1 D8 inventory complete, §2c re-architecture deference principle added, D1/D2 D0 re-audits closed)
 **Canonical location:** this file
 
 > One audit. One spec. One driver at a time. Everything else defers to this doc.
@@ -51,6 +51,32 @@ The audit started April 14, 2026 as a comprehensive every-line-of-code pass on t
 
 In practice most D8 findings ship immediately. The batch candidates are called out explicitly in the queue (§7) and cross-reference table (§9).
 
+## 2c. Re-architecture deference
+
+Added 2026-04-16 after batch 1 D8 inventory surfaced mostly findings that D9 (UAD) will naturally absorb. This rule constrains §2b.
+
+**Default: defer to D9 remediation when D9 (UAD) will naturally absorb a finding.**
+
+Write the finding into its inventory doc with its proposed D9d table or D9-layer mapping. Do not patch hardcoded values that D9d will delete and replace with DB reads — the patch is throwaway work, and a few weeks of "continued wrongness" is usually cheaper than duplicate effort.
+
+**Ship immediately anyway when ONE of these is true:**
+
+1. **Security-critical** — data leak, auth bypass, credential exposure, injection. No exceptions.
+2. **Actively harming real users *right now*** in a way that can't wait weeks for D9. Test: is this wrong output on *every* borrower hit, or is it fallback-path-only / edge-case-only? The former qualifies; the latter defers.
+3. **Observability / tooling work that survives D9 intact** — health-check coverage, monitoring, logging. D9 doesn't touch these surfaces, so today's fix is not thrown away.
+
+**Worked examples from 2026-04-16 triage:**
+
+| Finding | Shipped now? | Reason |
+|---|---|---|
+| D4 cross-org SMS leak (PR #80) | ✅ ship | Security-critical |
+| CRON-2 + CRON-12 health-check gaps | ✅ ship | Observability survives D9 |
+| HP-B6 DSCR comp cap $4,595 vs $3,595 | ⏭ defer | Fallback-path only — D9d absorbs into `ref_comp_caps` |
+| REF-1 stale $726,200 high-balance threshold | ⏭ defer | Live pricer bug, but D9d absorbs into `ref_county_loan_limits` — accept wrong-categorization cost vs throwaway fix cost |
+| REF-9 HECM UFMIP hardcoded in 3 places | ⏭ defer | Consistency-only (all 3 sites agree today) — D9d absorbs into `ref_hecm_config` |
+
+**Enforcement:** Every D8 inventory pass must, for each finding, propose its D9 resolution path. Ship-immediately candidates are called out explicitly in the pass's "Ship-immediately candidates" section, with the §2c justification (which of the three criteria applies).
+
 ## 3. Scope
 
 **In scope:**
@@ -97,19 +123,25 @@ Under these rules: even with two sessions awake, at most one can deploy, and usu
 
 The audit covers eight dimensions. Each dimension has its own completion state, scope, and artifacts.
 
-### D1 · Security — ✅ done
+### D1 · Security — ✅ re-verified (2026-04-16)
 
 Every-line review for OWASP-class vulnerabilities, credential exposure, unsafe deserialization, missing auth guards.
 
 - **Shipped:** PR #52 (security audit — 8 vulnerabilities patched across 27 files)
+- **D0 verification (2026-04-16):** re-audit at [`D0-VERIFICATION-D1-SECURITY-2026-04-16.md`](./D0-VERIFICATION-D1-SECURITY-2026-04-16.md). All 8 PR #52 patches held at HEAD. No regressions from PRs #53–#79.
+- **Residual findings (batched for follow-up PR, lower priority):**
+  - 7 public/unauth routes still leak raw `err.message` (`strike-rate`, `saved-scenario`, `saved-scenario/update`, `pricing/dscr` ×2, `market/national-rates` ×2, `my-rates`)
+  - `/api/my-rates:26` leaks matched-lead count in auth error message
+  - ~11 MLO-protected routes leak `err.message` to authenticated callers (lower risk)
+  - No rate limiting on public POSTs (`strike-rate`, `saved-scenario`, `pricing`, both `pricing/dscr` endpoints)
 - **Deferred:** full security audit (plaintext secrets in `~/.claude` skill files, API key rotation, `~/.netrate/auth.json` pattern, repo-wide scan) — tracked as PLATFORM-2026 backlog item #73, P=medium.
 
-### D2 · camelCase / snake_case consistency — ✅ done (with follow-up noted)
+### D2 · camelCase / snake_case consistency — ✅ fully closed (2026-04-16)
 
 Surfaced because the DB uses snake_case and JS uses camelCase; early refactors left 12+ dead features where row access mixed conventions.
 
 - **Shipped:** PR #53 (camelCase/snake_case migration — 12 dead features restored).
-- **Follow-up:** 12 files with residual `row.camelCase` patterns noted in session `cmo05mtfia6lu8877` for a secondary pass. Not urgent.
+- **D0 verification (2026-04-16):** re-audit at [`D0-VERIFICATION-D2-CAMELCASE-2026-04-16.md`](./D0-VERIFICATION-D2-CAMELCASE-2026-04-16.md). PR #53 holds. Audited all 14 files using `@neondatabase/serverless` + sampled 109 files using `await sql\`` templates. **Zero residual raw-SQL camelCase bugs found** — the "12 residual files" note from session `cmo05mtfia6lu8877` was a false alarm (every `row.camelCaseName` pattern was safe: transformed output, session/body/API response, or parser/computation output). D2 dimension is closed, no secondary pass needed.
 
 ### D3 · Pricing engine correctness — ✅ done (re-verified 2026-04-15)
 
@@ -121,11 +153,13 @@ Financial correctness of `priceRate()` and the surrounding ingest pipeline. Catc
 - **Out of scope:** DSCR pricer (separate domain, see D6), non-QM parsers (same).
 - **Note:** D3 audited the *computation*. It did not audit the *inputs* to the computation for staleness — that's D8.
 
-### D4 · Data integrity — ✅ done
+### D4 · Data integrity — ✅ re-verified (2026-04-16)
 
 Ownership checks, foreign key enforcement, transactional boundaries, PII handling, display-layer hygiene.
 
 - **Shipped:** #55 (data integrity — 7 issues patched), #56 (hide product names from public rate tool — show only in debug mode).
+- **D0 verification (2026-04-16):** re-audit at [`D0-VERIFICATION-D4-DATA-INTEGRITY-2026-04-16.md`](./D0-VERIFICATION-D4-DATA-INTEGRITY-2026-04-16.md). 5 PR #55 patches verified correct. **2 critical new findings surfaced and shipped in PR #80:** (a) `GET /api/dialer/sms/threads` had no `organization_id` filter — cross-org SMS PII leak including plaintext message bodies; (b) `PATCH /api/portal/mlo/pipeline` bulk-cap guard was unreachable dead code due to brace scoping.
+- **Residual (flagged for follow-up pass):** other routes under `src/app/api/dialer/**` also do not scope by `organization_id`. Only `/threads` was in the D4 audit scope; remaining dialer routes need their own audit pass.
 
 ### D5 · Org scoping — 🔄 half-done (first half re-verified, second half unshipped)
 
@@ -162,25 +196,30 @@ Phase 6 of the original Apr 14 plan. Four PRs (16–19) refreshing pipeline view
 - **Blocked on:** D9 Layer 1 (new Contact/Deal schema) + D8 Pass 6 (MLO portal inventory). The portal redesign should build on the new D9 schema, not the current Borrower/Loan model. Executing D7 PRs before D9 Layer 1 means re-doing the work on a different data model.
 - **Original scope:** PRs 16–19 per portal-rebuild backlog. Specs to be confirmed once D9 Layer 1 ships and D8 Pass 6 completes.
 
-### D8 · Static data / stale-by-deploy — 🆕 inventory phase
+### D8 · Static data / stale-by-deploy — 🆕 inventory phase (batch 1 complete)
 
-**The dimension added tonight.** Catalogs data that is baked into the deploy and becomes stale without code intervention. Includes hardcoded reference values, bundled data files, duplicated business rules, and silent-fallback-to-stale patterns.
+Catalogs data that is baked into the deploy and becomes stale without code intervention. Includes hardcoded reference values, bundled data files, duplicated business rules, and silent-fallback-to-stale patterns.
 
-- **Pass 1 · Pricer scenario flow** — ✅ done. See [`PRICER-STATIC-DATA-INVENTORY-2026-04-15.md`](./PRICER-STATIC-DATA-INVENTORY-2026-04-15.md). Findings cross-referenced in §9.
-- **Pass 2 · Homepage + UI components** — ⏳ not started. Seed findings from tonight:
-  - `src/app/page.js:56-58` — hardcoded `'5.875%' / '5.94%' / '$2,366'` fallbacks for conv30/conv15/fha30/va30 hero rates. Silent borrower-facing stale-data fallback. **NOTE:** cascade closed by PR #77 (D3 fix); fallbacks still exist as a belt-and-suspenders but should now rarely fire. Pass 2 should decide: keep as last-resort with loud error logging, or remove entirely and fail loud if pricer returns null.
-  - `src/components/DscrRateWidget.js` + `src/app/tools/dscr-calculator/page.js` — inline par-picker logic. `src/lib/rates/pick-par-rate.js` (shipped in PR #73) should be the single source.
-  - **`src/lib/rates/homepage-db.js` runs a parallel pricing path that diverges from `/api/pricing`** — same DEFAULT_SCENARIO, same Everstream data, two different answers (homepage: 5.875% par · /api/pricing: 5.990% par). Candidates for the divergence: (a) homepage-db's `LIMIT 1 ORDER BY effective_date DESC` picks a single lender's sheet rather than the best-across-all-lenders par; (b) homepage-db's SQL-level `is_* = false` product filter differs from /api/pricing's in-memory filter; (c) brokerConfig shape differs (homepage-db doesn't thread `fhaUfmip`). Root fix likely: have `getHomepageRatesFromDB()` call `priceScenario()` for the 4 default scenarios and pick from its output, retiring the parallel path entirely.
-  - `src/lib/rates/homepage-db.js` — file name misleading (consumed by rate-watch too). Rename candidate.
-  - `DEFAULT_SCENARIO` (defaults.js) — intentional publishing anchor. Document as such so future passes don't mistake it for stale data.
-- **Pass 3 · Marketing pages** — ⏳ not started. Surfaces: `/rates/*`, `/services/*`, state pages (TX, CA, CO, OR), `/refinance-*`, `/tools/*` prose and numeric examples.
-- **Pass 4 · Schema.org + SEO markup** — ⏳ not started. JSON-LD blocks and meta descriptions with numeric claims.
+**Inventory passes complete (1/2/6/7/8):**
+
+- **Pass 1 · Pricer scenario flow** — ✅ done. See [`PRICER-STATIC-DATA-INVENTORY-2026-04-15.md`](./PRICER-STATIC-DATA-INVENTORY-2026-04-15.md). 5 findings (A1, A2, B1, B2, B3). Cross-referenced in §9.
+- **Pass 2 · Homepage + UI components** — ✅ done 2026-04-16. See [`PASS-2-HOMEPAGE-UI-INVENTORY-2026-04-16.md`](./PASS-2-HOMEPAGE-UI-INVENTORY-2026-04-16.md). Expanded scope: par-picker is duplicated in **4 callers with different semantics**, not 2. **Live pricing bug HP-B6** — DSCR comp cap $4,595 (dscr-calculator) vs $3,595 (homepage-db fallback). 6 marketing pages with outdated rate examples. 23 per-page JSON-LD blobs duplicating schema. 2 "Locus Mortgage" URL refs still live. Per §2c: HP-B6 deferred to D9b (fallback-path only, D9d absorbs comp caps into ref table).
+- **Pass 6 · MLO portal** — ✅ done 2026-04-16 (blocks D7). See [`PASS-6-MLO-PORTAL-INVENTORY-2026-04-16.md`](./PASS-6-MLO-PORTAL-INVENTORY-2026-04-16.md). 15 findings (3 Critical, 4 High, 3 Medium, 5 Low). Status picklist duplicated in 5+ files with divergent color palettes (MLO-1/4/5). Loan type picklist diverges 3 ways (MLO-2/3/6). `HOUSE_FEE_RATE` hardcoded in 2 places (MLO-8/12). FHA UFMIP hardcoded in QuoteScenarioForm JSX (MLO-11) duplicating Pass 1 B3. Per §2c: ~60% absorbed by D9 Layer 1 (status lifecycle, deal model); loan type + UFMIP are cross-layer and need remediation regardless.
+- **Pass 7 · Scheduled tasks / cron / ingest** — ✅ done 2026-04-16. See [`PASS-7-SCHEDULED-TASKS-INVENTORY-2026-04-16.md`](./PASS-7-SCHEDULED-TASKS-INVENTORY-2026-04-16.md). 13 findings (5 High, 6 Medium, 2 Low-med). Top risk: MND scraper fragile HTML regex (CRON-1). 6 scheduled jobs with no observability — common pattern: cron returns 200 OK on partial/complete failure. `parse-gcs-rates.mjs` filename-date regex (`MMDDYYYY`) could silently produce wrong dates. Per §2c: CRON-2 + CRON-12 shipped (health-check observability survives D9).
+- **Pass 8 · Reference data files** — ✅ done 2026-04-16 (feeds D9d). See [`PASS-8-REFERENCE-DATA-INVENTORY-2026-04-16.md`](./PASS-8-REFERENCE-DATA-INVENTORY-2026-04-16.md). 18 findings (REF-1 through REF-18). **13 proposed new `ref_*` tables for D9d**, grouped into 5 domains: loan limits (2), govt insurance (5), HECM pricing (3), geographic/tax (4), business scope (1). Key REFs: stale $726,200 high-balance threshold (REF-1, 2 years out of date), HECM UFMIP hardcoded in 3 sites not importing the constant (REF-9), prose-only VA funding fee disclosure (REF-8). **Explicit enum-vs-reference-data line drawn** — answers D9d scoping: `LOAN_TYPES`, `CONDITION_STAGES`, `DOC_PREFIXES`, MCR enums, org constants stay in code; externally-authored cadence-driven values → DB. Per §2c: all REF findings deferred to D9d remediation (consolidated schema design).
+
+**Inventory passes queued (3/4/5):**
+
+- **Pass 3 · Marketing pages** — ⏳ not started. Surfaces: `/rates/*`, `/services/*`, state pages (TX, CA, CO, OR), `/refinance-*`, `/tools/*` prose and numeric examples. (Pass 2 already caught several outdated rate examples on marketing-adjacent pages; Pass 3 finishes the sweep.)
+- **Pass 4 · Schema.org + SEO markup** — ⏳ not started. JSON-LD blocks and meta descriptions with numeric claims. (Pass 2 flagged the 23 duplicated JSON-LD blobs as HP-C4; Pass 4 will catalog the structured-data side specifically.)
 - **Pass 5 · Borrower portal + application flow** — ⏳ not started. Fee defaults, loan amount bounds, state-specific copy.
-- **Pass 6 · MLO portal** — ⏳ not started. Pipeline widgets, dashboard KPIs, payroll calc. Blocks D7.
-- **Pass 7 · Scheduled tasks / cron** — ⏳ not started. Rate-sheet parsers, FRED snapshotter, any hardcoded assumptions baked into ingest.
-- **Pass 8 · Reference data files** — ⏳ not started. `src/data/*`, `scripts/seed-*`, anything baked into the deploy.
 
-Passes 2–8 may run in parallel (see §8). Inventory work does not deploy.
+Passes 3–5 may run in parallel (see §8). Inventory work does not deploy.
+
+**Ship-immediately candidates shipped from batch 1:**
+
+- PR #80 (2026-04-16) — D4 cross-org SMS leak + pipeline bulk-cap (from D0 re-audit, not D8 inventory)
+- Pending PR — CRON-2 + CRON-12 health-check observability gaps (TRACKER_API_KEY silent-skip + lender rate_sheets pipeline coverage)
 
 ### D9 · Unified Architecture Directive (UAD) — 🆕 spec drafted
 
@@ -211,47 +250,43 @@ Passes 2–8 may run in parallel (see §8). Inventory work does not deploy.
 
 Ordered work list. Inventory passes and remediation PRs interleave by default (see §2b). Items at the same indent level may run in parallel per the multi-agent rules (§8).
 
-### Done tonight (2026-04-15)
+### Done 2026-04-15 → 2026-04-16
 
 1. ✅ Spec filed (PR #74)
-2. ✅ D0 re-audit of D3 and D5 (docs in PR #75) — both dimensions confirmed done but with one critical finding each
+2. ✅ D0 re-audit of D3 and D5 (docs in PR #75)
 3. ✅ D5 remediation — cross-org leak in `scenario-alerts` closed (PR #76)
-4. ✅ D3 remediation — homepage-db EMPTY_ADJ fallback (PR #77). Partial fix: closes the silent cascade, but homepage still shows a different par rate than `/api/pricing`. Residual parked to D8 Pass 2.
-5. ❌ D1 / D2 / D4 D0 re-audits — agents hit tool-use budget mid-investigation and terminated without final reports. Need to re-spawn with narrower prompts.
+4. ✅ D3 remediation — homepage-db EMPTY_ADJ fallback (PR #77). Residual divergence parked to D8 Pass 2 (now: finding HP-B6 + parallel-path, deferred to D9b per §2c)
+5. ✅ D9 UAD spec drafted ([`UAD-SPEC.md`](../UAD-SPEC.md)) — 16 architecture decisions, full data model, build layers
+6. ✅ **D0 re-audits for D1, D2, D4** (2026-04-16) — all three completed. D1/D2 confirmed done (D2 fully closed — residual-files note was a false alarm). D4 surfaced 2 critical findings shipped in PR #80.
+7. ✅ **D4 remediation** — PR #80 (2026-04-16) — cross-org SMS leak in `/api/dialer/sms/threads` + pipeline bulk-cap brace scoping bug
+8. ✅ **D8 inventory batch 1** (2026-04-16) — Passes 2/6/7/8 complete. Docs filed. Triage run under new §2c re-architecture-deference principle.
 
-### Next — D9 UAD + D8 inventory (parallel tracks)
+### Next — D8 batch 2 + ship-immediate CRON fixes (parallel tracks)
 
-1. ✅ **D9 UAD spec drafted** — [`UAD-SPEC.md`](../UAD-SPEC.md). 16 architecture decisions, full data model, build layers defined.
-2. **D0 re-audits for D1, D2, D4** — narrower per-dimension prompts so each fits in the researcher agent's tool budget. Output: three more `D0-VERIFICATION-*.md` docs alongside D3 and D5's.
-3. **D8 inventory Passes 2–4** — may run in parallel (different surfaces):
-   - Pass 2 · Homepage + UI components (3 seed findings, see §6 D8)
+1. 🔄 **D8 observability ship-immediate** — CRON-2 (health-check silent relay-key failure) + CRON-12 (lender rate_sheets pipeline coverage). Survives D9, ships now per §2c. *(in flight as of writing)*
+2. **D8 inventory Passes 3/4/5** — may run in parallel (different surfaces):
    - Pass 3 · Marketing pages
    - Pass 4 · Schema.org + SEO markup
-4. **D8 inventory Passes 5–8** — may run in parallel:
    - Pass 5 · Borrower portal + application flow
-   - Pass 6 · MLO portal (blocks D7)
-   - Pass 7 · Scheduled tasks / cron
-   - Pass 8 · Reference data files
-   - Ship-immediately remediations land as they surface; batch candidates get queued.
 
-### After D8 inventory converges
+### After D8 inventory converges (batch 2 complete)
 
-5. **D8 + D9d remediation — reference data migration** — design `ref_fha_ufmip`, `ref_county_loan_limits`, `ref_closing_cost_defaults`, etc. against the full set of D8 findings. D9d absorbs the schema design round.
-6. **D8 remediation — single-source rule consolidation** — par-picker consumers, duplicated business rules found across passes.
-7. **D9b remediation — pricing unification** — retire `homepage-db.js` parallel path, unified pricing entry point with product router.
+3. **D8 + D9d remediation — reference data migration** — design `ref_fha_ufmip`, `ref_county_loan_limits`, `ref_closing_cost_defaults`, `ref_comp_caps`, `ref_hecm_config`, etc. Pass 8 proposed 13 tables; aggregate with batch 2 findings before finalizing schema. Absorbs HP-B6, REF-1, REF-9, Pass 1 A1/A2/B3, MLO-11.
+4. **D8 remediation — single-source rule consolidation** — par-picker consumers (HP-4a/4b/4c + dscr-calculator), duplicated status/loan-type picklists (MLO-1→6), comp split calc (MLO-8/12).
+5. **D9b remediation — pricing unification** — retire `homepage-db.js` parallel path (HP-B6 root cause), unified pricing entry point with product router.
 
 ### D9 Layer 1 build (lead intake — primary goal)
 
-8. **D9 Layer 1** — contacts + staff + deals + deal_participants tables. Lead cleanup, conversion flow, MLO pipeline view. This is what the Claw campaign relays need (backlog #78).
-9. **D9 scenarios update** — replace denormalized borrower strings with contact_id FK. Service provider directory tables.
+6. **D9 Layer 1** — contacts + staff + deals + deal_participants tables. Lead cleanup, conversion flow, MLO pipeline view. Unblocks Claw campaign relay backlog #78 (CoreCRM lead intake → ICanBuy activation).
+7. **D9 scenarios update** — replace denormalized borrower strings with contact_id FK. Service provider directory tables.
 
 ### After D9 Layer 1
 
-10. **D7 — MLO Portal UX** — redesigned on the new Contact/Deal model. Informed by D8 Pass 6 findings.
-11. **D6 wrap-up** — PR 14 (drop old tables, soak ends ~2026-04-29), Core Non-QM LLPA parser.
-12. **D9 Layers 2–4** — quote composer, borrower portal rebuild, strike rates, lifecycle marketing.
-13. **D2 secondary pass** — 12 residual row.camelCase files.
-14. **D1 follow-up** — security audit (plaintext secrets, API key rotation).
+8. **D7 — MLO Portal UX** — redesigned on the new Contact/Deal model. Informed by D8 Pass 6 findings.
+9. **D6 wrap-up** — PR 14 (drop old tables, soak ends ~2026-04-29), Core Non-QM LLPA parser.
+10. **D9 Layers 2–4** — quote composer, borrower portal rebuild, strike rates, lifecycle marketing.
+11. **D1 follow-up** — public-route `err.message` leaks + rate limiting (batched residuals from D1 D0 re-audit); later, broader security audit (plaintext secrets, API key rotation) per backlog #73.
+12. **D4 follow-up** — audit remaining `src/app/api/dialer/**` routes for `organization_id` scoping (only `/threads` was in D4 audit scope).
 
 ### Done criteria per item
 
@@ -326,6 +361,7 @@ After completion, this doc moves to archive status and a fresh `SITE-AUDIT-2027.
 - **2026-04-15 (v1.1)** — clarified that remediation is part of the audit (not a separate phase), added §2b "Interleave vs batch" defaulting to interleave, reshaped the queue (§7) to interleave inventory + ship-immediately remediations with an explicit batched-remediation block for cross-surface schema design.
 - **2026-04-15 (v1.2)** — post-D0-re-audit update. Ran D0 verification re-audits (§6 header distinguishes claimed-done from re-verified-done). D3 and D5 fully re-audited; D1/D2/D4 agents terminated mid-investigation and will be re-spawned. Two ship-immediately remediations landed: PR #76 (D5 cross-org scenario-alerts leak) and PR #77 (D3 homepage EMPTY_ADJ fallback + shared `empty-adj.js` module). D3 remediation was partial: closed the silent hardcoded-fallback cascade, but homepage-db still diverges from `/api/pricing` for the DEFAULT_SCENARIO (5.875% vs 5.990%). Divergence parked as a seed finding for D8 Pass 2 along with the existing page.js fallback and DSCR-widget inline-picker findings. Queue in §7 reshaped to reflect actual tonight-state and what's next.
 - **2026-04-16 (v1.3)** — D9 (UAD) added as new dimension. Full architecture discussion with David produced 16 architecture decisions covering identity lifecycle (Lead → Contact → Deal), pricing unification, composable quote model, application modules, service provider directory, marketing lifecycle, and portal access. D5 downgraded from ✅ to 🔄 half-done — first half (org_id on existing tables) verified, second half (unified identity model) absorbed into D9. D7 blocked-on updated to include D9 Layer 1 dependency. Queue reshaped: D9 spec + D8 inventory passes are parallel tracks, D9 Layer 1 build (lead intake) is the primary goal, D7 redesigns on top of D9 schema. UAD spec filed at `Work/Dev/UAD-SPEC.md`. UAB MCP decision (`cmo1igp2enjnw46ef`) superseded by broader UAD scope.
+- **2026-04-16 (v1.4)** — batch 1 D8 inventory complete (Passes 2/6/7/8). D0 re-audits for D1/D2/D4 also complete. **§2c "Re-architecture deference" added** — new triage principle stating that findings D9 will naturally absorb should be deferred rather than patched with throwaway fixes, unless the finding is (a) security-critical, (b) actively harming users *right now* in a non-fallback path, or (c) observability/tooling that survives D9. PR #80 shipped 2 critical D4 findings (SMS cross-org leak + pipeline bulk-cap). Pending PR ships CRON-2/CRON-12 (health-check observability). D1 re-verified with residual `err.message` leaks batched for follow-up. D2 fully closed — residual-files note was false alarm. D4 re-verified ✅ with other dialer routes flagged for a follow-up pass. Queue reshaped: batch 2 (Passes 3/4/5) is next; D9d reference-data schema design batches all inventory findings together after batch 2 converges.
 
 ## 12. Appendix — where to find things
 

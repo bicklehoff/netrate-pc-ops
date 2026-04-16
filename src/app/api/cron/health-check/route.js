@@ -11,6 +11,12 @@
  *   3. MND rate didn't move more than ±0.5% from previous day (parse failure guard)
  *   4. fred_series_data has DGS10 updated within last 36 hours
  *   5. fred_series_data has MORTGAGE30US updated within last 8 days (weekly series)
+ *   6. rate_sheets has at least one active sheet parsed within last 30 hours
+ *      (covers the GitHub Actions GCS parse pipeline — audit finding CRON-12)
+ *
+ * Also: if any failure fires but TRACKER_API_KEY is not configured, that
+ * absence is itself recorded as a failure so ops discovers the silent
+ * alerting gap (audit finding CRON-2).
  */
 
 import { NextResponse } from 'next/server';
@@ -22,6 +28,12 @@ const RATE_MAX   = 9.0;
 const RATE_MAX_DAILY_MOVE = 0.5;  // flag if MND moves more than this in one day
 const FRED_DAILY_STALE_HOURS  = 36;
 const FRED_WEEKLY_STALE_DAYS  = 8;
+// Weekend-safe bound: Friday's sheet is ~72h old at Monday 14:00 UTC if
+// Monday's GitHub Action parse-rates job has not yet run. Threshold is tight
+// enough that a silent failure on Monday is flagged the same day by the
+// Monday 14:00 UTC health-check run (which fires at the same cron minute as
+// parse-rates, but the check reads data parse-rates just wrote).
+const LENDER_RATES_STALE_HOURS = 30;
 
 function lastWeekday(date = new Date()) {
   const d = new Date(date);
@@ -73,6 +85,13 @@ export async function GET(request) {
 
   if (!authorized && process.env.NODE_ENV === 'production') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // Surface a missing relay key at startup so every invocation logs the
+  // gap. This makes it hard to notice "relay never posted" only months
+  // after the key was rotated out of env.
+  if (!trackerApiKey) {
+    console.warn('[health-check] TRACKER_API_KEY not set — relay alerts will NOT be sent on failure');
   }
 
   const sql = neon(process.env.PC_DATABASE_URL || process.env.DATABASE_URL);
@@ -190,12 +209,48 @@ export async function GET(request) {
     checks.fredWeekly = `error:${e.message}`;
   }
 
+  // ── Check 4: lender rate_sheets freshness (GCS parse pipeline coverage) ─
+  try {
+    const latestSheet = await sql`
+      SELECT rs.parsed_at, rl.code AS lender_code
+      FROM rate_sheets rs
+      JOIN rate_lenders rl ON rs.lender_id = rl.id
+      WHERE rs.status = 'active' AND rl.status = 'active'
+      ORDER BY rs.parsed_at DESC
+      LIMIT 1
+    `;
+
+    if (!latestSheet.length) {
+      failures.push('rate_sheets: no active sheets for any active lender — GCS parse pipeline may have never run');
+      checks.lenderRates = 'no_data';
+    } else {
+      const parsedAt = new Date(latestSheet[0].parsed_at);
+      const hoursAgo = (Date.now() - parsedAt.getTime()) / (1000 * 60 * 60);
+      if (hoursAgo > LENDER_RATES_STALE_HOURS) {
+        failures.push(`rate_sheets: most recent active sheet (${latestSheet[0].lender_code}) parsed ${hoursAgo.toFixed(1)}h ago (threshold: ${LENDER_RATES_STALE_HOURS}h) — GCS parse pipeline may have silently failed`);
+        checks.lenderRates = `stale:${hoursAgo.toFixed(1)}h:${latestSheet[0].lender_code}`;
+      } else {
+        checks.lenderRates = `ok:${hoursAgo.toFixed(1)}h:${latestSheet[0].lender_code}`;
+      }
+    }
+  } catch (e) {
+    failures.push(`rate_sheets check error: ${e.message}`);
+    checks.lenderRates = `error:${e.message}`;
+  }
+
   // ── Send relay alert if any failures ─────────────────────────────────────
-  if (failures.length > 0 && trackerApiKey) {
-    try {
-      await postRelay(trackerApiKey, failures);
-    } catch (e) {
-      console.error('[health-check] Failed to send relay alert:', e.message);
+  if (failures.length > 0) {
+    if (trackerApiKey) {
+      try {
+        await postRelay(trackerApiKey, failures);
+      } catch (e) {
+        console.error('[health-check] Failed to send relay alert:', e.message);
+        failures.push(`Relay post failed: ${e.message}`);
+      }
+    } else {
+      // CRON-2 fix: surface the silent-alerting gap as its own failure so
+      // the HTTP response body shows ops that no relay was sent.
+      failures.push('TRACKER_API_KEY not configured — this alert could NOT be relayed to ops');
     }
   }
 
