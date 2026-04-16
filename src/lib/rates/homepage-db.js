@@ -26,10 +26,22 @@ const HOMEPAGE_CACHE_TTL = 30 * 60 * 1000; // 30 minutes
 
 /**
  * Price a single product type using the DB-driven engine.
- * Queries: active rate sheet → products matching loan type + term → prices at 30-day lock
- * Then runs each through priceRate() with DB adjustments, collects the priced
- * ladder, and hands it to pickParRate() to select the rate a borrower would
- * actually take (lowest rate at/above par — matches LoanSifter default).
+ *
+ * Iterates ALL active rate_sheets across ALL active lenders (one sheet per
+ * lender — the most recently-effective one). For each, queries products
+ * matching loan type + term, prices every (product × rate) combo through
+ * priceRate() with DB adjustments, and collects the combined ladder.
+ * pickParRate() then selects the rate a borrower would actually take —
+ * lowest rate at/above par (matches LoanSifter default + MND par rule,
+ * audit finding {pick-par-rate}).
+ *
+ * Previously this function did a single `LIMIT 1 ORDER BY effective_date DESC`
+ * on rate_sheets, which picked whichever lender parsed most recently — the
+ * returned "par" was that one lender's view, not the true best-across-lenders
+ * par. This produced a homepage rate that diverged from /api/pricing's
+ * output for the same scenario (D8 Pass 2 finding HP-B6). All-lenders
+ * iteration aligns homepage-db.js with /api/pricing's best-across-lenders
+ * semantics while keeping the intentional compRate=0 public-display behavior.
  */
 async function priceProduct(loanType, termYears) {
   const loanAmount = DEFAULT_SCENARIO.loanAmount;
@@ -38,114 +50,117 @@ async function priceProduct(loanType, termYears) {
   const fico = DEFAULT_SCENARIO.fico;
   const purpose = DEFAULT_SCENARIO.loanPurpose;
 
-  // Get active rate sheet with lender info
+  // One active sheet per active lender — the most recently-effective one.
+  // DISTINCT ON keeps the first row per lender after the ORDER BY, so the
+  // `effective_date DESC` tiebreaker picks each lender's freshest active sheet.
   const sheetRows = await sql`
-    SELECT
+    SELECT DISTINCT ON (rs.lender_id)
       rs.id, rs.lender_id, rs.effective_date,
       rl.code AS lender_code, rl.name AS lender_name,
       rl.max_comp_cap_purchase, rl.max_comp_cap_refi, rl.price_format
     FROM rate_sheets rs
     JOIN rate_lenders rl ON rs.lender_id = rl.id
-    WHERE rs.status = 'active'
-    ORDER BY rs.effective_date DESC
-    LIMIT 1
+    WHERE rs.status = 'active' AND rl.status = 'active'
+    ORDER BY rs.lender_id, rs.effective_date DESC
   `;
-  const activeSheet = sheetRows[0];
 
-  if (!activeSheet) return null;
+  if (!sheetRows.length) return null;
 
-  const lenderCode = activeSheet.lender_code;
-
-  // Build broker config for public display — comp is excluded.
-  // Homepage/rate-watch shows borrower-facing par rates from the sheet.
-  // Broker comp is our revenue, not a borrower cost — including it shifts
-  // the "par" selection lower and produces misleading APRs.
-  const brokerConfig = {
-    compRate: 0,
-    compCapPurchase: Number(activeSheet.max_comp_cap_purchase) || 3595,
-    compCapRefi: Number(activeSheet.max_comp_cap_refi) || 3595,
+  const scenarioObj = {
+    creditScore: fico,
+    ltv,
+    loanAmount,
+    loanPurpose: purpose,
+    state: DEFAULT_SCENARIO.state,
+    loanType,
   };
 
-  // Get DB adjustments for this lender + loan type. Some lenders (e.g., TLS,
-  // whose LLPAs are baked into product codes on the sheet) have no rows in
-  // adjustment_rules — for those, fall back to EMPTY_ADJ so pricing proceeds
-  // with zero adjustments instead of silently returning null. Matches the
-  // behavior in price-scenario.js; the previous hard-fail cascaded to the
-  // hardcoded '5.875%' fallback in src/app/page.js:56. See
-  // Work/Dev/audits/D0-VERIFICATION-D3-PRICING-2026-04-15.md.
-  const lenderAdj = await getDbLenderAdj(lenderCode, loanType);
-  const effectiveAdj = lenderAdj || EMPTY_ADJ;
-
-  // Find products matching our criteria
-  const products = await sql`
-    SELECT * FROM rate_products
-    WHERE lender_id = ${activeSheet.lender_id}
-      AND loan_type = ${loanType}
-      AND term = ${termYears}
-      AND product_type = 'fixed'
-      AND occupancy = 'primary'
-      AND is_high_balance = false
-      AND is_streamline = false
-      AND is_buydown = false
-      AND is_interest_only = false
-  `;
-
-  if (!products.length) return null;
-
-  // Filter products that cover our loan amount
-  const matchingProducts = products.filter(p => {
-    if (p.loan_amount_min && loanAmount < p.loan_amount_min) return false;
-    if (p.loan_amount_max && loanAmount > p.loan_amount_max) return false;
-    return true;
-  });
-
-  if (!matchingProducts.length) return null;
-
-  // 1. Run every (product × rate) combo through priceRate() and collect the
-  //    ladder. finalPrice is native to pricing (100 = par, >100 = credit to
+  // 1. Collect every (lender × product × rate) combo into a single ladder.
+  //    finalPrice is native to pricing (100 = par, >100 = credit to
   //    borrower, <100 = discount to borrower). We derive it from netCost so
   //    downstream code stays unit-agnostic.
   const ladder = [];
 
-  for (const product of matchingProducts) {
-    const prices = await sql`
-      SELECT * FROM rate_prices
-      WHERE product_id = ${product.id}
-        AND rate_sheet_id = ${activeSheet.id}
-        AND lock_days = 30
-      ORDER BY rate ASC
+  for (const activeSheet of sheetRows) {
+    const lenderCode = activeSheet.lender_code;
+
+    // Build broker config per-lender for public display — comp is excluded.
+    // Homepage/rate-watch shows borrower-facing par rates from the sheet.
+    // Broker comp is our revenue, not a borrower cost — including it shifts
+    // the "par" selection lower and produces misleading APRs.
+    const brokerConfig = {
+      compRate: 0,
+      compCapPurchase: Number(activeSheet.max_comp_cap_purchase) || 3595,
+      compCapRefi: Number(activeSheet.max_comp_cap_refi) || 3595,
+    };
+
+    // Get DB adjustments for this lender + loan type. Some lenders (e.g., TLS,
+    // whose LLPAs are baked into product codes on the sheet) have no rows in
+    // adjustment_rules — for those, fall back to EMPTY_ADJ so pricing proceeds
+    // with zero adjustments instead of silently returning null. Matches the
+    // behavior in price-scenario.js; an earlier hard-fail cascaded to the
+    // hardcoded '5.875%' fallback in src/app/page.js:56 (D3 D0 re-audit,
+    // resolved in PR #77).
+    const lenderAdj = await getDbLenderAdj(lenderCode, loanType);
+    const effectiveAdj = lenderAdj || EMPTY_ADJ;
+
+    const products = await sql`
+      SELECT * FROM rate_products
+      WHERE lender_id = ${activeSheet.lender_id}
+        AND loan_type = ${loanType}
+        AND term = ${termYears}
+        AND product_type = 'fixed'
+        AND occupancy = 'primary'
+        AND is_high_balance = false
+        AND is_streamline = false
+        AND is_buydown = false
+        AND is_interest_only = false
     `;
 
-    const productObj = {
-      term: termYears,
-      productType: 'fixed',
-      investor: product.agency,
-      tier: product.tier || 'core',
-      name: product.display_name,
-      lenderCode: lenderCode,
-      uwFee: product.origination_fee || product.uw_fee || 999,
-    };
-    const scenarioObj = {
-      creditScore: fico,
-      ltv,
-      loanAmount,
-      loanPurpose: purpose,
-      state: DEFAULT_SCENARIO.state,
-      loanType,
-    };
+    if (!products.length) continue;
 
-    for (const price of prices) {
-      const rate = Number(price.rate);
-      const rateEntry = { rate, price: Number(price.price) };
+    const matchingProducts = products.filter(p => {
+      if (p.loan_amount_min && loanAmount < p.loan_amount_min) return false;
+      if (p.loan_amount_max && loanAmount > p.loan_amount_max) return false;
+      return true;
+    });
 
-      const result = priceRate(rateEntry, productObj, scenarioObj, effectiveAdj, brokerConfig);
-      if (!result) continue;
+    if (!matchingProducts.length) continue;
 
-      const netCost = (result.discountDollars || 0) - (result.rebateDollars || 0);
-      const finalPrice = 100 - (netCost * 100 / loanAmount);
-      ladder.push({ rate, finalPrice });
+    for (const product of matchingProducts) {
+      const prices = await sql`
+        SELECT * FROM rate_prices
+        WHERE product_id = ${product.id}
+          AND rate_sheet_id = ${activeSheet.id}
+          AND lock_days = 30
+        ORDER BY rate ASC
+      `;
+
+      const productObj = {
+        term: termYears,
+        productType: 'fixed',
+        investor: product.agency,
+        tier: product.tier || 'core',
+        name: product.display_name,
+        lenderCode: lenderCode,
+        uwFee: product.origination_fee || product.uw_fee || 999,
+      };
+
+      for (const price of prices) {
+        const rate = Number(price.rate);
+        const rateEntry = { rate, price: Number(price.price) };
+
+        const result = priceRate(rateEntry, productObj, scenarioObj, effectiveAdj, brokerConfig);
+        if (!result) continue;
+
+        const netCost = (result.discountDollars || 0) - (result.rebateDollars || 0);
+        const finalPrice = 100 - (netCost * 100 / loanAmount);
+        ladder.push({ rate, finalPrice });
+      }
     }
   }
+
+  if (!ladder.length) return null;
 
   // 2. Let the shared par picker choose — LoanSifter rule (lowest rate whose
   //    best outcome is at or above par, fallback to closest-to-par).
@@ -154,8 +169,8 @@ async function priceProduct(loanType, termYears) {
 
   if (picked.reason === 'fallback_closest') {
     console.warn(
-      `[homepage-db] No ${loanType} ${termYears}yr combo at/above par — ` +
-      `fell back to closest-to-par. Check the active rate sheet.`
+      `[homepage-db] No ${loanType} ${termYears}yr combo at/above par across any active lender — ` +
+      `fell back to closest-to-par. Check active rate sheets.`
     );
   }
 
