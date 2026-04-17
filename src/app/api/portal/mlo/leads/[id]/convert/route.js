@@ -44,13 +44,14 @@ export async function POST(req, { params }) {
       let contact = contactRows[0];
 
       if (!contact) {
+        // contacts.id has no DB default — must generate explicitly.
         const created = await tx`
           INSERT INTO contacts (
-            organization_id, first_name, last_name, email, phone,
+            id, organization_id, first_name, last_name, email, phone,
             source, role, marketing_stage, assigned_mlo_id,
             created_at, updated_at
           ) VALUES (
-            ${orgId}, ${firstName}, ${lastName}, ${emailLower},
+            gen_random_uuid(), ${orgId}, ${firstName}, ${lastName}, ${emailLower},
             ${normalizePhone(lead.phone) || lead.phone || null},
             ${lead.source || 'lead'}, 'borrower', 'in_process', ${assignedMloId},
             NOW(), NOW()
@@ -74,16 +75,17 @@ export async function POST(req, { params }) {
         ? JSON.stringify({ state: lead.property_state, county: lead.property_county || null })
         : null;
 
+      // loans.id has no DB default — must generate explicitly.
       const loanRows = await tx`
         INSERT INTO loans (
-          organization_id, contact_id, mlo_id, status, ball_in_court,
+          id, organization_id, contact_id, mlo_id, status, ball_in_court,
           purpose, occupancy, property_type,
           loan_amount, purchase_price, down_payment, estimated_value, current_balance,
           credit_score, employment_status, property_address,
           lead_source, referral_source, application_channel,
           num_borrowers, application_step, created_at, updated_at
         ) VALUES (
-          ${orgId}, ${contact.id}, ${assignedMloId}, 'draft', 'mlo',
+          gen_random_uuid(), ${orgId}, ${contact.id}, ${assignedMloId}, 'draft', 'mlo',
           ${lead.loan_purpose || null}, ${lead.occupancy || null}, ${lead.property_type || null},
           ${lead.loan_amount || null}, ${lead.purchase_price || lead.property_value || null},
           ${lead.down_payment || null}, ${lead.property_value || null}, ${lead.current_balance || null},
@@ -118,11 +120,12 @@ export async function POST(req, { params }) {
       `;
 
       // ─── 5. Create LoanEvent ──────────────────────────────────
+      // loan_events.id has no DB default — must generate explicitly.
       await tx`
         INSERT INTO loan_events (
-          loan_id, event_type, actor_type, actor_id, old_value, new_value, details, created_at
+          id, loan_id, event_type, actor_type, actor_id, old_value, new_value, details, created_at
         ) VALUES (
-          ${loan.id}, 'status_change', 'mlo', ${mloId}, NULL, 'draft',
+          gen_random_uuid(), ${loan.id}, 'status_change', 'mlo', ${mloId}, NULL, 'draft',
           ${JSON.stringify({
             source: 'lead_conversion',
             leadId: lead.id,
