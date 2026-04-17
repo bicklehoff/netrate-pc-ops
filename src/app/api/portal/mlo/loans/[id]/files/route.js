@@ -166,7 +166,7 @@ export async function PUT(request, { params }) {
         const borrowerRows = await sql`SELECT first_name, last_name FROM borrowers WHERE id = ${loan.borrower_id} LIMIT 1`;
         const borrower = borrowerRows[0];
         const mloRows = loan.mlo_id
-          ? await sql`SELECT first_name, last_name FROM mlos WHERE id = ${loan.mlo_id} LIMIT 1`
+          ? await sql`SELECT first_name, last_name FROM staff WHERE id = ${loan.mlo_id} LIMIT 1`
           : [];
         const mlo = mloRows[0];
         const loName = mlo ? `${mlo.first_name} ${mlo.last_name}` : 'David Burson';

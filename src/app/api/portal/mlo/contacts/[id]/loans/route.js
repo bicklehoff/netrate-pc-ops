@@ -30,7 +30,7 @@ export async function GET(request, { params }) {
           l.created_at, l.updated_at, l.is_application, l.application_date,
           m.first_name AS mlo_first_name, m.last_name AS mlo_last_name, m.nmls AS mlo_nmls
         FROM loans l
-        LEFT JOIN mlos m ON m.id = l.mlo_id
+        LEFT JOIN staff m ON m.id = l.mlo_id
         WHERE (l.contact_id = ${contactId} OR l.borrower_id = ${contact.borrower_id}) AND l.organization_id = ${orgId}
         ORDER BY l.created_at DESC
       `;
@@ -41,7 +41,7 @@ export async function GET(request, { params }) {
           l.created_at, l.updated_at, l.is_application, l.application_date,
           m.first_name AS mlo_first_name, m.last_name AS mlo_last_name, m.nmls AS mlo_nmls
         FROM loans l
-        LEFT JOIN mlos m ON m.id = l.mlo_id
+        LEFT JOIN staff m ON m.id = l.mlo_id
         WHERE l.contact_id = ${contactId} AND l.organization_id = ${orgId}
         ORDER BY l.created_at DESC
       `;

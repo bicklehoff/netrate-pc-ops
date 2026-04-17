@@ -33,7 +33,7 @@ export async function GET(req) {
             m.first_name AS mlo_first_name, m.last_name AS mlo_last_name
           FROM call_logs cl
           LEFT JOIN contacts c ON cl.contact_id = c.id
-          LEFT JOIN mlos m ON cl.mlo_id = m.id
+          LEFT JOIN staff m ON cl.mlo_id = m.id
           WHERE cl.contact_id = ${contactId} AND cl.direction = ${direction}
             ${isAdmin ? sql`` : sql`AND cl.mlo_id = ${mloId}`}
           ORDER BY cl.started_at DESC
@@ -49,7 +49,7 @@ export async function GET(req) {
             m.first_name AS mlo_first_name, m.last_name AS mlo_last_name
           FROM call_logs cl
           LEFT JOIN contacts c ON cl.contact_id = c.id
-          LEFT JOIN mlos m ON cl.mlo_id = m.id
+          LEFT JOIN staff m ON cl.mlo_id = m.id
           WHERE cl.contact_id = ${contactId}
             ${isAdmin ? sql`` : sql`AND cl.mlo_id = ${mloId}`}
           ORDER BY cl.started_at DESC
@@ -65,7 +65,7 @@ export async function GET(req) {
             m.first_name AS mlo_first_name, m.last_name AS mlo_last_name
           FROM call_logs cl
           LEFT JOIN contacts c ON cl.contact_id = c.id
-          LEFT JOIN mlos m ON cl.mlo_id = m.id
+          LEFT JOIN staff m ON cl.mlo_id = m.id
           WHERE cl.direction = ${direction}
             ${isAdmin ? sql`` : sql`AND cl.mlo_id = ${mloId}`}
           ORDER BY cl.started_at DESC
@@ -81,7 +81,7 @@ export async function GET(req) {
             m.first_name AS mlo_first_name, m.last_name AS mlo_last_name
           FROM call_logs cl
           LEFT JOIN contacts c ON cl.contact_id = c.id
-          LEFT JOIN mlos m ON cl.mlo_id = m.id
+          LEFT JOIN staff m ON cl.mlo_id = m.id
           ${isAdmin ? sql`` : sql`WHERE cl.mlo_id = ${mloId}`}
           ORDER BY cl.started_at DESC
           LIMIT ${limit} OFFSET ${offset}

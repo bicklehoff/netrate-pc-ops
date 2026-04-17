@@ -22,7 +22,7 @@ export async function GET() {
       SELECT l.*,
         json_build_object('first_name', m.first_name, 'last_name', m.last_name, 'email', m.email) AS mlo
       FROM loans l
-      LEFT JOIN mlos m ON m.id = l.mlo_id
+      LEFT JOIN staff m ON m.id = l.mlo_id
       WHERE l.borrower_id = ${session.borrowerId}
       ORDER BY l.created_at DESC
     `;

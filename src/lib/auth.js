@@ -26,7 +26,7 @@ export const authOptions = {
 
         const email = credentials.email.toLowerCase();
 
-        const rows = await sql`SELECT * FROM mlos WHERE email = ${email} LIMIT 1`;
+        const rows = await sql`SELECT * FROM staff WHERE email = ${email} LIMIT 1`;
         const mlo = rows[0];
 
         if (!mlo) return null;

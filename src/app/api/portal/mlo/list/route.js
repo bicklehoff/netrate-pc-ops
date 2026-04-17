@@ -13,7 +13,7 @@ export async function GET() {
 
     const mlos = await sql`
       SELECT id, first_name, last_name, email, role
-      FROM mlos
+      FROM staff
       WHERE organization_id = ${orgId}
       ORDER BY first_name ASC
     `;

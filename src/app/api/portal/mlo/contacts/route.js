@@ -45,7 +45,7 @@ export async function GET(req) {
         (SELECT COUNT(*)::int FROM contact_notes WHERE contact_id = c.id) AS contact_notes_count,
         (SELECT COUNT(*)::int FROM leads WHERE contact_id = c.id) AS leads_count
       FROM contacts c
-      LEFT JOIN mlos m ON m.id = c.assigned_mlo_id
+      LEFT JOIN staff m ON m.id = c.assigned_mlo_id
       WHERE c.organization_id = $1
         AND ($2::text IS NULL OR c.first_name ILIKE $2 OR c.last_name ILIKE $2 OR c.email ILIKE $2 OR c.phone LIKE $2)
         AND ($3::text IS NULL OR $3 = ANY(c.tags))
