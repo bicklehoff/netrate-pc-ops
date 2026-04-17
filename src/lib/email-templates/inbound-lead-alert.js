@@ -114,9 +114,9 @@ export function inboundLeadAlertTemplate({
     : '';
 
   const phoneHtml = phone
-    ? `<a href="tel:${escapeHtml(phone)}" style="color:#0891b2;text-decoration:none;font-weight:600;">${escapeHtml(phone)}</a>`
+    ? `<a href="tel:${escapeHtml(phone)}" style="color:#024c4f;text-decoration:none;font-weight:600;">${escapeHtml(phone)}</a>`
     : null;
-  const emailHtml = `<a href="mailto:${escapeHtml(email)}" style="color:#0891b2;text-decoration:none;">${escapeHtml(email)}</a>`;
+  const emailHtml = `<a href="mailto:${escapeHtml(email)}" style="color:#024c4f;text-decoration:none;">${escapeHtml(email)}</a>`;
   const sourceHtml = source
     ? `${escapeHtml(source)}${sourceDetail ? ` <span style="color:#9ca3af;">/ ${escapeHtml(sourceDetail)}</span>` : ''}`
     : null;
@@ -125,10 +125,10 @@ export function inboundLeadAlertTemplate({
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:24px;background:#f9fafb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;">
     <tr>
-      <td style="padding:20px 24px;background:#0891b2;color:#ffffff;">
-        <div style="font-size:12px;letter-spacing:0.1em;text-transform:uppercase;opacity:0.9;">New Inbound Lead</div>
+      <td style="padding:20px 24px;background:#024c4f;color:#ffffff;">
+        <div style="font-size:12px;letter-spacing:0.1em;text-transform:uppercase;color:#fff000;">New Inbound Lead</div>
         <div style="font-size:22px;font-weight:700;margin-top:4px;">${escapeHtml(name)}</div>
       </td>
     </tr>
@@ -149,7 +149,7 @@ export function inboundLeadAlertTemplate({
     </tr>
     <tr>
       <td style="padding:0 24px 24px;">
-        <a href="${escapeHtml(contactLink)}" style="display:inline-block;padding:12px 20px;background:#0891b2;color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;">Open in CoreCRM →</a>
+        <a href="${escapeHtml(contactLink)}" style="display:inline-block;padding:12px 20px;background:#024c4f;color:#fff000;text-decoration:none;border-radius:16px;font-size:14px;font-weight:500;">Open in CoreCRM →</a>
       </td>
     </tr>
     <tr>
