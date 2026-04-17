@@ -20,7 +20,7 @@ export async function GET(request, { params }) {
 
     // Verify borrower is associated with this loan (primary or co-borrower)
     const loanBorrower = await sql`
-      SELECT id FROM loan_borrowers WHERE loan_id = ${id} AND borrower_id = ${session.borrowerId} LIMIT 1
+      SELECT id FROM loan_borrowers WHERE loan_id = ${id} AND contact_id = ${session.contactId} LIMIT 1
     `;
 
     if (!loanBorrower[0]) {

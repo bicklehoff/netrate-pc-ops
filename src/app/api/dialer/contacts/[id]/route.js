@@ -39,9 +39,9 @@ export async function GET(req, { params }) {
         ORDER BY sent_at DESC
         LIMIT 50
       `,
-      contact.borrower_id
+      contact.role === 'borrower'
         ? sql`
-            SELECT b.id, b.first_name, b.last_name, b.email FROM borrowers b WHERE b.id = ${contact.borrower_id} LIMIT 1
+            SELECT c.id, c.first_name, c.last_name, c.email FROM contacts c WHERE c.id = ${contact.id} LIMIT 1
           `
         : Promise.resolve([]),
     ]);
@@ -57,11 +57,11 @@ export async function GET(req, { params }) {
       call.notes = callNotes.filter(n => n.call_log_id === call.id);
     }
 
-    // Fetch borrower loans if borrower exists
+    // Fetch loans if contact has borrower role (post-migration: contact.id IS the loan owner)
     const borrower = borrowerRows[0] || null;
     if (borrower) {
       const loans = await sql`
-        SELECT id, status, purpose FROM loans WHERE borrower_id = ${borrower.id} ORDER BY created_at DESC LIMIT 5
+        SELECT id, status, purpose FROM loans WHERE contact_id = ${borrower.id} ORDER BY created_at DESC LIMIT 5
       `;
       borrower.loans = loans;
     }

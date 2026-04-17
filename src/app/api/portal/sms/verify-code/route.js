@@ -15,7 +15,7 @@ export async function POST(request) {
   try {
     const session = await getBorrowerSession();
 
-    if (!session?.borrowerId) {
+    if (!session?.contactId) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
@@ -25,16 +25,16 @@ export async function POST(request) {
       return NextResponse.json({ error: 'A 6-digit code is required' }, { status: 400 });
     }
 
-    // Look up borrower's phone to pass to Twilio Verify
-    const rows = await sql`SELECT phone FROM borrowers WHERE id = ${session.borrowerId} LIMIT 1`;
-    const borrower = rows[0];
+    // Look up contact's phone to pass to Twilio Verify
+    const rows = await sql`SELECT phone FROM contacts WHERE id = ${session.contactId} LIMIT 1`;
+    const contact = rows[0];
 
-    if (!borrower?.phone) {
+    if (!contact?.phone) {
       return NextResponse.json({ error: 'No phone number on file' }, { status: 400 });
     }
 
     // Twilio Verify checks the code (handles expiry and attempt limits internally)
-    const { valid } = await checkVerification(borrower.phone, code);
+    const { valid } = await checkVerification(contact.phone, code);
 
     if (!valid) {
       return NextResponse.json(
@@ -44,9 +44,9 @@ export async function POST(request) {
     }
 
     // Mark phone as verified in DB and upgrade session
-    await sql`UPDATE borrowers SET phone_verified = true, updated_at = NOW() WHERE id = ${session.borrowerId}`;
+    await sql`UPDATE contacts SET phone_verified = true, updated_at = NOW() WHERE id = ${session.contactId}`;
 
-    await createBorrowerSession(session.borrowerId, { smsVerified: true });
+    await createBorrowerSession(session.contactId, { smsVerified: true });
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -8,6 +8,11 @@
 //   - cookie with smsVerified=true: fully authenticated
 //
 // Uses signed, httpOnly cookies with JSON payload.
+//
+// Session shape post-UAD Layer-1b3: claim is `contactId`. Old `borrowerId`
+// cookies from before the cutover are still accepted read-side (falls back to
+// payload.borrowerId) so active sessions don't force a re-auth — but new
+// sessions are written with `contactId`.
 
 import { cookies } from 'next/headers';
 import { SignJWT, jwtVerify } from 'jose';
@@ -19,9 +24,9 @@ const SECRET = new TextEncoder().encode(process.env.NEXTAUTH_SECRET); // Reuse N
  * Create a borrower session cookie.
  * Called after magic link verification (smsVerified=false) or after SMS verification (smsVerified=true).
  */
-export async function createBorrowerSession(borrowerId, { smsVerified = false } = {}) {
+export async function createBorrowerSession(contactId, { smsVerified = false } = {}) {
   const token = await new SignJWT({
-    borrowerId,
+    contactId,
     smsVerified,
   })
     .setProtectedHeader({ alg: 'HS256' })
@@ -43,7 +48,7 @@ export async function createBorrowerSession(borrowerId, { smsVerified = false } 
 
 /**
  * Read and verify the borrower session from the cookie.
- * Returns { borrowerId, smsVerified } or null if invalid/expired.
+ * Returns { contactId, smsVerified } or null if invalid/expired.
  */
 export async function getBorrowerSession() {
   try {
@@ -52,8 +57,12 @@ export async function getBorrowerSession() {
     if (!cookie?.value) return null;
 
     const { payload } = await jwtVerify(cookie.value, SECRET);
+    // Backward-compat: pre-1b3 cookies had `borrowerId` claim. For Case-3
+    // orphan contacts the UUID was preserved (contact.id === old borrower.id)
+    // so the claim is still a valid contact id.
+    const contactId = payload.contactId || payload.borrowerId;
     return {
-      borrowerId: payload.borrowerId,
+      contactId,
       smsVerified: payload.smsVerified || false,
     };
   } catch {

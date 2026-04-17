@@ -101,7 +101,8 @@ export async function POST(req) {
   }
 
   const body = await req.json();
-  const { firstName, lastName, email, phone, company, source, tags, notes, borrowerId } = body;
+  // borrowerId is ignored post-migration — contact IS the borrower; promote via role='borrower' instead
+  const { firstName, lastName, email, phone, company, source, tags, notes } = body;
 
   if (!firstName || !lastName) {
     return Response.json({ error: 'First and last name required' }, { status: 400 });
@@ -109,8 +110,8 @@ export async function POST(req) {
 
   try {
     const rows = await sql`
-      INSERT INTO contacts (first_name, last_name, email, phone, company, source, tags, notes, borrower_id, updated_at)
-      VALUES (${firstName}, ${lastName}, ${email || null}, ${normalizePhone(phone) || phone || null}, ${company || null}, ${source || 'manual'}, ${tags || []}, ${notes || null}, ${borrowerId || null}, NOW())
+      INSERT INTO contacts (first_name, last_name, email, phone, company, source, tags, notes, updated_at)
+      VALUES (${firstName}, ${lastName}, ${email || null}, ${normalizePhone(phone) || phone || null}, ${company || null}, ${source || 'manual'}, ${tags || []}, ${notes || null}, NOW())
       RETURNING *
     `;
 

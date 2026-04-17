@@ -30,10 +30,10 @@ export async function GET(req, { params }) {
 
     // Fetch related data in parallel
     const [borrowerData, leads, contactNotes, callLogs, smsMessages] = await Promise.all([
-      // Borrower + loans
-      contact.borrower_id
+      // Borrower role + loans (post-migration: contact IS borrower)
+      contact.role === 'borrower'
         ? sql`
-            SELECT b.id, b.email, b.first_name, b.last_name, b.phone, b.phone_verified,
+            SELECT c.id, c.email, c.first_name, c.last_name, c.phone, c.phone_verified,
               COALESCE(json_agg(
                 json_build_object(
                   'id', l.id, 'status', l.status, 'purpose', l.purpose,
@@ -44,10 +44,10 @@ export async function GET(req, { params }) {
                   'submitted_at', l.submitted_at
                 ) ORDER BY l.created_at DESC
               ) FILTER (WHERE l.id IS NOT NULL), '[]') AS loans
-            FROM borrowers b
-            LEFT JOIN loans l ON l.borrower_id = b.id
-            WHERE b.id = ${contact.borrower_id} AND b.organization_id = ${orgId}
-            GROUP BY b.id
+            FROM contacts c
+            LEFT JOIN loans l ON l.contact_id = c.id
+            WHERE c.id = ${contact.id} AND c.organization_id = ${orgId}
+            GROUP BY c.id
           `
         : [],
       // Leads

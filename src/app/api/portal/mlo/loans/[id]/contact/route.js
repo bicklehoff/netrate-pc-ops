@@ -12,15 +12,16 @@ export async function GET(request, { params }) {
 
     const { id } = await params;
 
-    const loanRows = await sql`SELECT borrower_id FROM loans WHERE id = ${id} AND organization_id = ${orgId} LIMIT 1`;
+    const loanRows = await sql`SELECT contact_id FROM loans WHERE id = ${id} AND organization_id = ${orgId} LIMIT 1`;
     const loan = loanRows[0];
 
-    if (!loan?.borrower_id) {
+    if (!loan?.contact_id) {
       return NextResponse.json({ contact_id: null });
     }
 
+    // Post-migration: loan.contact_id IS the contact id. Verify it exists in this org.
     const contactRows = await sql`
-      SELECT id FROM contacts WHERE borrower_id = ${loan.borrower_id} AND organization_id = ${orgId} LIMIT 1
+      SELECT id FROM contacts WHERE id = ${loan.contact_id} AND organization_id = ${orgId} LIMIT 1
     `;
 
     return NextResponse.json({ contact_id: contactRows[0]?.id || null });

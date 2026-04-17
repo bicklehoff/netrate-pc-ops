@@ -17,18 +17,18 @@ export default async function BorrowerDashboardPage() {
   }
 
   const borrowerRows = await sql`
-    SELECT first_name, last_name, email FROM borrowers
-    WHERE id = ${session.borrowerId}
+    SELECT first_name, last_name, email FROM contacts
+    WHERE id = ${session.contactId}
     LIMIT 1
   `;
   const borrower = borrowerRows[0];
 
-  // Find loans where this borrower is either primary or co-borrower
+  // Find loans where this contact is either primary or co-borrower
   const loanBorrowers = await sql`
     SELECT lb.loan_id, lb.borrower_type
     FROM loan_borrowers lb
     JOIN loans l ON lb.loan_id = l.id
-    WHERE lb.borrower_id = ${session.borrowerId}
+    WHERE lb.contact_id = ${session.contactId}
     ORDER BY l.created_at DESC
   `;
   const loanIds = loanBorrowers.map((lb) => lb.loan_id);
@@ -60,9 +60,9 @@ export default async function BorrowerDashboardPage() {
         WHERE m.id = ANY(${loans.map(l => l.mlo_id).filter(Boolean)})
       `,
       sql`
-        SELECT lb.loan_id, b.first_name
+        SELECT lb.loan_id, c.first_name
         FROM loan_borrowers lb
-        JOIN borrowers b ON lb.borrower_id = b.id
+        JOIN contacts c ON lb.contact_id = c.id
         WHERE lb.loan_id = ANY(${loanIds})
           AND lb.borrower_type = 'primary'
       `,

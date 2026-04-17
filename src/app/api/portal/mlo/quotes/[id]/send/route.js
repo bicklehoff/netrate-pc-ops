@@ -90,26 +90,28 @@ export async function POST(request, { params }) {
       // Continue without PDF — still send email with link
     }
 
-    // Ensure borrower exists for portal access
+    // Ensure contact (borrower role) exists for portal access (post-migration: borrower fields live on contacts)
     const borrowerRows = await sql`
-      SELECT * FROM borrowers WHERE email = ${borrowerEmail.toLowerCase().trim()} AND organization_id = ${orgId} LIMIT 1
+      SELECT * FROM contacts WHERE email = ${borrowerEmail.toLowerCase().trim()} AND organization_id = ${orgId} LIMIT 1
     `;
     let borrower = borrowerRows[0];
 
     if (!borrower) {
       const { encrypt } = await import('@/lib/encryption');
       const created = await sql`
-        INSERT INTO borrowers (organization_id, email, first_name, last_name, phone, ssn_encrypted, dob_encrypted, ssn_last_four, created_at, updated_at)
+        INSERT INTO contacts (organization_id, email, first_name, last_name, phone, ssn_encrypted, dob_encrypted, ssn_last_four, role, marketing_stage, created_at, updated_at)
         VALUES (
           ${orgId}, ${borrowerEmail.toLowerCase().trim()}, ${firstName},
           ${borrowerName.split(' ').slice(1).join(' ') || 'Unknown'},
           ${quote.borrower_phone || null},
           ${encrypt('000000000')}, ${encrypt('1900-01-01')}, '0000',
-          NOW(), NOW()
+          'borrower', 'in_process', NOW(), NOW()
         )
         RETURNING *
       `;
       borrower = created[0];
+    } else if (borrower.role !== 'borrower') {
+      await sql`UPDATE contacts SET role = 'borrower', marketing_stage = COALESCE(marketing_stage, 'in_process'), updated_at = NOW() WHERE id = ${borrower.id}`;
     }
 
     // Generate magic link (24 hours)
@@ -117,7 +119,7 @@ export async function POST(request, { params }) {
     const magicExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     await sql`
-      UPDATE borrowers SET magic_token = ${magicToken}, magic_expires = ${magicExpires}, updated_at = NOW()
+      UPDATE contacts SET magic_token = ${magicToken}, magic_expires = ${magicExpires}, updated_at = NOW()
       WHERE id = ${borrower.id}
     `;
 

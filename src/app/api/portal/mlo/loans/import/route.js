@@ -91,7 +91,7 @@ export async function PUT(request) {
     const propAddress = result.property?.address || null;
 
     const loanRows = await sql`
-      INSERT INTO loans (id, organization_id, borrower_id, mlo_id, status, ball_in_court, purpose, occupancy,
+      INSERT INTO loans (id, organization_id, contact_id, mlo_id, status, ball_in_court, purpose, occupancy,
         loan_type, lender_name, loan_number, loan_amount, interest_rate, loan_term,
         property_address, property_type, num_units, purchase_price, estimated_value,
         current_address, address_years, address_months, marital_status,
@@ -118,7 +118,7 @@ export async function PUT(request) {
 
     // ─── Create LoanBorrower for Primary ──────────────────
     const primaryLBRows = await sql`
-      INSERT INTO loan_borrowers (id, loan_id, borrower_id, borrower_type, ordinal,
+      INSERT INTO loan_borrowers (id, loan_id, contact_id, borrower_type, ordinal,
         marital_status, citizenship, housing_type, monthly_rent,
         current_address, address_years, address_months,
         previous_address, previous_address_years, previous_address_months,
@@ -149,7 +149,7 @@ export async function PUT(request) {
       const cbBorrower = await upsertBorrowerFromImport(cb, orgId);
 
       const cbLBRows = await sql`
-        INSERT INTO loan_borrowers (id, loan_id, borrower_id, borrower_type, ordinal,
+        INSERT INTO loan_borrowers (id, loan_id, contact_id, borrower_type, ordinal,
           marital_status, citizenship, housing_type, monthly_rent,
           current_address, address_years, address_months,
           previous_address, previous_address_years, previous_address_months,
@@ -175,17 +175,17 @@ export async function PUT(request) {
     // ─── Create Loan-Level 1003 Models ────────────────────
     await create1003LoanModels(loan.id, result);
 
-    // ─── Create Contacts for All Borrowers ─────────────────
-    await upsertContactFromBorrower(borrower, primary, 'xml_import', orgId);
+    // ─── Tag contacts with import source (borrower upsert above already created contact) ─
+    await tagContactSource(borrower.id, 'xml_import', orgId);
 
     for (const cb of result.coBorrowers) {
       if (!cb.firstName || !cb.lastName) continue;
-      const cbBorrowerRows = await sql`
-        SELECT * FROM borrowers WHERE first_name = ${cb.firstName} AND last_name = ${cb.lastName} AND organization_id = ${orgId}
+      const cbContactRows = await sql`
+        SELECT * FROM contacts WHERE first_name = ${cb.firstName} AND last_name = ${cb.lastName} AND organization_id = ${orgId}
         ORDER BY created_at DESC LIMIT 1
       `;
-      if (cbBorrowerRows[0]) {
-        await upsertContactFromBorrower(cbBorrowerRows[0], cb, 'xml_import', orgId);
+      if (cbContactRows[0]) {
+        await tagContactSource(cbContactRows[0].id, 'xml_import', orgId);
       }
     }
 
@@ -218,7 +218,7 @@ export async function PUT(request) {
     return NextResponse.json({
       success: true,
       loan_id: loan.id,
-      borrower_id: borrower.id,
+      contact_id: borrower.id,
       borrower_name: `${primary.firstName} ${primary.lastName}`,
       loan_number: loanData.loanNumber,
       status: statusOverride,
@@ -267,68 +267,36 @@ async function upsertBorrowerFromImport({ firstName, lastName, email, phone, ssn
 
   const dobEncrypted = dob ? encrypt(String(dob)) : encrypt('1900-01-01');
 
-  // Check if borrower exists by email
-  const existingRows = await sql`SELECT * FROM borrowers WHERE email = ${borrowerEmail} AND organization_id = ${orgId} LIMIT 1`;
+  // Check if contact exists by email
+  const existingRows = await sql`SELECT * FROM contacts WHERE email = ${borrowerEmail} AND organization_id = ${orgId} LIMIT 1`;
 
   if (existingRows.length > 0) {
     const existing = existingRows[0];
     const updatedRows = await sql`
-      UPDATE borrowers SET first_name = ${firstName || existing.first_name}, last_name = ${lastName || existing.last_name},
-        phone = ${phone || existing.phone}, dob_encrypted = ${dobEncrypted}, ssn_encrypted = ${ssnEncrypted}, ssn_last_four = ${lastFour}, updated_at = NOW()
+      UPDATE contacts SET first_name = ${firstName || existing.first_name}, last_name = ${lastName || existing.last_name},
+        phone = ${phone || existing.phone}, dob_encrypted = ${dobEncrypted}, ssn_encrypted = ${ssnEncrypted}, ssn_last_four = ${lastFour},
+        role = 'borrower', marketing_stage = 'in_process', updated_at = NOW()
       WHERE email = ${borrowerEmail} AND organization_id = ${orgId} RETURNING *
     `;
     return updatedRows[0];
   } else {
     const newRows = await sql`
-      INSERT INTO borrowers (id, organization_id, email, first_name, last_name, phone, dob_encrypted, ssn_encrypted, ssn_last_four, created_at, updated_at)
-      VALUES (gen_random_uuid(), ${orgId}, ${borrowerEmail}, ${firstName || 'Unknown'}, ${lastName || 'Unknown'}, ${phone || null}, ${dobEncrypted}, ${ssnEncrypted}, ${lastFour}, NOW(), NOW())
+      INSERT INTO contacts (id, organization_id, email, first_name, last_name, phone, dob_encrypted, ssn_encrypted, ssn_last_four, role, marketing_stage, created_at, updated_at)
+      VALUES (gen_random_uuid(), ${orgId}, ${borrowerEmail}, ${firstName || 'Unknown'}, ${lastName || 'Unknown'}, ${phone || null}, ${dobEncrypted}, ${ssnEncrypted}, ${lastFour}, 'borrower', 'in_process', NOW(), NOW())
       RETURNING *
     `;
     return newRows[0];
   }
 }
 
-async function upsertContactFromBorrower(borrower, rawData, source, orgId) {
+async function tagContactSource(contactId, source, orgId) {
   try {
-    // Check if Contact already exists for this borrower
-    const existingRows = await sql`SELECT * FROM contacts WHERE borrower_id = ${borrower.id} AND organization_id = ${orgId} LIMIT 1`;
-
-    if (existingRows.length > 0) {
-      const contact = existingRows[0];
-      const updatedRows = await sql`
-        UPDATE contacts SET first_name = ${rawData.firstName || contact.first_name}, last_name = ${rawData.lastName || contact.last_name},
-          email = ${rawData.email || contact.email}, phone = ${rawData.phone || contact.phone}, updated_at = NOW()
-        WHERE id = ${contact.id} RETURNING *
-      `;
-      return updatedRows[0];
-    }
-
-    // Check by email to avoid duplicates
-    if (rawData.email) {
-      const emailRows = await sql`SELECT * FROM contacts WHERE email = ${rawData.email.toLowerCase().trim()} AND organization_id = ${orgId} LIMIT 1`;
-      if (emailRows.length > 0) {
-        const contact = emailRows[0];
-        const updatedRows = await sql`
-          UPDATE contacts SET borrower_id = ${borrower.id}, first_name = ${rawData.firstName || contact.first_name},
-            last_name = ${rawData.lastName || contact.last_name}, phone = ${rawData.phone || contact.phone}, updated_at = NOW()
-          WHERE id = ${contact.id} RETURNING *
-        `;
-        return updatedRows[0];
-      }
-    }
-
-    // Create new Contact
-    const newRows = await sql`
-      INSERT INTO contacts (id, organization_id, first_name, last_name, email, phone, source, tags, borrower_id, created_at, updated_at)
-      VALUES (gen_random_uuid(), ${orgId}, ${rawData.firstName || 'Unknown'}, ${rawData.lastName || 'Unknown'},
-              ${rawData.email ? rawData.email.toLowerCase().trim() : null}, ${rawData.phone || null},
-              ${source}, ${['borrower']}, ${borrower.id}, NOW(), NOW())
-      RETURNING *
+    await sql`
+      UPDATE contacts SET source = COALESCE(source, ${source}), tags = COALESCE(tags, ${['borrower']}), updated_at = NOW()
+      WHERE id = ${contactId} AND organization_id = ${orgId}
     `;
-    return newRows[0];
   } catch (error) {
-    console.error('Contact creation failed (non-fatal):', error?.message);
-    return null;
+    console.error('Contact source tag failed (non-fatal):', error?.message);
   }
 }
 

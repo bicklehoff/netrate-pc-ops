@@ -1,10 +1,15 @@
 // API: Submit Loan Application
 // POST /api/portal/apply
 //
-// Receives all form data, creates borrower + loan + co-borrower records.
+// Receives all form data, creates contact + loan + co-borrower records.
 // Encrypts SSN and DOB before storage.
 // Creates initial loan_event for the submission.
 // Supports up to 3 co-borrowers (4 total borrowers per loan).
+//
+// Post-UAD Layer-1b3: borrower identity lives on `contacts`. Per-borrower
+// app-module data (employment, income, declarations, address) still flows
+// through `loan_borrowers` (keyed on contact_id after migration 008).
+// `loan_contacts` is replaced by `loan_participants`.
 
 import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
@@ -92,8 +97,8 @@ function safeJson(val) {
   return val;
 }
 
-// ─── Create or find a Borrower record ──────────────────────
-async function upsertBorrower({ firstName, lastName, email, phone, ssn, dob }) {
+// ─── Create or find a Contact record (with borrower PII) ───
+async function upsertContact({ firstName, lastName, email, phone, ssn, dob, role = 'borrower' }) {
   const emailLower = (sanitize(email) || email || '').toLowerCase().trim();
   const ssnDigits = String(ssn).replace(/\D/g, '');
   if (ssnDigits.length !== 9) throw new Error('SSN must contain exactly 9 digits');
@@ -102,25 +107,25 @@ async function upsertBorrower({ firstName, lastName, email, phone, ssn, dob }) {
   const dobEncrypted = encrypt(String(dob));
   const lastFour = ssnLastFour(ssnDigits);
 
-  const existing = await sql`SELECT * FROM borrowers WHERE email = ${emailLower} LIMIT 1`;
+  const existing = await sql`SELECT * FROM contacts WHERE lower(email) = ${emailLower} LIMIT 1`;
 
   if (existing[0]) {
     const updated = await sql`
-      UPDATE borrowers SET
+      UPDATE contacts SET
         first_name = ${sanitize(firstName)}, last_name = ${sanitize(lastName)},
         phone = ${normalizePhone(phone) || (phone ? sanitize(phone) : null)},
         dob_encrypted = ${dobEncrypted}, ssn_encrypted = ${ssnEncrypted},
         ssn_last_four = ${lastFour}, updated_at = NOW()
-      WHERE email = ${emailLower}
+      WHERE id = ${existing[0].id}
       RETURNING *
     `;
     return updated[0];
   } else {
     const created = await sql`
-      INSERT INTO borrowers (email, first_name, last_name, phone, dob_encrypted, ssn_encrypted, ssn_last_four, created_at, updated_at)
+      INSERT INTO contacts (email, first_name, last_name, phone, dob_encrypted, ssn_encrypted, ssn_last_four, role, marketing_stage, source, created_at, updated_at)
       VALUES (${emailLower}, ${sanitize(firstName)}, ${sanitize(lastName)},
         ${normalizePhone(phone) || (phone ? sanitize(phone) : null)},
-        ${dobEncrypted}, ${ssnEncrypted}, ${lastFour}, NOW(), NOW())
+        ${dobEncrypted}, ${ssnEncrypted}, ${lastFour}, ${role}, 'in_process', 'application', NOW(), NOW())
       RETURNING *
     `;
     return created[0];
@@ -157,10 +162,10 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Server configuration error. Please contact support.' }, { status: 500 });
     }
 
-    // ─── Create Primary Borrower ──────────────────────────────
-    const borrower = await upsertBorrower({
+    // ─── Create Primary Contact (borrower role) ───────────────
+    const borrower = await upsertContact({
       firstName: body.firstName, lastName: body.lastName, email: body.email,
-      phone: body.phone, ssn: body.ssn, dob: body.dob,
+      phone: body.phone, ssn: body.ssn, dob: body.dob, role: 'borrower',
     });
 
     // ─── Build Declarations Object ──────────────────
@@ -198,7 +203,7 @@ export async function POST(request) {
     // ─── Create Loan Record ──────────────────────────────────
     const loanRows = await sql`
       INSERT INTO loans (
-        borrower_id, status, ball_in_court, purpose, occupancy, num_borrowers,
+        contact_id, status, ball_in_court, purpose, occupancy, num_borrowers,
         property_address, property_type, num_units, purchase_price, down_payment,
         estimated_value, current_balance, refi_purpose, cash_out_amount,
         current_address, address_years, address_months, mailing_address, marital_status,
@@ -227,9 +232,9 @@ export async function POST(request) {
     const loan = loanRows[0];
 
     // ─── Create/Update LoanBorrower for Primary ────────────────
-    // Upsert: check if exists first
+    // Upsert: check if exists first (loan_borrowers.contact_id post-1b3)
     const existingLB = await sql`
-      SELECT id FROM loan_borrowers WHERE loan_id = ${loan.id} AND borrower_id = ${borrower.id} LIMIT 1
+      SELECT id FROM loan_borrowers WHERE loan_id = ${loan.id} AND contact_id = ${borrower.id} LIMIT 1
     `;
     const lbData = {
       marital_status: body.maritalStatus || null,
@@ -259,12 +264,12 @@ export async function POST(request) {
           monthly_base_income = ${lbData.monthly_base_income}, other_monthly_income = ${lbData.other_monthly_income},
           other_income_source = ${lbData.other_income_source},
           declarations = ${JSON.stringify(declarations)}::jsonb, updated_at = NOW()
-        WHERE loan_id = ${loan.id} AND borrower_id = ${borrower.id}
+        WHERE loan_id = ${loan.id} AND contact_id = ${borrower.id}
       `;
     } else {
       await sql`
         INSERT INTO loan_borrowers (
-          loan_id, borrower_id, borrower_type, ordinal,
+          loan_id, contact_id, borrower_type, ordinal,
           marital_status, current_address, address_years, address_months,
           mailing_address, employment_status, employer_name, position_title,
           years_in_position, monthly_base_income, other_monthly_income, other_income_source,
@@ -287,13 +292,13 @@ export async function POST(request) {
       const cb = coBorrowers[i];
       if (!cb.firstName || !cb.lastName || !cb.email || !cb.ssn || !cb.dob) continue;
 
-      const cbBorrower = await upsertBorrower({
+      const cbBorrower = await upsertContact({
         firstName: cb.firstName, lastName: cb.lastName, email: cb.email,
-        phone: cb.phone, ssn: cb.ssn, dob: cb.dob,
+        phone: cb.phone, ssn: cb.ssn, dob: cb.dob, role: 'co_borrower',
       });
 
       const existingCBLB = await sql`
-        SELECT id FROM loan_borrowers WHERE loan_id = ${loan.id} AND borrower_id = ${cbBorrower.id} LIMIT 1
+        SELECT id FROM loan_borrowers WHERE loan_id = ${loan.id} AND contact_id = ${cbBorrower.id} LIMIT 1
       `;
 
       const cbLbData = {
@@ -326,12 +331,12 @@ export async function POST(request) {
             monthly_base_income = ${cbLbData.monthly_base_income}, other_monthly_income = ${cbLbData.other_monthly_income},
             other_income_source = ${cbLbData.other_income_source},
             declarations = ${cbLbData.declarations}::jsonb, updated_at = NOW()
-          WHERE loan_id = ${loan.id} AND borrower_id = ${cbBorrower.id}
+          WHERE loan_id = ${loan.id} AND contact_id = ${cbBorrower.id}
         `;
       } else {
         await sql`
           INSERT INTO loan_borrowers (
-            loan_id, borrower_id, borrower_type, ordinal, relationship,
+            loan_id, contact_id, borrower_type, ordinal, relationship,
             marital_status, current_address, address_years, address_months,
             mailing_address, employment_status, employer_name, position_title,
             years_in_position, monthly_base_income, other_monthly_income, other_income_source,
@@ -381,36 +386,40 @@ export async function POST(request) {
       console.error('Initial doc list creation failed (non-fatal):', docListErr?.message);
     }
 
-    // ─── Link Contact + Application Gate (non-blocking) ───
+    // ─── Loan Participants + Application Gate (non-blocking) ───
+    // Primary contact already exists (borrower variable). Add loan_participants
+    // rows for primary + co-borrowers. loan_borrowers already has per-borrower
+    // app-module rows written above.
     try {
-      let contactRows = await sql`SELECT * FROM contacts WHERE borrower_id = ${borrower.id} LIMIT 1`;
-      let contact = contactRows[0];
-      if (!contact) {
-        const created = await sql`
-          INSERT INTO contacts (first_name, last_name, email, phone, borrower_id, source, status, created_at, updated_at)
-          VALUES (${sanitize(body.firstName)}, ${sanitize(body.lastName)}, ${body.email?.toLowerCase()},
-            ${normalizePhone(body.phone) || body.phone || null}, ${borrower.id}, 'application', 'applicant', NOW(), NOW())
-          RETURNING *
-        `;
-        contact = created[0];
-      }
+      const orgId = loan.organization_id || '00000000-0000-4000-8000-000000000001';
 
-      await sql`UPDATE loans SET contact_id = ${contact.id}, updated_at = NOW() WHERE id = ${loan.id}`;
-
+      // Primary borrower participant
       await sql`
-        INSERT INTO loan_contacts (loan_id, contact_id, role, is_primary, name, email, phone, created_at, updated_at)
-        VALUES (${loan.id}, ${contact.id}, 'borrower', true,
-          ${`${sanitize(body.firstName)} ${sanitize(body.lastName)}`},
-          ${body.email?.toLowerCase()}, ${normalizePhone(body.phone) || body.phone || null},
-          NOW(), NOW())
+        INSERT INTO loan_participants (loan_id, contact_id, role, ordinal, organization_id, created_at, updated_at)
+        VALUES (${loan.id}, ${borrower.id}, 'primary_borrower', 0, ${orgId}, NOW(), NOW())
+        ON CONFLICT DO NOTHING
       `;
+
+      // Co-borrower participants (mirrors loan_borrowers ordinals above)
+      for (let i = 0; i < coBorrowers.length; i++) {
+        const cb = coBorrowers[i];
+        if (!cb.firstName || !cb.lastName || !cb.email || !cb.ssn || !cb.dob) continue;
+        const cbContactRows = await sql`SELECT id FROM contacts WHERE lower(email) = ${cb.email.toLowerCase().trim()} LIMIT 1`;
+        const cbContactId = cbContactRows[0]?.id;
+        if (!cbContactId) continue;
+        await sql`
+          INSERT INTO loan_participants (loan_id, contact_id, role, ordinal, organization_id, created_at, updated_at)
+          VALUES (${loan.id}, ${cbContactId}, 'co_borrower', ${i + 1}, ${orgId}, NOW(), NOW())
+          ON CONFLICT DO NOTHING
+        `;
+      }
 
       const gatePassed = checkApplicationGate(loan, borrower);
       if (gatePassed) {
         await sql`UPDATE loans SET is_application = true, application_date = NOW(), updated_at = NOW() WHERE id = ${loan.id}`;
       }
     } catch (contactErr) {
-      console.error('Contact linking failed (non-fatal):', contactErr?.message);
+      console.error('Participant linking failed (non-fatal):', contactErr?.message);
     }
 
     // ─── WorkDrive Folder Creation (non-blocking) ──────────
@@ -446,7 +455,7 @@ export async function POST(request) {
       console.error('Confirmation email failed (non-fatal):', emailError?.message);
     }
 
-    return NextResponse.json({ success: true, loanId: loan.id, borrowerId: borrower.id });
+    return NextResponse.json({ success: true, loanId: loan.id, contactId: borrower.id });
   } catch (error) {
     console.error('Application submission error:', error?.message, error?.stack);
     const msg = error?.message || '';

@@ -40,65 +40,61 @@ export async function POST(req, { params }) {
 
     // Wrap all 6 steps in a transaction — partial failure leaves orphaned records
     const result = await sql.begin(async (tx) => {
-      // ─── 1. Find or create Contact ────────────────────────────
+      // ─── 1. Find or create Contact (post-migration: contact carries borrower fields) ─
       let contactRows = await tx`SELECT * FROM contacts WHERE email = ${emailLower} AND organization_id = ${orgId} LIMIT 1`;
       let contact = contactRows[0];
 
       if (!contact) {
+        const placeholderSsn = encrypt('000000000');
+        const placeholderDob = encrypt('1900-01-01');
         const created = await tx`
-          INSERT INTO contacts (organization_id, first_name, last_name, email, phone, source, status, contact_type, assigned_mlo_id, tags, created_at, updated_at)
-          VALUES (${orgId}, ${firstName}, ${lastName}, ${emailLower}, ${normalizePhone(lead.phone) || lead.phone || null}, 'lead', 'applicant', 'borrower', ${assignedMloId}, '{}', NOW(), NOW())
+          INSERT INTO contacts (organization_id, first_name, last_name, email, phone, source, status, contact_type, assigned_mlo_id, tags,
+            ssn_encrypted, dob_encrypted, ssn_last_four, role, marketing_stage, created_at, updated_at)
+          VALUES (${orgId}, ${firstName}, ${lastName}, ${emailLower}, ${normalizePhone(lead.phone) || lead.phone || null}, 'lead', 'applicant', 'borrower', ${assignedMloId}, '{}',
+            ${placeholderSsn}, ${placeholderDob}, '0000', 'borrower', 'in_process', NOW(), NOW())
           RETURNING *
         `;
         contact = created[0];
       } else {
+        // Promote contact to borrower role + ensure PII placeholders if missing
+        const placeholderSsn = encrypt('000000000');
+        const placeholderDob = encrypt('1900-01-01');
         if (!contact.assigned_mlo_id) {
           await tx`
-            UPDATE contacts SET status = 'applicant', last_contacted_at = NOW(), assigned_mlo_id = ${assignedMloId}, updated_at = NOW()
+            UPDATE contacts SET status = 'applicant', last_contacted_at = NOW(), assigned_mlo_id = ${assignedMloId},
+              role = 'borrower', marketing_stage = 'in_process',
+              ssn_encrypted = COALESCE(ssn_encrypted, ${placeholderSsn}),
+              dob_encrypted = COALESCE(dob_encrypted, ${placeholderDob}),
+              ssn_last_four = COALESCE(ssn_last_four, '0000'),
+              updated_at = NOW()
             WHERE id = ${contact.id} AND organization_id = ${orgId}
           `;
         } else {
           await tx`
-            UPDATE contacts SET status = 'applicant', last_contacted_at = NOW(), updated_at = NOW()
+            UPDATE contacts SET status = 'applicant', last_contacted_at = NOW(),
+              role = 'borrower', marketing_stage = 'in_process',
+              ssn_encrypted = COALESCE(ssn_encrypted, ${placeholderSsn}),
+              dob_encrypted = COALESCE(dob_encrypted, ${placeholderDob}),
+              ssn_last_four = COALESCE(ssn_last_four, '0000'),
+              updated_at = NOW()
             WHERE id = ${contact.id} AND organization_id = ${orgId}
           `;
         }
       }
 
-      // ─── 2. Find or create Borrower ───────────────────────────
-      let borrowerRows = await tx`SELECT * FROM borrowers WHERE email = ${emailLower} AND organization_id = ${orgId} LIMIT 1`;
-      let borrower = borrowerRows[0];
-
-      if (!borrower) {
-        const placeholderSsn = encrypt('000000000');
-        const placeholderDob = encrypt('1900-01-01');
-
-        const created = await tx`
-          INSERT INTO borrowers (organization_id, email, first_name, last_name, phone, ssn_encrypted, dob_encrypted, ssn_last_four, created_at, updated_at)
-          VALUES (${orgId}, ${emailLower}, ${firstName}, ${lastName}, ${normalizePhone(lead.phone) || lead.phone || null}, ${placeholderSsn}, ${placeholderDob}, '0000', NOW(), NOW())
-          RETURNING *
-        `;
-        borrower = created[0];
-      }
-
-      // Link contact to borrower if not already linked
-      if (!contact.borrower_id) {
-        await tx`UPDATE contacts SET borrower_id = ${borrower.id}, updated_at = NOW() WHERE id = ${contact.id} AND organization_id = ${orgId}`;
-      }
-
-      // ─── 3. Create Loan (draft) ───────────────────────────────
+      // ─── 2. Create Loan (draft) ───────────────────────────────
       const propertyAddress = lead.property_state
         ? JSON.stringify({ state: lead.property_state, county: lead.property_county || null })
         : null;
 
       const loanRows = await tx`
         INSERT INTO loans (
-          organization_id, borrower_id, mlo_id, status, ball_in_court, purpose, occupancy, property_type,
+          organization_id, contact_id, mlo_id, status, ball_in_court, purpose, occupancy, property_type,
           loan_amount, purchase_price, down_payment, estimated_value, current_balance,
           credit_score, employment_status, property_address, lead_source, referral_source,
           num_borrowers, application_step, created_at, updated_at
         ) VALUES (
-          ${orgId}, ${borrower.id}, ${assignedMloId}, 'draft', 'mlo',
+          ${orgId}, ${contact.id}, ${assignedMloId}, 'draft', 'mlo',
           ${lead.loan_purpose || null}, ${lead.occupancy || null}, ${lead.property_type || null},
           ${lead.loan_amount || null}, ${lead.purchase_price || lead.property_value || null},
           ${lead.down_payment || null}, ${lead.property_value || null}, ${lead.current_balance || null},
@@ -112,13 +108,13 @@ export async function POST(req, { params }) {
       `;
       const loan = loanRows[0];
 
-      // ─── 4. Create LoanBorrower ───────────────────────────────
+      // ─── 3. Create LoanBorrower ───────────────────────────────
       await tx`
-        INSERT INTO loan_borrowers (loan_id, borrower_id, borrower_type, ordinal, created_at, updated_at)
-        VALUES (${loan.id}, ${borrower.id}, 'primary', 0, NOW(), NOW())
+        INSERT INTO loan_borrowers (loan_id, contact_id, borrower_type, ordinal, created_at, updated_at)
+        VALUES (${loan.id}, ${contact.id}, 'primary', 0, NOW(), NOW())
       `;
 
-      // ─── 5. Create LoanEvent ──────────────────────────────────
+      // ─── 4. Create LoanEvent ──────────────────────────────────
       await tx`
         INSERT INTO loan_events (loan_id, event_type, actor_type, actor_id, old_value, new_value, details, created_at)
         VALUES (
@@ -128,13 +124,13 @@ export async function POST(req, { params }) {
         )
       `;
 
-      // ─── 6. Update Lead → converted ──────────────────────────
+      // ─── 5. Update Lead → converted ──────────────────────────
       await tx`
         UPDATE leads SET status = 'converted', contact_id = ${contact.id}, updated_at = NOW()
         WHERE id = ${id} AND organization_id = ${orgId}
       `;
 
-      return { loanId: loan.id, contactId: contact.id, borrowerId: borrower.id };
+      return { loanId: loan.id, contactId: contact.id };
     });
 
     return Response.json({ success: true, ...result }, { status: 201 });

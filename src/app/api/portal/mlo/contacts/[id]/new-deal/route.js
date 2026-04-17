@@ -36,9 +36,9 @@ export async function POST(request, { params }) {
     const body = await request.json();
     const { sourceLoanId } = body;
 
-    // Load contact
+    // Load contact (post-migration: contact IS the borrower)
     const contactRows = await sql`
-      SELECT id, borrower_id, first_name, last_name, email, phone
+      SELECT id, role, first_name, last_name, email, phone
       FROM contacts WHERE id = ${contactId} AND organization_id = ${orgId} LIMIT 1
     `;
     const contact = contactRows[0];
@@ -47,8 +47,9 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: 'Contact not found' }, { status: 404 });
     }
 
-    if (!contact.borrower_id) {
-      return NextResponse.json({ error: 'Contact has no linked borrower account' }, { status: 400 });
+    if (contact.role !== 'borrower') {
+      // Promote to borrower so this contact can own a loan
+      await sql`UPDATE contacts SET role = 'borrower', marketing_stage = 'in_process', updated_at = NOW() WHERE id = ${contact.id}`;
     }
 
     // Load source loan if provided
@@ -90,8 +91,8 @@ export async function POST(request, { params }) {
     // Insert base loan, then UPDATE with source data
     let newLoan;
     const baseInsert = await sql`
-      INSERT INTO loans (organization_id, borrower_id, contact_id, mlo_id, status, ball_in_court, application_step, num_borrowers, created_at, updated_at)
-      VALUES (${orgId}, ${contact.borrower_id}, ${contact.id}, ${mloId}, 'draft', 'mlo', 1, 1, NOW(), NOW())
+      INSERT INTO loans (organization_id, contact_id, mlo_id, status, ball_in_court, application_step, num_borrowers, created_at, updated_at)
+      VALUES (${orgId}, ${contact.id}, ${mloId}, 'draft', 'mlo', 1, 1, NOW(), NOW())
       RETURNING *
     `;
     newLoan = baseInsert[0];
@@ -117,8 +118,8 @@ export async function POST(request, { params }) {
 
     // Create primary LoanBorrower
     await sql`
-      INSERT INTO loan_borrowers (loan_id, borrower_id, borrower_type, ordinal, created_at, updated_at)
-      VALUES (${newLoan.id}, ${contact.borrower_id}, 'primary', 0, NOW(), NOW())
+      INSERT INTO loan_borrowers (loan_id, contact_id, borrower_type, ordinal, created_at, updated_at)
+      VALUES (${newLoan.id}, ${contact.id}, 'primary', 0, NOW(), NOW())
     `;
 
     // Apply source borrower data via parameterized UPDATE if we have any
@@ -138,12 +139,11 @@ export async function POST(request, { params }) {
       }
     }
 
-    // Create LoanContact bridge record
+    // Create LoanParticipant bridge record (post-migration: replaces loan_contacts)
     await sql`
-      INSERT INTO loan_contacts (loan_id, contact_id, role, is_primary, name, email, phone, created_at, updated_at)
-      VALUES (${newLoan.id}, ${contact.id}, 'borrower', true,
-        ${`${contact.first_name} ${contact.last_name}`}, ${contact.email}, ${contact.phone},
-        NOW(), NOW())
+      INSERT INTO loan_participants (loan_id, contact_id, role, ordinal, organization_id, created_at, updated_at)
+      VALUES (${newLoan.id}, ${contact.id}, 'primary_borrower', 0, ${orgId}, NOW(), NOW())
+      ON CONFLICT DO NOTHING
     `;
 
     // Audit trail

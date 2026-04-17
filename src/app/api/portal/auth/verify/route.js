@@ -18,9 +18,9 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Token is required' }, { status: 400 });
     }
 
-    const borrower = await verifyMagicToken(token);
+    const contact = await verifyMagicToken(token);
 
-    if (!borrower) {
+    if (!contact) {
       return NextResponse.json(
         { error: 'Invalid or expired link. Please request a new one.' },
         { status: 401 }
@@ -28,17 +28,17 @@ export async function POST(request) {
     }
 
     // Check if phone is already verified
-    const needsSmsVerification = borrower.phone && !borrower.phone_verified;
+    const needsSmsVerification = contact.phone && !contact.phone_verified;
 
     // Create session (partial if SMS needed, full if phone already verified or no phone)
-    await createBorrowerSession(borrower.id, {
+    await createBorrowerSession(contact.id, {
       smsVerified: !needsSmsVerification,
     });
 
     // Auto-send SMS verification code so it arrives before the user lands on the verify-phone page
     if (needsSmsVerification) {
       try {
-        await sendVerification(borrower.phone);
+        await sendVerification(contact.phone);
       } catch (smsError) {
         // Log but don't block — user can still resend from the verify-phone page
         console.error('Auto-send SMS failed:', smsError);
@@ -48,7 +48,7 @@ export async function POST(request) {
     return NextResponse.json({
       success: true,
       needsSmsVerification,
-      borrowerId: borrower.id,
+      contactId: contact.id,
     });
   } catch (error) {
     console.error('Verify magic link error:', error);
