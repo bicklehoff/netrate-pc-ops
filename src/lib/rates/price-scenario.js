@@ -147,7 +147,6 @@ export async function priceScenario(body) {
     const lenderAdj = await getDbLenderAdj(lenderId, scenario.loanType);
     // Lenders with no adjustment rules (e.g., TLS — LLPAs baked into product codes)
     // get an empty adj object so pricing can still proceed with zero adjustments.
-    // EMPTY_ADJ shape lives in ./empty-adj.js so homepage-db.js shares the same fallback.
     const effectiveAdj = lenderAdj || EMPTY_ADJ;
 
     // Pre-load conventional adjustments if FTHB is checked and main type isn't conventional
@@ -185,6 +184,13 @@ export async function priceScenario(body) {
       // (typically seller-paid) and have different pricing that doesn't apply to
       // standard purchase/refi scenarios
       if (program.isBuydown) continue;
+
+      // Optional filters — default off for full-ladder callers (MLO quotes),
+      // turned on by homepage/public surfaces that want to show only standard
+      // owner-occupied fully-amortizing products.
+      if (body.excludeStreamline && program.isStreamline) continue;
+      if (body.excludeInterestOnly && program.isInterestOnly) continue;
+      if (body.excludeHighBalance && program.isHighBalance) continue;
 
       // Filter by loan purpose if the product is purpose-specific (e.g. TLS CONF30R = refinance)
       // Programs with no purpose set are eligible for any purpose.
