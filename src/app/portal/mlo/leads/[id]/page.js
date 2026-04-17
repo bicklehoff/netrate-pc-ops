@@ -63,14 +63,14 @@ export default function LeadDetailPage() {
   }, [lead, id]);
 
   const handleConvert = async () => {
-    if (!confirm('Convert this lead to a draft loan? This will create a contact (if needed), borrower, and loan record.')) return;
+    if (!confirm('Convert this lead to a draft loan? This will create a contact (if needed) and a loan record.')) return;
     setConverting(true);
     setError('');
     try {
       const res = await fetch(`/api/portal/mlo/leads/${id}/convert`, { method: 'POST' });
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'Conversion failed'); return; }
-      router.push(`/portal/mlo/loans/${data.loan_id}`);
+      router.push(`/portal/mlo/loans/${data.loanId}`);
     } catch { setError('Failed to convert lead'); }
     finally { setConverting(false); }
   };
