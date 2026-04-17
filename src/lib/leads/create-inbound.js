@@ -138,15 +138,16 @@ export async function createInboundLead({
         : JSON.stringify(propertyAddress))
     : null;
 
+  // loans.id has no DB default — must generate explicitly.
   const loanRows = await sql`
     INSERT INTO loans (
-      contact_id, status, ball_in_court,
+      id, contact_id, status, ball_in_court,
       purpose, loan_type, loan_amount, credit_score,
       property_address, property_type, estimated_value,
       lead_source, referral_source, application_channel,
       created_at, updated_at
     ) VALUES (
-      ${contact.id}, 'draft', 'borrower',
+      gen_random_uuid(), ${contact.id}, 'draft', 'borrower',
       ${loanPurpose}, ${loanType}, ${loanAmount}, ${creditScore},
       ${propertyAddressJson}::jsonb, ${propertyType}, ${propertyValue},
       ${source}, ${sourceDetail}, ${applicationChannel},
