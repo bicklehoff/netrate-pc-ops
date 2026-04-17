@@ -1,6 +1,34 @@
 # Twilio Integration — Status Tracker
 
-**Last Updated:** 2026-04-16 (Port day — routing reconfigured, A2P attachment fixed)
+**Last Updated:** 2026-04-17 (Dialer restored — Vercel AUTH_TOKEN space fixed)
+
+---
+
+## UPDATE 2026-04-17 — Dialer Restored + SMS Ticket Filed
+
+### Dialer fix (config-only, no code change)
+
+Site dialer was broken with `ConnectionError (31005): Error sent from gateway in HANGUP` when placing calls. Root cause: Vercel's `TWILIO_AUTH_TOKEN` env var had a stray whitespace character, causing `validateTwilioSignature` (added in PR #52 security hotfix) to return 403 on all Twilio-originated webhooks.
+
+**Diagnostic steps used (replicable for next time):**
+1. Tried dialer → saw 31005 in browser
+2. Pulled Twilio call events: `POST /api/dialer/voice → 403`, `POST /api/dialer/status → 403`
+3. Signed a test request with local `TWILIO_AUTH_TOKEN` (which I'd verified works against Twilio's REST API all session) and hit production endpoint directly → also 403 → confirmed Vercel's value differed from the real auth token
+4. David re-pasted AUTH_TOKEN value in Vercel without the space, redeployed
+
+**Also during session:** flipped `TWILIO_PHONE_NUMBER` env var from `+17205731236` → `+13034445251` so outbound dialer calls show David's ported business line as caller ID. This was intentional — not a fix, but aligning caller ID with the ported business number.
+
+**Verified working 2026-04-17 13:59 UTC:** 11-second outbound call placed via dialer, caller ID showed +13034445251, both `/api/dialer/voice` and `/api/dialer/status` returning 200.
+
+**LESSON:** always trim whitespace on pasted env var values, especially when revealing/copying from Vercel UI. The eye-icon decrypt display can include invisible whitespace that tab-key or trailing spaces insert.
+
+### SMS outbound status
+
+Twilio support ticket **#26369980** filed P2 for TCR reconciliation of ported numbers — outbound SMS still returns 30034. Initial agent confirmed hypothesis (TCR hasn't released ported numbers from Zoho's prior A2P campaign). Awaiting carrier ops response.
+
+Inbound SMS port completed overnight — Twilio receives inbound SMS cleanly, but the auto-reply + forward-to-David's-cell in TwiML Bin #2 still fails due to 30034. Will resolve once TCR reconciles.
+
+**Zoho Voice cancellation still deferred** until outbound SMS confirmed working.
 
 ---
 
