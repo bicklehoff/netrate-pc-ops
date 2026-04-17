@@ -194,6 +194,12 @@ export default async function sitemap() {
       changeFrequency: 'daily',
       priority: 0.8,
     },
+    {
+      url: `${BASE_URL}/rates/dscr`,
+      lastModified: new Date(),
+      changeFrequency: 'daily',
+      priority: 0.8,
+    },
     // State landing pages
     {
       url: `${BASE_URL}/colorado`,

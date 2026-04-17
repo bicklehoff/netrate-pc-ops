@@ -1,8 +1,9 @@
-# Site Audit 2026 — Spec
+# FoH April — Audit + UAD Spec
 
-**Status:** Active · D1 ✅ re-verified (residuals batched) · D2 ✅ fully closed · D3 ✅ re-verified · D4 ✅ re-verified (PR #80 shipped 2 critical findings) · D5 🔄 half-done · D6 🔄 · D7 ⏳ · D8 🆕 Passes 1/2/6/7/8 done, 3/4/5 queued · D9 🆕 UAD spec drafted
-**Current driver:** PC Dev (`nice-beaver` worktree)
-**Last updated:** 2026-04-16 (v1.4 — batch 1 D8 inventory complete, §2c re-architecture deference principle added, D1/D2 D0 re-audits closed)
+**Status:** Active · D1 ✅ re-verified · D2 ✅ fully closed · D3 ✅ re-verified · D4 ✅ re-verified · D5 🔄 half-done (second half absorbed into D9) · D6 🔄 · D7 ⏳ (blocked on D9 Layer 1) · D8 🆕 **Passes 1–8 inventory complete** · D9 🆕 UAD spec drafted, Layer 1 migration plan drafted
+**Name:** FoH April (Front-of-House April 2026) — the combined audit + UAD effort, David-named 2026-04-17. Formerly "Site Audit 2026"; audit (retrospective) + UAD (prospective) are one continuous effort.
+**Current driver:** PC Dev (`vigorous-cartwright` worktree)
+**Last updated:** 2026-04-17 (v1.5 — FoH April rename, batch 2 D8 inventory complete, PR #83 closures, Layer 1 migration plan drafted)
 **Canonical location:** this file
 
 > One audit. One spec. One driver at a time. Everything else defers to this doc.
@@ -208,18 +209,23 @@ Catalogs data that is baked into the deploy and becomes stale without code inter
 - **Pass 7 · Scheduled tasks / cron / ingest** — ✅ done 2026-04-16. See [`PASS-7-SCHEDULED-TASKS-INVENTORY-2026-04-16.md`](./PASS-7-SCHEDULED-TASKS-INVENTORY-2026-04-16.md). 13 findings (5 High, 6 Medium, 2 Low-med). Top risk: MND scraper fragile HTML regex (CRON-1). 6 scheduled jobs with no observability — common pattern: cron returns 200 OK on partial/complete failure. `parse-gcs-rates.mjs` filename-date regex (`MMDDYYYY`) could silently produce wrong dates. Per §2c: CRON-2 + CRON-12 shipped (health-check observability survives D9).
 - **Pass 8 · Reference data files** — ✅ done 2026-04-16 (feeds D9d). See [`PASS-8-REFERENCE-DATA-INVENTORY-2026-04-16.md`](./PASS-8-REFERENCE-DATA-INVENTORY-2026-04-16.md). 18 findings (REF-1 through REF-18). **13 proposed new `ref_*` tables for D9d**, grouped into 5 domains: loan limits (2), govt insurance (5), HECM pricing (3), geographic/tax (4), business scope (1). Key REFs: stale $726,200 high-balance threshold (REF-1, 2 years out of date), HECM UFMIP hardcoded in 3 sites not importing the constant (REF-9), prose-only VA funding fee disclosure (REF-8). **Explicit enum-vs-reference-data line drawn** — answers D9d scoping: `LOAN_TYPES`, `CONDITION_STAGES`, `DOC_PREFIXES`, MCR enums, org constants stay in code; externally-authored cadence-driven values → DB. Per §2c: all REF findings deferred to D9d remediation (consolidated schema design).
 
-**Inventory passes queued (3/4/5):**
+**Inventory passes complete (3/4/5) — batch 2 done 2026-04-16 (discovered 2026-04-17):**
 
-- **Pass 3 · Marketing pages** — ⏳ not started. Surfaces: `/rates/*`, `/services/*`, state pages (TX, CA, CO, OR), `/refinance-*`, `/tools/*` prose and numeric examples. (Pass 2 already caught several outdated rate examples on marketing-adjacent pages; Pass 3 finishes the sweep.)
-- **Pass 4 · Schema.org + SEO markup** — ⏳ not started. JSON-LD blocks and meta descriptions with numeric claims. (Pass 2 flagged the 23 duplicated JSON-LD blobs as HP-C4; Pass 4 will catalog the structured-data side specifically.)
-- **Pass 5 · Borrower portal + application flow** — ⏳ not started. Fee defaults, loan amount bounds, state-specific copy.
+- **Pass 3 · Marketing pages** — ✅ done 2026-04-16. See [`PASS-3-MARKETING-PAGES-INVENTORY-2026-04-16.md`](./PASS-3-MARKETING-PAGES-INVENTORY-2026-04-16.md). 40+ findings (MKT-A/B/C/D/E/F/G/H series). Key: illustrative rate ladders repeat across 3 files (MKT-D1/D2/D3); 43 marketing routes each emit their own `metadata` export (MKT-C1); `loan-limits-2025.json` still referenced during 2026 (MKT-E2); **MKT-COMP-1** CA disclosure was missing → shipped in PR #83.
+- **Pass 4 · Schema.org + SEO markup** — ✅ done 2026-04-16. See [`PASS-4-SCHEMA-SEO-INVENTORY-2026-04-16.md`](./PASS-4-SCHEMA-SEO-INVENTORY-2026-04-16.md). 29 findings (SEO-1–29). Key: 17 JSON-LD scripts across 16 routes + root layout; 9 pages hardcode `datePublished: '2026-03-27'` (March content batch); 47 canonical URLs hardcoded absolute (domain change = 47 edits); **SEO-20** aggregateRating was missing → shipped in PR #83; Ahrefs "7 sitemap 3xx URLs" traced to DB-driven `content_pages` entries, not `next.config.js` (which is empty).
+- **Pass 5 · Borrower portal + app flow** — ✅ done 2026-04-16 + refreshed 2026-04-17. See [`PASS-5-BORROWER-PORTAL-INVENTORY-2026-04-17.md`](./PASS-5-BORROWER-PORTAL-INVENTORY-2026-04-17.md) (newer, with UAD §7 module mapping) and [`PASS-5-BORROWER-PORTAL-INVENTORY-2026-04-16.md`](./PASS-5-BORROWER-PORTAL-INVENTORY-2026-04-16.md) (original). 13 findings (BP-1–13). Key: **BP-9 LOAN_TYPES picklist divergence** across 3+ UI surfaces (needs DB audit before ship); LTV/property-type/occupancy enum duplication (BP-2/5/6); STATE_DEFAULTS closing costs hardcoded (BP-1). **Key validation for D9 Layer 1:** 100% coverage of Application LITE field list against current intake wizard — Layer 1 does not require new intake-form work, only schema rename + FK rewiring.
 
-Passes 3–5 may run in parallel (see §8). Inventory work does not deploy.
+**Ship-immediately candidates shipped:**
 
-**Ship-immediately candidates shipped from batch 1:**
+- **PR #80** (2026-04-16) — D4 cross-org SMS leak + pipeline bulk-cap (from D0 re-audit)
+- **PR #81** (2026-04-16) — CRON-2 + CRON-12 health-check observability
+- **PR #83** (2026-04-16) — company/auth constants + CA licensing (MKT-COMP-1) + aggregateRating (SEO-20) + Texas stale prose (MKT-B4) + SMS OTP auth constants
+- **Pending small PR (2026-04-17, this worktree)** — GBP rename Locus→NetRate URLs (MKT-B2/SEO-17; 3 page sites centralized through `GBP_REVIEW_URL` constant), `/rates/dscr` added to sitemap (SEO-15a), `equity-without-losing-rate` meta historical framing (MKT-D4a), about-page `(2025)` year-label consistency (MKT-B3)
 
-- PR #80 (2026-04-16) — D4 cross-org SMS leak + pipeline bulk-cap (from D0 re-audit, not D8 inventory)
-- Pending PR — CRON-2 + CRON-12 health-check observability gaps (TRACKER_API_KEY silent-skip + lender rate_sheets pipeline coverage)
+**Ship-immediately candidates parked awaiting data/DB-audit:**
+
+- **BP-9** — LOAN_TYPES picklist divergence. Needs `SELECT DISTINCT loan_type` query across `scenarios` + `rate_products` tables to confirm a product is missing from UI. Ship after DB audit.
+- **MKT-B3 volume/loans-funded numbers** — needs fresh 2026-YTD numbers from David OR continues as 2025-labeled historical stats (current state post-PR).
 
 ### D9 · Unified Architecture Directive (UAD) — 🆕 spec drafted
 
@@ -261,19 +267,21 @@ Ordered work list. Inventory passes and remediation PRs interleave by default (s
 7. ✅ **D4 remediation** — PR #80 (2026-04-16) — cross-org SMS leak in `/api/dialer/sms/threads` + pipeline bulk-cap brace scoping bug
 8. ✅ **D8 inventory batch 1** (2026-04-16) — Passes 2/6/7/8 complete. Docs filed. Triage run under new §2c re-architecture-deference principle.
 
-### Next — D8 batch 2 + ship-immediate CRON fixes (parallel tracks)
+### Done 2026-04-17
 
-1. 🔄 **D8 observability ship-immediate** — CRON-2 (health-check silent relay-key failure) + CRON-12 (lender rate_sheets pipeline coverage). Survives D9, ships now per §2c. *(in flight as of writing)*
-2. **D8 inventory Passes 3/4/5** — may run in parallel (different surfaces):
-   - Pass 3 · Marketing pages
-   - Pass 4 · Schema.org + SEO markup
-   - Pass 5 · Borrower portal + application flow
+9. ✅ **D8 batch 2 inventory** (Passes 3/4/5) — all three filed 2026-04-16; Pass 5 refreshed 2026-04-17 with UAD §7 module mapping. Ship-immediate candidates triaged per §2c.
+10. ✅ **PR #83 closures** — CA licensing (MKT-COMP-1), aggregateRating schema (SEO-20), Texas stale prose (MKT-B4), auth display constants, company constants module (`src/lib/constants/company.js`, `src/lib/constants/auth.js`).
+11. ✅ **D9 Layer 1 migration plan** — drafted at [`Work/Dev/UAD-LAYER-1-MIGRATION-PLAN.md`](../UAD-LAYER-1-MIGRATION-PLAN.md). Maps current schema → UAD target; Option B (in-place rename + merge) recommended; 5 open decisions for David.
+12. ✅ **FoH April rename** — combined audit + UAD effort named.
+13. 🔄 **Small ship-now remediation PR** (2026-04-17 this worktree) — GBP rename URLs, sitemap `/rates/dscr`, equity meta framing, year-label consistency.
 
-### After D8 inventory converges (batch 2 complete)
+### Next — D8 + D9 convergence
 
-3. **D8 + D9d remediation — reference data migration** — design `ref_fha_ufmip`, `ref_county_loan_limits`, `ref_closing_cost_defaults`, `ref_comp_caps`, `ref_hecm_config`, etc. Pass 8 proposed 13 tables; aggregate with batch 2 findings before finalizing schema. Absorbs HP-B6, REF-1, REF-9, Pass 1 A1/A2/B3, MLO-11.
-4. **D8 remediation — single-source rule consolidation** — par-picker consumers (HP-4a/4b/4c + dscr-calculator), duplicated status/loan-type picklists (MLO-1→6), comp split calc (MLO-8/12).
-5. **D9b remediation — pricing unification** — retire `homepage-db.js` parallel path (HP-B6 root cause), unified pricing entry point with product router.
+14. **D9d ref-data schema design** — aggregate Pass 1/2/6/7/8 reference-data findings (13+ proposed tables from Pass 8 alone; MKT-E2 loan-limits-2025.json; BP-1 closing costs) into unified `ref_*` schema. Feeds Layer 1 migration PR design.
+15. **D9 Layer 1 build** — PR 1 (schema rename + merge migration), PR 2 (scenarios contact_id discipline), PR 3 (lead conversion flow), PR 4 (lead capture auto-email). Unblocks Claw relay `cmo0m2hy2mv25q95r` (CoreCRM lead intake → ICanBuy activation).
+16. **BP-9 DB audit → ship** — `SELECT DISTINCT loan_type FROM scenarios/rate_products` then extract `LOAN_TYPES` to single constant file if divergence confirmed.
+17. **D8 remediation — single-source rule consolidation** — par-picker consumers (HP-4a/4b/4c + dscr-calculator), duplicated status picklists (MLO-1→6), comp split calc (MLO-8/12) — after D9 Layer 1 to land on new schema.
+18. **D9b remediation — pricing unification** — retire `homepage-db.js` parallel path (HP-B6 root cause), unified pricing entry point with product router.
 
 ### D9 Layer 1 build (lead intake — primary goal)
 
@@ -362,6 +370,7 @@ After completion, this doc moves to archive status and a fresh `SITE-AUDIT-2027.
 - **2026-04-15 (v1.2)** — post-D0-re-audit update. Ran D0 verification re-audits (§6 header distinguishes claimed-done from re-verified-done). D3 and D5 fully re-audited; D1/D2/D4 agents terminated mid-investigation and will be re-spawned. Two ship-immediately remediations landed: PR #76 (D5 cross-org scenario-alerts leak) and PR #77 (D3 homepage EMPTY_ADJ fallback + shared `empty-adj.js` module). D3 remediation was partial: closed the silent hardcoded-fallback cascade, but homepage-db still diverges from `/api/pricing` for the DEFAULT_SCENARIO (5.875% vs 5.990%). Divergence parked as a seed finding for D8 Pass 2 along with the existing page.js fallback and DSCR-widget inline-picker findings. Queue in §7 reshaped to reflect actual tonight-state and what's next.
 - **2026-04-16 (v1.3)** — D9 (UAD) added as new dimension. Full architecture discussion with David produced 16 architecture decisions covering identity lifecycle (Lead → Contact → Deal), pricing unification, composable quote model, application modules, service provider directory, marketing lifecycle, and portal access. D5 downgraded from ✅ to 🔄 half-done — first half (org_id on existing tables) verified, second half (unified identity model) absorbed into D9. D7 blocked-on updated to include D9 Layer 1 dependency. Queue reshaped: D9 spec + D8 inventory passes are parallel tracks, D9 Layer 1 build (lead intake) is the primary goal, D7 redesigns on top of D9 schema. UAD spec filed at `Work/Dev/UAD-SPEC.md`. UAB MCP decision (`cmo1igp2enjnw46ef`) superseded by broader UAD scope.
 - **2026-04-16 (v1.4)** — batch 1 D8 inventory complete (Passes 2/6/7/8). D0 re-audits for D1/D2/D4 also complete. **§2c "Re-architecture deference" added** — new triage principle stating that findings D9 will naturally absorb should be deferred rather than patched with throwaway fixes, unless the finding is (a) security-critical, (b) actively harming users *right now* in a non-fallback path, or (c) observability/tooling that survives D9. PR #80 shipped 2 critical D4 findings (SMS cross-org leak + pipeline bulk-cap). Pending PR ships CRON-2/CRON-12 (health-check observability). D1 re-verified with residual `err.message` leaks batched for follow-up. D2 fully closed — residual-files note was false alarm. D4 re-verified ✅ with other dialer routes flagged for a follow-up pass. Queue reshaped: batch 2 (Passes 3/4/5) is next; D9d reference-data schema design batches all inventory findings together after batch 2 converges.
+- **2026-04-17 (v1.5)** — **FoH April rename** (combined audit + UAD). Discovered batch 2 D8 inventory (Passes 3/4/5) was already filed 2026-04-16; README stale. PR #83 (2026-04-16) landed: CA licensing (MKT-COMP-1), aggregateRating schema (SEO-20), Texas stale prose (MKT-B4), company+auth constants modules. Small ship-now PR in flight (vigorous-cartwright worktree): GBP rename URLs centralized through `GBP_REVIEW_URL` (MKT-B2/SEO-17 — GBP renamed Locus→NetRate 2026-04-17), `/rates/dscr` added to sitemap (SEO-15a), equity-page meta historical framing (MKT-D4a), about-page year-label consistency (MKT-B3). **D9 Layer 1 migration plan** drafted — current schema is much further along than UAD implied (application modules from `1003-BUILD-SPEC.md` are modeled); Layer 1 is rename + merge migration, not greenfield. Option B (in-place) recommended. 5 open decisions for David at [`UAD-LAYER-1-MIGRATION-PLAN.md`](../UAD-LAYER-1-MIGRATION-PLAN.md) §8. Pass 5 confirmed Application LITE field list has 100% coverage against current intake wizard.
 
 ## 12. Appendix — where to find things
 

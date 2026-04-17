@@ -6,7 +6,7 @@
 **Do not announce your department, do not ask what we're working on, do not respond to the user's first message until all 4 steps below are complete.**
 
 1. `get_briefing(device="pc", department=<yours>)` — full context from MCP
-2. `GET https://tracker.netratemortgage.com/api/relay?device=pc&status=open` with header `x-tracker-api-key: ntk_6f069e97f3272b9e1543710929b4517a` — check for open relay messages (REST API call, not MCP tool)
+2. `GET https://tracker.netratemortgage.com/api/relay?participant=pc&status=open` with header `x-tracker-api-key: ntk_6f069e97f3272b9e1543710929b4517a` — check for open relay messages (REST API call, not MCP tool)
 3. Announce department and summarize findings from steps 1 and 2
 4. Read your department CLAUDE.md:
    - Dev → `Work/Dev/CLAUDE.md`
@@ -322,7 +322,7 @@ Auth: `x-tracker-api-key: {TRACKER_API_KEY}` on all requests.
 ### Relay Protocol
 
 1. **Check inbox at session start — MANDATORY, every session:**
-   `GET https://tracker.netratemortgage.com/api/relay?device=pc&status=open`
+   `GET https://tracker.netratemortgage.com/api/relay?participant=pc&status=open`
 
 2. **Send a relay:**
    `POST https://tracker.netratemortgage.com/api/relay`

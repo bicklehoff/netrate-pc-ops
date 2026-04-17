@@ -101,10 +101,10 @@ export const STATE_LICENSES = {
 };
 
 // Google Business Profile review stats. Update manually until the GBP
-// sync cron is built. See marketing-playbook.md for the rename-deferred
-// context (the GBP itself is still under "Locus Mortgage").
+// sync cron is built. GBP renamed from "Locus Mortgage" to "NetRate Mortgage"
+// on 2026-04-17; place_id is stable across the rename.
 export const GBP_PLACE_ID = 'ChIJa5-5jCXza4cRptwJxaP23eU';
 export const GBP_REVIEW_RATING = 4.9;
 export const GBP_REVIEW_COUNT = 35;
 export const GBP_REVIEW_URL =
-  `https://www.google.com/maps/search/?api=1&query=Locus+Mortgage&query_place_id=${GBP_PLACE_ID}`;
+  `https://www.google.com/maps/search/?api=1&query=NetRate+Mortgage&query_place_id=${GBP_PLACE_ID}`;

@@ -67,9 +67,9 @@
 
 ### 2. Google Reviews — Two Components
 
-**Current GBP data:** 4.9 stars, 35 reviews (under "Locus Mortgage" — GBP rename deferred, see below)
+**Current GBP data:** 4.9 stars, 35 reviews (GBP renamed from "Locus Mortgage" to "NetRate Mortgage" 2026-04-17; place_id stable across rename)
 **Google Place ID:** `ChIJa5-5jCXza4cRptwJxaP23eU`
-**GBP review link:** `https://www.google.com/maps/search/?api=1&query=Locus+Mortgage&query_place_id=ChIJa5-5jCXza4cRptwJxaP23eU`
+**GBP review link:** `https://www.google.com/maps/search/?api=1&query=NetRate+Mortgage&query_place_id=ChIJa5-5jCXza4cRptwJxaP23eU`
 
 **a) Curated Reviews Section (Homepage)**
 - Reviews strip showing Google star rating (4.9) + 2-3 curated pull quotes + "See all reviews on Google" link

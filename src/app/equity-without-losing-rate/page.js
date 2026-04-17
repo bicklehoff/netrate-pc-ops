@@ -2,10 +2,10 @@ import Link from 'next/link';
 
 export const metadata = {
   title: 'Access Home Equity Without Refinancing Your Low Rate | NetRate Mortgage',
-  description: 'Got a 3% (3.369% APR) mortgage and need cash? A HELOC or second lien lets you tap your equity without touching your first mortgage. Here\'s how it works and when it makes sense.',
+  description: 'Have a low-rate mortgage from 2020-2021 and need cash? A HELOC or second lien lets you tap your equity without touching your first mortgage. Here\'s how it works and when it makes sense.',
   openGraph: {
     title: 'Access Home Equity Without Refinancing Your Low Rate',
-    description: 'Got a 3% (3.369% APR) mortgage and need cash? A HELOC or second lien lets you tap your equity without touching your first mortgage.',
+    description: 'Have a low-rate mortgage from 2020-2021 and need cash? A HELOC or second lien lets you tap your equity without touching your first mortgage.',
     url: 'https://netratemortgage.com/equity-without-losing-rate',
     siteName: 'NetRate Mortgage',
     type: 'article',
@@ -26,7 +26,7 @@ const jsonLd = [
     '@context': 'https://schema.org',
     '@type': 'Article',
     headline: 'How to Access Your Home Equity Without Losing Your Low Rate',
-    description: 'Got a 3% (3.369% APR) mortgage and need cash? A HELOC or second lien lets you tap your equity without touching your first mortgage.',
+    description: 'Have a low-rate mortgage from 2020-2021 and need cash? A HELOC or second lien lets you tap your equity without touching your first mortgage.',
     datePublished: '2026-03-27',
     dateModified: '2026-03-27',
     author: {
