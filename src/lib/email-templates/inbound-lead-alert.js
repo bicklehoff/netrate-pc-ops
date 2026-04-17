@@ -55,6 +55,7 @@ function escapeHtml(s) {
  */
 export function inboundLeadAlertTemplate({
   contactId,
+  leadId,
   firstName,
   lastName,
   email,
@@ -70,7 +71,11 @@ export function inboundLeadAlertTemplate({
   siteUrl,
 }) {
   const baseUrl = siteUrl || process.env.NEXTAUTH_URL || 'https://www.netratemortgage.com';
-  const contactLink = `${baseUrl}/portal/mlo/contacts/${contactId}`;
+  const contactLink = contactId
+    ? `${baseUrl}/portal/mlo/contacts/${contactId}`
+    : leadId
+      ? `${baseUrl}/portal/mlo/leads/${leadId}`
+      : `${baseUrl}/portal/mlo/leads`;
 
   const name = [firstName, lastName].filter(Boolean).join(' ') || email || 'Unknown';
   const amount = formatMoney(loanAmount);

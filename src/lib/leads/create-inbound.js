@@ -23,11 +23,9 @@
 
 import sql from '@/lib/db';
 import { findOrCreateContactByEmail } from '@/lib/contacts/find-or-create';
-import { sendEmail } from '@/lib/resend';
-import { inboundLeadAlertTemplate } from '@/lib/email-templates/inbound-lead-alert';
+import { notifyOnLeadCreated } from '@/lib/leads/notify';
 
 const DEFAULT_ORG_ID = '00000000-0000-4000-8000-000000000001';
-const DAVID_EMAIL = 'david@netratemortgage.com';
 
 /**
  * @param {object} params
@@ -167,14 +165,14 @@ export async function createInboundLead({
     )
   `;
 
-  // ── 6. David notification (non-blocking) ──────────────────────
-  let emailStatus = notifyDavid ? 'not_attempted' : 'skipped_disabled';
-  if (notifyDavid) {
-    try {
-      const tmpl = inboundLeadAlertTemplate({
+  // ── 6. Notifications (non-blocking) ──────────────────────────
+  // Inbound/paid leads: send both borrower confirmation + David alert.
+  // skipBorrower=false because inbound leads always have a valid email (caller-validated).
+  const { borrowerEmailStatus, davidEmailStatus } = notifyDavid
+    ? await notifyOnLeadCreated({
+        leadId,
         contactId: contact.id,
         firstName,
-        lastName,
         email,
         phone,
         state,
@@ -185,19 +183,8 @@ export async function createInboundLead({
         propertyAddress,
         source,
         sourceDetail,
-      });
-      const result = await sendEmail({
-        to: DAVID_EMAIL,
-        subject: tmpl.subject,
-        html: tmpl.html,
-        text: tmpl.text,
-      });
-      emailStatus = result?.skipped ? 'skipped_no_api_key' : 'sent';
-    } catch (err) {
-      emailStatus = 'failed';
-      console.error('[createInboundLead] David notification failed (non-fatal):', err.message);
-    }
-  }
+      })
+    : { borrowerEmailStatus: 'skipped_disabled', davidEmailStatus: 'skipped_disabled' };
 
   return {
     success: true,
@@ -205,6 +192,7 @@ export async function createInboundLead({
     leadId,
     dealId: loanId,
     isNew,
-    emailStatus,
+    emailStatus: davidEmailStatus,
+    borrowerEmailStatus,
   };
 }

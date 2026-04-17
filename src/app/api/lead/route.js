@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import sql from '@/lib/db';
 import { normalizePhone } from '@/lib/normalize-phone';
+import { notifyOnLeadCreated } from '@/lib/leads/notify';
 
 // Simple in-memory rate limiter (resets on cold start, but still catches bursts)
 const rateLimitMap = new Map();
@@ -86,6 +87,17 @@ export async function POST(request) {
       VALUES (${name}, ${email}, ${normalizePhone(phone) || phone || null}, ${fullMessage || null}, ${source || leadSource || 'website'}, ${sourceDetail || null}, ${utmSource || null}, ${utmMedium || null}, ${utmCampaign || null})
       RETURNING id
     `;
+
+    const firstName = (name || '').trim().split(/\s+/)[0] || null;
+    notifyOnLeadCreated({
+      leadId: rows[0].id,
+      contactId: null,
+      firstName,
+      email,
+      phone: normalizePhone(phone) || phone || null,
+      source: source || leadSource || 'website',
+      sourceDetail: sourceDetail || null,
+    }).catch(err => console.error('[lead] notify failed (non-fatal):', err.message));
 
     return NextResponse.json({ success: true, id: rows[0].id });
   } catch (err) {
