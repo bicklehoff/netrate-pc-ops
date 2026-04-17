@@ -19,40 +19,39 @@ Pricing-drift bugs have leaked to prod repeatedly (PR #82 LIMIT-1, homepage para
 
 ## 1. The North Star
 
+Two independent pipelines. Both land in the DB, but **they never cross**. Market context (FRED/MND/Treasury) is never displayed as a NetRate Mortgage rate and never fed into the pricer.
+
+### 1.A — NetRate pricing pipeline (THE rate when we show "our rate")
+
 ```
-                                 ┌──────────────────────────────────────┐
-     Rate sheet files  ─┐        │  DB (source of truth)                │
-     (CSV, XLSX)         │        │                                      │
-                         │        │  rate_sheets                         │
-                         ├── parsers ──▶  rate_products                  │
-                         │        │    rate_prices                       │
-     FRED / MND /        │        │    rate_lenders                      │
-     Treasury APIs  ─────┤──▶    │    adjustment_rules                  │
-                         │        │    nonqm_rate_sheets / _products /  │
-     Manual admin  ──────┘        │    _adjustment_rules                 │
-                                  │    rate_history (daily snapshots)   │
-                                  │    site_scenarios  (NEW)            │
-                                  │    surface_pricing_config (NEW)     │
-                                  │    homepage_rate_cache (NEW)        │
-                                  └─────────────────┬────────────────────┘
-                                                    │
-                                          ┌─────────▼───────────┐
-                                          │   priceScenario()    │  ← THE ONLY PRICER
-                                          │   (forward + nonQM   │    (one per product
-                                          │    + HECM as peers)  │     family; same contract)
-                                          └─────────┬───────────┘
-                                                    │
-                                          ┌─────────▼────────────┐
-                                          │  selection layer      │
-                                          │  pickParRate()        │
-                                          │  (or caller-custom)   │
-                                          └─────────┬────────────┘
-                                                    │
-           ┌──────────────┬─────────────────┬───────┼───────────┬─────────────────┐
-           ▼              ▼                 ▼       ▼           ▼                 ▼
-       Homepage       Rate-Watch        Tool pages  MLO pricer   Email/PDF      Rate alerts
-       (§3.A)          (§3.B)            (§3.C)     (§3.D)        (§3.E)         (§3.F)
+Rate sheet files ──▶ parsers ──▶ DB ──▶ priceScenario() ──▶ pickParRate ──▶ surfaces
+(CSV, XLSX)                      │                                            │
+                                 │         rate_sheets                        ├─ Homepage (§3.A)
+Manual admin    ─────────────────┤         rate_products                      ├─ Rate-Watch hero (§3.B)
+(rate_lenders,                   │         rate_prices                        ├─ Tool pages (§3.C)
+ LLPA seed)                      │         rate_lenders                       ├─ MLO pricer (§3.D)
+                                 │         adjustment_rules                   ├─ Email / PDF (§3.E)
+                                 │         nonqm_rate_*                       └─ Rate alerts (§3.F)
+                                 │         site_scenarios      (NEW)
+                                 │         surface_pricing_config (NEW)
+                                 │         homepage_rate_cache  (NEW)
+                                 ▼
+                          ONE PRICER per product family:
+                            priceScenario() — forward (conv/FHA/VA)
+                            priceDscrScenario() — NonQM
+                            hecm — reverse
 ```
+
+### 1.B — Market context pipeline (independent — not "our rate")
+
+```
+FRED API           ──▶ fred-snapshot cron ──▶ fred_series_data ──┐
+MND scrape         ──▶ mnd-scrape cron    ──▶ rate_history       │
+Treasury CSV       ──▶ getTreasuryCMT (on-demand fetch)          ├──▶ /rate-watch chart + sidebar
+National rates     ──▶ national-rates/scrape ──▶ rate_history    │    (market narrative only)
+```
+
+**These sources are never consumed by `priceScenario()` and never displayed as a NetRate rate.** They exist to provide market context on `/rate-watch` (Freddie Mac 30yr average, 10yr Treasury, Fed Funds, MND daily benchmark). When the site shows "the market is trending higher," this is where that comes from. When it shows "our par is 5.875%," that comes from 1.A.
 
 ### Principles (enforced, not aspirational)
 
@@ -62,6 +61,7 @@ Pricing-drift bugs have leaked to prod repeatedly (PR #82 LIMIT-1, homepage para
 4. **Surface differences are config, not code.** "Homepage excludes buydowns" is a row in `surface_pricing_config`, not a branch in homepage.js.
 5. **Parsers write to DB only.** They never return values consumed elsewhere. If you need a number a parser extracted, read it from the DB.
 6. **Every user-visible total traces to DB columns.** Derivations are documented (§5); no undocumented math leaks.
+7. **Market context is independent.** FRED, MND, Treasury, and any other external market-data source writes to its own tables (`fred_series_data`, `rate_history`) and is read only by /rate-watch chart/sidebar. It is never consumed by `priceScenario()`, never labeled as a NetRate rate, and never shown interchangeably with our pricer's output.
 
 ---
 
@@ -100,17 +100,20 @@ Files flow: **GCS bucket → parser → db-writer → Postgres**.
 |---|---|---|---|
 | NonQM ingest | `src/lib/pricing-nonqm/ingest.js` | `nonqm_rate_sheets`, `nonqm_rate_products`, `nonqm_adjustment_rules` | Manual |
 
-### 2.4 Rate history (time-series, not pricing)
+### 2.4 Market context (independent of pricing pipeline 1.A)
 
-| Writer | File | Writes to | Schedule |
-|---|---|---|---|
-| MND scrape | `src/app/api/cron/mnd-scrape/route.js` | `rate_history` (source='mnd') | Vercel cron (see `vercel.json`) |
-| FRED snapshot | `src/app/api/cron/fred-snapshot/route.js` | `fred_series_data` | Vercel cron |
-| National rates scrape | `src/app/api/market/national-rates/scrape/route.js` | `rate_history` | Manual / cron |
-| NetRate par snapshot | `scripts/rate-history-snapshot.js` | `rate_history` (source='netrate') | Manual; **should be cron** |
-| Backfill | `scripts/backfill-rate-history.mjs`, `scripts/ingest-rate-watch.mjs`, `scripts/write-rate-history.mjs` | `rate_history` | One-shot historical |
+These writers feed `/rate-watch` chart and sidebar — Freddie Mac weekly rates, MND daily benchmark, Treasury yield curve, Fed Funds, SOFR. They **never** feed the pricer and never get labeled as a NetRate rate. Listed here for completeness of the write-inventory, but §1.B is the authoritative description of this pipeline.
 
-**Not pricing data**, but on the read-path for `/rate-watch` chart. Called out so the write-inventory is complete.
+| Writer | File | Writes to | Source | Schedule |
+|---|---|---|---|---|
+| MND scrape | `src/app/api/cron/mnd-scrape/route.js` | `rate_history` (source='mnd') | Mortgage News Daily | Vercel cron |
+| FRED snapshot | `src/app/api/cron/fred-snapshot/route.js` | `fred_series_data` | FRED API (Freddie Mac 30yr/15yr, Treasuries, SOFR, Prime, Fed Funds) | Vercel cron |
+| National rates scrape | `src/app/api/market/national-rates/scrape/route.js` | `rate_history` | MND product variants | Manual / cron |
+| Treasury CMT | (fetched inline by `/rate-watch/page.js:getTreasuryCMT`, not written to DB) | — | home.treasury.gov CSV | Per-request |
+| NetRate par snapshot | `scripts/rate-history-snapshot.js` | `rate_history` (source='netrate') | Our own pricer output (snapshots our par for historical chart) | Manual; **should be cron** |
+| Backfill | `scripts/backfill-rate-history.mjs`, `scripts/ingest-rate-watch.mjs`, `scripts/write-rate-history.mjs` | `rate_history` | One-shot historical import | — |
+
+Note: the "NetRate par snapshot" row is a bridge — it takes the current day's par output from the pricing pipeline (1.A) and writes a point into `rate_history` so the /rate-watch chart can plot our par alongside MND. That's a read from 1.A and a write into the 1.B-shaped table. This is the only sanctioned crossover: pricer → market-context table for historical charting. It is **not** a round-trip — the chart reads `rate_history` but never shows that as a "live NetRate rate" to a borrower.
 
 ### 2.5 `rate_lenders` — seeded, not actively written
 
@@ -511,6 +514,7 @@ Per the "never assume, always verify" rule, this log tracks which claims in this
 | Original claim | Corrected |
 |---|---|
 | "No state machine preventing two sheets for the same lender from both being active" | Supersede logic EXISTS at `db-writer.js:142`: `UPDATE rate_sheets SET status='superseded'` before new insert. Kept a narrower concern (race under concurrent parses). |
+| North Star diagram (first pass) showed FRED / MND / Treasury feeding the same DB → pricer flow as rate sheets | Corrected 2026-04-17 per David's feedback: these are two independent pipelines. §1 split into 1.A (pricing) and 1.B (market context). Principle #7 added: market context never feeds the pricer and never displays as a NetRate rate. §2.4 retitled to "Market context" and explicitly scoped out of the pricing pipeline. |
 
 ### 🕳️ Explicitly not audited (out of scope this pass)
 
