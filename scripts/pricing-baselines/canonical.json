@@ -1,0 +1,174 @@
+{
+  "conv30": {
+    "scenarioKey": "conv30",
+    "effectiveDate": "4/17/2026",
+    "resultCount": 686,
+    "par": {
+      "lender": "everstream",
+      "rate": 5.75,
+      "finalPrice": 100.226,
+      "monthlyPI": null
+    },
+    "top5": [
+      {
+        "lender": "everstream",
+        "rate": 4.375,
+        "finalPrice": 89.059,
+        "monthlyPI": null
+      },
+      {
+        "lender": "everstream",
+        "rate": 4.375,
+        "finalPrice": 93.062,
+        "monthlyPI": null
+      },
+      {
+        "lender": "everstream",
+        "rate": 4.375,
+        "finalPrice": 88.953,
+        "monthlyPI": null
+      },
+      {
+        "lender": "everstream",
+        "rate": 4.375,
+        "finalPrice": 93.244,
+        "monthlyPI": null
+      },
+      {
+        "lender": "everstream",
+        "rate": 4.5,
+        "finalPrice": 89.759,
+        "monthlyPI": null
+      }
+    ]
+  },
+  "conv15": {
+    "scenarioKey": "conv15",
+    "effectiveDate": "4/17/2026",
+    "resultCount": 445,
+    "par": {
+      "lender": "swmc",
+      "rate": 5,
+      "finalPrice": 100.144,
+      "monthlyPI": null
+    },
+    "top5": [
+      {
+        "lender": "amwest",
+        "rate": 4,
+        "finalPrice": 96.816,
+        "monthlyPI": null
+      },
+      {
+        "lender": "amwest",
+        "rate": 4.125,
+        "finalPrice": 96.029,
+        "monthlyPI": null
+      },
+      {
+        "lender": "everstream",
+        "rate": 4.25,
+        "finalPrice": 93.595,
+        "monthlyPI": null
+      },
+      {
+        "lender": "everstream",
+        "rate": 4.25,
+        "finalPrice": 96.629,
+        "monthlyPI": null
+      },
+      {
+        "lender": "everstream",
+        "rate": 4.25,
+        "finalPrice": 93.717,
+        "monthlyPI": null
+      }
+    ]
+  },
+  "fha30": {
+    "scenarioKey": "fha30",
+    "effectiveDate": "4/17/2026",
+    "resultCount": 461,
+    "par": {
+      "lender": "everstream",
+      "rate": 5.375,
+      "finalPrice": 100.092,
+      "monthlyPI": null
+    },
+    "top5": [
+      {
+        "lender": "everstream",
+        "rate": 4.375,
+        "finalPrice": 91.159,
+        "monthlyPI": null
+      },
+      {
+        "lender": "everstream",
+        "rate": 4.375,
+        "finalPrice": 95.06,
+        "monthlyPI": null
+      },
+      {
+        "lender": "everstream",
+        "rate": 4.375,
+        "finalPrice": 95.08,
+        "monthlyPI": null
+      },
+      {
+        "lender": "everstream",
+        "rate": 4.375,
+        "finalPrice": 91.159,
+        "monthlyPI": null
+      },
+      {
+        "lender": "everstream",
+        "rate": 4.5,
+        "finalPrice": 91.901,
+        "monthlyPI": null
+      }
+    ]
+  },
+  "va30": {
+    "scenarioKey": "va30",
+    "effectiveDate": "4/17/2026",
+    "resultCount": 299,
+    "par": {
+      "lender": "everstream",
+      "rate": 5.25,
+      "finalPrice": 100.113,
+      "monthlyPI": null
+    },
+    "top5": [
+      {
+        "lender": "swmc",
+        "rate": 4.5,
+        "finalPrice": 93.835,
+        "monthlyPI": null
+      },
+      {
+        "lender": "windsor",
+        "rate": 4.5,
+        "finalPrice": 89.196,
+        "monthlyPI": null
+      },
+      {
+        "lender": "windsor",
+        "rate": 4.5,
+        "finalPrice": 89.196,
+        "monthlyPI": null
+      },
+      {
+        "lender": "swmc",
+        "rate": 4.625,
+        "finalPrice": 93.99,
+        "monthlyPI": null
+      },
+      {
+        "lender": "windsor",
+        "rate": 4.625,
+        "finalPrice": 89.672,
+        "monthlyPI": null
+      }
+    ]
+  }
+}
