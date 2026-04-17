@@ -3,7 +3,7 @@ import Link from 'next/link';
 export const metadata = {
   title: 'Mortgage Tools & Calculators | NetRate Mortgage',
   description: 'Free mortgage calculators and tools — refinance calculator, rate alerts, purchase calculator, refi recoup analyzer, DSCR calculator, cost of waiting, and more.',
-  alternates: { canonical: 'https://netratemortgage.com/tools' },
+  alternates: { canonical: 'https://www.netratemortgage.com/tools' },
 };
 
 const tools = [

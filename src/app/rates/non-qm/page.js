@@ -8,7 +8,7 @@ export const metadata = {
     description: 'Non-QM mortgage rates for investors, self-employed borrowers, and foreign nationals. DSCR loans, bank statement programs, ITIN, and asset depletion. Updated daily.',
     type: 'website',
     siteName: 'NetRate Mortgage',
-    url: 'https://netratemortgage.com/rates/non-qm',
+    url: 'https://www.netratemortgage.com/rates/non-qm',
   },
   twitter: {
     card: 'summary_large_image',
@@ -16,7 +16,7 @@ export const metadata = {
     description: 'Non-QM mortgage rates for investors, self-employed borrowers, and foreign nationals. DSCR loans, bank statement programs, ITIN, and asset depletion. Updated daily.',
   },
   alternates: {
-    canonical: 'https://netratemortgage.com/rates/non-qm',
+    canonical: 'https://www.netratemortgage.com/rates/non-qm',
   },
 };
 
@@ -25,16 +25,16 @@ const jsonLd = {
   '@type': 'WebPage',
   name: 'Non-QM Mortgage Rates',
   description: 'Non-QM mortgage rates for investors, self-employed borrowers, and foreign nationals. DSCR loans, bank statement programs, ITIN, and asset depletion.',
-  url: 'https://netratemortgage.com/rates/non-qm',
+  url: 'https://www.netratemortgage.com/rates/non-qm',
   publisher: {
     '@type': 'Organization',
     name: 'NetRate Mortgage',
-    url: 'https://netratemortgage.com',
+    url: 'https://www.netratemortgage.com',
   },
   author: {
     '@type': 'Organization',
     name: 'NetRate Mortgage',
-    url: 'https://netratemortgage.com',
+    url: 'https://www.netratemortgage.com',
   },
 };
 

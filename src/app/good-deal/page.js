@@ -4,7 +4,7 @@ export const metadata = {
   title: 'How to Tell If Your Mortgage Rate Is a Good Deal | NetRate Mortgage',
   description: 'The mortgage industry makes it hard to comparison shop on purpose. Here\'s why — and what to watch out for.',
   alternates: {
-    canonical: 'https://netratemortgage.com/good-deal',
+    canonical: 'https://www.netratemortgage.com/good-deal',
   },
 };
 

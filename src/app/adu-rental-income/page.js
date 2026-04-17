@@ -9,7 +9,7 @@ export const metadata = {
     type: 'article',
     publishedTime: '2026-03-27T00:00:00Z',
     siteName: 'NetRate Mortgage',
-    url: 'https://netratemortgage.com/adu-rental-income',
+    url: 'https://www.netratemortgage.com/adu-rental-income',
   },
   twitter: {
     card: 'summary_large_image',
@@ -17,7 +17,7 @@ export const metadata = {
     description: 'Fannie Mae now allows rental income from your ADU to count toward mortgage qualifying. Here\'s how it works, what qualifies, and what the limits are.',
   },
   alternates: {
-    canonical: 'https://netratemortgage.com/adu-rental-income',
+    canonical: 'https://www.netratemortgage.com/adu-rental-income',
   },
 }
 
@@ -31,12 +31,12 @@ const jsonLd = [
     author: {
       '@type': 'Organization',
       name: 'NetRate Mortgage',
-      url: 'https://netratemortgage.com',
+      url: 'https://www.netratemortgage.com',
     },
     publisher: {
       '@type': 'Organization',
       name: 'NetRate Mortgage',
-      url: 'https://netratemortgage.com',
+      url: 'https://www.netratemortgage.com',
     },
   },
   {

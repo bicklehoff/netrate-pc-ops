@@ -203,7 +203,7 @@ export async function generateMetadata() {
     description,
     openGraph: { title, description },
     alternates: {
-      canonical: 'https://netratemortgage.com/rate-watch',
+      canonical: 'https://www.netratemortgage.com/rate-watch',
     },
   };
 }
@@ -222,7 +222,7 @@ const jsonLd = {
   creator: {
     '@type': 'Organization',
     name: 'NetRate Mortgage',
-    url: 'https://netratemortgage.com',
+    url: 'https://www.netratemortgage.com',
   },
 };
 

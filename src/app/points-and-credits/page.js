@@ -4,7 +4,7 @@ export const metadata = {
   title: 'Mortgage Points vs Lender Credits — Which Option Saves You More? | NetRate Mortgage',
   description: 'Should you pay points for a lower rate, take lender credits for lower closing costs, or go somewhere in between? Here\'s how to think about it.',
   alternates: {
-    canonical: 'https://netratemortgage.com/points-and-credits',
+    canonical: 'https://www.netratemortgage.com/points-and-credits',
   },
 };
 

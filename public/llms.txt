@@ -8,11 +8,11 @@ The rate tool at /rates is the primary feature. It pulls live wholesale pricing 
 
 ## Key Pages
 
-- [Today's Rates](https://netratemortgage.com/rates): Live wholesale mortgage rate tool. Enter loan amount, credit range, and property type to see current rates with points, lender credits, and monthly payment breakdowns. Updated daily from wholesale lender pricing.
-- [Services](https://netratemortgage.com/services): Refinance and home purchase financing. Conventional, FHA, VA, and jumbo loans. Includes what-to-expect breakdowns for each loan type.
-- [About](https://netratemortgage.com/about): David Burson, mortgage broker since 2013. 50 loans funded in 2025 ($26.6M volume). 87.7% application-to-funding rate. Explains the direct-to-consumer model.
-- [Contact / Get a Quote](https://netratemortgage.com/contact): Request a personalized quote with full fee breakdown, cash-to-close estimate, and savings analysis. No application, no credit pull.
+- [Today's Rates](https://www.netratemortgage.com/rates): Live wholesale mortgage rate tool. Enter loan amount, credit range, and property type to see current rates with points, lender credits, and monthly payment breakdowns. Updated daily from wholesale lender pricing.
+- [Services](https://www.netratemortgage.com/services): Refinance and home purchase financing. Conventional, FHA, VA, and jumbo loans. Includes what-to-expect breakdowns for each loan type.
+- [About](https://www.netratemortgage.com/about): David Burson, mortgage broker since 2013. 50 loans funded in 2025 ($26.6M volume). 87.7% application-to-funding rate. Explains the direct-to-consumer model.
+- [Contact / Get a Quote](https://www.netratemortgage.com/contact): Request a personalized quote with full fee breakdown, cash-to-close estimate, and savings analysis. No application, no credit pull.
 
 ## Optional
 
-- [Homepage](https://netratemortgage.com/): Overview of services, credibility, and rate tool access.
+- [Homepage](https://www.netratemortgage.com/): Overview of services, credibility, and rate tool access.

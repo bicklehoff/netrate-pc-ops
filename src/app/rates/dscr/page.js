@@ -9,7 +9,7 @@ export const metadata = {
     description: 'Live DSCR loan rates for investment property. No tax returns, no W-2s — qualify on rental income. Instant quote for 1–4 unit properties.',
     type: 'website',
     siteName: 'NetRate Mortgage',
-    url: 'https://netratemortgage.com/rates/dscr',
+    url: 'https://www.netratemortgage.com/rates/dscr',
   },
   twitter: {
     card: 'summary_large_image',
@@ -17,7 +17,7 @@ export const metadata = {
     description: 'Live DSCR loan rates for investment property. No tax returns, no W-2s — qualify on rental income.',
   },
   alternates: {
-    canonical: 'https://netratemortgage.com/rates/dscr',
+    canonical: 'https://www.netratemortgage.com/rates/dscr',
   },
 };
 
@@ -26,16 +26,16 @@ const jsonLd = {
   '@type': 'WebPage',
   name: 'DSCR Loan Rates',
   description: 'Live DSCR loan rates for investment property. Qualify on rental income, not personal income.',
-  url: 'https://netratemortgage.com/rates/dscr',
+  url: 'https://www.netratemortgage.com/rates/dscr',
   publisher: {
     '@type': 'Organization',
     name: 'NetRate Mortgage',
-    url: 'https://netratemortgage.com',
+    url: 'https://www.netratemortgage.com',
   },
   author: {
     '@type': 'Organization',
     name: 'NetRate Mortgage',
-    url: 'https://netratemortgage.com',
+    url: 'https://www.netratemortgage.com',
   },
 };
 

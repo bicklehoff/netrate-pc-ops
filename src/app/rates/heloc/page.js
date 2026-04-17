@@ -8,7 +8,7 @@ export const metadata = {
     description: 'HELOC and home equity loan rates. Access your equity without touching your first mortgage rate. Compare line of credit vs closed-end second options.',
     type: 'website',
     siteName: 'NetRate Mortgage',
-    url: 'https://netratemortgage.com/rates/heloc',
+    url: 'https://www.netratemortgage.com/rates/heloc',
   },
   twitter: {
     card: 'summary_large_image',
@@ -16,7 +16,7 @@ export const metadata = {
     description: 'HELOC and home equity loan rates. Access your equity without touching your first mortgage rate. Compare line of credit vs closed-end second options.',
   },
   alternates: {
-    canonical: 'https://netratemortgage.com/rates/heloc',
+    canonical: 'https://www.netratemortgage.com/rates/heloc',
   },
 };
 
@@ -25,16 +25,16 @@ const jsonLd = {
   '@type': 'WebPage',
   name: 'HELOC & Home Equity Rates',
   description: 'HELOC and home equity loan rates. Access your equity without touching your first mortgage rate. Compare line of credit vs closed-end second options.',
-  url: 'https://netratemortgage.com/rates/heloc',
+  url: 'https://www.netratemortgage.com/rates/heloc',
   publisher: {
     '@type': 'Organization',
     name: 'NetRate Mortgage',
-    url: 'https://netratemortgage.com',
+    url: 'https://www.netratemortgage.com',
   },
   author: {
     '@type': 'Organization',
     name: 'NetRate Mortgage',
-    url: 'https://netratemortgage.com',
+    url: 'https://www.netratemortgage.com',
   },
 };
 

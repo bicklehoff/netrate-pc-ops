@@ -7,7 +7,7 @@ export const metadata = {
   title: "Today's Mortgage Rates | NetRate Mortgage",
   description: "See today's real wholesale mortgage rates with transparent pricing. Enter your scenario and get instant rate quotes with full cost breakdown.",
   alternates: {
-    canonical: 'https://netratemortgage.com/rates',
+    canonical: 'https://www.netratemortgage.com/rates',
   },
 };
 

@@ -10,7 +10,7 @@ import Link from 'next/link';
 import sql from '@/lib/db';
 import MarkdownContent from '@/components/Portal/MarkdownContent';
 
-const BASE_URL = 'https://netratemortgage.com';
+const BASE_URL = 'https://www.netratemortgage.com';
 
 async function getPage(slug) {
   const rows = await sql`
