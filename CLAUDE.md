@@ -385,10 +385,10 @@ PC connects to the shared knowledge layer via `.mcp.json` in repo root. The MCP 
 
 ## Brand
 
-- **See full guide:** Read from Mac's `netrate-ops` repo: `Work/Marketing/Brand/BRAND_GUIDE.md`
-- **Primary color:** Teal (#0891b2)
+- **Design system (MANDATORY for all UI work):** `Work/Dev/DESIGN-SYSTEM.md` — current tokens mirrored from `tailwind.config.js`. Source of truth is the tailwind config itself; read it first for any color/radius/shadow value.
+- **Primary tokens:** brand `#2E6BA8` (blue), go `#059669` (green CTA), accent `#FFC220` (yellow highlight), ink `#1A1F2E` (text). No cyan, no teal, no ad-hoc hex.
+- **Full brand guide (voice, logo, philosophy):** Read from Mac's `netrate-ops` repo: `Work/Marketing/Brand/BRAND_GUIDE.md`
 - **Font:** Inter
-- **Logo:** Wordmark — "Net" (black) + "Rate" (teal) + "Mortgage"
 - **Philosophy:** "Show, don't tell" — demonstrate transparency with real rates, real math
 
 ### Branding Rules (mandatory for all published content)

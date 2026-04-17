@@ -48,23 +48,17 @@ export async function notifyOnLeadCreated({
   sourceDetail = null,
   skipBorrower = false,
 }) {
-  let borrowerEmailStatus = skipBorrower ? 'skipped_disabled' : 'not_attempted';
-  let davidEmailStatus = 'not_attempted';
+  // Send both in parallel. Callers MUST await this function (not fire-and-forget) —
+  // Vercel serverless terminates execution shortly after the response is returned,
+  // which was silently killing the second sequential send.
+  const borrowerPromise = skipBorrower || !email
+    ? Promise.resolve({ skipped: true, reason: skipBorrower ? 'disabled' : 'no_email' })
+    : (async () => {
+        const tmpl = leadConfirmationTemplate({ firstName });
+        return sendEmail({ to: email, subject: tmpl.subject, html: tmpl.html, text: tmpl.text });
+      })();
 
-  // ── 1. Borrower confirmation ──────────────────────────────────
-  if (!skipBorrower && email) {
-    try {
-      const tmpl = leadConfirmationTemplate({ firstName });
-      const result = await sendEmail({ to: email, subject: tmpl.subject, html: tmpl.html, text: tmpl.text });
-      borrowerEmailStatus = result?.skipped ? 'skipped_no_api_key' : 'sent';
-    } catch (err) {
-      borrowerEmailStatus = 'failed';
-      console.error('[notifyOnLeadCreated] borrower email failed (non-fatal):', err.message);
-    }
-  }
-
-  // ── 2. David alert ────────────────────────────────────────────
-  try {
+  const davidPromise = (async () => {
     const tmpl = inboundLeadAlertTemplate({
       contactId,
       leadId,
@@ -80,11 +74,29 @@ export async function notifyOnLeadCreated({
       source,
       sourceDetail,
     });
-    const result = await sendEmail({ to: DAVID_EMAIL, subject: tmpl.subject, html: tmpl.html, text: tmpl.text });
-    davidEmailStatus = result?.skipped ? 'skipped_no_api_key' : 'sent';
-  } catch (err) {
+    return sendEmail({ to: DAVID_EMAIL, subject: tmpl.subject, html: tmpl.html, text: tmpl.text });
+  })();
+
+  const [borrowerResult, davidResult] = await Promise.allSettled([borrowerPromise, davidPromise]);
+
+  let borrowerEmailStatus;
+  if (skipBorrower) {
+    borrowerEmailStatus = 'skipped_disabled';
+  } else if (!email) {
+    borrowerEmailStatus = 'skipped_no_email';
+  } else if (borrowerResult.status === 'rejected') {
+    borrowerEmailStatus = 'failed';
+    console.error('[notifyOnLeadCreated] borrower email failed:', borrowerResult.reason?.message);
+  } else {
+    borrowerEmailStatus = borrowerResult.value?.skipped ? 'skipped_no_api_key' : 'sent';
+  }
+
+  let davidEmailStatus;
+  if (davidResult.status === 'rejected') {
     davidEmailStatus = 'failed';
-    console.error('[notifyOnLeadCreated] David alert failed (non-fatal):', err.message);
+    console.error('[notifyOnLeadCreated] David alert failed:', davidResult.reason?.message);
+  } else {
+    davidEmailStatus = davidResult.value?.skipped ? 'skipped_no_api_key' : 'sent';
   }
 
   return { borrowerEmailStatus, davidEmailStatus };
