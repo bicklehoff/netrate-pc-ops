@@ -3,7 +3,58 @@
  *
  * Converts between the new normalized scenario tables and the old JSONB shapes
  * that existing UI consumers expect in API responses.
+ *
+ * Post-Layer-1c: `scenarios.borrower_name/email/phone` are deprecated.
+ * Identity comes from the JOINed contact (scenario_id → contact_id →
+ * contacts.first_name/last_name/email/phone). During the soak period we
+ * fall back to the legacy denorm columns for scenarios whose contact_id
+ * is NULL. PR 2 removes both the fallback and the columns.
  */
+
+/**
+ * Derive `{ borrower_name, borrower_email, borrower_phone }` from a
+ * scenario row that was read with identity JOIN aliases:
+ *   - Contact:  `_c_first_name`, `_c_last_name`, `_c_email`, `_c_phone`
+ *   - Lead:     `_l_first_name`, `_l_last_name`, `_l_name`, `_l_email`, `_l_phone`
+ *
+ * Priority: contact → lead → legacy denorm columns. The legacy fallback
+ * is soak-period only; PR 2 removes it along with the columns.
+ *
+ * @param {object} scenario - Row from listScenarios / getScenarioById / createScenario.
+ * @returns {{ borrower_name: string|null, borrower_email: string|null, borrower_phone: string|null }}
+ */
+export function deriveIdentity(scenario) {
+  if (!scenario) {
+    return { borrower_name: null, borrower_email: null, borrower_phone: null };
+  }
+
+  // Name: prefer contact (first+last), then lead structured, then lead full name, then legacy.
+  let borrower_name = null;
+
+  const cFn = scenario._c_first_name || null;
+  const cLn = scenario._c_last_name || null;
+  if (cFn || cLn) {
+    borrower_name = [cFn, cLn].filter(Boolean).join(' ') || null;
+  }
+
+  if (!borrower_name) {
+    const lFn = scenario._l_first_name || null;
+    const lLn = scenario._l_last_name || null;
+    if (lFn || lLn) {
+      borrower_name = [lFn, lLn].filter(Boolean).join(' ') || null;
+    }
+  }
+
+  if (!borrower_name) borrower_name = scenario._l_name || null;
+  if (!borrower_name) borrower_name = scenario.borrower_name || null;
+
+  const borrower_email =
+    scenario._c_email || scenario._l_email || scenario.borrower_email || null;
+  const borrower_phone =
+    scenario._c_phone || scenario._l_phone || scenario.borrower_phone || null;
+
+  return { borrower_name, borrower_email, borrower_phone };
+}
 
 /**
  * Convert a scenario_rates row to the old quote scenarios JSONB shape.
@@ -94,6 +145,7 @@ export function feeItemsToBreakdownShape(feeItems, scenario = {}) {
 export function scenarioToQuoteShape(scenario) {
   const rates = scenario.rates || [];
   const feeItems = scenario.feeItems || [];
+  const { borrower_name, borrower_email, borrower_phone } = deriveIdentity(scenario);
 
   return {
     id: scenario.id,
@@ -102,9 +154,9 @@ export function scenarioToQuoteShape(scenario) {
     contact_id: scenario.contact_id,
     lead_id: scenario.lead_id,
     loan_id: scenario.loan_id,
-    borrower_name: scenario.borrower_name,
-    borrower_email: scenario.borrower_email,
-    borrower_phone: scenario.borrower_phone,
+    borrower_name,
+    borrower_email,
+    borrower_phone,
     purpose: scenario.loan_purpose,
     property_value: scenario.property_value,
     loan_amount: scenario.loan_amount,
