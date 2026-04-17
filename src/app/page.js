@@ -2,6 +2,7 @@ import Link from 'next/link';
 import TrustBar from '@/components/TrustBar';
 import StickyRateBar from '@/components/StickyRateBar';
 import { getHomepageRatesFromDB } from '@/lib/rates/homepage-db';
+import { GBP_REVIEW_URL } from '@/lib/constants/company';
 
 export const metadata = {
   alternates: {
@@ -116,10 +117,9 @@ export default async function HomePage() {
           {/* Left — Text */}
           <div>
             {/* Trust strip — above headline */}
-            {/* TODO: Update Google Maps link after GBP name change from Locus → NetRate */}
             <div className="flex items-center gap-2 mb-5 flex-wrap">
               <a
-                href="https://www.google.com/maps/search/?api=1&query=Locus+Mortgage&query_place_id=ChIJa5-5jCXza4cRptwJxaP23eU"
+                href={GBP_REVIEW_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 bg-gray-100 border border-gray-200 rounded-full pl-1.5 pr-3 py-1 hover:bg-gray-200 transition-colors"

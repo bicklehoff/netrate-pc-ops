@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { GBP_REVIEW_URL } from '@/lib/constants/company';
 
 export const metadata = {
   title: 'About | NetRate Mortgage',
@@ -38,7 +39,7 @@ const CREDENTIALS = [
   { label: 'Founded', value: '2013' },
   { label: 'Loans Funded (2025)', value: '50' },
   { label: 'Volume (2025)', value: '$26.6M' },
-  { label: 'App-to-Fund Rate', value: '87.7%' },
+  { label: 'App-to-Fund Rate (2025)', value: '87.7%' },
   { label: 'Lending Partners', value: '11' },
 ];
 
@@ -148,9 +149,8 @@ export default function AboutPage() {
                   <div className="text-sm text-gray-600"><strong className="text-gray-900">4.9</strong> · 35 reviews</div>
                 </div>
               </div>
-              {/* TODO: Update Google Maps link after GBP name change from Locus → NetRate */}
               <a
-                href="https://www.google.com/maps/search/?api=1&query=Locus+Mortgage&query_place_id=ChIJa5-5jCXza4cRptwJxaP23eU"
+                href={GBP_REVIEW_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-sm text-brand font-semibold hover:text-brand-dark transition-colors"
