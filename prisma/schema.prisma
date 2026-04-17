@@ -39,6 +39,8 @@ model Organization {
   borrowerQuotes  BorrowerQuote[]
   savedScenarios  SavedScenario[]
   scenarios       Scenario[]
+  loanParticipants        LoanParticipant[]
+  serviceProviderAccounts ServiceProviderAccount[]
 
   @@map("organizations")
 }
@@ -93,6 +95,7 @@ model Mlo {
   hecmScenarios HecmScenario[]
   loans         Loan[]
   smsMessages   SmsMessage[]
+  participants  LoanParticipant[]
 
   @@map("mlos")
 }
@@ -190,6 +193,8 @@ model Loan {
   assets                LoanAsset[]
   loanBorrowers         LoanBorrower[]
   loanContacts          LoanContact[]
+  participants          LoanParticipant[]
+  serviceProviders      LoanServiceProvider[]
   conv                  LoanConv?
   dates                 LoanDates?
   dscr                  LoanDscr?
@@ -307,6 +312,24 @@ model Contact {
   zohoLeadId          String?         @map("zoho_lead_id")
   createdAt           DateTime        @default(now()) @map("created_at")
   updatedAt           DateTime        @updatedAt @map("updated_at")
+  // UAD Layer-1a additive fields (2026-04-17). Populated from `borrowers` in Layer-1b.
+  dobEncrypted        String?         @map("dob_encrypted")
+  ssnEncrypted        String?         @map("ssn_encrypted")
+  ssnLastFour         String?         @map("ssn_last_four") @db.VarChar(4)
+  phoneVerified       Boolean         @default(false) @map("phone_verified")
+  passwordHash        String?         @map("password_hash")
+  magicToken          String?         @map("magic_token")
+  magicExpires        DateTime?       @map("magic_expires")
+  smsCode             String?         @map("sms_code")
+  smsCodeExpires      DateTime?       @map("sms_code_expires")
+  smsAttempts         Int             @default(0) @map("sms_attempts")
+  smsLockedUntil      DateTime?       @map("sms_locked_until")
+  legalFirstName      String?         @map("legal_first_name")
+  legalLastName       String?         @map("legal_last_name")
+  nickname            String?
+  role                String          @default("borrower")
+  communicationPrefs  Json?           @map("communication_prefs")
+  marketingStage      String          @default("lead") @map("marketing_stage")
   anniversary_date    DateTime?       @db.Timestamptz(6)
   assigned_mlo_id     String?         @db.Uuid
   city                String?
@@ -350,6 +373,7 @@ model Contact {
   loan_contacts       LoanContact[]
   loans               Loan[]
   smsMessages         SmsMessage[]
+  participants        LoanParticipant[]
 
   @@index([phone])
   @@index([email])
@@ -1626,4 +1650,100 @@ model ScenarioAlertQueue {
   @@index([status])
 
   @@map("scenario_alert_queue")
+}
+
+// ============================================================
+// UAD Layer-1a additions (2026-04-17) — new tables, empty until Layer-1b
+// ============================================================
+
+model LoanParticipant {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  loanId             String   @map("loan_id") @db.Uuid
+  contactId          String?  @map("contact_id") @db.Uuid
+  staffId            String?  @map("staff_id") @db.Uuid
+  role               String
+  hasPortalAccess    Boolean  @default(false) @map("has_portal_access")
+  privateDocs        Boolean  @default(false) @map("private_docs")
+  notificationPrefs  Json?    @map("notification_prefs")
+  ordinal            Int      @default(0)
+  organizationId     String   @default("00000000-0000-4000-8000-000000000001") @map("organization_id") @db.Uuid
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  loan         Loan         @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  contact      Contact?     @relation(fields: [contactId], references: [id])
+  mlo          Mlo?         @relation(fields: [staffId], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([loanId])
+  @@index([contactId])
+  @@index([staffId])
+  @@index([organizationId])
+  @@map("loan_participants")
+}
+
+model ServiceProviderAccount {
+  id              String                      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId  String                      @default("00000000-0000-4000-8000-000000000001") @map("organization_id") @db.Uuid
+  name            String
+  type            String
+  phone           String?
+  fax             String?
+  email           String?
+  address         Json?
+  website         String?
+  coverageAreas   String[]                    @map("coverage_areas")
+  notes           String?
+  isActive        Boolean                     @default(true) @map("is_active")
+  createdAt       DateTime                    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime                    @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  organization    Organization                @relation(fields: [organizationId], references: [id])
+  contacts        ServiceProviderContact[]
+  loanAssignments LoanServiceProvider[]
+
+  @@index([organizationId])
+  @@index([type])
+  @@map("service_provider_accounts")
+}
+
+model ServiceProviderContact {
+  id              String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId       String                  @map("account_id") @db.Uuid
+  name            String
+  email           String?
+  phone           String?
+  title           String?
+  isPrimary       Boolean                 @default(false) @map("is_primary")
+  notes           String?
+  isActive        Boolean                 @default(true) @map("is_active")
+  createdAt       DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime                @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  account         ServiceProviderAccount  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  loanAssignments LoanServiceProvider[]
+
+  @@index([accountId])
+  @@map("service_provider_contacts")
+}
+
+model LoanServiceProvider {
+  id          String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  loanId      String                   @map("loan_id") @db.Uuid
+  accountId   String                   @map("account_id") @db.Uuid
+  contactId   String?                  @map("contact_id") @db.Uuid
+  role        String
+  status      String                   @default("pending")
+  orderedAt   DateTime?                @map("ordered_at") @db.Timestamptz(6)
+  receivedAt  DateTime?                @map("received_at") @db.Timestamptz(6)
+  notes       String?
+  createdAt   DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  loan    Loan                     @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  account ServiceProviderAccount   @relation(fields: [accountId], references: [id])
+  contact ServiceProviderContact?  @relation(fields: [contactId], references: [id])
+
+  @@index([loanId])
+  @@index([accountId])
+  @@map("loan_service_providers")
 }
