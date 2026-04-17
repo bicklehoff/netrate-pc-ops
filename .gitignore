@@ -55,3 +55,4 @@ Work/Dev/Products/rate-sheets-historical/
 src/data/fhfa-loan-limits-raw.csv
 
 .vercel
+.claude/scheduled_tasks.lock
