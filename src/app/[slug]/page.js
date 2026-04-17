@@ -21,22 +21,29 @@ async function getPage(slug) {
   return rows[0] || null;
 }
 
+// Claw's /api/content payloads sometimes set meta_title already suffixed
+// with " | NetRate Mortgage". We own the brand suffix here — strip any
+// incoming copy of it so we don't double-brand the <title> tag.
+const BRAND_SUFFIX_RE = /\s*[|\u2014\u2013-]\s*NetRate(\s+Mortgage)?\s*$/i;
+
 export async function generateMetadata({ params }) {
   const { slug } = await params;
   const page = await getPage(slug);
   if (!page) return {};
 
-  const title = page.meta_title || page.title;
+  const rawTitle = (page.meta_title || page.title || '').trim();
+  const titleNoBrand = rawTitle.replace(BRAND_SUFFIX_RE, '').trim();
+  const title = `${titleNoBrand} | NetRate Mortgage`;
   const description = page.meta_description;
 
   return {
-    title: `${title} | NetRate Mortgage`,
+    title,
     description,
     alternates: {
       canonical: `${BASE_URL}/${slug}`,
     },
     openGraph: {
-      title: `${title} | NetRate Mortgage`,
+      title,
       description,
       type: 'article',
       publishedTime: page.published_at,
@@ -44,7 +51,7 @@ export async function generateMetadata({ params }) {
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${title} | NetRate Mortgage`,
+      title,
       description,
     },
   };
