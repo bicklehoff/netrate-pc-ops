@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import TrustBar from '@/components/TrustBar';
 import StickyRateBar from '@/components/StickyRateBar';
-import { getHomepageRatesFromDB } from '@/lib/rates/homepage-db';
+import { getHomepageLiveRates } from '@/lib/rates/homepage';
 import { GBP_REVIEW_URL } from '@/lib/constants/company';
 
 export const metadata = {
@@ -35,7 +35,7 @@ async function getMarketSentiment() {
 
 export default async function HomePage() {
   // ─── Live Rate Data (from DB via pricing-v2 engine) ───
-  const liveRates = await getHomepageRatesFromDB();
+  const liveRates = await getHomepageLiveRates();
 
   // ─── Market Sentiment (from Rate Watch commentary) ───
   const sentiment = await getMarketSentiment();

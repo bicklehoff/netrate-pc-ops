@@ -11,7 +11,7 @@ import Commentary from '@/components/RateWatch/Commentary';
 import WhatHappenedToday from '@/components/RateWatch/WhatHappenedToday';
 import BenchmarkIndexes from '@/components/RateWatch/BenchmarkIndexes';
 import MarketNews from '@/components/RateWatch/MarketNews';
-import { getHomepageRatesFromDB } from '@/lib/rates/homepage-db';
+import { getHomepageLiveRates } from '@/lib/rates/homepage';
 
 export const revalidate = 1800; // 30 min — rates change once/day when new sheet is parsed
 
@@ -183,8 +183,8 @@ async function getTreasuryCMT() {
 export async function generateMetadata() {
   let rateStr = '';
   try {
-    const { getHomepageRatesFromDB } = await import('@/lib/rates/homepage-db');
-    const rates = await getHomepageRatesFromDB();
+    const { getHomepageLiveRates } = await import('@/lib/rates/homepage');
+    const rates = await getHomepageLiveRates();
     if (rates?.conv30?.rate) rateStr = parseFloat(rates.conv30.rate).toFixed(2) + '%';
   } catch {
     // fallback
@@ -233,7 +233,7 @@ export default async function RateWatchPage() {
 
   let liveRates = null;
   let realRate = null;
-  liveRates = await getHomepageRatesFromDB();
+  liveRates = await getHomepageLiveRates();
   realRate = liveRates?.conv30?.rate || null;
 
   const todayRate = realRate || null;
