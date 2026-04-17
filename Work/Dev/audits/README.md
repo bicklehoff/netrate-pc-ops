@@ -1,9 +1,9 @@
 # FoH April — Audit + UAD Spec
 
-**Status:** Active · D1 ✅ re-verified · D2 ✅ fully closed · D3 ✅ re-verified · D4 ✅ re-verified · D5 ✅ closed (absorbed into D9a) · D6 🔄 · D7 ⏳ (blocked on D9b pricing unification) · D8 🆕 **Passes 1–8 inventory complete** · D9 🔄 D9a identity model ✅ shipped (Layer 1 complete), D9b–D9d queued
+**Status:** Active · D1 ✅ re-verified · D2 ✅ fully closed · D3 ✅ re-verified · D4 ✅ re-verified · D5 ✅ closed (absorbed into D9a) · D6 🔄 · D7 ⏳ (blocked on D9b pricing unification) · D8 🆕 **Passes 1–8 inventory complete** · D9 🔄 D9a identity model ✅ Layer-1a through 1c shipped (soak: drop deprecated borrower_* columns), D9b–D9e queued
 **Name:** FoH April (Front-of-House April 2026) — the combined audit + UAD effort, David-named 2026-04-17. Formerly "Site Audit 2026"; audit (retrospective) + UAD (prospective) are one continuous effort.
-**Current driver:** PC Dev (`dazzling-saha` worktree)
-**Last updated:** 2026-04-17 (v1.6 — Layer-1b3 shipped: borrowers table dropped, loan_contacts/mlos-view dropped, loans.borrower_id → contact_id renamed, Mlo Prisma model → Staff)
+**Current driver:** PC Dev (`sparkling-nebula` worktree)
+**Last updated:** 2026-04-17 (v1.7 — Layer-1c shipped: scenarios.contact_id discipline. DAL no longer writes denormalized borrower_*; reads JOIN contacts + leads with 3-way COALESCE identity derive. Migration 009 idempotent bridge catchup — no data movement needed this run (24/56 linked from 006; 15 legitimate unconverted-lead NULLs, 17 truly-anonymous NULLs). Soak to ~2026-05-01 before PR drops columns.)
 **Canonical location:** this file
 
 > One audit. One spec. One driver at a time. Everything else defers to this doc.
@@ -238,7 +238,7 @@ Catalogs data that is baked into the deploy and becomes stale without code inter
 
 | ID | Scope | Status |
 |----|-------|--------|
-| D9a · Identity model | Lead → Contact → Deal lifecycle, contact roles (borrower/realtor), staff separation, service provider accounts + contacts | ✅ Layer 1 complete (1a #86 + 1b1 #87 + 1b2a #88 + 1b3). Borrower table dropped; loan_contacts/mlos view dropped; loans.borrower_id → contact_id; LoanBorrower table retained for co-borrower app-module data pending Layer-2. |
+| D9a · Identity model | Lead → Contact → Deal lifecycle, contact roles (borrower/realtor), staff separation, service provider accounts + contacts | ✅ Layer 1 schema + scenario FK complete (1a #86 + 1b1 #87 + 1b2a #88 + 1b3 #90 + 1c #91). Borrower table dropped; loan_contacts/mlos view dropped; loans.borrower_id → contact_id; scenarios.contact_id canonical with lead-bridge fallback. LoanBorrower table retained for co-borrower app-module data pending Layer-2. Soak: drop deprecated scenarios.borrower_name/email/phone columns ~2026-05-01. |
 | D9b · Pricing unification | One API entry point, product router, retire homepage-db.js parallel path, all surfaces use same engine | 📋 spec drafted |
 | D9c · Scenario/quote model | Scenarios link to Contact + Deal, composable calc modules, Layer 3 Lite (shareable quote links), borrower scenario save | 📋 spec drafted |
 | D9d · Reference data migration | County limits, closing costs, PLF tables, comp caps → DB tables. D8 inventory findings feed this. | ⏳ waiting on D8 passes |
@@ -274,6 +274,7 @@ Ordered work list. Inventory passes and remediation PRs interleave by default (s
 11. ✅ **D9 Layer 1 migration plan** — drafted at [`Work/Dev/UAD-LAYER-1-MIGRATION-PLAN.md`](../UAD-LAYER-1-MIGRATION-PLAN.md). Maps current schema → UAD target; Option B (in-place rename + merge) recommended; 5 open decisions for David.
 12. ✅ **FoH April rename** — combined audit + UAD effort named.
 13. 🔄 **Small ship-now remediation PR** (2026-04-17 this worktree) — GBP rename URLs, sitemap `/rates/dscr`, equity meta framing, year-label consistency.
+14. ✅ **UAD Layer-1c (PR #91)** — scenarios.contact_id discipline. DAL stops writing denormalized borrower_name/email/phone; reads LEFT JOIN contacts + leads; transform.js derives identity via 3-way COALESCE (contact → lead → legacy). Migration 009 idempotent bridge catchup. Shared `findOrCreateContactByEmail` util staged for CoreCRM #78. Designed to respect UAD AD-1/AD-2 (no aggressive contact creation from pre-conversion scenarios).
 
 ### Next — D8 + D9 convergence
 
