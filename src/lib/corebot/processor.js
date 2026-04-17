@@ -225,7 +225,7 @@ export async function processLoanDocuments(loanId, mloId) {
            b.first_name AS borrower_first_name,
            b.last_name AS borrower_last_name
     FROM loans l
-    LEFT JOIN borrowers b ON l.borrower_id = b.id
+    LEFT JOIN contacts b ON l.contact_id = b.id
     WHERE l.id = ${loanId}
     LIMIT 1
   `;
@@ -240,7 +240,7 @@ export async function processLoanDocuments(loanId, mloId) {
            b.first_name AS b_first_name,
            b.last_name AS b_last_name
     FROM loan_borrowers lb
-    JOIN borrowers b ON lb.borrower_id = b.id
+    JOIN contacts b ON lb.contact_id = b.id
     WHERE lb.loan_id = ${loanId}
   `;
   loan._loanBorrowers = loanBorrowers;

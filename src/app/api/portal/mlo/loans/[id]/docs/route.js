@@ -56,8 +56,8 @@ export async function POST(request, { params }) {
     `;
 
     // Send doc request email to borrower (non-blocking)
-    if (loan.borrower_id) {
-      const borrowerRows = await sql`SELECT * FROM borrowers WHERE id = ${loan.borrower_id} LIMIT 1`;
+    if (loan.contact_id) {
+      const borrowerRows = await sql`SELECT * FROM contacts WHERE id = ${loan.contact_id} LIMIT 1`;
       const borrower = borrowerRows[0];
       if (borrower?.email) {
         const template = docRequestTemplate({

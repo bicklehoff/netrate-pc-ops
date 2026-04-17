@@ -1,9 +1,9 @@
 # FoH April — Audit + UAD Spec
 
-**Status:** Active · D1 ✅ re-verified · D2 ✅ fully closed · D3 ✅ re-verified · D4 ✅ re-verified · D5 🔄 half-done (second half absorbed into D9) · D6 🔄 · D7 ⏳ (blocked on D9 Layer 1) · D8 🆕 **Passes 1–8 inventory complete** · D9 🆕 UAD spec drafted, Layer 1 migration plan drafted
+**Status:** Active · D1 ✅ re-verified · D2 ✅ fully closed · D3 ✅ re-verified · D4 ✅ re-verified · D5 ✅ closed (absorbed into D9a) · D6 🔄 · D7 ⏳ (blocked on D9b pricing unification) · D8 🆕 **Passes 1–8 inventory complete** · D9 🔄 D9a identity model ✅ shipped (Layer 1 complete), D9b–D9d queued
 **Name:** FoH April (Front-of-House April 2026) — the combined audit + UAD effort, David-named 2026-04-17. Formerly "Site Audit 2026"; audit (retrospective) + UAD (prospective) are one continuous effort.
-**Current driver:** PC Dev (`vigorous-cartwright` worktree)
-**Last updated:** 2026-04-17 (v1.5 — FoH April rename, batch 2 D8 inventory complete, PR #83 closures, Layer 1 migration plan drafted)
+**Current driver:** PC Dev (`dazzling-saha` worktree)
+**Last updated:** 2026-04-17 (v1.6 — Layer-1b3 shipped: borrowers table dropped, loan_contacts/mlos-view dropped, loans.borrower_id → contact_id renamed, Mlo Prisma model → Staff)
 **Canonical location:** this file
 
 > One audit. One spec. One driver at a time. Everything else defers to this doc.
@@ -238,7 +238,7 @@ Catalogs data that is baked into the deploy and becomes stale without code inter
 
 | ID | Scope | Status |
 |----|-------|--------|
-| D9a · Identity model | Lead → Contact → Deal lifecycle, contact roles (borrower/realtor), staff separation, service provider accounts + contacts | 📋 spec drafted |
+| D9a · Identity model | Lead → Contact → Deal lifecycle, contact roles (borrower/realtor), staff separation, service provider accounts + contacts | ✅ Layer 1 complete (1a #86 + 1b1 #87 + 1b2a #88 + 1b3). Borrower table dropped; loan_contacts/mlos view dropped; loans.borrower_id → contact_id; LoanBorrower table retained for co-borrower app-module data pending Layer-2. |
 | D9b · Pricing unification | One API entry point, product router, retire homepage-db.js parallel path, all surfaces use same engine | 📋 spec drafted |
 | D9c · Scenario/quote model | Scenarios link to Contact + Deal, composable calc modules, Layer 3 Lite (shareable quote links), borrower scenario save | 📋 spec drafted |
 | D9d · Reference data migration | County limits, closing costs, PLF tables, comp caps → DB tables. D8 inventory findings feed this. | ⏳ waiting on D8 passes |

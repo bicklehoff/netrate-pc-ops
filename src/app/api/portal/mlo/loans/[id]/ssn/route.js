@@ -18,7 +18,7 @@ export async function POST(request, { params }) {
     const loanRows = await sql`
       SELECT l.*, b.id AS b_id, b.ssn_encrypted AS b_ssn_encrypted
       FROM loans l
-      LEFT JOIN borrowers b ON b.id = l.borrower_id
+      LEFT JOIN contacts b ON b.id = l.contact_id
       WHERE l.id = ${id} AND l.organization_id = ${orgId} LIMIT 1
     `;
     const loan = loanRows[0];
@@ -43,7 +43,7 @@ export async function POST(request, { params }) {
     await sql`
       INSERT INTO loan_events (id, loan_id, event_type, actor_type, actor_id, details, created_at)
       VALUES (gen_random_uuid(), ${id}, 'ssn_revealed', 'mlo', ${mloId},
-              ${JSON.stringify({ borrowerId: loan.b_id, ip: request.headers.get('x-forwarded-for') || 'unknown', userAgent: request.headers.get('user-agent') || 'unknown' })},
+              ${JSON.stringify({ contactId: loan.b_id, ip: request.headers.get('x-forwarded-for') || 'unknown', userAgent: request.headers.get('user-agent') || 'unknown' })},
               NOW())
     `;
 

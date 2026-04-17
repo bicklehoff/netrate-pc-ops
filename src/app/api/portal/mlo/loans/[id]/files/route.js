@@ -163,7 +163,7 @@ export async function PUT(request, { params }) {
     // Auto-create WorkDrive folder if it doesn't exist
     if (!loan.work_drive_folder_id) {
       try {
-        const borrowerRows = await sql`SELECT first_name, last_name FROM borrowers WHERE id = ${loan.borrower_id} LIMIT 1`;
+        const borrowerRows = await sql`SELECT first_name, last_name FROM contacts WHERE id = ${loan.contact_id} LIMIT 1`;
         const borrower = borrowerRows[0];
         const mloRows = loan.mlo_id
           ? await sql`SELECT first_name, last_name FROM staff WHERE id = ${loan.mlo_id} LIMIT 1`
@@ -235,7 +235,7 @@ export async function PUT(request, { params }) {
       targetFolder === 'CLOSING';
     if (isClosingDoc || loan.status === 'funded') {
       const uploaderName = session.user.name || session.user.email;
-      const borrowerRows = await sql`SELECT first_name, last_name FROM borrowers WHERE id = ${loan.borrower_id} LIMIT 1`;
+      const borrowerRows = await sql`SELECT first_name, last_name FROM contacts WHERE id = ${loan.contact_id} LIMIT 1`;
       const borrower = borrowerRows[0];
       const borrowerName = borrower ? `${borrower.first_name} ${borrower.last_name}` : `Loan #${loan.loan_number}`;
       try {

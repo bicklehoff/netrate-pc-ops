@@ -19,15 +19,15 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Email is required' }, { status: 400 });
     }
 
-    const rows = await sql`SELECT * FROM borrowers WHERE email = ${email.toLowerCase().trim()} LIMIT 1`;
-    const borrower = rows[0];
+    const rows = await sql`SELECT * FROM contacts WHERE lower(email) = ${email.toLowerCase().trim()} LIMIT 1`;
+    const contact = rows[0];
 
-    // Always return success even if no borrower found (prevent email enumeration)
-    if (!borrower) {
+    // Always return success even if no contact found (prevent email enumeration)
+    if (!contact) {
       return NextResponse.json({ success: true });
     }
 
-    const token = await generateMagicToken(borrower.id);
+    const token = await generateMagicToken(contact.id);
 
     // Build the magic link URL
     const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
@@ -35,12 +35,12 @@ export async function POST(request) {
 
     // Send magic link email via Resend
     const { subject, html, text } = magicLinkTemplate({
-      firstName: borrower.first_name,
+      firstName: contact.first_name,
       magicLink,
     });
 
     try {
-      await sendEmail({ to: borrower.email, subject, html, text });
+      await sendEmail({ to: contact.email, subject, html, text });
     } catch (emailErr) {
       console.error('Magic link email failed:', emailErr.message);
     }

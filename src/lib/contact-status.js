@@ -26,10 +26,10 @@ const LOAN_STATUS_MAP = {
  */
 export async function updateContactFromLoanStatus(loanId, newLoanStatus) {
   try {
-    const loanRows = await sql`SELECT borrower_id FROM loans WHERE id = ${loanId} LIMIT 1`;
-    if (!loanRows.length || !loanRows[0].borrower_id) return;
+    const loanRows = await sql`SELECT contact_id FROM loans WHERE id = ${loanId} LIMIT 1`;
+    if (!loanRows.length || !loanRows[0].contact_id) return;
 
-    const contactRows = await sql`SELECT * FROM contacts WHERE borrower_id = ${loanRows[0].borrower_id} LIMIT 1`;
+    const contactRows = await sql`SELECT * FROM contacts WHERE id = ${loanRows[0].contact_id} LIMIT 1`;
     if (!contactRows.length) return;
 
     const contact = contactRows[0];

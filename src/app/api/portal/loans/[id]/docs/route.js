@@ -23,7 +23,7 @@ export async function GET(request, { params }) {
     const { id: loanId } = await params;
 
     // Verify borrower owns this loan
-    const loanRows = await sql`SELECT id FROM loans WHERE id = ${loanId} AND borrower_id = ${session.borrowerId} LIMIT 1`;
+    const loanRows = await sql`SELECT id FROM loans WHERE id = ${loanId} AND contact_id = ${session.contactId} LIMIT 1`;
     if (!loanRows[0]) {
       return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
     }
@@ -49,7 +49,7 @@ export async function POST(request, { params }) {
     // Verify borrower owns this loan
     const loanRows = await sql`
       SELECT id, work_drive_folder_id, work_drive_subfolders FROM loans
-      WHERE id = ${loanId} AND borrower_id = ${session.borrowerId} LIMIT 1
+      WHERE id = ${loanId} AND contact_id = ${session.contactId} LIMIT 1
     `;
     const loan = loanRows[0];
     if (!loan) {
@@ -122,7 +122,7 @@ export async function POST(request, { params }) {
 
       await sql`
         INSERT INTO loan_events (loan_id, event_type, actor_type, actor_id, new_value, details, created_at)
-        VALUES (${loanId}, 'doc_uploaded', 'borrower', ${session.borrowerId}, ${doc.label},
+        VALUES (${loanId}, 'doc_uploaded', 'borrower', ${session.contactId}, ${doc.label},
           ${JSON.stringify({ documentId: doc.id, fileName: file.name, storageType })}::jsonb, NOW())
       `;
 
@@ -138,7 +138,7 @@ export async function POST(request, { params }) {
 
       await sql`
         INSERT INTO loan_events (loan_id, event_type, actor_type, actor_id, new_value, details, created_at)
-        VALUES (${loanId}, 'doc_uploaded', 'borrower', ${session.borrowerId}, ${file.name},
+        VALUES (${loanId}, 'doc_uploaded', 'borrower', ${session.contactId}, ${file.name},
           ${JSON.stringify({ documentId: doc.id, fileName: file.name, storageType })}::jsonb, NOW())
       `;
 

@@ -71,8 +71,8 @@ export async function POST(request) {
       SELECT l.*,
              b.first_name AS borrower_first_name,
              b.last_name AS borrower_last_name
-      FROM "Loan" l
-      LEFT JOIN "Borrower" b ON b.id = l.borrower_id
+      FROM loans l
+      LEFT JOIN contacts b ON b.id = l.contact_id
       WHERE l.id = ${loanId}
       LIMIT 1
     `;
@@ -91,8 +91,8 @@ export async function POST(request) {
     const loanBorrowers = await sql`
       SELECT lb.borrower_type,
              b.first_name, b.last_name
-      FROM "LoanBorrower" lb
-      JOIN "Borrower" b ON b.id = lb.borrower_id
+      FROM loan_borrowers lb
+      JOIN contacts b ON b.id = lb.contact_id
       WHERE lb.loan_id = ${loanId}
     `;
 
@@ -141,18 +141,18 @@ export async function POST(request) {
     const now = new Date();
     // dateField is from ORDER_CONFIG (safe, not user input) — use per-type queries
     if (config.dateField === 'title_ordered') {
-      await sql`INSERT INTO "LoanDates" (loan_id, title_ordered) VALUES (${loanId}, ${now}) ON CONFLICT (loan_id) DO UPDATE SET title_ordered = ${now}, updated_at = NOW()`;
+      await sql`INSERT INTO loan_dates (loan_id, title_ordered) VALUES (${loanId}, ${now}) ON CONFLICT (loan_id) DO UPDATE SET title_ordered = ${now}, updated_at = NOW()`;
     } else if (config.dateField === 'appraisal_ordered') {
-      await sql`INSERT INTO "LoanDates" (loan_id, appraisal_ordered) VALUES (${loanId}, ${now}) ON CONFLICT (loan_id) DO UPDATE SET appraisal_ordered = ${now}, updated_at = NOW()`;
+      await sql`INSERT INTO loan_dates (loan_id, appraisal_ordered) VALUES (${loanId}, ${now}) ON CONFLICT (loan_id) DO UPDATE SET appraisal_ordered = ${now}, updated_at = NOW()`;
     } else if (config.dateField === 'hoi_ordered') {
-      await sql`INSERT INTO "LoanDates" (loan_id, hoi_ordered) VALUES (${loanId}, ${now}) ON CONFLICT (loan_id) DO UPDATE SET hoi_ordered = ${now}, updated_at = NOW()`;
+      await sql`INSERT INTO loan_dates (loan_id, hoi_ordered) VALUES (${loanId}, ${now}) ON CONFLICT (loan_id) DO UPDATE SET hoi_ordered = ${now}, updated_at = NOW()`;
     } else if (config.dateField === 'flood_cert_ordered') {
-      await sql`INSERT INTO "LoanDates" (loan_id, flood_cert_ordered) VALUES (${loanId}, ${now}) ON CONFLICT (loan_id) DO UPDATE SET flood_cert_ordered = ${now}, updated_at = NOW()`;
+      await sql`INSERT INTO loan_dates (loan_id, flood_cert_ordered) VALUES (${loanId}, ${now}) ON CONFLICT (loan_id) DO UPDATE SET flood_cert_ordered = ${now}, updated_at = NOW()`;
     }
 
     // Create audit event
     await sql`
-      INSERT INTO "LoanEvent" (loan_id, event_type, actor_type, actor_id, details)
+      INSERT INTO loan_events (loan_id, event_type, actor_type, actor_id, details)
       VALUES (
         ${loanId},
         'order_out',
@@ -170,7 +170,7 @@ export async function POST(request) {
 
     // Create loan note
     await sql`
-      INSERT INTO "LoanNote" (loan_id, author_id, content)
+      INSERT INTO loan_notes (loan_id, author_id, content)
       VALUES (
         ${loanId},
         ${session.user.id},

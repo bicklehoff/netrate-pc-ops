@@ -26,7 +26,7 @@ export async function POST(request) {
 
     // Verify MLO owns this loan
     const loanRows = await sql`
-      SELECT * FROM "Loan" WHERE id = ${loanId} LIMIT 1
+      SELECT * FROM loans WHERE id = ${loanId} LIMIT 1
     `;
     const loan = loanRows[0];
 

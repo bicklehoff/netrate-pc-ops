@@ -36,7 +36,7 @@ export async function GET() {
         (SELECT COUNT(*)::int FROM documents WHERE loan_id = l.id AND status = 'requested') AS pending_docs,
         (SELECT COUNT(*)::int FROM documents WHERE loan_id = l.id) AS total_docs
       FROM loans l
-      LEFT JOIN borrowers b ON l.borrower_id = b.id
+      LEFT JOIN contacts b ON l.contact_id = b.id
       LEFT JOIN staff m ON l.mlo_id = m.id
       LEFT JOIN loan_dates ld ON ld.loan_id = l.id
       WHERE l.organization_id = ${orgId}
@@ -48,7 +48,7 @@ export async function GET() {
     const coBorrowers = loanIds.length ? await sql`
       SELECT lb.loan_id, lb.borrower_type, b.first_name, b.last_name, b.email, b.phone
       FROM loan_borrowers lb
-      JOIN borrowers b ON lb.borrower_id = b.id
+      JOIN contacts b ON lb.contact_id = b.id
       WHERE lb.loan_id = ANY(${loanIds}) AND lb.borrower_type != 'primary'
       ORDER BY lb.ordinal ASC
     ` : [];

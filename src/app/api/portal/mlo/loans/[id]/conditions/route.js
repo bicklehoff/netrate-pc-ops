@@ -379,8 +379,8 @@ export async function PUT(request, { params }) {
     // Extract via Claude
     let extraction;
     try {
-      const borrowerRows = loan.borrower_id
-        ? await sql`SELECT first_name, last_name FROM borrowers WHERE id = ${loan.borrower_id} LIMIT 1`
+      const borrowerRows = loan.contact_id
+        ? await sql`SELECT first_name, last_name FROM contacts WHERE id = ${loan.contact_id} LIMIT 1`
         : [];
       const borrower = borrowerRows[0];
       const loanContext = {

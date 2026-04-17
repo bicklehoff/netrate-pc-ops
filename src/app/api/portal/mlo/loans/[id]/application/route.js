@@ -34,7 +34,7 @@ export async function GET(request, { params }) {
     const loanBorrowers = await sql`
       SELECT lb.*, b.id AS b_id, b.first_name AS b_first_name, b.last_name AS b_last_name
       FROM loan_borrowers lb
-      LEFT JOIN borrowers b ON b.id = lb.borrower_id
+      LEFT JOIN contacts b ON b.id = lb.contact_id
       WHERE lb.loan_id = ${id}
       ORDER BY lb.ordinal ASC
     `;

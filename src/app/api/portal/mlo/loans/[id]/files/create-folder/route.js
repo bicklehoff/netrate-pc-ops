@@ -20,7 +20,7 @@ export async function POST(request, { params }) {
     const loanRows = await sql`
       SELECT l.*, b.first_name AS b_first_name, b.last_name AS b_last_name
       FROM loans l
-      LEFT JOIN borrowers b ON b.id = l.borrower_id
+      LEFT JOIN contacts b ON b.id = l.contact_id
       WHERE l.id = ${id} AND l.organization_id = ${orgId} LIMIT 1
     `;
     const loan = loanRows[0];

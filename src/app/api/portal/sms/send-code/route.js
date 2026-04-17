@@ -13,18 +13,18 @@ export async function POST() {
   try {
     const session = await getBorrowerSession();
 
-    if (!session?.borrowerId) {
+    if (!session?.contactId) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    const rows = await sql`SELECT id, phone FROM borrowers WHERE id = ${session.borrowerId} LIMIT 1`;
-    const borrower = rows[0];
+    const rows = await sql`SELECT id, phone FROM contacts WHERE id = ${session.contactId} LIMIT 1`;
+    const contact = rows[0];
 
-    if (!borrower) {
-      return NextResponse.json({ error: 'Borrower not found' }, { status: 404 });
+    if (!contact) {
+      return NextResponse.json({ error: 'Contact not found' }, { status: 404 });
     }
 
-    if (!borrower.phone) {
+    if (!contact.phone) {
       return NextResponse.json(
         { error: 'No phone number on file. Please contact us for assistance.' },
         { status: 400 }
@@ -32,7 +32,7 @@ export async function POST() {
     }
 
     // Twilio Verify handles code generation, delivery, rate limiting, and fraud prevention
-    await sendVerification(borrower.phone);
+    await sendVerification(contact.phone);
 
     return NextResponse.json({ success: true });
   } catch (error) {

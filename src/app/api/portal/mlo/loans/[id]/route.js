@@ -97,10 +97,10 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
     }
 
-    // ─── Borrower ───
-    const borrowers = loan.borrower_id
+    // ─── Borrower (contact) ───
+    const borrowers = loan.contact_id
       ? await sql`SELECT id, first_name, last_name, email, phone, ssn_last_four, phone_verified, created_at
-                   FROM borrowers WHERE id = ${loan.borrower_id} LIMIT 1`
+                   FROM contacts WHERE id = ${loan.contact_id} LIMIT 1`
       : [];
 
     // ─── MLO ───
@@ -141,7 +141,7 @@ export async function GET(request, { params }) {
     const loanBorrowers = await sql`
       SELECT lb.*, b.id AS b_id, b.first_name AS b_first_name, b.last_name AS b_last_name, b.email AS b_email, b.phone AS b_phone
       FROM loan_borrowers lb
-      LEFT JOIN borrowers b ON b.id = lb.borrower_id
+      LEFT JOIN contacts b ON b.id = lb.contact_id
       WHERE lb.loan_id = ${id}
       ORDER BY lb.ordinal ASC
     `;
@@ -291,8 +291,8 @@ export async function PATCH(request, { params }) {
 
       // Send borrower notification email (non-blocking)
       const trigger = EMAIL_TRIGGERS[body.status];
-      if (trigger?.sendToBorrower && loan.borrower_id) {
-        const borrowerRows = await sql`SELECT * FROM borrowers WHERE id = ${loan.borrower_id} LIMIT 1`;
+      if (trigger?.sendToBorrower && loan.contact_id) {
+        const borrowerRows = await sql`SELECT * FROM contacts WHERE id = ${loan.contact_id} LIMIT 1`;
         const borrower = borrowerRows[0];
         if (borrower?.email) {
           const template = statusChangeTemplate({
@@ -410,8 +410,8 @@ export async function PATCH(request, { params }) {
 
       // Application gate — check if loan just became a real MCR application (non-blocking)
       if (!updated.is_application) {
-        const borrowerRows = loan.borrower_id
-          ? await sql`SELECT * FROM borrowers WHERE id = ${loan.borrower_id} LIMIT 1`
+        const borrowerRows = loan.contact_id
+          ? await sql`SELECT * FROM contacts WHERE id = ${loan.contact_id} LIMIT 1`
           : [];
         const gatePassed = checkApplicationGate(updated, borrowerRows[0]);
         if (gatePassed) {

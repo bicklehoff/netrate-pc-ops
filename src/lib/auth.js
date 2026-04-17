@@ -90,60 +90,63 @@ export const authOptions = {
 // ─── Borrower Magic Link Helpers ────────────────────────────
 // Borrower auth is custom (not NextAuth EmailProvider) because we need
 // two-factor (magic link + SMS). These helpers manage the magic link flow.
+//
+// Post-UAD Layer-1b3: borrower auth fields (magic_token, sms_code, etc.)
+// live on the `contacts` table. The old `borrowers` table is gone.
 
 /**
- * Generate a magic link token for a borrower.
+ * Generate a magic link token for a contact.
  * Returns the token (to be included in the email link).
  */
-export async function generateMagicToken(borrowerId) {
+export async function generateMagicToken(contactId) {
   const token = randomBytes(32).toString('hex');
   const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
   await sql`
-    UPDATE borrowers SET magic_token = ${token}, magic_expires = ${expires}
-    WHERE id = ${borrowerId}
+    UPDATE contacts SET magic_token = ${token}, magic_expires = ${expires}
+    WHERE id = ${contactId}
   `;
 
   return token;
 }
 
 /**
- * Verify a magic link token. Returns the borrower if valid, null if not.
+ * Verify a magic link token. Returns the contact if valid, null if not.
  */
 export async function verifyMagicToken(token) {
   const rows = await sql`
-    SELECT * FROM borrowers
+    SELECT * FROM contacts
     WHERE magic_token = ${token} AND magic_expires > NOW()
     LIMIT 1
   `;
 
   if (!rows.length) return null;
 
-  const borrower = rows[0];
+  const contact = rows[0];
 
   // Clear the token (single-use)
   await sql`
-    UPDATE borrowers SET magic_token = NULL, magic_expires = NULL
-    WHERE id = ${borrower.id}
+    UPDATE contacts SET magic_token = NULL, magic_expires = NULL
+    WHERE id = ${contact.id}
   `;
 
-  return borrower;
+  return contact;
 }
 
 /**
- * Generate a 6-digit SMS verification code for a borrower.
+ * Generate a 6-digit SMS verification code for a contact.
  * Stores hashed code in DB.
  */
-export async function generateSmsCode(borrowerId) {
-  const rows = await sql`SELECT * FROM borrowers WHERE id = ${borrowerId} LIMIT 1`;
-  const borrower = rows[0];
+export async function generateSmsCode(contactId) {
+  const rows = await sql`SELECT * FROM contacts WHERE id = ${contactId} LIMIT 1`;
+  const contact = rows[0];
 
-  if (!borrower) throw new Error('Borrower not found');
+  if (!contact) throw new Error('Contact not found');
 
   // Check lockout
-  if (borrower.sms_locked_until && new Date(borrower.sms_locked_until) > new Date()) {
+  if (contact.sms_locked_until && new Date(contact.sms_locked_until) > new Date()) {
     const minutesLeft = Math.ceil(
-      (new Date(borrower.sms_locked_until).getTime() - Date.now()) / 60000
+      (new Date(contact.sms_locked_until).getTime() - Date.now()) / 60000
     );
     throw new Error(`Too many attempts. Try again in ${minutesLeft} minutes.`);
   }
@@ -153,52 +156,52 @@ export async function generateSmsCode(borrowerId) {
   const hashedCode = await bcrypt.hash(code, 10);
 
   await sql`
-    UPDATE borrowers SET
+    UPDATE contacts SET
       sms_code = ${hashedCode},
       sms_code_expires = ${new Date(Date.now() + 10 * 60 * 1000)},
       sms_attempts = 0,
       sms_locked_until = NULL
-    WHERE id = ${borrowerId}
+    WHERE id = ${contactId}
   `;
 
   return code; // Return plaintext code to send via SMS
 }
 
 /**
- * Verify an SMS code for a borrower.
+ * Verify an SMS code for a contact.
  * Returns true if valid, false if not. Handles lockout after 3 failed attempts.
  */
-export async function verifySmsCode(borrowerId, code) {
-  const rows = await sql`SELECT * FROM borrowers WHERE id = ${borrowerId} LIMIT 1`;
-  const borrower = rows[0];
+export async function verifySmsCode(contactId, code) {
+  const rows = await sql`SELECT * FROM contacts WHERE id = ${contactId} LIMIT 1`;
+  const contact = rows[0];
 
-  if (!borrower || !borrower.sms_code) return false;
+  if (!contact || !contact.sms_code) return false;
 
   // Check lockout
-  if (borrower.sms_locked_until && new Date(borrower.sms_locked_until) > new Date()) {
+  if (contact.sms_locked_until && new Date(contact.sms_locked_until) > new Date()) {
     return false;
   }
 
   // Check expiry
-  if (!borrower.sms_code_expires || new Date(borrower.sms_code_expires) < new Date()) {
+  if (!contact.sms_code_expires || new Date(contact.sms_code_expires) < new Date()) {
     return false;
   }
 
-  const isValid = await bcrypt.compare(code, borrower.sms_code);
+  const isValid = await bcrypt.compare(code, contact.sms_code);
 
   if (!isValid) {
-    const newAttempts = borrower.sms_attempts + 1;
+    const newAttempts = contact.sms_attempts + 1;
 
     if (newAttempts >= 3) {
       // Lock after 3 failed attempts
       await sql`
-        UPDATE borrowers SET sms_attempts = ${newAttempts}, sms_locked_until = ${new Date(Date.now() + 15 * 60 * 1000)}
-        WHERE id = ${borrowerId}
+        UPDATE contacts SET sms_attempts = ${newAttempts}, sms_locked_until = ${new Date(Date.now() + 15 * 60 * 1000)}
+        WHERE id = ${contactId}
       `;
     } else {
       await sql`
-        UPDATE borrowers SET sms_attempts = ${newAttempts}
-        WHERE id = ${borrowerId}
+        UPDATE contacts SET sms_attempts = ${newAttempts}
+        WHERE id = ${contactId}
       `;
     }
 
@@ -207,13 +210,13 @@ export async function verifySmsCode(borrowerId, code) {
 
   // Success — clear the code and mark phone as verified
   await sql`
-    UPDATE borrowers SET
+    UPDATE contacts SET
       sms_code = NULL,
       sms_code_expires = NULL,
       sms_attempts = 0,
       sms_locked_until = NULL,
       phone_verified = true
-    WHERE id = ${borrowerId}
+    WHERE id = ${contactId}
   `;
 
   return true;

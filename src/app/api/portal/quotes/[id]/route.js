@@ -26,7 +26,7 @@ export async function GET(request, { params }) {
 
     // Validate magic token — also gives us the borrower's organization scope
     const borrowerRows = await sql`
-      SELECT id, email, organization_id FROM borrowers
+      SELECT id, email, organization_id FROM contacts
       WHERE magic_token = ${token} AND magic_expires >= NOW()
       LIMIT 1
     `;

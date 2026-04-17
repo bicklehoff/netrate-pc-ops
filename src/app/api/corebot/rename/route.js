@@ -25,7 +25,7 @@ export async function POST(request) {
 
     // Verify MLO owns this loan
     const loanRows = await sql`
-      SELECT * FROM "Loan" WHERE id = ${loanId} LIMIT 1
+      SELECT * FROM loans WHERE id = ${loanId} LIMIT 1
     `;
     const loan = loanRows[0];
 
@@ -42,7 +42,7 @@ export async function POST(request) {
 
     // Audit trail
     await sql`
-      INSERT INTO "LoanEvent" (loan_id, event_type, actor_type, actor_id, new_value, details)
+      INSERT INTO loan_events (loan_id, event_type, actor_type, actor_id, new_value, details)
       VALUES (
         ${loanId},
         'doc_renamed',

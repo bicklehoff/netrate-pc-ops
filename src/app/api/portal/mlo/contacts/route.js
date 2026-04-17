@@ -56,40 +56,39 @@ export async function GET(req) {
     `;
     const contacts = await sql(contactQuery, [orgId, pattern, tag, status, filterMloId, limit, offset]);
 
-    // Get borrower + loans for each contact that has a borrower_id
-    const borrowerIds = contacts.filter(c => c.borrower_id).map(c => c.borrower_id);
-    let borrowerLoans = [];
-    if (borrowerIds.length > 0) {
-      borrowerLoans = await sql`
-        SELECT b.id AS borrower_id, l.id AS loan_id, l.status, l.purpose, l.loan_amount, l.lender_name
-        FROM borrowers b
-        LEFT JOIN loans l ON l.borrower_id = b.id
-        WHERE b.id = ANY(${borrowerIds}) AND b.organization_id = ${orgId}
+    // Post-migration: contact IS borrower. Pull loans for borrower-role contacts directly.
+    const borrowerContactIds = contacts.filter(c => c.role === 'borrower').map(c => c.id);
+    let contactLoans = [];
+    if (borrowerContactIds.length > 0) {
+      contactLoans = await sql`
+        SELECT l.contact_id AS contact_id, l.id AS loan_id, l.status, l.purpose, l.loan_amount, l.lender_name
+        FROM loans l
+        WHERE l.contact_id = ANY(${borrowerContactIds}) AND l.organization_id = ${orgId}
         ORDER BY l.created_at DESC
       `;
     }
 
-    // Group loans by borrower_id
-    const borrowerLoanMap = new Map();
-    for (const row of borrowerLoans) {
-      if (!borrowerLoanMap.has(row.borrower_id)) {
-        borrowerLoanMap.set(row.borrower_id, []);
+    // Group loans by contact_id
+    const contactLoanMap = new Map();
+    for (const row of contactLoans) {
+      if (!contactLoanMap.has(row.contact_id)) {
+        contactLoanMap.set(row.contact_id, []);
       }
       if (row.loan_id) {
-        const arr = borrowerLoanMap.get(row.borrower_id);
+        const arr = contactLoanMap.get(row.contact_id);
         if (arr.length < 3) {
           arr.push({ id: row.loan_id, status: row.status, purpose: row.purpose, loan_amount: row.loan_amount, lender_name: row.lender_name });
         }
       }
     }
 
-    // Enrich contacts with borrower data
+    // Enrich contacts with borrower-role loan data
     const enriched = contacts.map(c => ({
       ...c,
       assigned_mlo: c.assigned_mlo?.id ? c.assigned_mlo : null,
-      borrower: c.borrower_id ? {
-        id: c.borrower_id,
-        loans: borrowerLoanMap.get(c.borrower_id) || [],
+      borrower: c.role === 'borrower' ? {
+        id: c.id,
+        loans: contactLoanMap.get(c.id) || [],
       } : null,
       _count: { contactNotes: c.contact_notes_count, leads: c.leads_count },
     }));

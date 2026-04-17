@@ -108,11 +108,11 @@ async function processLoan(loanData) {
   const coreStatus = normalizeStatus(loanData.loanStatus?.name);
   const ballInCourt = BALL_IN_COURT[coreStatus] || 'mlo';
 
-  // ── 1. Match or create borrower ──────────────────────────
+  // ── 1. Match or create contact (post-migration: contact carries borrower fields) ─
   let borrower = null;
   if (borrowerData?.contacts?.email) {
     const borrowerRows = await sql`
-      SELECT * FROM "Borrower"
+      SELECT * FROM contacts
       WHERE email = ${borrowerData.contacts.email.toLowerCase()}
       LIMIT 1
     `;
@@ -133,7 +133,7 @@ async function processLoan(loanData) {
     const ssnPadded = ssnRaw ? ssnRaw.padStart(9, '0') : null;
 
     const rows = await sql`
-      INSERT INTO "Borrower" (email, first_name, last_name, phone, ssn_encrypted, dob_encrypted, ssn_last_four)
+      INSERT INTO contacts (email, first_name, last_name, phone, ssn_encrypted, dob_encrypted, ssn_last_four, role, marketing_stage)
       VALUES (
         ${email},
         ${borrowerData.firstName || 'Unknown'},
@@ -141,15 +141,18 @@ async function processLoan(loanData) {
         ${normalizePhone(borrowerData.contacts?.mobilePhone || borrowerData.contacts?.homePhone)},
         ${ssnPadded ? encrypt(ssnPadded) : encrypt('000000000')},
         ${dobRaw ? encrypt(dobRaw) : encrypt('1900-01-01')},
-        ${ssnPadded ? ssnPadded.slice(-4) : '0000'}
+        ${ssnPadded ? ssnPadded.slice(-4) : '0000'},
+        'borrower', 'in_process'
       )
       RETURNING *
     `;
     borrower = rows[0];
+  } else if (borrower && borrower.role !== 'borrower') {
+    await sql`UPDATE contacts SET role = 'borrower', marketing_stage = COALESCE(marketing_stage, 'in_process'), updated_at = NOW() WHERE id = ${borrower.id}`;
   }
 
   if (!borrower) {
-    throw new Error(`Loan ${loanNumber}: Could not match or create borrower`);
+    throw new Error(`Loan ${loanNumber}: Could not match or create borrower contact`);
   }
 
   // ── 2. Match MLO by ldoxOfficerId, then NMLS fallback ───
@@ -160,14 +163,14 @@ async function processLoan(loanData) {
     const loInt = parseInt(loValue, 10);
     if (!isNaN(loInt)) {
       const mloByLdox = await sql`
-        SELECT id FROM "Mlo" WHERE ldox_officer_id = ${loInt} LIMIT 1
+        SELECT id FROM staff WHERE ldox_officer_id = ${loInt} LIMIT 1
       `;
       if (mloByLdox[0]) mloId = mloByLdox[0].id;
     }
     if (!mloId) {
       // Fallback: match by NMLS
       const mloByNmls = await sql`
-        SELECT id FROM "Mlo" WHERE nmls = ${loValue} LIMIT 1
+        SELECT id FROM staff WHERE nmls = ${loValue} LIMIT 1
       `;
       if (mloByNmls[0]) mloId = mloByNmls[0].id;
     }
@@ -175,7 +178,7 @@ async function processLoan(loanData) {
   // Also check explicit loanOfficerNmls field
   if (!mloId && loanData.loanOfficerNmls) {
     const mloRows = await sql`
-      SELECT id FROM "Mlo" WHERE nmls = ${String(loanData.loanOfficerNmls)} LIMIT 1
+      SELECT id FROM staff WHERE nmls = ${String(loanData.loanOfficerNmls)} LIMIT 1
     `;
     if (mloRows[0]) mloId = mloRows[0].id;
   }
@@ -203,16 +206,16 @@ async function processLoan(loanData) {
   // Try match by ldoxLoanId first
   if (ldoxLoanId) {
     const rows = await sql`
-      SELECT * FROM "Loan" WHERE ldox_loan_id = ${ldoxLoanId} LIMIT 1
+      SELECT * FROM loans WHERE ldox_loan_id = ${ldoxLoanId} LIMIT 1
     `;
     loan = rows[0] || null;
   }
 
-  // Fallback: match by loanNumber + borrower
+  // Fallback: match by loanNumber + contact (post-migration)
   if (!loan && loanNumber) {
     const rows = await sql`
-      SELECT * FROM "Loan"
-      WHERE loan_number = ${loanNumber} AND borrower_id = ${borrower.id}
+      SELECT * FROM loans
+      WHERE loan_number = ${loanNumber} AND contact_id = ${borrower.id}
       LIMIT 1
     `;
     loan = rows[0] || null;
@@ -222,8 +225,8 @@ async function processLoan(loanData) {
     // Update existing
     const oldStatus = loan.status;
     const updatedRows = await sql`
-      UPDATE "Loan" SET
-        borrower_id = ${borrower.id},
+      UPDATE loans SET
+        contact_id = ${borrower.id},
         mlo_id = ${mloId},
         status = ${coreStatus},
         ball_in_court = ${ballInCourt},
@@ -252,7 +255,7 @@ async function processLoan(loanData) {
     // Log status change if it changed
     if (oldStatus !== coreStatus) {
       await sql`
-        INSERT INTO "LoanEvent" (loan_id, event_type, actor_type, old_value, new_value, details)
+        INSERT INTO loan_events (loan_id, event_type, actor_type, old_value, new_value, details)
         VALUES (
           ${loan.id},
           'status_change',
@@ -269,8 +272,8 @@ async function processLoan(loanData) {
     const applicationStep = coreStatus === 'prospect' ? 1 : 6;
     const submittedAt = coreStatus !== 'prospect' ? new Date() : null;
     const rows = await sql`
-      INSERT INTO "Loan" (
-        borrower_id, mlo_id, status, ball_in_court, ldox_loan_id, loan_number,
+      INSERT INTO loans (
+        contact_id, mlo_id, status, ball_in_court, ldox_loan_id, loan_number,
         loan_amount, interest_rate, loan_term, purpose, occupancy, loan_type,
         lender_name, purchase_price, estimated_value, num_units, property_type,
         property_address, current_address, credit_score, application_step, submitted_at
@@ -289,7 +292,7 @@ async function processLoan(loanData) {
 
   // Log import event
   await sql`
-    INSERT INTO "LoanEvent" (loan_id, event_type, actor_type, details)
+    INSERT INTO loan_events (loan_id, event_type, actor_type, details)
     VALUES (
       ${loan.id},
       'field_updated',
@@ -320,7 +323,7 @@ async function processLoan(loanData) {
     const hasAnyDate = [applicationDate, lockedDate, lockExpiration, estimatedClosing, closingDate, fundingDate, firstPaymentDate, estimatedFunding, appraisalOrdered].some((v) => v !== null);
     if (hasAnyDate) {
       await sql`
-        INSERT INTO "LoanDates" (
+        INSERT INTO loan_dates (
           loan_id, application_date, locked_date, lock_expiration, estimated_closing,
           closing_date, funding_date, first_payment_date, estimated_funding, appraisal_ordered
         ) VALUES (
@@ -328,15 +331,15 @@ async function processLoan(loanData) {
           ${closingDate}, ${fundingDate}, ${firstPaymentDate}, ${estimatedFunding}, ${appraisalOrdered}
         )
         ON CONFLICT (loan_id) DO UPDATE SET
-          application_date = COALESCE(EXCLUDED.application_date, "LoanDates".application_date),
-          locked_date = COALESCE(EXCLUDED.locked_date, "LoanDates".locked_date),
-          lock_expiration = COALESCE(EXCLUDED.lock_expiration, "LoanDates".lock_expiration),
-          estimated_closing = COALESCE(EXCLUDED.estimated_closing, "LoanDates".estimated_closing),
-          closing_date = COALESCE(EXCLUDED.closing_date, "LoanDates".closing_date),
-          funding_date = COALESCE(EXCLUDED.funding_date, "LoanDates".funding_date),
-          first_payment_date = COALESCE(EXCLUDED.first_payment_date, "LoanDates".first_payment_date),
-          estimated_funding = COALESCE(EXCLUDED.estimated_funding, "LoanDates".estimated_funding),
-          appraisal_ordered = COALESCE(EXCLUDED.appraisal_ordered, "LoanDates".appraisal_ordered),
+          application_date = COALESCE(EXCLUDED.application_date, loan_dates.application_date),
+          locked_date = COALESCE(EXCLUDED.locked_date, loan_dates.locked_date),
+          lock_expiration = COALESCE(EXCLUDED.lock_expiration, loan_dates.lock_expiration),
+          estimated_closing = COALESCE(EXCLUDED.estimated_closing, loan_dates.estimated_closing),
+          closing_date = COALESCE(EXCLUDED.closing_date, loan_dates.closing_date),
+          funding_date = COALESCE(EXCLUDED.funding_date, loan_dates.funding_date),
+          first_payment_date = COALESCE(EXCLUDED.first_payment_date, loan_dates.first_payment_date),
+          estimated_funding = COALESCE(EXCLUDED.estimated_funding, loan_dates.estimated_funding),
+          appraisal_ordered = COALESCE(EXCLUDED.appraisal_ordered, loan_dates.appraisal_ordered),
           updated_at = NOW()
       `;
     }
@@ -346,7 +349,7 @@ async function processLoan(loanData) {
   if (isNew) {
     try {
       await sql`
-        INSERT INTO "LoanBorrower" (loan_id, borrower_id, borrower_type, ordinal, current_address)
+        INSERT INTO loan_borrowers (loan_id, contact_id, borrower_type, ordinal, current_address)
         VALUES (
           ${loan.id},
           ${borrower.id},
@@ -367,14 +370,14 @@ async function processLoan(loanData) {
     const cbEmail = cb.contacts?.email?.toLowerCase();
     if (cbEmail) {
       let cbRows = await sql`
-        SELECT * FROM "Borrower" WHERE email = ${cbEmail} LIMIT 1
+        SELECT * FROM contacts WHERE email = ${cbEmail} LIMIT 1
       `;
       let coBorrower = cbRows[0] || null;
 
       if (!coBorrower) {
         const cbSsn = cb.ssn ? String(cb.ssn).padStart(9, '0') : null;
         const newCbRows = await sql`
-          INSERT INTO "Borrower" (email, first_name, last_name, phone, ssn_encrypted, dob_encrypted, ssn_last_four)
+          INSERT INTO contacts (email, first_name, last_name, phone, ssn_encrypted, dob_encrypted, ssn_last_four, role, marketing_stage)
           VALUES (
             ${cbEmail},
             ${cb.firstName || 'Unknown'},
@@ -382,16 +385,19 @@ async function processLoan(loanData) {
             ${normalizePhone(cb.contacts?.mobilePhone || cb.contacts?.homePhone)},
             ${cbSsn ? encrypt(cbSsn) : encrypt('000000000')},
             ${cb.birthDate ? encrypt(cb.birthDate) : encrypt('1900-01-01')},
-            ${cbSsn ? cbSsn.slice(-4) : '0000'}
+            ${cbSsn ? cbSsn.slice(-4) : '0000'},
+            'borrower', 'in_process'
           )
           RETURNING *
         `;
         coBorrower = newCbRows[0];
+      } else if (coBorrower.role !== 'borrower') {
+        await sql`UPDATE contacts SET role = 'borrower', marketing_stage = COALESCE(marketing_stage, 'in_process'), updated_at = NOW() WHERE id = ${coBorrower.id}`;
       }
 
       const cbAddress = normalizeAddress(cb.currentAddress);
       await sql`
-        INSERT INTO "LoanBorrower" (loan_id, borrower_id, borrower_type, ordinal, current_address)
+        INSERT INTO loan_borrowers (loan_id, contact_id, borrower_type, ordinal, current_address)
         VALUES (
           ${loan.id},
           ${coBorrower.id},
@@ -399,14 +405,14 @@ async function processLoan(loanData) {
           1,
           ${cbAddress ? JSON.stringify(cbAddress) : null}::jsonb
         )
-        ON CONFLICT (loan_id, borrower_id) DO UPDATE SET
+        ON CONFLICT (loan_id, contact_id) DO UPDATE SET
           current_address = ${cbAddress ? JSON.stringify(cbAddress) : null}::jsonb,
           updated_at = NOW()
       `;
 
       // Update co-borrower count
       await sql`
-        UPDATE "Loan" SET num_borrowers = 2, updated_at = NOW()
+        UPDATE loans SET num_borrowers = 2, updated_at = NOW()
         WHERE id = ${loan.id}
       `;
     }
@@ -419,7 +425,7 @@ async function processLoan(loanData) {
       if (result.enriched) {
         try {
           await sql`
-            UPDATE "Loan" SET
+            UPDATE loans SET
               property_address = ${JSON.stringify(result.address)}::jsonb,
               updated_at = NOW()
             WHERE id = ${loan.id}

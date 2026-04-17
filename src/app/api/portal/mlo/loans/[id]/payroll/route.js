@@ -21,7 +21,7 @@ async function verifyMloAccess(loanId, session, orgId, mloId) {
     SELECT l.*, b.id AS b_id, b.first_name AS b_first_name, b.last_name AS b_last_name, b.email AS b_email,
            m.id AS m_id, m.first_name AS m_first_name, m.last_name AS m_last_name, m.email AS m_email, m.nmls AS m_nmls
     FROM loans l
-    LEFT JOIN borrowers b ON b.id = l.borrower_id
+    LEFT JOIN contacts b ON b.id = l.contact_id
     LEFT JOIN staff m ON m.id = l.mlo_id
     WHERE l.id = ${loanId} AND l.organization_id = ${orgId} LIMIT 1
   `;
@@ -44,11 +44,11 @@ export async function GET(request, { params }) {
 
     // Dup-check: other loans for same borrower not settled/cancelled
     let relatedLoans = [];
-    if (loan.borrower_id) {
+    if (loan.contact_id) {
       relatedLoans = await sql`
         SELECT id, status, loan_number, lender_name, loan_type, loan_amount, purpose, created_at
         FROM loans
-        WHERE borrower_id = ${loan.borrower_id} AND id != ${id} AND organization_id = ${orgId} AND status NOT IN ('settled', 'cancelled')
+        WHERE contact_id = ${loan.contact_id} AND id != ${id} AND organization_id = ${orgId} AND status NOT IN ('settled', 'cancelled')
         ORDER BY created_at DESC
       `;
     }
@@ -185,11 +185,11 @@ export async function PUT(request, { params }) {
 
     // Dup-check
     let relatedLoans = [];
-    if (loan.borrower_id) {
+    if (loan.contact_id) {
       relatedLoans = await sql`
         SELECT id, status, loan_number, lender_name, loan_type, loan_amount, purpose, created_at
         FROM loans
-        WHERE borrower_id = ${loan.borrower_id} AND id != ${id} AND organization_id = ${orgId} AND status NOT IN ('settled', 'cancelled')
+        WHERE contact_id = ${loan.contact_id} AND id != ${id} AND organization_id = ${orgId} AND status NOT IN ('settled', 'cancelled')
         ORDER BY created_at DESC
       `;
     }
@@ -265,7 +265,7 @@ export async function PATCH(request, { params }) {
 
       // Handle nickname
       let nicknameUpdate = null;
-      if (nicknameConfirmed && loan.borrower_id && Array.isArray(cd.borrowerNames) && cd.borrowerNames.length > 0) {
+      if (nicknameConfirmed && loan.contact_id && Array.isArray(cd.borrowerNames) && cd.borrowerNames.length > 0) {
         const primaryCd = cd.borrowerNames[0];
         nicknameUpdate = {
           legalFirstName: primaryCd.firstName,
@@ -273,8 +273,8 @@ export async function PATCH(request, { params }) {
           nickname: loan.b_first_name,
         };
         await sql`
-          UPDATE borrowers SET legal_first_name = ${primaryCd.firstName}, legal_last_name = ${primaryCd.lastName}, nickname = ${loan.b_first_name}, updated_at = NOW()
-          WHERE id = ${loan.borrower_id}
+          UPDATE contacts SET legal_first_name = ${primaryCd.firstName}, legal_last_name = ${primaryCd.lastName}, nickname = ${loan.b_first_name}, updated_at = NOW()
+          WHERE id = ${loan.contact_id}
         `;
       }
 
@@ -297,18 +297,18 @@ export async function PATCH(request, { params }) {
 
           if (person.role === 'co_borrower') {
             const borrowerRows = await sql`
-              INSERT INTO borrowers (id, first_name, last_name, legal_first_name, legal_last_name, email, dob_encrypted, ssn_encrypted, ssn_last_four, created_at, updated_at)
-              VALUES (gen_random_uuid(), ${person.firstName}, ${person.lastName}, ${person.firstName}, ${person.lastName}, ${person.email || `${person.firstName.toLowerCase()}.${person.lastName.toLowerCase()}@placeholder.local`}, '', '', '0000', NOW(), NOW())
+              INSERT INTO contacts (id, first_name, last_name, legal_first_name, legal_last_name, email, dob_encrypted, ssn_encrypted, ssn_last_four, role, marketing_stage, created_at, updated_at)
+              VALUES (gen_random_uuid(), ${person.firstName}, ${person.lastName}, ${person.firstName}, ${person.lastName}, ${person.email || `${person.firstName.toLowerCase()}.${person.lastName.toLowerCase()}@placeholder.local`}, '', '', '0000', 'borrower', 'in_process', NOW(), NOW())
               RETURNING *
             `;
             const borrower = borrowerRows[0];
 
             await sql`
-              INSERT INTO loan_borrowers (id, loan_id, borrower_id, borrower_type, ordinal, created_at, updated_at)
+              INSERT INTO loan_borrowers (id, loan_id, contact_id, borrower_type, ordinal, created_at, updated_at)
               VALUES (gen_random_uuid(), ${id}, ${borrower.id}, 'co_borrower', 1, NOW(), NOW())
             `;
 
-            personsCreated.push({ ...person, borrowerId: borrower.id, contactId });
+            personsCreated.push({ ...person, contactId: borrower.id, secondaryContactId: contactId });
           } else {
             personsCreated.push({ ...person, contactId });
           }
@@ -383,7 +383,7 @@ export async function POST(request, { params }) {
       SELECT l.*, b.first_name AS b_first_name, b.last_name AS b_last_name, b.email AS b_email,
              m.first_name AS m_first_name, m.last_name AS m_last_name, m.email AS m_email, m.nmls AS m_nmls
       FROM loans l
-      LEFT JOIN borrowers b ON b.id = l.borrower_id
+      LEFT JOIN contacts b ON b.id = l.contact_id
       LEFT JOIN staff m ON m.id = l.mlo_id
       WHERE l.id = ${id} AND l.organization_id = ${orgId} LIMIT 1
     `;

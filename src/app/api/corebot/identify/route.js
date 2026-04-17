@@ -23,13 +23,13 @@ export async function POST(request) {
       return NextResponse.json({ error: 'loanId, fileId, and fileName are required' }, { status: 400 });
     }
 
-    // Verify MLO owns this loan (with borrower + loanBorrowers)
+    // Verify MLO owns this loan (with borrower contact + loanBorrowers)
     const loanRows = await sql`
       SELECT l.*,
              b.first_name AS borrower_first_name,
              b.last_name AS borrower_last_name
-      FROM "Loan" l
-      LEFT JOIN "Borrower" b ON b.id = l.borrower_id
+      FROM loans l
+      LEFT JOIN contacts b ON b.id = l.contact_id
       WHERE l.id = ${loanId}
       LIMIT 1
     `;
@@ -48,8 +48,8 @@ export async function POST(request) {
     const loanBorrowers = await sql`
       SELECT lb.borrower_type,
              b.first_name, b.last_name
-      FROM "LoanBorrower" lb
-      JOIN "Borrower" b ON b.id = lb.borrower_id
+      FROM loan_borrowers lb
+      JOIN contacts b ON b.id = lb.contact_id
       WHERE lb.loan_id = ${loanId}
     `;
 

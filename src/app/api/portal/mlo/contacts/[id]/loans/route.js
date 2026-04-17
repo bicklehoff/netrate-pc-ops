@@ -13,7 +13,7 @@ export async function GET(request, { params }) {
     const { id: contactId } = await params;
 
     const contactRows = await sql`
-      SELECT id, first_name, last_name, borrower_id FROM contacts WHERE id = ${contactId} AND organization_id = ${orgId} LIMIT 1
+      SELECT id, first_name, last_name FROM contacts WHERE id = ${contactId} AND organization_id = ${orgId} LIMIT 1
     `;
     const contact = contactRows[0];
 
@@ -21,31 +21,17 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: 'Contact not found' }, { status: 404 });
     }
 
-    // Find loans via contact_id (direct) OR via borrower_id (legacy)
-    let loans;
-    if (contact.borrower_id) {
-      loans = await sql`
-        SELECT l.id, l.status, l.loan_amount, l.loan_type, l.purpose, l.property_address,
-          l.lender_name, l.interest_rate, l.loan_term, l.closing_date, l.funding_date,
-          l.created_at, l.updated_at, l.is_application, l.application_date,
-          m.first_name AS mlo_first_name, m.last_name AS mlo_last_name, m.nmls AS mlo_nmls
-        FROM loans l
-        LEFT JOIN staff m ON m.id = l.mlo_id
-        WHERE (l.contact_id = ${contactId} OR l.borrower_id = ${contact.borrower_id}) AND l.organization_id = ${orgId}
-        ORDER BY l.created_at DESC
-      `;
-    } else {
-      loans = await sql`
-        SELECT l.id, l.status, l.loan_amount, l.loan_type, l.purpose, l.property_address,
-          l.lender_name, l.interest_rate, l.loan_term, l.closing_date, l.funding_date,
-          l.created_at, l.updated_at, l.is_application, l.application_date,
-          m.first_name AS mlo_first_name, m.last_name AS mlo_last_name, m.nmls AS mlo_nmls
-        FROM loans l
-        LEFT JOIN staff m ON m.id = l.mlo_id
-        WHERE l.contact_id = ${contactId} AND l.organization_id = ${orgId}
-        ORDER BY l.created_at DESC
-      `;
-    }
+    // Post-migration: loans.contact_id is the unified link (borrowers table merged into contacts).
+    const loans = await sql`
+      SELECT l.id, l.status, l.loan_amount, l.loan_type, l.purpose, l.property_address,
+        l.lender_name, l.interest_rate, l.loan_term, l.closing_date, l.funding_date,
+        l.created_at, l.updated_at, l.is_application, l.application_date,
+        m.first_name AS mlo_first_name, m.last_name AS mlo_last_name, m.nmls AS mlo_nmls
+      FROM loans l
+      LEFT JOIN staff m ON m.id = l.mlo_id
+      WHERE l.contact_id = ${contactId} AND l.organization_id = ${orgId}
+      ORDER BY l.created_at DESC
+    `;
 
     // Convert Decimals for JSON
     const formatted = loans.map((loan) => ({

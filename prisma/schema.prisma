@@ -25,9 +25,8 @@ model Organization {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  mlos            Mlo[]
+  mlos            Staff[]
   loans           Loan[]
-  borrowers       Borrower[]
   contacts        Contact[]
   leads           Lead[]
   accounts        Account[]
@@ -45,41 +44,10 @@ model Organization {
   @@map("organizations")
 }
 
-model Borrower {
-  id               String         @id @default(uuid()) @db.Uuid
-  email            String         @unique
-  firstName        String         @map("first_name")
-  lastName         String         @map("last_name")
-  phone            String?
-  dobEncrypted     String         @map("dob_encrypted")
-  ssnEncrypted     String         @map("ssn_encrypted")
-  ssnLastFour      String         @map("ssn_last_four") @db.VarChar(4)
-  phoneVerified    Boolean        @default(false) @map("phone_verified")
-  passwordHash     String?        @map("password_hash")
-  magicToken       String?        @map("magic_token")
-  magicExpires     DateTime?      @map("magic_expires")
-  smsCode          String?        @map("sms_code")
-  smsCodeExpires   DateTime?      @map("sms_code_expires")
-  smsAttempts      Int            @default(0) @map("sms_attempts")
-  smsLockedUntil   DateTime?      @map("sms_locked_until")
-  createdAt        DateTime       @default(now()) @map("created_at")
-  updatedAt        DateTime       @updatedAt @map("updated_at")
-  legalFirstName String? @map("legal_first_name")
-  legalLastName  String? @map("legal_last_name")
-  nickname       String?
-  organizationId String       @default("00000000-0000-4000-8000-000000000001") @map("organization_id") @db.Uuid
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  contact          Contact?
-  loanBorrowers    LoanBorrower[]
-  loans            Loan[]
-
-  @@map("borrowers")
-}
-
-/// Maps to the `staff` table (renamed from `mlos` in migration 007).
-/// A backward-compat view `mlos` exists over `staff` during the Layer-1b2
-/// code-deploy window; view is dropped in Layer-1b3.
-model Mlo {
+/// Maps to the `staff` table (renamed from `mlos` in migration 007; view
+/// dropped in 008). The model was renamed from `Mlo` in Layer-1b3; `mloId`
+/// field names across other models are kept to minimize churn.
+model Staff {
   id             String          @id @default(uuid()) @db.Uuid
   email          String          @unique
   firstName      String          @map("first_name")
@@ -109,7 +77,7 @@ model Mlo {
 
 model Loan {
   id                    String             @id @default(uuid()) @db.Uuid
-  borrowerId            String             @map("borrower_id") @db.Uuid
+  contactId             String             @map("contact_id") @db.Uuid
   mloId                 String?            @map("mlo_id") @db.Uuid
   status                String             @default("draft")
   ballInCourt           String             @default("borrower") @map("ball_in_court")
@@ -193,13 +161,11 @@ model Loan {
   estateHeldIn       String?            @map("estate_held_in")
   titleHeldAs        String?            @map("title_held_as")
   applicationDate    DateTime?          @map("application_date") @db.Timestamptz(6)
-  contactId          String?            @map("contact_id") @db.Uuid
   isApplication      Boolean            @default(false) @map("is_application")
   conditions            Condition[]
   documents             Document[]
   assets                LoanAsset[]
   loanBorrowers         LoanBorrower[]
-  loanContacts          LoanContact[]
   participants          LoanParticipant[]
   serviceProviders      LoanServiceProvider[]
   conv                  LoanConv?
@@ -216,9 +182,8 @@ model Loan {
   va                    LoanVa?
   organizationId        String             @default("00000000-0000-4000-8000-000000000001") @map("organization_id") @db.Uuid
   organization          Organization       @relation(fields: [organizationId], references: [id])
-  borrower              Borrower           @relation(fields: [borrowerId], references: [id])
-  contacts              Contact?           @relation(fields: [contactId], references: [id])
-  mlo                   Mlo?               @relation(fields: [mloId], references: [id])
+  contact               Contact            @relation(fields: [contactId], references: [id])
+  mlo                   Staff?             @relation(fields: [mloId], references: [id])
 
   @@index([contactId], map: "idx_loans_contact_id")
   @@index([organizationId], map: "idx_loans_org")
@@ -228,7 +193,7 @@ model Loan {
 model LoanBorrower {
   id                      String             @id @default(uuid()) @db.Uuid
   loanId                  String             @map("loan_id") @db.Uuid
-  borrowerId              String             @map("borrower_id") @db.Uuid
+  contactId               String             @map("contact_id") @db.Uuid
   borrowerType            String             @map("borrower_type")
   ordinal                 Int                @default(0)
   relationship            String?
@@ -256,13 +221,13 @@ model LoanBorrower {
   previous_address_months Int?
   previous_address_years  Int?
   suffix                  String?
-  borrower                Borrower           @relation(fields: [borrowerId], references: [id])
+  contact                 Contact            @relation(fields: [contactId], references: [id])
   loan                    Loan               @relation(fields: [loanId], references: [id], onDelete: Cascade)
   declaration             LoanDeclaration?
   employments             LoanEmployment[]
   income                  LoanIncome?
 
-  @@unique([loanId, borrowerId])
+  @@unique([loanId, contactId])
   @@unique([loanId, ordinal])
   @@map("loan_borrowers")
 }
@@ -298,7 +263,7 @@ model Document {
   createdAt     DateTime    @default(now()) @map("created_at")
   conditions    Condition[]
   loan          Loan        @relation(fields: [loanId], references: [id])
-  requestedBy   Mlo?        @relation("RequestedBy", fields: [requestedById], references: [id])
+  requestedBy   Staff?        @relation("RequestedBy", fields: [requestedById], references: [id])
 
   organizationId String       @default("00000000-0000-4000-8000-000000000001") @map("organization_id") @db.Uuid
   organization   Organization @relation(fields: [organizationId], references: [id])
@@ -315,7 +280,6 @@ model Contact {
   source              String          @default("manual")
   tags                String[]        @default([])
   notes               String?
-  borrowerId          String?         @unique @map("borrower_id") @db.Uuid
   zohoLeadId          String?         @map("zoho_lead_id")
   createdAt           DateTime        @default(now()) @map("created_at")
   updatedAt           DateTime        @updatedAt @map("updated_at")
@@ -374,10 +338,9 @@ model Contact {
   zoho_contact_id     String?
   callLogs            CallLog[]
   contactNotes        ContactNote[]
-  mlos                Mlo?            @relation(fields: [assigned_mlo_id], references: [id])
-  borrower            Borrower?       @relation(fields: [borrowerId], references: [id])
+  mlos                Staff?            @relation(fields: [assigned_mlo_id], references: [id])
   leads               Lead[]
-  loan_contacts       LoanContact[]
+  loanBorrowers       LoanBorrower[]
   loans               Loan[]
   smsMessages         SmsMessage[]
   participants        LoanParticipant[]
@@ -406,7 +369,7 @@ model CallLog {
   startedAt     DateTime   @default(now()) @map("started_at")
   endedAt       DateTime?  @map("ended_at")
   contact       Contact?   @relation(fields: [contactId], references: [id])
-  mlo           Mlo        @relation(fields: [mloId], references: [id])
+  mlo           Staff      @relation(fields: [mloId], references: [id])
   notes         CallNote[]
 
   @@index([contactId])
@@ -425,7 +388,7 @@ model CallNote {
   disposition String?
   createdAt   DateTime @default(now()) @map("created_at")
   callLog     CallLog  @relation(fields: [callLogId], references: [id])
-  mlo         Mlo      @relation(fields: [mloId], references: [id])
+  mlo         Staff    @relation(fields: [mloId], references: [id])
 
   @@map("call_notes")
 }
@@ -442,7 +405,7 @@ model SmsMessage {
   twilioMessageSid String?  @unique @map("twilio_message_sid")
   sentAt           DateTime @default(now()) @map("sent_at")
   contact          Contact? @relation(fields: [contactId], references: [id])
-  mlo              Mlo?     @relation(fields: [mloId], references: [id])
+  mlo              Staff?     @relation(fields: [mloId], references: [id])
 
   @@index([contactId])
   @@index([twilioMessageSid])
@@ -567,26 +530,6 @@ model LoanTask {
   @@map("loan_tasks")
 }
 
-model LoanContact {
-  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  loanId     String    @map("loan_id") @db.Uuid
-  role       String    @default("borrower")
-  name       String?
-  company    String?
-  email      String?
-  phone      String?
-  notes      String?
-  isPrimary  Boolean?  @default(false) @map("is_primary")
-  createdAt  DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt  DateTime? @updatedAt @map("updated_at") @db.Timestamptz(6)
-  contact_id String    @db.Uuid
-  contacts   Contact   @relation(fields: [contact_id], references: [id])
-  loan       Loan      @relation(fields: [loanId], references: [id], onDelete: Cascade)
-
-  @@unique([loanId, contact_id])
-  @@map("loan_contacts")
-}
-
 model RateHistory {
   id              Int       @id @default(autoincrement())
   date            DateTime  @db.Date
@@ -665,7 +608,7 @@ model HecmScenario {
   scenario_data    Json?
   state            String?
   zip              String?
-  mlo              Mlo?      @relation(fields: [mloId], references: [id])
+  mlo              Staff?      @relation(fields: [mloId], references: [id])
 
   organizationId String       @default("00000000-0000-4000-8000-000000000001") @map("organization_id") @db.Uuid
   organization   Organization @relation(fields: [organizationId], references: [id])
@@ -1679,7 +1622,7 @@ model LoanParticipant {
 
   loan         Loan         @relation(fields: [loanId], references: [id], onDelete: Cascade)
   contact      Contact?     @relation(fields: [contactId], references: [id])
-  mlo          Mlo?         @relation(fields: [staffId], references: [id])
+  mlo          Staff?         @relation(fields: [staffId], references: [id])
   organization Organization @relation(fields: [organizationId], references: [id])
 
   @@index([loanId])

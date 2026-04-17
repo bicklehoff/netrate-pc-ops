@@ -18,9 +18,9 @@ async function fetchFullLoan(id, orgId) {
   const loan = loanRows[0];
   if (!loan) return null;
 
-  // Borrower
-  const borrowerRows = loan.borrower_id
-    ? await sql`SELECT * FROM borrowers WHERE id = ${loan.borrower_id} LIMIT 1`
+  // Borrower (contact)
+  const borrowerRows = loan.contact_id
+    ? await sql`SELECT * FROM contacts WHERE id = ${loan.contact_id} LIMIT 1`
     : [];
 
   // MLO
@@ -34,7 +34,7 @@ async function fetchFullLoan(id, orgId) {
            b.email AS b_email, b.phone AS b_phone, b.ssn_encrypted AS b_ssn_encrypted,
            b.dob_encrypted AS b_dob_encrypted
     FROM loan_borrowers lb
-    LEFT JOIN borrowers b ON b.id = lb.borrower_id
+    LEFT JOIN contacts b ON b.id = lb.contact_id
     WHERE lb.loan_id = ${id}
     ORDER BY lb.ordinal ASC
   `;
