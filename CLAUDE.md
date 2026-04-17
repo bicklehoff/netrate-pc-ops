@@ -168,8 +168,8 @@ Ask: "Which department should I work as? (Dev, Admin, or Setup)"
 David may run multiple Claude Code sessions against this repo simultaneously. These rules prevent branch collisions, memory loss, and deploy conflicts.
 
 #### Session Types
-- **Main session** (setup/admin): Runs in repo root (`D:\PROJECTS\netrate-pc-ops`). Owns the dev server (port 3000). Can merge PRs (Gates 5-6).
-- **Worktree session** (dev work): Runs via `EnterWorktree`. Has its own branch checkout — no collisions with other sessions. Does NOT run dev servers. Can push branches and create PRs (Gates 0-4) but does NOT merge.
+- **Main session** (setup/admin): Runs in repo root (`D:\PROJECTS\netrate-pc-ops`). Owns the dev server (port 3000). Can execute every deploy gate including merge + production confirm.
+- **Worktree session** (dev work): Runs via `EnterWorktree`. Has its own branch checkout — no collisions with other sessions. Does NOT run dev servers. **Can execute every deploy gate** including `gh pr merge` (API-based — no local branch switch) and production monitoring (read-only).
 
 #### Memory in Worktrees
 If your CWD contains `.claude/worktrees/`, auto-memory may not load. At session start, manually read:
@@ -185,7 +185,23 @@ mklink /J node_modules D:\PROJECTS\netrate-pc-ops\node_modules
 ```
 
 #### Deploy from Worktrees
-Worktree sessions may execute Gates 0-4 (build, push, PR, preview). Gates 5-6 (merge, production confirm) must happen from the main session or GitHub UI. This prevents worktrees from switching to `main`, which would corrupt the isolation.
+Worktree sessions execute every deploy gate. The hazard being protected against is **touching the `main` branch locally from the worktree**, not API-based operations.
+
+**Safe from worktrees (execute on David's go-ahead):**
+- `gh pr merge --squash` (GitHub API — does not modify local branch or refs)
+- `gh pr view` / `gh pr edit` / `gh pr status` (read/API-only)
+- `npx vercel ls` and `vercel inspect` (read-only)
+- `curl` smoke tests against production URLs (read-only)
+
+**Never from worktrees:**
+- `git checkout main` — would switch the worktree off its own branch
+- `git pull` while on `main` — modifies the local `main` ref
+- `git merge origin/main` into the `main` branch locally
+- Any operation that modifies the local `main` ref from inside the worktree
+
+**Worktree lifecycle:** a worktree stays on its own branch for its entire life. After its PR is merged, the worktree may:
+- be exited + removed (its branch is dead now), or
+- spawn a new branch for follow-up work using `git fetch origin main && git checkout -b <new-branch> origin/main` — this creates a NEW local branch tracking the updated remote without touching the local `main` ref.
 
 #### Deploy Lock
 Before entering Gate 1, check `.claude/deploy.lock`:
