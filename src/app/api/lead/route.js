@@ -89,15 +89,22 @@ export async function POST(request) {
     `;
 
     const firstName = (name || '').trim().split(/\s+/)[0] || null;
-    notifyOnLeadCreated({
-      leadId: rows[0].id,
-      contactId: null,
-      firstName,
-      email,
-      phone: normalizePhone(phone) || phone || null,
-      source: source || leadSource || 'website',
-      sourceDetail: sourceDetail || null,
-    }).catch(err => console.error('[lead] notify failed (non-fatal):', err.message));
+    // Must await — Vercel serverless terminates post-response, killing any background promises.
+    // Total email send is ~1s (parallel), acceptable for form submission UX.
+    try {
+      await notifyOnLeadCreated({
+        leadId: rows[0].id,
+        contactId: null,
+        firstName,
+        email,
+        phone: normalizePhone(phone) || phone || null,
+        source: source || leadSource || 'website',
+        sourceDetail: sourceDetail || null,
+      });
+    } catch (err) {
+      // Never fail the form submit because of email issues — log and move on.
+      console.error('[lead] notify failed (non-fatal):', err.message);
+    }
 
     return NextResponse.json({ success: true, id: rows[0].id });
   } catch (err) {
