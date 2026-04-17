@@ -4,7 +4,7 @@ export const metadata = {
   title: 'How NetRate Charges Less — The Direct Mortgage Model | NetRate Mortgage',
   description: 'No TV ads. No cold calls. No haggling. NetRate Mortgage keeps overhead low and passes the savings to you in the rate. See how the direct model works.',
   alternates: {
-    canonical: 'https://netratemortgage.com/why-netrate',
+    canonical: 'https://www.netratemortgage.com/why-netrate',
   },
 };
 

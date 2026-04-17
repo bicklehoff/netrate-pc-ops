@@ -9,7 +9,7 @@ export const metadata = {
     type: 'article',
     publishedTime: '2026-03-27T00:00:00Z',
     siteName: 'NetRate Mortgage',
-    url: 'https://netratemortgage.com/california-housing-update',
+    url: 'https://www.netratemortgage.com/california-housing-update',
   },
   twitter: {
     card: 'summary_large_image',
@@ -17,7 +17,7 @@ export const metadata = {
     description: 'California is building more housing near transit and Fannie Mae just made condo financing easier. Here\'s what changed and what it means if you\'re buying or refinancing.',
   },
   alternates: {
-    canonical: 'https://netratemortgage.com/california-housing-update',
+    canonical: 'https://www.netratemortgage.com/california-housing-update',
   },
 }
 
@@ -31,12 +31,12 @@ const jsonLd = [
     author: {
       '@type': 'Organization',
       name: 'NetRate Mortgage',
-      url: 'https://netratemortgage.com',
+      url: 'https://www.netratemortgage.com',
     },
     publisher: {
       '@type': 'Organization',
       name: 'NetRate Mortgage',
-      url: 'https://netratemortgage.com',
+      url: 'https://www.netratemortgage.com',
     },
   },
   {

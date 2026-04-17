@@ -4,7 +4,7 @@ export const metadata = {
   title: 'What Are Closing Costs? The Three Categories Most Borrowers Don\'t Know | NetRate Mortgage',
   description: 'Closing costs aren\'t one thing — they\'re three different categories lumped together. Learn the difference between loan costs, third-party fees, and prepaids so you know what you\'re actually paying.',
   alternates: {
-    canonical: 'https://netratemortgage.com/closing-costs',
+    canonical: 'https://www.netratemortgage.com/closing-costs',
   },
 };
 

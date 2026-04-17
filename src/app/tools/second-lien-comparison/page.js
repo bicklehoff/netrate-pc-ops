@@ -3,7 +3,7 @@ import SubFinancingComparison from '@/components/calculators/SubFinancingCompari
 export const metadata = {
   title: 'Keep Your Second Lien or Pay It Off? | NetRate Mortgage',
   description: 'Compare the cost of keeping your HELOC or second mortgage vs. paying it off with a cash-out refinance. See the real pricing impact side by side.',
-  alternates: { canonical: 'https://netratemortgage.com/tools/second-lien-comparison' },
+  alternates: { canonical: 'https://www.netratemortgage.com/tools/second-lien-comparison' },
 };
 
 export default function SecondLienComparisonPage() {

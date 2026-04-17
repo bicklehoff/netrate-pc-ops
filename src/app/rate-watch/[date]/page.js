@@ -88,7 +88,7 @@ export default async function RateWatchDatePage({ params }) {
     datePublished: commentary.published_at || commentary.date,
     dateModified: commentary.published_at || commentary.date,
     author: { '@type': 'Person', name: commentary.author || 'David Burson' },
-    publisher: { '@type': 'Organization', name: 'NetRate Mortgage', url: 'https://netratemortgage.com' },
+    publisher: { '@type': 'Organization', name: 'NetRate Mortgage', url: 'https://www.netratemortgage.com' },
     description: commentary.commentary?.substring(0, 160),
   };
 

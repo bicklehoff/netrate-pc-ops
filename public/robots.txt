@@ -27,4 +27,4 @@ User-agent: GoogleOther
 Allow: /
 
 # Sitemap
-Sitemap: https://netratemortgage.com/sitemap.xml
+Sitemap: https://www.netratemortgage.com/sitemap.xml

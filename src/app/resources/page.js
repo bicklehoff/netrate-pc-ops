@@ -6,12 +6,12 @@ export const metadata = {
   openGraph: {
     title: 'Mortgage Resources — Guides, Explainers, and Updates',
     description: 'Educational mortgage content: how pricing works, points vs credits, closing costs, refinance strategies, and more.',
-    url: 'https://netratemortgage.com/resources',
+    url: 'https://www.netratemortgage.com/resources',
     siteName: 'NetRate Mortgage',
     type: 'website',
   },
   alternates: {
-    canonical: 'https://netratemortgage.com/resources',
+    canonical: 'https://www.netratemortgage.com/resources',
   },
 };
 
@@ -20,11 +20,11 @@ const jsonLd = {
   '@type': 'CollectionPage',
   name: 'Mortgage Resources',
   description: 'Educational mortgage guides, explainers, and industry updates from NetRate Mortgage.',
-  url: 'https://netratemortgage.com/resources',
+  url: 'https://www.netratemortgage.com/resources',
   publisher: {
     '@type': 'Organization',
     name: 'NetRate Mortgage',
-    url: 'https://netratemortgage.com',
+    url: 'https://www.netratemortgage.com',
   },
 };
 

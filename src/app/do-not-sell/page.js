@@ -1,7 +1,7 @@
 export const metadata = {
   title: 'Do Not Sell My Personal Information | NetRate Mortgage',
   description: 'California Consumer Privacy Act (CCPA) notice and rights for NetRate Mortgage.',
-  alternates: { canonical: 'https://netratemortgage.com/do-not-sell' },
+  alternates: { canonical: 'https://www.netratemortgage.com/do-not-sell' },
 };
 
 export default function DoNotSellPage() {

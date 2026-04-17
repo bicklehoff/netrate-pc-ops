@@ -1,7 +1,7 @@
 export const metadata = {
   title: 'Privacy Policy | NetRate Mortgage',
   description: 'Privacy policy for NetRate Mortgage, including how we collect, use, and protect your personal information.',
-  alternates: { canonical: 'https://netratemortgage.com/privacy' },
+  alternates: { canonical: 'https://www.netratemortgage.com/privacy' },
 };
 
 export default function PrivacyPage() {

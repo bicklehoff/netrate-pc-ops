@@ -9,7 +9,7 @@ export const metadata = {
     siteName: 'NetRate Mortgage',
     title: 'Can Crypto Assets Qualify You for a Mortgage?',
     description: 'Some mortgage programs now accept cryptocurrency as qualifying assets. Here\'s what counts, what doesn\'t, and how it works for conventional, government, and non-QM loans.',
-    url: 'https://netratemortgage.com/crypto-mortgage',
+    url: 'https://www.netratemortgage.com/crypto-mortgage',
   },
   twitter: {
     card: 'summary_large_image',
@@ -17,7 +17,7 @@ export const metadata = {
     description: 'Some mortgage programs now accept cryptocurrency as qualifying assets. Here\'s what counts, what doesn\'t, and how it works.',
   },
   alternates: {
-    canonical: 'https://netratemortgage.com/crypto-mortgage',
+    canonical: 'https://www.netratemortgage.com/crypto-mortgage',
   },
 }
 
@@ -31,16 +31,16 @@ const jsonLd = [
     author: {
       '@type': 'Organization',
       name: 'NetRate Mortgage',
-      url: 'https://netratemortgage.com',
+      url: 'https://www.netratemortgage.com',
     },
     publisher: {
       '@type': 'Organization',
       name: 'NetRate Mortgage',
-      url: 'https://netratemortgage.com',
+      url: 'https://www.netratemortgage.com',
     },
     mainEntityOfPage: {
       '@type': 'WebPage',
-      '@id': 'https://netratemortgage.com/crypto-mortgage',
+      '@id': 'https://www.netratemortgage.com/crypto-mortgage',
     },
   },
   {

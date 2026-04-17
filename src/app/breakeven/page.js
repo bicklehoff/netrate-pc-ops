@@ -4,7 +4,7 @@ export const metadata = {
   title: 'Should You Pay Mortgage Points? The Breakeven Math That Tells You | NetRate Mortgage',
   description: 'Paying points for a lower rate sounds smart — but most borrowers never recoup the cost. Here\'s the simple math that shows when it\'s worth it and when it\'s not.',
   alternates: {
-    canonical: 'https://netratemortgage.com/breakeven',
+    canonical: 'https://www.netratemortgage.com/breakeven',
   },
 };
 

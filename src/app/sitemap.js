@@ -1,6 +1,6 @@
 import sql from '@/lib/db';
 
-const BASE_URL = 'https://netratemortgage.com';
+const BASE_URL = 'https://www.netratemortgage.com';
 
 export default async function sitemap() {
   // Fetch published content pages from DB

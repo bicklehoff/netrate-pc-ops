@@ -6,7 +6,7 @@ export const metadata = {
   openGraph: {
     title: 'Access Home Equity Without Refinancing Your Low Rate',
     description: 'Have a low-rate mortgage from 2020-2021 and need cash? A HELOC or second lien lets you tap your equity without touching your first mortgage.',
-    url: 'https://netratemortgage.com/equity-without-losing-rate',
+    url: 'https://www.netratemortgage.com/equity-without-losing-rate',
     siteName: 'NetRate Mortgage',
     type: 'article',
     publishedTime: '2026-03-27T00:00:00Z',
@@ -17,7 +17,7 @@ export const metadata = {
     description: 'A HELOC or second lien lets you tap your equity without touching your first mortgage.',
   },
   alternates: {
-    canonical: 'https://netratemortgage.com/equity-without-losing-rate',
+    canonical: 'https://www.netratemortgage.com/equity-without-losing-rate',
   },
 };
 
@@ -32,16 +32,16 @@ const jsonLd = [
     author: {
       '@type': 'Organization',
       name: 'NetRate Mortgage',
-      url: 'https://netratemortgage.com',
+      url: 'https://www.netratemortgage.com',
     },
     publisher: {
       '@type': 'Organization',
       name: 'NetRate Mortgage',
-      url: 'https://netratemortgage.com',
+      url: 'https://www.netratemortgage.com',
     },
     mainEntityOfPage: {
       '@type': 'WebPage',
-      '@id': 'https://netratemortgage.com/equity-without-losing-rate',
+      '@id': 'https://www.netratemortgage.com/equity-without-losing-rate',
     },
   },
   {

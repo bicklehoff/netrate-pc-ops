@@ -6,7 +6,7 @@ export const metadata = {
   openGraph: {
     title: 'New Condo Mortgage Rules: What Changed and Why It Matters',
     description: 'Fannie Mae just retired the investor concentration limit for condos. If your building was blocked from conventional financing because too many units were rentals, that rule is gone.',
-    url: 'https://netratemortgage.com/condo-rules-changed',
+    url: 'https://www.netratemortgage.com/condo-rules-changed',
     siteName: 'NetRate Mortgage',
     type: 'article',
     publishedTime: '2026-03-27T00:00:00Z',
@@ -17,7 +17,7 @@ export const metadata = {
     description: 'Fannie Mae just retired the investor concentration limit for condos. If your building was blocked from conventional financing, that rule is gone.',
   },
   alternates: {
-    canonical: 'https://netratemortgage.com/condo-rules-changed',
+    canonical: 'https://www.netratemortgage.com/condo-rules-changed',
   },
 };
 
@@ -33,16 +33,16 @@ const jsonLd = [
     author: {
       '@type': 'Organization',
       name: 'NetRate Mortgage',
-      url: 'https://netratemortgage.com',
+      url: 'https://www.netratemortgage.com',
     },
     publisher: {
       '@type': 'Organization',
       name: 'NetRate Mortgage',
-      url: 'https://netratemortgage.com',
+      url: 'https://www.netratemortgage.com',
     },
     mainEntityOfPage: {
       '@type': 'WebPage',
-      '@id': 'https://netratemortgage.com/condo-rules-changed',
+      '@id': 'https://www.netratemortgage.com/condo-rules-changed',
     },
   },
   {

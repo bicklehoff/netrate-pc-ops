@@ -9,7 +9,7 @@ export const metadata = {
     type: 'article',
     publishedTime: '2026-03-27T00:00:00Z',
     siteName: 'NetRate Mortgage',
-    url: 'https://netratemortgage.com/heloc-vs-cashout',
+    url: 'https://www.netratemortgage.com/heloc-vs-cashout',
   },
   twitter: {
     card: 'summary_large_image',
@@ -17,7 +17,7 @@ export const metadata = {
     description: 'Two ways to access your home equity. One keeps your current rate. One replaces it. Here\'s how to figure out which is right for your situation.',
   },
   alternates: {
-    canonical: 'https://netratemortgage.com/heloc-vs-cashout',
+    canonical: 'https://www.netratemortgage.com/heloc-vs-cashout',
   },
 }
 
@@ -31,12 +31,12 @@ const jsonLd = [
     author: {
       '@type': 'Organization',
       name: 'NetRate Mortgage',
-      url: 'https://netratemortgage.com',
+      url: 'https://www.netratemortgage.com',
     },
     publisher: {
       '@type': 'Organization',
       name: 'NetRate Mortgage',
-      url: 'https://netratemortgage.com',
+      url: 'https://www.netratemortgage.com',
     },
   },
   {

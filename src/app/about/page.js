@@ -5,7 +5,7 @@ export const metadata = {
   title: 'About | NetRate Mortgage',
   description: 'Meet David Burson, mortgage broker at NetRate Mortgage. Direct-to-consumer lending in CO, OR, and TX.',
   alternates: {
-    canonical: 'https://netratemortgage.com/about',
+    canonical: 'https://www.netratemortgage.com/about',
   },
 };
 

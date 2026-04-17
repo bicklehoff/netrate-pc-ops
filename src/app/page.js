@@ -6,7 +6,7 @@ import { GBP_REVIEW_URL } from '@/lib/constants/company';
 
 export const metadata = {
   alternates: {
-    canonical: 'https://netratemortgage.com',
+    canonical: 'https://www.netratemortgage.com',
   },
 };
 

@@ -9,7 +9,7 @@ export const metadata = {
     siteName: 'NetRate Mortgage',
     title: 'Should I Refinance? How to Know When It Makes Sense',
     description: 'A refinance isn\'t always worth it. Here\'s how to figure out if the math works for your situation.',
-    url: 'https://netratemortgage.com/when-to-refinance',
+    url: 'https://www.netratemortgage.com/when-to-refinance',
   },
   twitter: {
     card: 'summary_large_image',
@@ -17,7 +17,7 @@ export const metadata = {
     description: 'A refinance isn\'t always worth it. Here\'s how to figure out if the math works for your situation.',
   },
   alternates: {
-    canonical: 'https://netratemortgage.com/when-to-refinance',
+    canonical: 'https://www.netratemortgage.com/when-to-refinance',
   },
 }
 
@@ -31,16 +31,16 @@ const jsonLd = [
     author: {
       '@type': 'Organization',
       name: 'NetRate Mortgage',
-      url: 'https://netratemortgage.com',
+      url: 'https://www.netratemortgage.com',
     },
     publisher: {
       '@type': 'Organization',
       name: 'NetRate Mortgage',
-      url: 'https://netratemortgage.com',
+      url: 'https://www.netratemortgage.com',
     },
     mainEntityOfPage: {
       '@type': 'WebPage',
-      '@id': 'https://netratemortgage.com/when-to-refinance',
+      '@id': 'https://www.netratemortgage.com/when-to-refinance',
     },
   },
   {

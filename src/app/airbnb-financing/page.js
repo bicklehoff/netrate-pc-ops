@@ -9,7 +9,7 @@ export const metadata = {
     siteName: 'NetRate Mortgage',
     title: 'How to Finance an Airbnb or Short-Term Rental Property',
     description: 'Yes, you can get a mortgage on a short-term rental property. DSCR loans qualify on rental income — no W-2s, no tax returns. Here\'s how it works.',
-    url: 'https://netratemortgage.com/airbnb-financing',
+    url: 'https://www.netratemortgage.com/airbnb-financing',
   },
   twitter: {
     card: 'summary_large_image',
@@ -17,7 +17,7 @@ export const metadata = {
     description: 'DSCR loans qualify on rental income — no W-2s, no tax returns. Here\'s how it works.',
   },
   alternates: {
-    canonical: 'https://netratemortgage.com/airbnb-financing',
+    canonical: 'https://www.netratemortgage.com/airbnb-financing',
   },
 }
 
@@ -31,16 +31,16 @@ const jsonLd = [
     author: {
       '@type': 'Organization',
       name: 'NetRate Mortgage',
-      url: 'https://netratemortgage.com',
+      url: 'https://www.netratemortgage.com',
     },
     publisher: {
       '@type': 'Organization',
       name: 'NetRate Mortgage',
-      url: 'https://netratemortgage.com',
+      url: 'https://www.netratemortgage.com',
     },
     mainEntityOfPage: {
       '@type': 'WebPage',
-      '@id': 'https://netratemortgage.com/airbnb-financing',
+      '@id': 'https://www.netratemortgage.com/airbnb-financing',
     },
   },
   {
