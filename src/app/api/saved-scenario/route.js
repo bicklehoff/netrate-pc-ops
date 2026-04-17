@@ -94,9 +94,8 @@ export async function POST(request) {
         visibility: 'borrower_visible',
         status: 'active',
         lead_id: leadId,
-        borrower_name: name,
-        borrower_email: email.trim().toLowerCase(),
-        borrower_phone: phone || null,
+        // Identity flows from lead_id → leads.{name,email,phone}.
+        // DAL no longer writes denormalized borrower_* fields (Layer-1c).
         loan_purpose: scenarioData.purpose || null,
         loan_type: scenarioData.loanType || null,
         property_value: scenarioData.propertyValue || null,

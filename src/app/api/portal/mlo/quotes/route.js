@@ -17,7 +17,7 @@ import { buildFeeBreakdown } from '@/lib/quotes/fee-builder';
 import { calculateMonthlyPI } from '@/lib/mortgage-math';
 import { requireMloSession, unauthorizedResponse } from '@/lib/require-mlo-session';
 import { createScenario, listScenarios } from '@/lib/scenarios/db';
-import { scenarioToQuoteShape } from '@/lib/scenarios/transform';
+import { scenarioToQuoteShape, deriveIdentity } from '@/lib/scenarios/transform';
 
 export async function GET(request) {
   try {
@@ -45,11 +45,14 @@ export async function GET(request) {
     });
 
     // The list shape keeps rates[] inline (from the DAL subquery). For
-    // backward compatibility, expose old-shape fields alongside.
-    const quotes = scenarios.map((s) => ({
+    // backward compatibility, expose old-shape fields alongside. Identity
+    // comes from deriveIdentity (contact → lead → legacy).
+    const quotes = scenarios.map((s) => {
+      const { borrower_name, borrower_email } = deriveIdentity(s);
+      return {
       id: s.id,
-      borrower_name: s.borrower_name,
-      borrower_email: s.borrower_email,
+      borrower_name,
+      borrower_email,
       purpose: s.loan_purpose,
       loan_amount: s.loan_amount,
       loan_type: s.loan_type,
@@ -64,7 +67,8 @@ export async function GET(request) {
       viewed_at: s.viewed_at,
       created_at: s.created_at,
       updated_at: s.updated_at,
-    }));
+      };
+    });
 
     return NextResponse.json({ quotes });
   } catch (err) {
@@ -256,9 +260,8 @@ export async function POST(request) {
         contact_id: body.contactId || null,
         lead_id: resolvedLeadId,
         loan_id: body.loanId || null,
-        borrower_name: body.borrowerName || null,
-        borrower_email: body.borrowerEmail || null,
-        borrower_phone: body.borrowerPhone || null,
+        // Identity flows from contact_id or lead_id. DAL no longer
+        // writes denormalized borrower_* fields (Layer-1c).
         loan_purpose: body.purpose,
         property_value: safePropertyValue,
         loan_amount: loanAmount,

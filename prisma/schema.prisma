@@ -866,7 +866,10 @@ model Scenario {
   lead_id               String?             @db.Uuid
   loan_id               String?             @db.Uuid
 
-  // Borrower info
+  // Borrower info — DEPRECATED (Layer-1c, 2026-04-17).
+  // Identity now flows from contact_id (post-conversion) or lead_id
+  // (pre-conversion). DAL no longer writes these columns. PR 2 drops
+  // them after the soak period (~2026-05-01).
   borrower_name         String?
   borrower_email        String?
   borrower_phone        String?
