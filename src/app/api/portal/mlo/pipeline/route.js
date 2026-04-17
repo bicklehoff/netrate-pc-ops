@@ -37,7 +37,7 @@ export async function GET() {
         (SELECT COUNT(*)::int FROM documents WHERE loan_id = l.id) AS total_docs
       FROM loans l
       LEFT JOIN borrowers b ON l.borrower_id = b.id
-      LEFT JOIN mlos m ON l.mlo_id = m.id
+      LEFT JOIN staff m ON l.mlo_id = m.id
       LEFT JOIN loan_dates ld ON ld.loan_id = l.id
       WHERE l.organization_id = ${orgId}
       ORDER BY l.updated_at DESC

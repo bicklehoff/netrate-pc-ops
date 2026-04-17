@@ -76,28 +76,35 @@ model Borrower {
   @@map("borrowers")
 }
 
+/// Maps to the `staff` table (renamed from `mlos` in migration 007).
+/// A backward-compat view `mlos` exists over `staff` during the Layer-1b2
+/// code-deploy window; view is dropped in Layer-1b3.
 model Mlo {
-  id            String         @id @default(uuid()) @db.Uuid
-  email         String         @unique
-  firstName     String         @map("first_name")
-  lastName      String         @map("last_name")
-  passwordHash  String         @map("password_hash")
-  role          String         @default("mlo")
-  ldoxOfficerId Int?           @unique @map("ldox_officer_id")
-  nmls          String?
-  createdAt     DateTime       @default(now()) @map("created_at")
-  organizationId String       @default("00000000-0000-4000-8000-000000000001") @map("organization_id") @db.Uuid
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  callLogs      CallLog[]
-  callNotes     CallNote[]
-  contacts      Contact[]
-  requestedDocs Document[]     @relation("RequestedBy")
-  hecmScenarios HecmScenario[]
-  loans         Loan[]
-  smsMessages   SmsMessage[]
-  participants  LoanParticipant[]
+  id             String          @id @default(uuid()) @db.Uuid
+  email          String          @unique
+  firstName      String          @map("first_name")
+  lastName       String          @map("last_name")
+  passwordHash   String          @map("password_hash")
+  role           String          @default("mlo")
+  ldoxOfficerId  Int?            @unique @map("ldox_officer_id")
+  nmls           String?
+  phone          String?
+  licenseStates  String[]        @default([]) @map("license_states")
+  commissionRate Decimal?        @db.Decimal(5, 4) @map("commission_rate")
+  isActive       Boolean         @default(true) @map("is_active")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  organizationId String          @default("00000000-0000-4000-8000-000000000001") @map("organization_id") @db.Uuid
+  organization   Organization    @relation(fields: [organizationId], references: [id])
+  callLogs       CallLog[]
+  callNotes      CallNote[]
+  contacts       Contact[]
+  requestedDocs  Document[]      @relation("RequestedBy")
+  hecmScenarios  HecmScenario[]
+  loans          Loan[]
+  smsMessages    SmsMessage[]
+  participants   LoanParticipant[]
 
-  @@map("mlos")
+  @@map("staff")
 }
 
 model Loan {

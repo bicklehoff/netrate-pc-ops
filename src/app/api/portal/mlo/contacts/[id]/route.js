@@ -18,7 +18,7 @@ export async function GET(req, { params }) {
       SELECT c.*,
         json_build_object('id', m.id, 'first_name', m.first_name, 'last_name', m.last_name, 'email', m.email) AS assigned_mlo
       FROM contacts c
-      LEFT JOIN mlos m ON m.id = c.assigned_mlo_id
+      LEFT JOIN staff m ON m.id = c.assigned_mlo_id
       WHERE c.id = ${id} AND c.organization_id = ${orgId}
       LIMIT 1
     `;

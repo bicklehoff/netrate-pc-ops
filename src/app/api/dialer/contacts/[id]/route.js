@@ -28,7 +28,7 @@ export async function GET(req, { params }) {
       sql`
         SELECT cl.*, m.first_name AS mlo_first_name, m.last_name AS mlo_last_name
         FROM call_logs cl
-        LEFT JOIN mlos m ON cl.mlo_id = m.id
+        LEFT JOIN staff m ON cl.mlo_id = m.id
         WHERE cl.contact_id = ${id}
         ORDER BY cl.started_at DESC
         LIMIT 20

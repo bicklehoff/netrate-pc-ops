@@ -22,7 +22,7 @@ async function verifyMloAccess(loanId, session, orgId, mloId) {
            m.id AS m_id, m.first_name AS m_first_name, m.last_name AS m_last_name, m.email AS m_email, m.nmls AS m_nmls
     FROM loans l
     LEFT JOIN borrowers b ON b.id = l.borrower_id
-    LEFT JOIN mlos m ON m.id = l.mlo_id
+    LEFT JOIN staff m ON m.id = l.mlo_id
     WHERE l.id = ${loanId} AND l.organization_id = ${orgId} LIMIT 1
   `;
   const loan = rows[0];
@@ -384,7 +384,7 @@ export async function POST(request, { params }) {
              m.first_name AS m_first_name, m.last_name AS m_last_name, m.email AS m_email, m.nmls AS m_nmls
       FROM loans l
       LEFT JOIN borrowers b ON b.id = l.borrower_id
-      LEFT JOIN mlos m ON m.id = l.mlo_id
+      LEFT JOIN staff m ON m.id = l.mlo_id
       WHERE l.id = ${id} AND l.organization_id = ${orgId} LIMIT 1
     `;
     const freshLoan = freshRows[0];

@@ -105,14 +105,14 @@ export async function GET(request, { params }) {
 
     // ─── MLO ───
     const mlos = loan.mlo_id
-      ? await sql`SELECT id, first_name, last_name, email FROM mlos WHERE id = ${loan.mlo_id} LIMIT 1`
+      ? await sql`SELECT id, first_name, last_name, email FROM staff WHERE id = ${loan.mlo_id} LIMIT 1`
       : [];
 
     // ─── Documents (with requestedBy) ───
     const documents = await sql`
       SELECT d.*, m.first_name AS requested_by_first_name, m.last_name AS requested_by_last_name
       FROM documents d
-      LEFT JOIN mlos m ON m.id = d.requested_by
+      LEFT JOIN staff m ON m.id = d.requested_by
       WHERE d.loan_id = ${id}
       ORDER BY d.created_at DESC
     `;

@@ -66,7 +66,7 @@ export async function POST() {
         m.first_name AS mlo_first_name, m.last_name AS mlo_last_name, m.nmls AS mlo_nmls
       FROM loans l
       LEFT JOIN borrowers b ON l.borrower_id = b.id
-      LEFT JOIN mlos m ON l.mlo_id = m.id
+      LEFT JOIN staff m ON l.mlo_id = m.id
       WHERE l.status != 'draft'
         AND l.organization_id = ${orgId}
       ORDER BY l.created_at ASC
@@ -191,7 +191,7 @@ export async function GET() {
         m.first_name AS mlo_first_name, m.last_name AS mlo_last_name, m.nmls AS mlo_nmls
       FROM loans l
       LEFT JOIN borrowers b ON l.borrower_id = b.id
-      LEFT JOIN mlos m ON l.mlo_id = m.id
+      LEFT JOIN staff m ON l.mlo_id = m.id
       WHERE l.status != 'draft'
         AND l.organization_id = ${orgId}
       ORDER BY l.created_at ASC

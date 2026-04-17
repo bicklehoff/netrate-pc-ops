@@ -56,7 +56,7 @@ export default async function BorrowerDashboardPage() {
       `,
       sql`
         SELECT m.id, m.first_name, m.last_name, m.email
-        FROM mlos m
+        FROM staff m
         WHERE m.id = ANY(${loans.map(l => l.mlo_id).filter(Boolean)})
       `,
       sql`

@@ -39,7 +39,7 @@ export async function POST(req) {
   // Find the first available MLO to ring.
   let targetIdentity = 'mlo-default';
   try {
-    const mlos = await sql`SELECT id FROM mlos LIMIT 1`;
+    const mlos = await sql`SELECT id FROM staff LIMIT 1`;
     if (mlos.length > 0) {
       targetIdentity = `mlo-${mlos[0].id}`;
 

@@ -19,7 +19,7 @@ export async function GET(req, { params }) {
     const notes = await sql`
       SELECT cn.*, m.first_name AS mlo_first_name, m.last_name AS mlo_last_name
       FROM call_notes cn
-      LEFT JOIN mlos m ON cn.mlo_id = m.id
+      LEFT JOIN staff m ON cn.mlo_id = m.id
       WHERE cn.call_log_id = ${id}
       ORDER BY cn.created_at DESC
     `;
@@ -66,7 +66,7 @@ export async function POST(req, { params }) {
     const note = rows[0];
 
     // Fetch mlo name for the response
-    const mloRows = await sql`SELECT first_name, last_name FROM mlos WHERE id = ${session.user.id} LIMIT 1`;
+    const mloRows = await sql`SELECT first_name, last_name FROM staff WHERE id = ${session.user.id} LIMIT 1`;
     note.mlo = mloRows[0] || { first_name: '', last_name: '' };
 
     return Response.json({ note }, { status: 201 });

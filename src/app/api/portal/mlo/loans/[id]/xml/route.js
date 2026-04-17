@@ -25,7 +25,7 @@ async function fetchFullLoan(id, orgId) {
 
   // MLO
   const mloRows = loan.mlo_id
-    ? await sql`SELECT id, first_name, last_name, email, nmls FROM mlos WHERE id = ${loan.mlo_id} LIMIT 1`
+    ? await sql`SELECT id, first_name, last_name, email, nmls FROM staff WHERE id = ${loan.mlo_id} LIMIT 1`
     : [];
 
   // LoanBorrowers with sub-models
