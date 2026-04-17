@@ -59,7 +59,16 @@ WHERE l.contact_id IS NULL
 --   - For Case 1/2 borrowers: borrower.id gets rewritten to contact.id.
 --   - No risk of duplicate (loan_id, borrower_id) unique violation because
 --     every borrower maps to exactly one contact (verified by pre-flight).
+--   - FK must be dropped BEFORE the UPDATE; otherwise rewriting a row to
+--     a contacts.id value that doesn't exist in borrowers(id) violates the
+--     constraint. Order matters here.
 -- ============================================================
+
+ALTER TABLE loan_borrowers
+  DROP CONSTRAINT IF EXISTS loan_borrowers_borrower_id_fkey;
+
+-- Drop the old unique index before renaming so we can recreate it cleanly.
+DROP INDEX IF EXISTS loan_borrowers_loan_id_borrower_id_key;
 
 UPDATE loan_borrowers lb
 SET borrower_id = c.id,
@@ -67,12 +76,6 @@ SET borrower_id = c.id,
 FROM contacts c
 WHERE c.borrower_id = lb.borrower_id
   AND c.id != lb.borrower_id;
-
-ALTER TABLE loan_borrowers
-  DROP CONSTRAINT IF EXISTS loan_borrowers_borrower_id_fkey;
-
--- Drop the old unique index before renaming so we can recreate it cleanly.
-DROP INDEX IF EXISTS loan_borrowers_loan_id_borrower_id_key;
 
 ALTER TABLE loan_borrowers
   RENAME COLUMN borrower_id TO contact_id;
