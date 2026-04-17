@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import sql from '@/lib/db';
 
 export const metadata = {
   title: 'Mortgage Resources — Guides, Explainers, and Updates | NetRate Mortgage',
@@ -27,6 +28,24 @@ const jsonLd = {
     url: 'https://www.netratemortgage.com',
   },
 };
+
+// ISR: regenerate this page every 10 minutes so newly-published content
+// from /api/content appears without a redeploy.
+export const revalidate = 600;
+
+const CATEGORY_LABELS = {
+  article: 'Article',
+  'state-update': 'State Update',
+  education: 'Explainer',
+  'rate-watch': 'Rate Watch',
+};
+
+function formatPubDate(d) {
+  if (!d) return null;
+  const date = d instanceof Date ? d : new Date(d);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
 
 const updates = [
   {
@@ -122,6 +141,34 @@ const guides = [
   },
 ];
 
+async function getLatestArticles() {
+  try {
+    return await sql`
+      SELECT slug, title, meta_description, category, published_at
+      FROM content_pages
+      WHERE status = 'published'
+      ORDER BY published_at DESC NULLS LAST, created_at DESC
+      LIMIT 24
+    `;
+  } catch (err) {
+    console.error('[resources] content_pages query failed:', err.message);
+    return [];
+  }
+}
+
+function LatestCard({ slug, title, description, category, date }) {
+  return (
+    <Link href={`/${slug}`} className="block bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md hover:border-brand/30 transition-all">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="inline-block text-xs font-medium text-brand bg-brand/10 px-2.5 py-1 rounded-full">{category}</span>
+        {date ? <span className="text-xs text-gray-400">{date}</span> : null}
+      </div>
+      <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
+      {description ? <p className="text-sm text-gray-600 leading-relaxed">{description}</p> : null}
+    </Link>
+  );
+}
+
 function UpdateCard({ href, title, description, tag, date }) {
   return (
     <Link href={href} className="block bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md hover:border-brand/30 transition-all">
@@ -144,7 +191,9 @@ function GuideCard({ href, title, description }) {
   );
 }
 
-export default function Resources() {
+export default async function Resources() {
+  const latest = await getLatestArticles();
+
   return (
     <>
       <script
@@ -165,22 +214,41 @@ export default function Resources() {
           Mortgage guides, explainers, and industry updates.
         </p>
 
-        {/* Updates section */}
+        {/* Latest — DB-driven, auto-includes new articles */}
+        {latest.length > 0 && (
+          <section className="mb-12">
+            <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Latest</h2>
+            <div className="grid gap-4 md:grid-cols-2">
+              {latest.map((item) => (
+                <LatestCard
+                  key={item.slug}
+                  slug={item.slug}
+                  title={item.title}
+                  description={item.meta_description}
+                  category={CATEGORY_LABELS[item.category] || 'Article'}
+                  date={formatPubDate(item.published_at)}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Essentials — hand-curated evergreen guides */}
         <section className="mb-12">
-          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Recent Updates</h2>
+          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Essentials</h2>
           <div className="grid gap-4 md:grid-cols-2">
-            {updates.map((item) => (
-              <UpdateCard key={item.href} {...item} />
+            {guides.map((item) => (
+              <GuideCard key={item.href} {...item} />
             ))}
           </div>
         </section>
 
-        {/* Guides section */}
+        {/* Industry Updates — hand-curated dated items */}
         <section>
-          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Guides</h2>
+          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Industry Updates</h2>
           <div className="grid gap-4 md:grid-cols-2">
-            {guides.map((item) => (
-              <GuideCard key={item.href} {...item} />
+            {updates.map((item) => (
+              <UpdateCard key={item.href} {...item} />
             ))}
           </div>
         </section>
