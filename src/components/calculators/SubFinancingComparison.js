@@ -50,8 +50,9 @@ export default function SubFinancingComparison() {
     firstRemainingYears: '27',
     propertyValue: '',
     cashDesired: '',
+    secondType: 'heloan', // 'heloan' (fixed, P&I) | 'heloc' (variable, I/O draw)
     heloanRate: '',
-    heloanTerm: '30',
+    heloanTerm: '30', // HELOAN term OR HELOC draw period
     cashoutRate: '',
     cashoutTerm: '30',
     holdYears: '7',
@@ -59,14 +60,27 @@ export default function SubFinancingComparison() {
 
   const update = (field, value) => setInputs((prev) => ({ ...prev, [field]: value }));
 
+  // Toggling 2nd-lien type flips term + hold-period defaults. HELOCs are
+  // short-term instruments (pay off or refi within the draw period);
+  // HELOANs amortize over 30y like a traditional 2nd mortgage.
+  const setSecondType = (type) => {
+    setInputs((prev) => ({
+      ...prev,
+      secondType: type,
+      heloanTerm: type === 'heloc' ? '5' : '30',
+      holdYears: type === 'heloc' ? '5' : prev.holdYears,
+    }));
+  };
+
   const result = useMemo(() => {
     const firstBalance = Number(inputs.firstBalance) || 0;
     const firstRate = Number(inputs.firstRate) || 0;
     const firstRemainingYears = Number(inputs.firstRemainingYears) || 30;
     const propertyValue = Number(inputs.propertyValue) || 0;
     const cashDesired = Number(inputs.cashDesired) || 0;
+    const secondType = inputs.secondType;
     const heloanRate = Number(inputs.heloanRate) || 0;
-    const heloanTerm = Number(inputs.heloanTerm) || 30;
+    const heloanTerm = Number(inputs.heloanTerm) || (secondType === 'heloc' ? 5 : 30);
     const cashoutRate = Number(inputs.cashoutRate) || 0;
     const cashoutTerm = Number(inputs.cashoutTerm) || 30;
     const holdYears = Number(inputs.holdYears) || 7;
@@ -77,7 +91,13 @@ export default function SubFinancingComparison() {
 
     // Option A — Open a new 2nd lien. First mortgage stays as-is.
     const firstMonthlyPI = calculateMonthlyPI(firstRate, firstBalance, firstRemainingYears) || 0;
-    const heloanMonthlyPI = calculateMonthlyPI(heloanRate, cashDesired, heloanTerm) || 0;
+    // HELOC = interest-only during draw: balance × annual rate / 12. No principal paydown.
+    // HELOAN = fully amortizing P&I like a traditional 2nd mortgage.
+    const heloanMonthlyPI =
+      secondType === 'heloc'
+        ? (cashDesired * heloanRate) / 100 / 12
+        : calculateMonthlyPI(heloanRate, cashDesired, heloanTerm) || 0;
+    const helocHoldExceedsDraw = secondType === 'heloc' && holdYears > heloanTerm;
     const optionATotalBalance = firstBalance + cashDesired;
     const optionACltv = (optionATotalBalance / propertyValue) * 100;
     const optionATotalMonthly = firstMonthlyPI + heloanMonthlyPI;
@@ -104,7 +124,8 @@ export default function SubFinancingComparison() {
       reason = `Cash-out refinancing above 80% LTV is restricted for conventional loans — a new 2nd lien is your path to this cash.`;
     } else if (monthlyDelta > 50) {
       winner = 'heloan';
-      reason = `Opening a new 2nd lien is ${fmtDollars(monthlyDelta)}/mo cheaper because you keep your ${fmtRate(firstRate)} first mortgage rate instead of replacing it at ${fmtRate(cashoutRate)}.`;
+      const productLabel = secondType === 'heloc' ? 'a HELOC' : 'a new 2nd lien';
+      reason = `Opening ${productLabel} is ${fmtDollars(monthlyDelta)}/mo cheaper because you keep your ${fmtRate(firstRate)} first mortgage rate instead of replacing it at ${fmtRate(cashoutRate)}.`;
     } else if (monthlyDelta < -50) {
       winner = 'cashout';
       reason = `Cash-out refinancing is ${fmtDollars(Math.abs(monthlyDelta))}/mo cheaper. Your current first rate is high enough that replacing the whole balance at ${fmtRate(cashoutRate)} still saves money.`;
@@ -119,6 +140,8 @@ export default function SubFinancingComparison() {
       propertyValue,
       cashDesired,
       holdYears,
+      secondType,
+      heloanTerm,
       optionA: {
         firstMonthlyPI,
         heloanMonthlyPI,
@@ -127,6 +150,7 @@ export default function SubFinancingComparison() {
         cltvWarn: optionACltvWarn,
         blendedRate: optionABlendedRate,
         holdCashPaid: optionAHoldCashPaid,
+        helocHoldExceedsDraw,
       },
       optionB: {
         loanAmount: optionBLoanAmount,
@@ -208,15 +232,48 @@ export default function SubFinancingComparison() {
       <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm mb-6">
         <h2 className="font-semibold text-gray-900 mb-1">Today&apos;s Rates</h2>
         <p className="text-xs text-gray-500 mb-4">
-          Enter the rates you&apos;d expect on each option. HELOAN (fixed 2nd lien) rates
-          typically run ~8–10%. Cash-out refi rates typically run ~6.5–7.5%.{' '}
+          Enter the rates you&apos;d expect on each option.{' '}
+          {inputs.secondType === 'heloc'
+            ? 'HELOC rates typically run ~8–10% (variable, tied to Prime).'
+            : 'HELOAN (fixed 2nd lien) rates typically run ~8–10%.'}{' '}
+          Cash-out refi rates typically run ~6.5–7.5%.{' '}
           <Link href="/rates" className="text-brand hover:underline">
             Check NetRate&apos;s current pricing →
           </Link>
         </p>
+
+        {/* 2nd lien type toggle */}
+        <div className="mb-4">
+          <div className="text-xs font-medium text-gray-600 mb-2">2nd Lien Type</div>
+          <div className="inline-flex rounded-lg border border-gray-300 overflow-hidden text-sm">
+            <button
+              type="button"
+              onClick={() => setSecondType('heloan')}
+              className={`px-4 py-2 transition-colors ${
+                inputs.secondType === 'heloan'
+                  ? 'bg-brand text-white'
+                  : 'bg-white text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              HELOAN (fixed, amortizing)
+            </button>
+            <button
+              type="button"
+              onClick={() => setSecondType('heloc')}
+              className={`px-4 py-2 border-l border-gray-300 transition-colors ${
+                inputs.secondType === 'heloc'
+                  ? 'bg-brand text-white'
+                  : 'bg-white text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              HELOC (variable, I/O draw)
+            </button>
+          </div>
+        </div>
+
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Input
-            label="2nd Lien Rate"
+            label={inputs.secondType === 'heloc' ? 'HELOC Rate' : 'HELOAN Rate'}
             suffix="%"
             value={inputs.heloanRate}
             onChange={(v) => update('heloanRate', v)}
@@ -224,11 +281,11 @@ export default function SubFinancingComparison() {
             step="0.125"
           />
           <Input
-            label="2nd Lien Term"
+            label={inputs.secondType === 'heloc' ? 'HELOC Draw Period' : 'HELOAN Term'}
             suffix="yr"
             value={inputs.heloanTerm}
             onChange={(v) => update('heloanTerm', v)}
-            placeholder="30"
+            placeholder={inputs.secondType === 'heloc' ? '5' : '30'}
           />
           <Input
             label="Cash-Out Refi Rate"
@@ -276,10 +333,23 @@ export default function SubFinancingComparison() {
                   CLTV {'>'} 85% — may exceed lender limits
                 </span>
               )}
-              <h3 className="font-semibold text-gray-900 mb-1">Open a new 2nd Lien</h3>
+              <h3 className="font-semibold text-gray-900 mb-1">
+                {result.secondType === 'heloc' ? 'Open a HELOC' : 'Open a new HELOAN'}
+              </h3>
               <p className="text-xs text-gray-500 mb-4">
-                Keep your low first mortgage rate. Add a fixed-rate 2nd for the cash you need.
+                {result.secondType === 'heloc'
+                  ? 'Keep your low first mortgage rate. Add a variable-rate line of credit with interest-only payments during the draw period.'
+                  : 'Keep your low first mortgage rate. Add a fixed-rate 2nd for the cash you need.'}
               </p>
+
+              {result.optionA.helocHoldExceedsDraw && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-xs text-amber-800">
+                  <strong>Heads up:</strong> your planned hold ({result.holdYears}yr) exceeds the
+                  HELOC draw period ({result.heloanTerm}yr). After the draw ends, the HELOC
+                  converts to a fully amortizing payment — monthly cost can jump significantly.
+                  Plan to refinance or pay off before conversion.
+                </div>
+              )}
 
               <div className="space-y-3">
                 <div className="flex justify-between text-sm">
@@ -289,7 +359,9 @@ export default function SubFinancingComparison() {
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">New 2nd lien</span>
+                  <span className="text-gray-600">
+                    {result.secondType === 'heloc' ? 'New HELOC' : 'New 2nd lien'}
+                  </span>
                   <span className="font-medium">
                     {fmtDollars(result.cashDesired)} @ {fmtRate(Number(inputs.heloanRate) || 0)}
                   </span>
@@ -309,7 +381,9 @@ export default function SubFinancingComparison() {
                     <span className="font-medium">{fmtDollars(result.optionA.firstMonthlyPI)}/mo</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">2nd lien P&amp;I</span>
+                    <span className="text-gray-600">
+                      {result.secondType === 'heloc' ? 'HELOC interest-only' : '2nd lien P&I'}
+                    </span>
                     <span className="font-medium">{fmtDollars(result.optionA.heloanMonthlyPI)}/mo</span>
                   </div>
                   <div className="flex justify-between text-sm font-bold text-gray-900 mt-1">
@@ -327,6 +401,13 @@ export default function SubFinancingComparison() {
                       {fmtDollars(result.optionA.holdCashPaid)}
                     </span>
                   </div>
+                  {result.secondType === 'heloc' && (
+                    <p className="text-xs text-gray-500 mt-2">
+                      Interest-only during draw — your HELOC balance ({fmtDollars(result.cashDesired)})
+                      is still owed at the end of the period. Plan to refinance or pay off before
+                      the draw ends.
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -420,7 +501,7 @@ export default function SubFinancingComparison() {
                   }`}
                 >
                   {result.comparison.monthlyDelta > 0
-                    ? `2nd lien saves ${fmtDollars(result.comparison.monthlyDelta)}`
+                    ? `${result.secondType === 'heloc' ? 'HELOC' : '2nd lien'} saves ${fmtDollars(result.comparison.monthlyDelta)}`
                     : result.comparison.monthlyDelta < 0
                     ? `Cash-out saves ${fmtDollars(Math.abs(result.comparison.monthlyDelta))}`
                     : 'About equal'}
@@ -444,7 +525,7 @@ export default function SubFinancingComparison() {
                 </div>
                 <div className="text-xs text-gray-500">
                   {result.comparison.holdCostDelta > 0
-                    ? 'saved with 2nd lien'
+                    ? `saved with ${result.secondType === 'heloc' ? 'HELOC' : '2nd lien'}`
                     : result.comparison.holdCostDelta < 0
                     ? 'saved with cash-out'
                     : 'about equal'}
@@ -512,13 +593,21 @@ export default function SubFinancingComparison() {
           </div>
           <div>
             <p className="font-medium text-gray-900 mb-1">HELOAN vs HELOC</p>
+            <p className="text-gray-600 mb-2">
+              A <strong>HELOAN</strong> is a fixed-rate, fully amortizing 2nd mortgage — one lump
+              sum with a fixed monthly payment, like a traditional mortgage in 2nd position.
+              Principal pays down every month. The calculator models it like any other amortizing
+              loan.
+            </p>
             <p className="text-gray-600">
-              A <strong>HELOAN</strong> is a fixed-rate, fully amortizing 2nd mortgage — a single
-              lump sum with a fixed monthly payment, like a traditional mortgage in 2nd position.
-              A <strong>HELOC</strong> is a revolving line of credit tied to prime rate, with
-              interest-only payments during the draw period and variable rates. This calculator
-              models a HELOAN (fixed). HELOC math is different — the payment can change as rates
-              move, and converts to a fully amortizing payment after the draw period ends.
+              A <strong>HELOC</strong> is a revolving line of credit tied to Prime rate. During
+              the <strong>draw period</strong> (typically 5 years for newer programs, 10 years
+              for traditional bank HELOCs), you pay interest only — no principal paydown. After
+              the draw ends, the full balance converts to a fully amortizing payment over the
+              remaining term, and payments can jump significantly. Because HELOC rates are
+              variable, the payment can also move as Prime moves. For most borrowers, a HELOC
+              makes sense only as a short-term tool — plan to refinance or pay off the balance
+              before the draw period ends.
             </p>
           </div>
         </div>
@@ -527,9 +616,11 @@ export default function SubFinancingComparison() {
       <div className="text-xs text-gray-500 space-y-2">
         <p>
           This calculator is for illustration only. It does not use NetRate Mortgage&apos;s live
-          pricing engine — it performs pure payment math on rates you enter. Actual rates depend
-          on credit, LTV/CLTV, property type, occupancy, state, and other factors. Contact us for
-          a real quote.
+          pricing engine — it performs pure payment math on rates you enter. HELOC mode models
+          interest-only payments during the draw period only; the post-draw amortizing payment
+          can be materially higher and depends on the then-current variable rate. Actual rates
+          and payments depend on credit, LTV/CLTV, property type, occupancy, state, and other
+          factors. Contact us for a real quote.
         </p>
       </div>
     </div>
