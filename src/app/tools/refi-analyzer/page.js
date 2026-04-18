@@ -3,16 +3,8 @@
 import { useState, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-
-function dollar(n) { return '$' + Math.round(n).toLocaleString('en-US'); }
-function pmt(principal, annualRate, months) {
-  const r = annualRate / 100 / 12;
-  if (!r) return principal / months;
-  return principal * (r * Math.pow(1 + r, months)) / (Math.pow(1 + r, months) - 1);
-}
-function totalInterest(principal, monthlyPmt, months) {
-  return monthlyPmt * months - principal;
-}
+import { fmtDollars } from '@/lib/formatters';
+import { calculateMonthlyPI } from '@/lib/mortgage-math';
 
 function Input({ label, prefix, suffix, value, onChange, step, min }) {
   return (
@@ -47,22 +39,24 @@ function RefiAnalyzerContent() {
   const results = useMemo(() => {
     const bal = parseFloat(balance) || 0;
     const curRate = parseFloat(currentRate) || 0;
-    const remMo = (parseFloat(remainingYears) || 27) * 12;
+    const remYrs = parseFloat(remainingYears) || 27;
+    const remMo = remYrs * 12;
     const nRate = parseFloat(newRate) || 0;
-    const nMo = (parseFloat(newTerm) || 30) * 12;
+    const nYrs = parseFloat(newTerm) || 30;
+    const nMo = nYrs * 12;
     const costs = parseFloat(closingCosts) || 0;
     const hold = (parseFloat(holdYears) || 7) * 12;
 
     if (!bal) return null;
 
-    const currentPmt = pmt(bal, curRate, remMo);
-    const newPmt = pmt(bal, nRate, nMo);
+    const currentPmt = calculateMonthlyPI(curRate, bal, remYrs) || 0;
+    const newPmt = calculateMonthlyPI(nRate, bal, nYrs) || 0;
     const monthlySavings = currentPmt - newPmt;
 
     const breakEvenMonths = monthlySavings > 0 ? Math.ceil(costs / monthlySavings) : Infinity;
 
-    const currentTotalInterest = totalInterest(bal, currentPmt, remMo);
-    const newTotalInterest = totalInterest(bal, newPmt, nMo);
+    const currentTotalInterest = currentPmt * remMo - bal;
+    const newTotalInterest = newPmt * nMo - bal;
     const interestSaved = currentTotalInterest - newTotalInterest;
 
     // Cost comparison over hold period
@@ -136,15 +130,15 @@ function RefiAnalyzerContent() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className="bg-white border border-gray-200 rounded-xl p-4">
               <div className="text-xs text-gray-500 uppercase tracking-wide">Current Payment</div>
-              <div className="text-lg font-semibold text-gray-900 mt-1">{dollar(results.currentPmt)}</div>
+              <div className="text-lg font-semibold text-gray-900 mt-1">{fmtDollars(results.currentPmt)}</div>
             </div>
             <div className="bg-white border border-gray-200 rounded-xl p-4">
               <div className="text-xs text-gray-500 uppercase tracking-wide">New Payment</div>
-              <div className="text-lg font-semibold text-gray-900 mt-1">{dollar(results.newPmt)}</div>
+              <div className="text-lg font-semibold text-gray-900 mt-1">{fmtDollars(results.newPmt)}</div>
             </div>
             <div className="bg-white border border-gray-200 rounded-xl p-4">
               <div className="text-xs text-gray-500 uppercase tracking-wide">Monthly Savings</div>
-              <div className="text-lg font-semibold text-green-700 mt-1">{dollar(results.monthlySavings)}</div>
+              <div className="text-lg font-semibold text-green-700 mt-1">{fmtDollars(results.monthlySavings)}</div>
             </div>
             <div className="bg-white border border-gray-200 rounded-xl p-4">
               <div className="text-xs text-gray-500 uppercase tracking-wide">Break-Even</div>
@@ -157,11 +151,11 @@ function RefiAnalyzerContent() {
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-white border border-gray-200 rounded-xl p-4">
               <div className="text-xs text-gray-500 uppercase tracking-wide">Total Interest Saved (life of loan)</div>
-              <div className="text-lg font-semibold text-green-700 mt-1">{dollar(results.interestSaved)}</div>
+              <div className="text-lg font-semibold text-green-700 mt-1">{fmtDollars(results.interestSaved)}</div>
             </div>
             <div className="bg-white border border-gray-200 rounded-xl p-4">
               <div className="text-xs text-gray-500 uppercase tracking-wide">Net Savings Over {holdYears}yr Hold</div>
-              <div className="text-lg font-semibold text-gray-900 mt-1">{dollar(results.netSavingsOverHold)}</div>
+              <div className="text-lg font-semibold text-gray-900 mt-1">{fmtDollars(results.netSavingsOverHold)}</div>
             </div>
           </div>
 

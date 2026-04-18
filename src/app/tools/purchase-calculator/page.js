@@ -3,13 +3,8 @@
 import { useState, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-
-function dollar(n) { return '$' + Math.round(n).toLocaleString('en-US'); }
-function pmt(principal, annualRate, months) {
-  const r = annualRate / 100 / 12;
-  if (!r) return principal / months;
-  return principal * (r * Math.pow(1 + r, months)) / (Math.pow(1 + r, months) - 1);
-}
+import { fmtDollars, fmtPct } from '@/lib/formatters';
+import { calculateMonthlyPI } from '@/lib/mortgage-math';
 
 function Input({ label, prefix, suffix, value, onChange, step, min }) {
   return (
@@ -46,7 +41,7 @@ function PurchaseCalculatorContent() {
     const price = parseFloat(homePrice) || 0;
     const dp = (parseFloat(downPct) || 3) / 100;
     const r = parseFloat(rate) || 0;
-    const n = (parseFloat(term) || 30) * 12;
+    const termYears = parseFloat(term) || 30;
     const tax = (parseFloat(taxRate) || 0.6) / 100;
     const ins = parseFloat(insurance) || 1200;
     const hoaAmt = parseFloat(hoa) || 0;
@@ -56,7 +51,7 @@ function PurchaseCalculatorContent() {
 
     const downPayment = price * dp;
     const loanAmount = price - downPayment;
-    const monthlyPI = pmt(loanAmount, r, n);
+    const monthlyPI = calculateMonthlyPI(r, loanAmount, termYears) || 0;
     const monthlyTax = (price * tax) / 12;
     const monthlyIns = ins / 12;
 
@@ -81,7 +76,7 @@ function PurchaseCalculatorContent() {
     let maxPrice = price;
     for (let i = 0; i < 20; i++) {
       const mLoan = maxPrice * (1 - dp);
-      const mPI = pmt(mLoan, r, n);
+      const mPI = calculateMonthlyPI(r, mLoan, termYears) || 0;
       const mTax = (maxPrice * tax) / 12;
       const mPMI = dp < 0.2 ? (mLoan * 0.005) / 12 : 0;
       const mTotal = mPI + mTax + monthlyIns + mPMI + hoaAmt;
@@ -139,27 +134,27 @@ function PurchaseCalculatorContent() {
           {/* Total Payment Hero */}
           <div className="bg-white border border-gray-200 rounded-xl p-6 text-center">
             <div className="text-xs text-gray-500 uppercase tracking-wide">Estimated Monthly Payment</div>
-            <div className="text-4xl font-bold text-gray-900 mt-1 tabular-nums">{dollar(results.totalMonthly)}</div>
+            <div className="text-4xl font-bold text-gray-900 mt-1 tabular-nums">{fmtDollars(results.totalMonthly)}</div>
           </div>
 
           {/* Payment Breakdown */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="bg-white border border-gray-200 rounded-xl p-4">
               <div className="text-xs text-gray-500">Principal &amp; Interest</div>
-              <div className="text-base font-semibold text-gray-900 mt-1">{dollar(results.monthlyPI)}</div>
+              <div className="text-base font-semibold text-gray-900 mt-1">{fmtDollars(results.monthlyPI)}</div>
             </div>
             <div className="bg-white border border-gray-200 rounded-xl p-4">
               <div className="text-xs text-gray-500">Property Tax</div>
-              <div className="text-base font-semibold text-gray-900 mt-1">{dollar(results.monthlyTax)}</div>
+              <div className="text-base font-semibold text-gray-900 mt-1">{fmtDollars(results.monthlyTax)}</div>
             </div>
             <div className="bg-white border border-gray-200 rounded-xl p-4">
               <div className="text-xs text-gray-500">Insurance</div>
-              <div className="text-base font-semibold text-gray-900 mt-1">{dollar(results.monthlyIns)}</div>
+              <div className="text-base font-semibold text-gray-900 mt-1">{fmtDollars(results.monthlyIns)}</div>
             </div>
             <div className="bg-white border border-gray-200 rounded-xl p-4">
               <div className="text-xs text-gray-500">{results.monthlyPMI > 0 ? 'PMI' : 'No PMI'}</div>
               <div className="text-base font-semibold text-gray-900 mt-1">
-                {results.monthlyPMI > 0 ? dollar(results.monthlyPMI) : '$0'}
+                {fmtDollars(results.monthlyPMI)}
               </div>
             </div>
           </div>
@@ -168,15 +163,15 @@ function PurchaseCalculatorContent() {
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-white border border-gray-200 rounded-xl p-4">
               <div className="text-xs text-gray-500 uppercase tracking-wide">Cash to Close (est.)</div>
-              <div className="text-lg font-semibold text-gray-900 mt-1">{dollar(results.cashToClose)}</div>
+              <div className="text-lg font-semibold text-gray-900 mt-1">{fmtDollars(results.cashToClose)}</div>
               <div className="text-xs text-gray-400 mt-0.5">
-                {dollar(results.downPayment)} down + ~{dollar(results.loanAmount * 0.03)} closing
+                {fmtDollars(results.downPayment)} down + ~{fmtDollars(results.loanAmount * 0.03)} closing
               </div>
             </div>
             <div className={`rounded-xl border p-4 ${results.dtiBg}`}>
               <div className="text-xs text-gray-500 uppercase tracking-wide">Debt-to-Income Ratio</div>
               <div className={`text-lg font-semibold mt-1 ${results.dtiColor}`}>
-                {results.dti.toFixed(1)}%
+                {fmtPct(results.dti)}
                 <span className="text-xs font-normal ml-1">— {results.dtiLabel}</span>
               </div>
             </div>
@@ -185,7 +180,7 @@ function PurchaseCalculatorContent() {
           {/* Max Affordable */}
           <div className="bg-brand/5 border border-brand/10 rounded-xl p-4">
             <div className="text-xs text-brand uppercase tracking-wide">Max Affordable Home (at 45% DTI)</div>
-            <div className="text-lg font-bold text-brand mt-1">{dollar(results.maxPrice)}</div>
+            <div className="text-lg font-bold text-brand mt-1">{fmtDollars(results.maxPrice)}</div>
           </div>
 
           <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-xs text-gray-500">

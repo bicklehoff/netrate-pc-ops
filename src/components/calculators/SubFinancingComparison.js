@@ -11,16 +11,7 @@
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { calculateMonthlyPI } from '@/lib/mortgage-math';
-
-function fmtDollars(n) {
-  if (n == null || !Number.isFinite(n)) return '—';
-  return '$' + Math.abs(Math.round(n)).toLocaleString();
-}
-
-function fmtPct(n) {
-  if (n == null || !Number.isFinite(n)) return '—';
-  return n.toFixed(2) + '%';
-}
+import { fmtDollars, fmtRate, fmtPct } from '@/lib/formatters';
 
 function Input({ label, prefix, suffix, value, onChange, placeholder, step }) {
   return (
@@ -113,10 +104,10 @@ export default function SubFinancingComparison() {
       reason = `Cash-out refinancing above 80% LTV is restricted for conventional loans — a new 2nd lien is your path to this cash.`;
     } else if (monthlyDelta > 50) {
       winner = 'heloan';
-      reason = `Opening a new 2nd lien is $${Math.round(monthlyDelta)}/mo cheaper because you keep your ${firstRate}% first mortgage rate instead of replacing it at ${cashoutRate}%.`;
+      reason = `Opening a new 2nd lien is ${fmtDollars(monthlyDelta)}/mo cheaper because you keep your ${fmtRate(firstRate)} first mortgage rate instead of replacing it at ${fmtRate(cashoutRate)}.`;
     } else if (monthlyDelta < -50) {
       winner = 'cashout';
-      reason = `Cash-out refinancing is $${Math.round(-monthlyDelta)}/mo cheaper. Your current first rate is high enough that replacing the whole balance at ${cashoutRate}% still saves money.`;
+      reason = `Cash-out refinancing is ${fmtDollars(Math.abs(monthlyDelta))}/mo cheaper. Your current first rate is high enough that replacing the whole balance at ${fmtRate(cashoutRate)} still saves money.`;
     } else {
       winner = 'close';
       reason = `Both options are within ~$50/mo. Consider simplicity (one payment vs. two) and whether you want to preserve your current first rate.`;
@@ -200,12 +191,17 @@ export default function SubFinancingComparison() {
             placeholder="e.g. 75000"
           />
           <Input
-            label="Planned Years in Home"
+            label="How Long You'll Keep This Loan"
+            suffix="yr"
             value={inputs.holdYears}
             onChange={(v) => update('holdYears', v)}
             placeholder="7"
           />
         </div>
+        <p className="text-xs text-gray-500 mt-3">
+          If you plan to refinance or sell within your chosen window, that&apos;s the period this
+          comparison uses for total-cost math.
+        </p>
       </div>
 
       {/* Rate inputs */}
@@ -229,6 +225,7 @@ export default function SubFinancingComparison() {
           />
           <Input
             label="2nd Lien Term"
+            suffix="yr"
             value={inputs.heloanTerm}
             onChange={(v) => update('heloanTerm', v)}
             placeholder="30"
@@ -243,6 +240,7 @@ export default function SubFinancingComparison() {
           />
           <Input
             label="Cash-Out Refi Term"
+            suffix="yr"
             value={inputs.cashoutTerm}
             onChange={(v) => update('cashoutTerm', v)}
             placeholder="30"
@@ -287,22 +285,22 @@ export default function SubFinancingComparison() {
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">First mortgage (unchanged)</span>
                   <span className="font-medium">
-                    {fmtDollars(result.firstBalance)} @ {fmtPct(result.firstRate)}
+                    {fmtDollars(result.firstBalance)} @ {fmtRate(result.firstRate)}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">New 2nd lien</span>
                   <span className="font-medium">
-                    {fmtDollars(result.cashDesired)} @ {fmtPct(Number(inputs.heloanRate) || 0)}
+                    {fmtDollars(result.cashDesired)} @ {fmtRate(Number(inputs.heloanRate) || 0)}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">CLTV</span>
-                  <span className="font-medium">{result.optionA.cltv.toFixed(1)}%</span>
+                  <span className="font-medium">{fmtPct(result.optionA.cltv)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Effective blended rate</span>
-                  <span className="font-medium">{fmtPct(result.optionA.blendedRate)}</span>
+                  <span className="font-medium">{fmtRate(result.optionA.blendedRate)}</span>
                 </div>
 
                 <div className="border-t border-gray-100 pt-2">
@@ -365,15 +363,15 @@ export default function SubFinancingComparison() {
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">New rate</span>
                   <span className="font-medium">
-                    {fmtPct(Number(inputs.cashoutRate) || 0)}{' '}
+                    {fmtRate(Number(inputs.cashoutRate) || 0)}{' '}
                     <span className="text-xs text-gray-400">
-                      (was {fmtPct(result.firstRate)})
+                      (was {fmtRate(result.firstRate)})
                     </span>
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">LTV</span>
-                  <span className="font-medium">{result.optionB.ltv.toFixed(1)}%</span>
+                  <span className="font-medium">{fmtPct(result.optionB.ltv)}</span>
                 </div>
 
                 <div className="border-t border-gray-100 pt-2">
@@ -383,7 +381,7 @@ export default function SubFinancingComparison() {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">2nd lien payment</span>
-                    <span className="text-gray-400 font-medium">$0/mo (none)</span>
+                    <span className="text-gray-400 font-medium">{fmtDollars(0)}/mo (none)</span>
                   </div>
                   <div className="flex justify-between text-sm font-bold text-gray-900 mt-1">
                     <span>Total monthly</span>
@@ -424,7 +422,7 @@ export default function SubFinancingComparison() {
                   {result.comparison.monthlyDelta > 0
                     ? `2nd lien saves ${fmtDollars(result.comparison.monthlyDelta)}`
                     : result.comparison.monthlyDelta < 0
-                    ? `Cash-out saves ${fmtDollars(result.comparison.monthlyDelta)}`
+                    ? `Cash-out saves ${fmtDollars(Math.abs(result.comparison.monthlyDelta))}`
                     : 'About equal'}
                 </div>
                 <div className="text-xs text-gray-500">per month</div>
@@ -442,10 +440,14 @@ export default function SubFinancingComparison() {
                       : 'text-gray-700'
                   }`}
                 >
-                  {fmtDollars(result.comparison.holdCostDelta)}
+                  {fmtDollars(Math.abs(result.comparison.holdCostDelta))}
                 </div>
                 <div className="text-xs text-gray-500">
-                  {result.comparison.holdCostDelta > 0 ? 'saved with 2nd lien' : 'saved with cash-out'}
+                  {result.comparison.holdCostDelta > 0
+                    ? 'saved with 2nd lien'
+                    : result.comparison.holdCostDelta < 0
+                    ? 'saved with cash-out'
+                    : 'about equal'}
                 </div>
               </div>
             </div>

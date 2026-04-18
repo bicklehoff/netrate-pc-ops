@@ -3,13 +3,8 @@
 import { useState, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-
-function dollar(n) { return '$' + Math.round(n).toLocaleString('en-US'); }
-function pmt(principal, annualRate, months) {
-  const r = annualRate / 100 / 12;
-  if (!r) return principal / months;
-  return principal * (r * Math.pow(1 + r, months)) / (Math.pow(1 + r, months) - 1);
-}
+import { fmtDollars } from '@/lib/formatters';
+import { calculateMonthlyPI } from '@/lib/mortgage-math';
 
 function Input({ label, prefix, suffix, value, onChange, step, min }) {
   return (
@@ -44,12 +39,13 @@ function CostOfWaitingContent() {
     const loan = parseFloat(loanAmount) || 0;
     const curRate = parseFloat(currentRate) || 0;
     const nRate = parseFloat(newRate) || 0;
-    const months = (parseFloat(term) || 30) * 12;
+    const termYears = parseFloat(term) || 30;
+    const months = termYears * 12;
 
     if (!loan || !curRate || !nRate || nRate >= curRate) return null;
 
-    const currentPmt = pmt(loan, curRate, months);
-    const newPmt = pmt(loan, nRate, months);
+    const currentPmt = calculateMonthlyPI(curRate, loan, termYears) || 0;
+    const newPmt = calculateMonthlyPI(nRate, loan, termYears) || 0;
     const monthlySavings = currentPmt - newPmt;
 
     const table = waitMonths.map(m => ({
@@ -145,9 +141,9 @@ function CostOfWaitingContent() {
           {/* Monthly savings hero */}
           <div className="rounded-xl border border-green-200 bg-green-50 p-6 text-center">
             <div className="text-sm text-green-700 font-medium mb-1">Monthly Savings Available Now</div>
-            <div className="text-4xl font-bold text-green-800 tabular-nums">{dollar(results.monthlySavings)}</div>
+            <div className="text-4xl font-bold text-green-800 tabular-nums">{fmtDollars(results.monthlySavings)}</div>
             <div className="text-xs text-green-600 mt-2">
-              {dollar(results.currentPmt)}/mo &rarr; {dollar(results.newPmt)}/mo
+              {fmtDollars(results.currentPmt)}/mo &rarr; {fmtDollars(results.newPmt)}/mo
             </div>
           </div>
 
@@ -171,7 +167,7 @@ function CostOfWaitingContent() {
                       {row.months} {row.months === 1 ? 'month' : 'months'}
                     </td>
                     <td className="px-6 py-3 text-right font-semibold text-red-600 tabular-nums">
-                      {dollar(row.lost)}
+                      {fmtDollars(row.lost)}
                     </td>
                   </tr>
                 ))}
@@ -183,12 +179,12 @@ function CostOfWaitingContent() {
           <div className="grid grid-cols-2 gap-4">
             <div className="rounded-xl border border-gray-200 bg-white p-5 text-center">
               <div className="text-xs text-gray-500 font-medium mb-1">Lifetime Savings</div>
-              <div className="text-xl font-bold text-gray-900 tabular-nums">{dollar(results.lifetimeSavings)}</div>
+              <div className="text-xl font-bold text-gray-900 tabular-nums">{fmtDollars(results.lifetimeSavings)}</div>
               <div className="text-xs text-gray-400 mt-1">over {term} years</div>
             </div>
             <div className="rounded-xl border border-gray-200 bg-white p-5 text-center">
               <div className="text-xs text-gray-500 font-medium mb-1">Interest Saved</div>
-              <div className="text-xl font-bold text-gray-900 tabular-nums">{dollar(results.interestSaved)}</div>
+              <div className="text-xl font-bold text-gray-900 tabular-nums">{fmtDollars(results.interestSaved)}</div>
               <div className="text-xs text-gray-400 mt-1">total interest reduction</div>
             </div>
           </div>
@@ -198,7 +194,7 @@ function CostOfWaitingContent() {
             <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
               <h2 className="text-sm font-semibold text-gray-900">What Your Savings Could Become</h2>
               <p className="text-xs text-gray-500 mt-0.5">
-                If you refinance today, here&apos;s what {dollar(results.monthlySavings)}/mo could grow into
+                If you refinance today, here&apos;s what {fmtDollars(results.monthlySavings)}/mo could grow into
               </p>
             </div>
 
@@ -209,9 +205,9 @@ function CostOfWaitingContent() {
                 <span className="text-sm font-semibold text-gray-800">Pay off your mortgage faster</span>
               </div>
               <p className="text-sm text-gray-600">
-                Put {dollar(results.monthlySavings)}/mo toward extra principal and pay off your loan{' '}
+                Put {fmtDollars(results.monthlySavings)}/mo toward extra principal and pay off your loan{' '}
                 <strong className="text-brand">{results.yearsSaved} years early</strong>,
-                saving <strong className="text-brand">{dollar(results.interestSavedExtra)}</strong> in interest.
+                saving <strong className="text-brand">{fmtDollars(results.interestSavedExtra)}</strong> in interest.
               </p>
             </div>
 
@@ -241,9 +237,9 @@ function CostOfWaitingContent() {
                 {results.opportunities.map(row => (
                   <tr key={row.years} className="border-b border-gray-50 last:border-0">
                     <td className="px-4 py-3 text-gray-700">{row.years} yr</td>
-                    <td className="px-4 py-3 text-right font-semibold text-brand tabular-nums">{dollar(row.extraPrincipal)}</td>
-                    <td className="px-4 py-3 text-right font-semibold text-green-700 tabular-nums">{dollar(row.sp500)}</td>
-                    <td className="px-4 py-3 text-right font-semibold text-blue-700 tabular-nums">{dollar(row.cds)}</td>
+                    <td className="px-4 py-3 text-right font-semibold text-brand tabular-nums">{fmtDollars(row.extraPrincipal)}</td>
+                    <td className="px-4 py-3 text-right font-semibold text-green-700 tabular-nums">{fmtDollars(row.sp500)}</td>
+                    <td className="px-4 py-3 text-right font-semibold text-blue-700 tabular-nums">{fmtDollars(row.cds)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -252,7 +248,7 @@ function CostOfWaitingContent() {
             <div className="px-6 py-3 bg-gray-50 text-xs text-gray-400">
               Extra Equity shows additional mortgage paydown vs normal payments at {newRate}%.
               S&P 500 uses ~7% inflation-adjusted historical return. CDs reflect ~4.5% APY.
-              All assume {dollar(results.monthlySavings)}/mo contributed monthly. Returns are hypothetical.
+              All assume {fmtDollars(results.monthlySavings)}/mo contributed monthly. Returns are hypothetical.
             </div>
           </div>
 
