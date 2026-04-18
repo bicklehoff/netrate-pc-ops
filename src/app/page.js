@@ -311,8 +311,8 @@ export default async function HomePage() {
                 cta: 'Estimate',
               },
               {
-                title: 'Second Lien Comparison',
-                desc: 'Compare HELOC vs. home equity loan side by side to find the best option for your situation.',
+                title: 'Tap Equity: 2nd Lien vs. Cash-Out',
+                desc: 'Need cash from your equity? Compare opening a new 2nd lien vs. cash-out refi — see if you can keep your low first mortgage rate.',
                 href: '/tools/second-lien-comparison',
                 cta: 'Compare',
               },
