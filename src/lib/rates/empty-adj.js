@@ -7,9 +7,11 @@
  * to this empty shape so pricing proceeds with zero adjustments instead of
  * failing or short-circuiting.
  *
- * Shared by `price-scenario.js` (which has always used this) and `homepage-db.js`
- * (which previously hard-failed — fixed in the D3 homepage-EMPTY_ADJ-fallback
- * remediation, see Work/Dev/audits/D0-VERIFICATION-D3-PRICING-2026-04-15.md).
+ * Used by `price-scenario.js` — the canonical pricing orchestrator. The old
+ * parallel `homepage-db.js` engine also used this fallback; that engine has
+ * been retired (homepage.js now calls priceScenario directly). Historical
+ * context of the hard-fail fix lives in
+ * Work/Dev/audits/D0-VERIFICATION-D3-PRICING-2026-04-15.md.
  *
  * Keeping this as a single constant prevents drift between the two pricing
  * paths. Do not copy-paste this shape into another file — import from here.

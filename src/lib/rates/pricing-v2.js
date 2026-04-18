@@ -337,10 +337,15 @@ function getInvestorAdjustment(investor, term, productType, lenderAdj) {
  * e.g., $450K × 2% = $9,000, capped at $3,595 = 0.799%
  */
 function getBrokerComp(loanAmount, loanPurpose, brokerConfig) {
-  const compRate = brokerConfig.compRate || 0.02;
+  // Nullish coalescing: treat 0 as an intentional zero (BPC mode), not as
+  // "missing config — use the default." The prior `||` variant silently
+  // replaced a caller's `compCapPurchase: 0` with $3595, which masked the
+  // borrowerPaid=true code path and contributed to the conv30 par regression
+  // that forced PR #104 (homepage-db revert, 2026-04-17).
+  const compRate = brokerConfig.compRate ?? 0.02;
   const cap = loanPurpose === 'purchase'
-    ? brokerConfig.compCapPurchase || 3595
-    : brokerConfig.compCapRefi || 3595;
+    ? (brokerConfig.compCapPurchase ?? 3595)
+    : (brokerConfig.compCapRefi ?? 3595);
 
   const compDollars = Math.min(loanAmount * compRate, cap);
   const compPoints = (compDollars / loanAmount) * 100;

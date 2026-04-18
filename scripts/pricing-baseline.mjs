@@ -137,8 +137,10 @@ async function fetchHomepage() {
       return n > 100 && n < 10000; // typical monthly PI range
     });
 
+  // byteLength intentionally omitted — ISR render noise (timestamps, cache-
+  // buster tokens) changes it without any rate-level change. Fingerprint
+  // should only flip on actual rate/payment changes.
   return {
-    byteLength: html.length,
     distinctRates: [...new Set(rateTokens)].slice(0, 16),
     distinctPayments: [...new Set(dollarTokens)].slice(0, 16),
   };
