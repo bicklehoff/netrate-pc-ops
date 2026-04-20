@@ -12,6 +12,7 @@
 import { NextResponse } from 'next/server';
 import sql from '@/lib/db';
 import { priceScenario } from '@/lib/rates/price-scenario';
+import { pickParRate } from '@/lib/rates/pick-par-rate';
 import { checkEligibility } from '@/lib/quotes/eligibility';
 import { buildFeeBreakdown } from '@/lib/quotes/fee-builder';
 import { calculateMonthlyPI } from '@/lib/mortgage-math';
@@ -141,12 +142,27 @@ export async function POST(request) {
       }
     }
 
-    // Build fee breakdown
-    const lenderFeeUw = pricing.results[0]?.lenderFee;
+    // Pick top 3 par rates across lenders FIRST so fee breakdown can
+    // anchor on the primary rate actually being quoted (not pricer
+    // results[0] which was a deep-discount row with a mismatched rate).
+    const topScenarios = pickTopScenarios(pricing.results, 3);
+
+    // Build fee breakdown against the primary scenario's rate + lender fee,
+    // so prepaid-interest math matches the rate the borrower sees. Fallback
+    // to pricing.parRow and then results[0] for thin-ladder edge cases.
+    const primaryScenario = topScenarios[0];
+    const lenderFeeUw =
+      primaryScenario?.lenderFee ??
+      pricing.parRow?.lenderFee ??
+      pricing.results[0]?.lenderFee;
     if (lenderFeeUw == null && pricing.results.length > 0) {
       eligibility.warnings.push({ severity: 'warning', code: 'CONFIG_MISSING', message: 'Lender fee missing from rate results — check rate_lenders.uwFee' });
     }
-    const primaryAnnualRate = pricing.results[0]?.rate ?? 0;
+    const primaryAnnualRate =
+      primaryScenario?.rate ??
+      pricing.parRow?.rate ??
+      pricing.results[0]?.rate ??
+      0;
     const fees = await buildFeeBreakdown({
       state: pricingInput.state,
       county: pricingInput.county,
@@ -165,9 +181,6 @@ export async function POST(request) {
     if (fees?.configWarning) {
       eligibility.warnings.push({ severity: 'warning', code: 'CONFIG_MISSING', message: fees.configWarning });
     }
-
-    // Pick top 3 rate scenarios for the quote (lowest rate with best price per lender)
-    const topScenarios = pickTopScenarios(pricing.results, 3);
 
     // Calculate monthly payment for primary scenario
     const primaryRate = topScenarios[0];
@@ -315,20 +328,42 @@ export async function POST(request) {
 }
 
 /**
- * Pick top N rate scenarios — best price per unique lender, then by lowest rate.
+ * Pick top N rate scenarios — par rate per unique lender, then by lowest par.
+ *
+ * For each lender, apply the canonical par rule (lowest rate with
+ * finalPrice >= 100) to that lender's rows. Then sort lenders by their par
+ * rate and take the top N. Produces an apples-to-apples "cheapest par across
+ * lenders" view — the rates the borrower would actually take.
+ *
+ * Previous behavior kept max-finalPrice per lender (highest rebate) then
+ * sorted by rate, producing a mix of rates the borrower couldn't take
+ * coherently.
  */
 function pickTopScenarios(results, n) {
   if (!results || results.length === 0) return [];
 
+  // Group rows by lender
   const byLender = new Map();
   for (const r of results) {
     const key = r.lender;
-    if (!byLender.has(key) || r.finalPrice > byLender.get(key).finalPrice) {
-      byLender.set(key, r);
-    }
+    if (!byLender.has(key)) byLender.set(key, []);
+    byLender.get(key).push(r);
   }
 
-  return Array.from(byLender.values())
+  // For each lender, pick its par rate and find the matching row
+  const perLenderPar = [];
+  for (const [, rows] of byLender) {
+    const par = pickParRate(
+      rows.map((r) => ({ rate: r.rate, finalPrice: r.finalPrice }))
+    );
+    if (!par) continue;
+    const parRow = rows.find(
+      (r) => r.rate === par.rate && r.finalPrice === par.finalPrice
+    );
+    if (parRow) perLenderPar.push(parRow);
+  }
+
+  return perLenderPar
     .sort((a, b) => a.rate - b.rate)
     .slice(0, n)
     .map(r => ({

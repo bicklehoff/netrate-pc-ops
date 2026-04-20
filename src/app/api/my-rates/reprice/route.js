@@ -59,10 +59,33 @@ export async function POST(request) {
 
     const result = await priceScenario(pricingInput);
     const term = scenario.term || 30;
-    const topRates = (result.results || [])
-      .sort((a, b) => a.rate - b.rate)
-      .slice(0, 3)
-      .map(r => ({
+
+    // Par-anchored ladder: row 0 is the par rate (the rate borrower would
+    // actually take — lowest rate at or above par). Rows 1-2 are the next
+    // two rates at or above par, sorted by rate ascending. Falls back to
+    // closest-to-par + next rows if nothing reaches par. Replaces the old
+    // `.sort.slice(0,3)` which returned 3 deeply-discounted rates that
+    // required borrower to pay thousands in points. Portal displays
+    // scenario.last_pricing_data[0] as "best rate" — now par, not discount.
+    const allResults = result.results || [];
+    const parRow = result.parRow || null;
+    const aboveParOrdered = allResults
+      .filter((r) => r.finalPrice >= 100 && r !== parRow)
+      .sort((a, b) => a.rate - b.rate);
+    const fallbackOrdered = allResults
+      .filter((r) => r !== parRow)
+      .sort((a, b) => a.rate - b.rate);
+    const sourceLadder = parRow
+      ? [parRow, ...aboveParOrdered, ...fallbackOrdered]
+      : fallbackOrdered;
+    // Dedupe while preserving order (parRow appears once at head)
+    const seen = new Set();
+    const topRates = [];
+    for (const r of sourceLadder) {
+      const key = `${r.rate}:${r.finalPrice}:${r.lender}:${r.program}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      topRates.push({
         rate: r.rate,
         apr: r.apr || null,
         monthlyPI: r.monthlyPI || calcMonthlyPI(r.rate, loanAmt, term),
@@ -74,7 +97,10 @@ export async function POST(request) {
         rebateDollars: r.rebateDollars,
         discountDollars: r.discountDollars,
         lenderFee: r.lenderFee,
-      }));
+        isPar: r === parRow,
+      });
+      if (topRates.length >= 3) break;
+    }
 
     // Replace rates + update last_priced_at
     await replaceScenarioRates(scenarioId, topRates);

@@ -14,6 +14,7 @@ import { getDbLenderAdj } from '@/lib/rates/db-adj-loader';
 import { loadRateDataFromDB } from '@/lib/rates/db-loader';
 import { DEFAULT_SCENARIO, FHA_BASELINE_LIMIT } from '@/lib/rates/defaults';
 import { EMPTY_ADJ } from '@/lib/rates/empty-adj';
+import { pickParRate } from '@/lib/rates/pick-par-rate';
 import { classifyLoan, getLoanLimits } from '@/data/county-loan-limits';
 
 const CACHE_TTL_MS = 2 * 60 * 1000;
@@ -239,6 +240,20 @@ export async function priceScenario(body) {
 
   results.sort((a, b) => a.rate - b.rate);
 
+  // Par pick — the single "today's rate" a borrower would actually take
+  // (lowest rate with finalPrice >= 100 across all lender/program combos).
+  // Exposed here so every caller uses the same rule instead of re-implementing
+  // via .sort().slice() which picks discount-heavy rates the borrower can't
+  // realistically take without paying points. See PRICING-ARCHITECTURE.md §5.
+  const parPick = pickParRate(
+    results.map((r) => ({ rate: r.rate, finalPrice: r.finalPrice }))
+  );
+  const parRow = parPick
+    ? results.find(
+        (r) => r.rate === parPick.rate && r.finalPrice === parPick.finalPrice
+      ) || null
+    : null;
+
   const effectiveDate = await getEffectiveDate();
 
   return {
@@ -254,6 +269,8 @@ export async function priceScenario(body) {
     } : null,
     resultCount: results.length,
     results,
+    parPick,
+    parRow,
     configWarnings,
   };
 }

@@ -59,8 +59,12 @@ export async function POST(request, { params }) {
       }, { status: 503 });
     }
 
-    // Best result is the first entry — price-scenario.js returns results sorted by rate ascending
-    const best = results.results[0];
+    // Best result = par rate (lowest rate with finalPrice >= 100). Falls back
+    // to the lowest-sorted row only if no rate reaches par in the ladder,
+    // which is the same fallback pickParRate uses internally. Quoting the par
+    // rate matches what the borrower would actually take — not a points-heavy
+    // discount rate buried in the top of the sort.
+    const best = results.parRow || results.results[0];
 
     // Calculate monthly payment from the best rate
     let monthlyPayment = null;
