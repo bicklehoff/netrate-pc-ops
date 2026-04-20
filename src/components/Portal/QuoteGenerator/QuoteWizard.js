@@ -5,6 +5,11 @@ import QuoteScenarioForm from './QuoteScenarioForm';
 import QuoteRateResults from './QuoteRateResults';
 import EligibilityPanel from './EligibilityPanel';
 import QuoteFeeEditor from './QuoteFeeEditor';
+import {
+  getDefaultClosingDate,
+  getDefaultFundingDate,
+  getFirstPaymentDate,
+} from '@/lib/dates/quote-defaults';
 
 const STEPS = [
   { key: 'scenario', label: 'Scenario' },
@@ -12,68 +17,10 @@ const STEPS = [
   { key: 'fees', label: 'Fees & Preview' },
 ];
 
-// Default closing date: 4 business days before the last business day of the month
-function defaultClosingDate() {
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-  for (let offset = 0; offset <= 1; offset++) {
-    const y = now.getFullYear();
-    const m = now.getMonth() + offset;
-    // Last calendar day of target month
-    const lastDay = new Date(y, m + 1, 0);
-    // Walk backward to last business day
-    while (lastDay.getDay() === 0 || lastDay.getDay() === 6) lastDay.setDate(lastDay.getDate() - 1);
-    // Walk back 4 business days
-    const closing = new Date(lastDay);
-    let count = 0;
-    while (count < 4) {
-      closing.setDate(closing.getDate() - 1);
-      if (closing.getDay() !== 0 && closing.getDay() !== 6) count++;
-    }
-    if (closing >= today) {
-      return `${closing.getFullYear()}-${String(closing.getMonth() + 1).padStart(2, '0')}-${String(closing.getDate()).padStart(2, '0')}`;
-    }
-  }
-  return `${now.getFullYear()}-${String(now.getMonth() + 2).padStart(2, '0')}-15`;
-}
-
-// Add N business days (skips Sat/Sun) to a date string
-function addBusinessDays(dateStr, days) {
-  const d = new Date(dateStr + 'T12:00:00');
-  let added = 0;
-  while (added < days) {
-    d.setDate(d.getDate() + 1);
-    const dow = d.getDay();
-    if (dow !== 0 && dow !== 6) added++;
-  }
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
-/**
- * Derive default funding date from closing date, state, and purpose.
- *   CO, TX purchase → same day as closing
- *   CA, OR purchase → closing + 3 business days
- *   All refinances  → closing + 3 business days (rescission period)
- */
-function defaultFundingDate(closingStr, state, purpose) {
-  if (!closingStr) return '';
-  const isRefi = purpose === 'refinance' || purpose === 'cashout';
-  const needsDelay = isRefi || state === 'CA' || state === 'OR';
-  return needsDelay ? addBusinessDays(closingStr, 3) : closingStr;
-}
-
-function firstPaymentFromClosing(closingStr) {
-  if (!closingStr) return '';
-  const [y, m] = closingStr.split('-').map(Number); // m is 1-indexed
-  const fp = new Date(y, m + 1, 1); // 1st of 2nd month after closing
-  return `${fp.getFullYear()}-${String(fp.getMonth() + 1).padStart(2, '0')}-01`;
-}
-
 export default function QuoteWizard({ prefill }) {
   const [step, setStep] = useState(0);
 
-  const initClosing = prefill?.closing_date || defaultClosingDate();
+  const initClosing = prefill?.closing_date || getDefaultClosingDate();
   const initState   = prefill?.state    || 'CO';
   const initPurpose = prefill?.purpose  || 'purchase';
   const [scenario, setScenario] = useState({
@@ -98,8 +45,8 @@ export default function QuoteWizard({ prefill }) {
     ltv: prefill?.ltv || 75,
     // Date defaults
     closing_date: initClosing,
-    first_payment_date: prefill?.first_payment_date || firstPaymentFromClosing(initClosing),
-    funding_date: prefill?.funding_date || defaultFundingDate(initClosing, initState, initPurpose),
+    first_payment_date: prefill?.first_payment_date || getFirstPaymentDate(initClosing),
+    funding_date: prefill?.funding_date || getDefaultFundingDate(initClosing, initState, initPurpose),
     // Escrow
     escrowsWaived: prefill?.escrowsWaived || false,
     borrowerPaid: prefill?.borrowerPaid || false,
