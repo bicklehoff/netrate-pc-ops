@@ -70,7 +70,7 @@ export default function ApplicationSection({ loan }) {
   const housingMap = { own: 'Own', rent: 'Rent', free: 'Living Rent Free' };
   const citizenMap = { us_citizen: 'U.S. Citizen', permanent_resident: 'Perm. Resident', non_permanent_resident: 'Non-Perm. Resident' };
 
-  const loanDesc = `${typeMap[loan.loan_type] || loan.loan_type || '—'}. ${loan.loan_term || 360/12}Y ${amortMap[app.amortizationType] || 'Fixed'} / ${purposeMap[loan.purpose] || loan.purpose || '—'}`;
+  const loanDesc = `${typeMap[loan.loan_type] || loan.loan_type || '—'}. ${loan.loan_term || 30}Y ${amortMap[app.amortizationType] || 'Fixed'} / ${purposeMap[loan.purpose] || loan.purpose || '—'}`;
 
   // LTV calc
   const loanAmt = Number(loan.loan_amount) || 0;
@@ -156,7 +156,7 @@ export default function ApplicationSection({ loan }) {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div><DL>LTV / CLTV</DL><DV>{ltv} / {ltv}</DV></div>
-                  <div><DL>Term / Amort</DL><DV>{loan.loan_term || 360} / {amortMap[app.amortizationType] || 'Fixed'}</DV></div>
+                  <div><DL>Term / Amort</DL><DV>{loan.loan_term || 30}Y / {amortMap[app.amortizationType] || 'Fixed'}</DV></div>
                 </div>
                 <div className="bg-[#eceeef] p-2 rounded text-[10px]">
                   <p className="font-bold text-ink">{loan.loanProgram || loanDesc}</p>

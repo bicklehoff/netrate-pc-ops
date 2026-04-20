@@ -88,7 +88,7 @@ model Loan {
   loanNumber            String?            @map("loan_number")
   loanAmount            Decimal?           @map("loan_amount") @db.Decimal(12, 2)
   interestRate          Decimal?           @map("interest_rate") @db.Decimal(5, 4)
-  loanTerm              Int?               @map("loan_term")
+  loanTerm              Int?               @map("loan_term") /// YEARS (migration 017, 2026-04-20). MISMO/LDox boundaries translate to months.
   propertyAddress       Json?              @map("property_address")
   propertyType          String?            @map("property_type")
   numUnits              Int?               @map("num_units")

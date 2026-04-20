@@ -117,7 +117,10 @@ export function parseMismoXml(xmlString) {
   // Amounts
   const loanAmount = num(terms.BaseLoanAmount) || num(terms.NoteAmount);
   const interestRate = num(terms.NoteRatePercent) || num(terms.WeightedAverageInterestRatePercent);
-  const loanTerm = int(terms.LoanMaturityPeriodCount) || int(terms.OriginalLoanMaturityPeriodCount);
+  // MISMO stores LoanMaturityPeriodCount in MONTHS; our loans.loan_term is
+  // YEARS (migration 017). Translate at this import boundary.
+  const loanTermMonths = int(terms.LoanMaturityPeriodCount) || int(terms.OriginalLoanMaturityPeriodCount);
+  const loanTerm = loanTermMonths != null ? Math.round(loanTermMonths / 12) : null;
 
   // ─── Extract Parties (Borrowers) ────────────────────────
   const parties = toArray(dig(deal, 'PARTIES', 'PARTY'));
@@ -159,8 +162,9 @@ export function parseMismoXml(xmlString) {
   // ─── Amortization ──────────────────────────────────────
   const amortRule = dig(loanData, 'AMORTIZATION', 'AMORTIZATION_RULE') || {};
   const amortizationType = mapAmortizationType(str(amortRule.AmortizationType));
-  // Derive loanTerm from AmortizationPeriodCount if not in TermsOfLoan
-  const derivedLoanTerm = loanTerm || int(amortRule.LoanAmortizationPeriodCount);
+  // Fall back to AmortizationPeriodCount (also MONTHS) if TermsOfLoan was empty.
+  const derivedAmortMonths = int(amortRule.LoanAmortizationPeriodCount);
+  const derivedLoanTerm = loanTerm || (derivedAmortMonths != null ? Math.round(derivedAmortMonths / 12) : null);
 
   // ─── Extract Assets & REOs from DEAL level ──────────────
   const rawAssets = toArray(dig(deal, 'ASSETS', 'ASSET'));

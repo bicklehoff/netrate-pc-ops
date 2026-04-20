@@ -26,7 +26,7 @@ function buildExtractionPrompt(loanContext) {
   "loanAmount": "<number — Loan Amount>",
   "interestRate": "<number — e.g. 6.875>",
   "monthlyPI": "<number — monthly principal & interest payment>",
-  "loanTerm": "<number — term in months, e.g. 360>",
+  "loanTerm": "<number — term in years, e.g. 30>",
   "totalClosingCosts": "<number — total closing costs>",
   "cashToClose": "<number — cash to close from borrower>",
   "lenderCredits": "<number — total lender credits>",

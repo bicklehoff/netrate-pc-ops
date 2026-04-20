@@ -276,7 +276,7 @@ export default function PayrollSection({ loan }) {
     { label: 'Loan Amount', ...compareValues(extraction.data.loan_amount, loan.loan_amount, 'currency') },
     { label: 'Interest Rate', ...compareValues(extraction.data.interest_rate, loan.interest_rate ? Number(loan.interest_rate) : null, 'rate') },
     { label: 'Monthly P&I', ...compareValues(extraction.data.monthlyPI, loan.monthlyPayment, 'currency') },
-    { label: 'Loan Term', ...compareValues(extraction.data.loan_term ? `${extraction.data.loan_term} mo` : null, loan.loan_term ? `${loan.loan_term} mo` : null, 'text') },
+    { label: 'Loan Term', ...compareValues(extraction.data.loan_term ? `${extraction.data.loan_term} yr` : null, loan.loan_term ? `${loan.loan_term} yr` : null, 'text') },
     { label: 'Broker Compensation', ...compareValues(extraction.data.brokerCompensation, loan.brokerCompensation, 'currency') },
     { label: 'Total Closing Costs', ...compareValues(extraction.data.totalClosingCosts, loan.totalClosingCosts, 'currency') },
     { label: 'Cash to Close', ...compareValues(extraction.data.cashToClose, loan.cashToClose, 'currency') },

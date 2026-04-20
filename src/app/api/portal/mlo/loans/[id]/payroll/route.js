@@ -411,7 +411,7 @@ export async function POST(request, { params }) {
       loanType: freshLoan.loan_type,
       loanPurpose: freshLoan.purpose ? freshLoan.purpose.charAt(0).toUpperCase() + freshLoan.purpose.slice(1) : null,
       interestRate: freshLoan.interest_rate ? Number(freshLoan.interest_rate) : null,
-      loanTerm: freshLoan.loan_term ? Math.round(freshLoan.loan_term / 12) : null,
+      loanTerm: freshLoan.loan_term || null,
       grossComp,
       reimbursements: reimbSelections.length > 0 ? reimbSelections : null,
       totalReimb: totalReimb || null,

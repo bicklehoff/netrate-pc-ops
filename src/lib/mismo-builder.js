@@ -125,7 +125,10 @@ export function buildMismoXml(loan, options = {}) {
 
   // ─── Build Loan Section ────────────────────────────────
   const loanNumber = loan.loanNumber || loan.lenderLoanNumber || loan.id.substring(0, 8);
-  const loanTerm = loan.loanTerm || 360;
+  // loan.loanTerm is YEARS (migration 017); MISMO LoanAmortizationPeriodCount
+  // expects MONTHS. Translate at this export boundary.
+  const loanTermYears = loan.loanTerm || 30;
+  const loanTermMonths = loanTermYears * 12;
   const amortType = mismoAmortType(loan.amortizationType);
 
   let armXml = '';
@@ -153,7 +156,7 @@ export function buildMismoXml(loan, options = {}) {
   <AMORTIZATION>
     <AMORTIZATION_RULE>
       ${tag('AmortizationType', amortType)}
-      ${tag('LoanAmortizationPeriodCount', loanTerm)}
+      ${tag('LoanAmortizationPeriodCount', loanTermMonths)}
       <LoanAmortizationPeriodType>Month</LoanAmortizationPeriodType>
     </AMORTIZATION_RULE>
   </AMORTIZATION>
