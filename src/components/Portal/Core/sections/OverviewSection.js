@@ -5,7 +5,11 @@ import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import EditableField from '../EditableField';
 import PrequalLetterModal from '../../PrequalLetter/PrequalLetterModal';
-import { PROPERTY_TYPES as PROPERTY_TYPE_OPTIONS } from '@/lib/constants/picklists';
+import {
+  PROPERTY_TYPES as PROPERTY_TYPE_OPTIONS,
+  REFI_PURPOSES,
+  CASHOUT_REASONS,
+} from '@/lib/constants/picklists';
 
 // ─── Constants ──────────────────────────────────────────────
 
@@ -25,9 +29,8 @@ const LOAN_TYPE_OPTIONS = [
   { value: 'jumbo', label: 'Jumbo' }, { value: 'other', label: 'Other' },
 ];
 const PURPOSE_OPTIONS = [
-  { value: 'purchase', label: 'Purchase' }, { value: 'refinance', label: 'Refi' },
-  { value: 'cash_out', label: 'C/O Refi' }, { value: 'heloc', label: 'HELOC' },
-  { value: 'hecm', label: 'HECM' }, { value: 'construction', label: 'Construction' },
+  { value: 'purchase', label: 'Purchase' },
+  { value: 'refinance', label: 'Refi' },
 ];
 const OCCUPANCY_OPTIONS = [
   { value: 'primary', label: 'Primary' }, { value: 'secondary', label: '2nd Home' },
@@ -315,11 +318,14 @@ export default function OverviewSection({ loan, updateLoanField, updateDates }) 
           <div className="flex-1"><EF label="Lien" value={loan.lien_status} type="text" onSave={v => save({ lien_status: v })} /></div>
           <div className="flex-1"><RF label="BIC" value={loan.ball_in_court} /></div>
         </div>
-        {(loan.purpose === 'refinance' || loan.purpose === 'cash_out') && (
+        {loan.purpose === 'refinance' && (
           <div className="flex gap-x-6 mt-0.5 pt-0.5 border-t border-slate-100">
-            <div className="flex-1"><EF label="Refi Purpose" value={loan.refi_purpose} type="text" onSave={v => save({ refi_purpose: v })} /></div>
+            <div className="flex-1"><EF label="Refi Purpose" value={loan.refi_purpose} type="select" options={REFI_PURPOSES} onSave={v => save({ refi_purpose: v })} /></div>
+            {loan.refi_purpose === 'cashout' && (
+              <div className="flex-1"><EF label="Cash Out Reason" value={loan.cashout_reason} type="select" options={CASHOUT_REASONS} onSave={v => save({ cashout_reason: v })} /></div>
+            )}
             <div className="flex-1"><EF label="Cash Out" value={loan.cash_out_amount} type="currency" onSave={v => save({ cash_out_amount: v })} /></div>
-            <div className="flex-1" /><div className="flex-1" /><div className="flex-1" /><div className="flex-1" /><div className="flex-1" /><div className="flex-1" /><div className="flex-1" />
+            <div className="flex-1" /><div className="flex-1" /><div className="flex-1" /><div className="flex-1" /><div className="flex-1" /><div className="flex-1" />
           </div>
         )}
         <div className="flex gap-x-6 mt-0.5 pt-0.5 border-t border-slate-100">

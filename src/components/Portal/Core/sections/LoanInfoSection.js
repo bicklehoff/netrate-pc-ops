@@ -12,7 +12,11 @@ import {
   LEAD_SOURCES,
   APPLICATION_CHANNELS,
 } from '@/lib/constants/mcr-fields';
-import { PROPERTY_TYPES as PROPERTY_TYPE_OPTIONS } from '@/lib/constants/picklists';
+import {
+  PROPERTY_TYPES as PROPERTY_TYPE_OPTIONS,
+  REFI_PURPOSES,
+  CASHOUT_REASONS,
+} from '@/lib/constants/picklists';
 
 // Convert label maps to option arrays
 const actionTakenOptions = Object.entries(ACTION_TAKEN_LABELS).map(([v, l]) => ({ value: v, label: l }));
@@ -34,8 +38,6 @@ const LOAN_TYPE_OPTIONS = [
 const PURPOSE_OPTIONS = [
   { value: 'purchase', label: 'Purchase' },
   { value: 'refinance', label: 'Refinance' },
-  { value: 'cash_out', label: 'Cash-Out Refi' },
-  { value: 'hecm', label: 'HECM / Reverse' },
 ];
 
 const OCCUPANCY_OPTIONS = [
@@ -207,12 +209,24 @@ export default function LoanInfoSection({ loan, updateLoanField, updateDates }) 
             options={PURPOSE_OPTIONS}
             onSave={save('purpose')}
           />
-          <EditableField
-            label="Refi Purpose"
-            value={loan.refi_purpose}
-            type="text"
-            onSave={save('refi_purpose')}
-          />
+          {loan.purpose === 'refinance' && (
+            <EditableField
+              label="Refi Purpose"
+              value={loan.refi_purpose}
+              type="select"
+              options={REFI_PURPOSES}
+              onSave={save('refi_purpose')}
+            />
+          )}
+          {loan.refi_purpose === 'cashout' && (
+            <EditableField
+              label="Cash Out Reason"
+              value={loan.cashout_reason}
+              type="select"
+              options={CASHOUT_REASONS}
+              onSave={save('cashout_reason')}
+            />
+          )}
           <EditableField
             label="Cash Out Amount"
             value={loan.cash_out_amount}

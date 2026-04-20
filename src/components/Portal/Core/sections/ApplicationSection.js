@@ -62,7 +62,7 @@ export default function ApplicationSection({ loan }) {
   const coName = coBorrower?.borrower ? ` & ${coBorrower.borrower.first_name?.toUpperCase()}` : '';
 
   // Labels
-  const purposeMap = { purchase: 'Purchase', refinance: 'Rate/Term Refi', cash_out: 'Cash-Out Refi' };
+  const purposeMap = { purchase: 'Purchase', refinance: 'Refinance' };
   const typeMap = { conventional: 'Conv.', fha: 'FHA', va: 'VA', usda: 'USDA', jumbo: 'Jumbo' };
   const occMap = { primary: 'Primary', secondary: 'Second Home', investment: 'Investment' };
   const propMap = { sfr: 'SFR', condo: 'Condo', townhome: 'Townhome', pud: 'PUD', multi_unit: 'Multi-Unit', manufactured: 'Mfg' };

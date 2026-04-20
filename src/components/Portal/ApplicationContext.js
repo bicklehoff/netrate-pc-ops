@@ -201,8 +201,8 @@ function mapBrpToApplication(lead, scenarioData) {
       // Refi / cashout
       if (sd.propertyValue) prefill.estimatedValue = String(sd.propertyValue);
       if (sd.loanAmount) prefill.currentBalance = String(sd.loanAmount);
-      if (sd.purpose === 'cashout') prefill.refiPurpose = 'cash-out';
-      else prefill.refiPurpose = 'lower-rate';
+      if (sd.purpose === 'cashout') prefill.refiPurpose = 'cashout';
+      else prefill.refiPurpose = 'rate_term';
     }
 
     if (sd.state) {

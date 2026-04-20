@@ -74,6 +74,26 @@ const STAGE_STATUS = {
 
 // ─── Property Type Mapping ──────────────────────────────────────────
 
+// Normalize LDOX's Refinance Purpose Type strings to our canonical
+// URLA-hierarchy codes (refi_purpose + cashout_reason). 'Other' is ignored
+// per David 2026-04-20 ("not helpful").
+function normalizeRefiPurpose(raw) {
+  if (!raw) return null;
+  const lower = String(raw).toLowerCase();
+  if (lower.includes('rate') || lower.includes('term')) return 'rate_term';
+  if (lower.includes('debt') || lower.includes('improv') || lower.includes('cash')) return 'cashout';
+  if (lower.includes('stream')) return 'streamline';
+  return null; // 'Other' and any unmapped value
+}
+
+function cashoutReasonFor(raw) {
+  if (!raw) return null;
+  const lower = String(raw).toLowerCase();
+  if (lower.includes('debt')) return 'debt_consolidation';
+  if (lower.includes('improv')) return 'home_improvement';
+  return null;
+}
+
 function mapPropertyType(subPropType) {
   if (!subPropType) return null;
   const lower = subPropType.toLowerCase();
@@ -293,7 +313,8 @@ async function run() {
       numBorrowers: parseInt(row['Borrower Count']) || 1,
       ldoxLoanId: row['LendingDox ID'] || null,
       leadSource: row['Lead Source'] || null,
-      refiPurpose: row['Refinance Purpose Type'] || null,
+      refiPurpose: normalizeRefiPurpose(row['Refinance Purpose Type']),
+      cashoutReason: cashoutReasonFor(row['Refinance Purpose Type']),
       cashOutAmount: parseMoney(row['Refinance CashOut Amount']),
       employmentStatus: row['Employment Status'] || null,
       monthlyBaseIncome: parseMoney(row['B1 Monthly Income']),
@@ -395,7 +416,7 @@ async function run() {
         property_address, num_units, purchase_price, down_payment, estimated_value,
         loan_type, lender_name, loan_number, loan_amount, interest_rate, loan_term,
         credit_score, num_borrowers, ldox_loan_id, lead_source,
-        refi_purpose, cash_out_amount, employment_status, monthly_base_income,
+        refi_purpose, cashout_reason, cash_out_amount, employment_status, monthly_base_income,
         created_at, updated_at
       ) VALUES (
         gen_random_uuid(), ${borrowerId}, ${loan.mloId},
@@ -405,7 +426,7 @@ async function run() {
         ${loan.loanType}, ${loan.lenderName}, ${loan.loanNumber},
         ${loan.loanAmount}, ${loan.interestRate}, ${loan.loanTerm},
         ${loan.creditScore}, ${loan.numBorrowers}, ${loan.ldoxLoanId}, ${loan.leadSource},
-        ${loan.refiPurpose}, ${loan.cashOutAmount},
+        ${loan.refiPurpose}, ${loan.cashoutReason}, ${loan.cashOutAmount},
         ${loan.employmentStatus}, ${loan.monthlyBaseIncome},
         ${loan.createdAt || new Date().toISOString()}, now()
       ) RETURNING id`;

@@ -10,8 +10,9 @@ import { useApplication } from '@/components/Portal/ApplicationContext';
 import { SelectField, CurrencyField, AddressGroup } from '@/components/Portal/FormFields';
 
 const REFI_PURPOSE_OPTIONS = [
-  { value: 'rate_term', label: 'Lower My Rate' },
-  { value: 'cash_out', label: 'Cash Out Equity' },
+  { value: 'rate_term',  label: 'Lower My Rate' },
+  { value: 'limited',    label: 'Limited Cash-Out' },
+  { value: 'cashout',    label: 'Cash Out Equity' },
   { value: 'streamline', label: 'Streamline / FHA / VA' },
 ];
 
@@ -68,7 +69,7 @@ export default function Step2Refinance({ onNext, onBack }) {
   const ltvPct = (() => {
     const val = parseFloat(estimatedValue) || 0;
     const bal = parseFloat(currentBalance) || 0;
-    const cash = refiPurpose === 'cash_out' ? (parseFloat(cashOutAmount) || 0) : 0;
+    const cash = refiPurpose === 'cashout' ? (parseFloat(cashOutAmount) || 0) : 0;
     if (val <= 0) return null;
     return ((bal + cash) / val) * 100;
   })();
@@ -149,7 +150,7 @@ export default function Step2Refinance({ onNext, onBack }) {
           </div>
         )}
 
-        {refiPurpose === 'cash_out' && (
+        {refiPurpose === 'cashout' && (
           <CurrencyField
             label="Cash-Out Amount"
             name="cashOutAmount"

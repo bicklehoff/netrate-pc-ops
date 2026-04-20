@@ -64,7 +64,7 @@ export const step2PurchaseSchema = z.object({
 // ─── Step 2: Property (Refinance) ───────────────────────────
 
 export const step2RefinanceSchema = z.object({
-  refiPurpose: z.enum(['rate_term', 'cash_out', 'streamline'], {
+  refiPurpose: z.enum(['rate_term', 'limited', 'cashout', 'streamline'], {
     required_error: 'Please select refinance purpose',
   }),
   occupancy: z.enum(['primary', 'secondary', 'investment'], {
