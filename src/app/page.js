@@ -41,29 +41,34 @@ export default async function HomePage() {
   const sentiment = await getMarketSentiment();
   const market = SENTIMENT_MAP[sentiment] || SENTIMENT_MAP.neutral;
 
-  // ─── Display Values (live → fallback) ──────────────────────
+  // ─── Display Values ──────────────────────────────────────────
+  // liveRates comes from getHomepageLiveRates(): live priceScenario →
+  // last-known-good cache (homepage_rate_cache) → null. When null,
+  // values render as '—' (graceful null state). Per D9b.7 we no longer
+  // fall back to hardcoded '5.875% / Mar 24, 2026' strings that would
+  // silently serve stale numbers.
   const d = liveRates;
 
   function fmtRate(product) {
-    return product ? `${product.rate.toFixed(3)}%` : null;
+    return product?.rate != null ? `${product.rate.toFixed(3)}%` : '—';
   }
   function fmtApr(product) {
-    return product ? `${product.apr.toFixed(2)}%` : null;
+    return product?.apr != null ? `${product.apr.toFixed(2)}%` : '—';
   }
   function fmtPayment(product) {
-    return product ? `$${product.payment.toLocaleString()}` : null;
+    return product?.payment != null ? `$${product.payment.toLocaleString()}` : '—';
   }
 
-  const conv30Rate = fmtRate(d?.conv30) || '5.875%';
-  const conv30Apr = fmtApr(d?.conv30) || '5.94%';
-  const conv30Payment = fmtPayment(d?.conv30) || '$2,366';
-  const effectiveDateShort = d?.dateShort || 'Mar 24, 2026';
+  const conv30Rate = fmtRate(d?.conv30);
+  const conv30Apr = fmtApr(d?.conv30);
+  const conv30Payment = fmtPayment(d?.conv30);
+  const effectiveDateShort = d?.dateShort || '—';
 
   const heroProducts = [
     { product: '30-Yr Fixed', label: 'Conforming', rate: conv30Rate, apr: conv30Apr },
-    { product: '15-Yr Fixed', label: 'Conforming', rate: fmtRate(d?.conv15) || '5.250%', apr: fmtApr(d?.conv15) || '5.38%' },
-    { product: 'FHA 30-Yr',   label: 'Government', rate: fmtRate(d?.fha30)  || '5.500%', apr: fmtApr(d?.fha30)  || '6.12%' },
-    { product: 'VA 30-Yr',    label: 'Military',   rate: fmtRate(d?.va30)   || '5.375%', apr: fmtApr(d?.va30)   || '5.52%' },
+    { product: '15-Yr Fixed', label: 'Conforming', rate: fmtRate(d?.conv15), apr: fmtApr(d?.conv15) },
+    { product: 'FHA 30-Yr',   label: 'Government', rate: fmtRate(d?.fha30),  apr: fmtApr(d?.fha30) },
+    { product: 'VA 30-Yr',    label: 'Military',   rate: fmtRate(d?.va30),   apr: fmtApr(d?.va30) },
   ];
 
   return (
