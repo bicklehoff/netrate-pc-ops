@@ -122,13 +122,20 @@ Ask: "Which department should I work as? (Dev, Admin, or Setup)"
 
 #### Phase 2 — After code changes are complete
 3. Present a summary of all changes — David reviews before anything runs
-4. David says **"build"** → run `npm run build`
-5. Review build output together:
-   - Zero ESLint **errors** (warnings OK — errors block Vercel)
-   - No TypeScript/module errors
-   - All pages compiled successfully
-6. If build fails → fix, repeat from step 4
-7. `git diff main --stat` — final sanity check on changed files
+4. David says **"build"** → **determine the lane first**, then act:
+
+   ```bash
+   # Everything changed vs origin/main (staged, unstaged, untracked)
+   CHANGED=$( ( git diff --name-only origin/main -- ; git ls-files --others --exclude-standard ) | sort -u )
+   BUILD_AFFECTING=$(echo "$CHANGED" | grep -E '^(src/|prisma/|public/|scripts/|package\.json$|package-lock\.json$|next\.config\.|tailwind\.config\.|postcss\.config\.|jsconfig\.json$|tsconfig\.json$|vercel\.json$|middleware\.|\.env($|\.))' || true)
+   ```
+
+   - **Build-affecting lane** (any match) → run `npm run build`. Zero ESLint **errors** (warnings OK). No TS/module errors. All pages compile.
+   - **Docs-only lane** (zero matches — e.g. changes limited to `Work/**`, `docs/**`, `.claude/**`, `.github/**`, root `*.md`) → **skip `npm run build`**. State: *"Docs-only change — skipping local build. Vercel preview (Phase 4) is the gate."* Note "docs-only" in the PR body.
+
+   The lane rule exists because local build only verifies files in the build-affecting paths above; recompiling `src/` on a docs PR just re-verifies `origin/main`. When in doubt, take the build-affecting lane. **Mixed PRs always take the build-affecting lane.**
+5. If build fails (build-affecting lane only) → fix, repeat from step 4
+6. `git diff origin/main --stat` + `git status --short` — final sanity check on changed files
 
 #### Phase 3 — Push & PR
 8. David says **"push"** → `git push -u origin <branch>`
