@@ -19,6 +19,7 @@ import sql from '@/lib/db';
 import { priceScenario } from './price-scenario';
 import { pickParRate } from './pick-par-rate';
 import { loadSiteScenario, loadSurfaceConfig } from './site-scenario-config';
+import { writeHomepageCache, readHomepageCache } from './homepage-cache';
 import { calculateMonthlyPI, calculateAPR } from '@/lib/mortgage-math';
 
 const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -121,7 +122,14 @@ async function priceOne(scenario, config, loanType, termYears) {
 
 /**
  * Compute the 4 homepage display products.
- * @returns {Promise<{ dateShort: string|null, conv30, conv15, fha30, va30 }|null>}
+ *
+ * Fallback chain (D9b.7):
+ *   1. Live priceScenario for all 4 products → write cache + return
+ *   2. Live fails → read homepage_rate_cache → return last-known-good
+ *      (tagged `source: 'cache'`)
+ *   3. Cache also empty → return null; page.js shows graceful null state
+ *
+ * @returns {Promise<{ dateShort: string|null, conv30, conv15, fha30, va30, source?: 'cache' }|null>}
  */
 export async function getHomepageLiveRates() {
   try {
@@ -152,6 +160,14 @@ export async function getHomepageLiveRates() {
     const fha30 = await priceOne(scenario, config, 'fha', 30);
     const va30 = await priceOne(scenario, config, 'va', 30);
 
+    // Require at least one product to consider the compute a success.
+    // If all four came back null (config warnings, missing products,
+    // etc.) fall through to cache read — better to serve stale rates
+    // than a null hero card.
+    if (!conv30 && !conv15 && !fha30 && !va30) {
+      throw new Error('priceScenario returned null for all homepage products');
+    }
+
     const result = {
       dateShort: formatDateShort(latestSheetDate),
       conv30,
@@ -161,9 +177,25 @@ export async function getHomepageLiveRates() {
     };
 
     cache = { data: result, sheetDate: sheetDateKey, fetchedAt: now };
+
+    // Persist to last-known-good cache (best-effort, non-blocking for
+    // the return value — if the cache write fails we still serve live).
+    if (latestSheetDate) {
+      writeHomepageCache(result, latestSheetDate).catch((err) => {
+        console.error('[homepage] cache write failed:', err.message);
+      });
+    }
+
     return result;
   } catch (err) {
     console.error('[homepage] live rates computation failed:', err.message);
-    return null;
+    // Fall back to last-known-good cache row. Returns null if cache is
+    // also empty — page.js handles null with a graceful "rates
+    // temporarily unavailable" state instead of stale hardcoded strings.
+    const cached = await readHomepageCache();
+    if (cached) {
+      console.warn('[homepage] serving cached rates (live compute failed)');
+    }
+    return cached;
   }
 }
