@@ -66,8 +66,8 @@ const STAGE_STATUS = {
   'processing': 'processing',
   'application': 'application',
   'web application': 'application',
-  'prospect': 'prospect',
-  'back to lead': 'prospect',
+  'prospect': 'draft',
+  'back to lead': 'draft',
   'withdrawn': 'withdrawn',
   'closed incomplete': 'withdrawn',
 };
@@ -244,7 +244,7 @@ async function run() {
 
     // Map status from stage
     const stage = (row['Stage'] || '').toLowerCase();
-    const status = STAGE_STATUS[stage] || 'prospect';
+    const status = STAGE_STATUS[stage] || 'draft';
 
     // Map fields
     const purpose = mapPurpose(row['Loan Purpose']);

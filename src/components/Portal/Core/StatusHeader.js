@@ -4,40 +4,11 @@
 'use client';
 
 import { useState } from 'react';
-
-const STATUS_LABELS = {
-  draft: 'Prospect',
-  applied: 'Applied',
-  processing: 'Processing',
-  submitted_uw: 'In UW',
-  cond_approved: 'Cond. Approved',
-  suspended: 'Suspended',
-  ctc: 'Clear to Close',
-  docs_out: 'Docs Out',
-  funded: 'Funded',
-  denied: 'Denied',
-  archived: 'Archived',
-};
-
-const STATUS_COLORS = {
-  draft: 'bg-gray-100 text-gray-700',
-  applied: 'bg-blue-100 text-blue-800',
-  processing: 'bg-yellow-100 text-yellow-800',
-  submitted_uw: 'bg-purple-100 text-purple-800',
-  cond_approved: 'bg-orange-100 text-orange-800',
-  suspended: 'bg-red-50 text-red-700',
-  ctc: 'bg-green-100 text-green-800',
-  docs_out: 'bg-green-100 text-green-800',
-  funded: 'bg-green-200 text-green-900',
-  denied: 'bg-red-100 text-red-800',
-  archived: 'bg-gray-200 text-gray-500',
-};
-
-const ALL_STATUSES = [
-  'draft', 'applied', 'processing', 'submitted_uw',
-  'cond_approved', 'ctc', 'docs_out', 'funded',
-  'suspended', 'denied', 'archived',
-];
+import {
+  ALL_STATUSES,
+  STATUS_LABELS,
+  STATUS_COLORS_SOFT,
+} from '@/lib/constants/loan-statuses';
 
 const BIC_LABELS = {
   borrower: { label: 'Borrower', color: 'text-blue-600 bg-blue-50' },
@@ -113,7 +84,7 @@ export default function StatusHeader({ loan, onStatusChange, onPrequalLetter }) 
             onClick={() => setStatusDropdown(!statusDropdown)}
             disabled={statusLoading}
             className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-              STATUS_COLORS[loan.status] || 'bg-gray-100 text-gray-700'
+              STATUS_COLORS_SOFT[loan.status] || 'bg-gray-100 text-gray-700'
             } ${statusLoading ? 'opacity-50' : 'hover:opacity-80 cursor-pointer'}`}
           >
             {STATUS_LABELS[loan.status] || loan.status}
@@ -133,7 +104,7 @@ export default function StatusHeader({ loan, onStatusChange, onPrequalLetter }) 
                     className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 flex items-center gap-2"
                   >
                     <span className={`inline-block w-2 h-2 rounded-full ${
-                      STATUS_COLORS[s]?.split(' ')[0] || 'bg-gray-200'
+                      STATUS_COLORS_SOFT[s]?.split(' ')[0] || 'bg-gray-200'
                     }`} />
                     {STATUS_LABELS[s]}
                   </button>

@@ -5,20 +5,7 @@
 
 import { useState } from 'react';
 import SectionCard from '../SectionCard';
-
-const STATUS_LABELS = {
-  draft: 'Prospect',
-  applied: 'Applied',
-  processing: 'Processing',
-  submitted_uw: 'In UW',
-  cond_approved: 'Cond. Approved',
-  suspended: 'Suspended',
-  ctc: 'Clear to Close',
-  docs_out: 'Docs Out',
-  funded: 'Funded',
-  denied: 'Denied',
-  archived: 'Archived',
-};
+import { STATUS_LABELS } from '@/lib/constants/loan-statuses';
 
 const EVENT_ICONS = {
   status_change: '🔄',
