@@ -23,9 +23,9 @@ const STATUS_COLORS = {
   subscriber: 'bg-gray-100 text-gray-700',
   lead: 'bg-blue-100 text-blue-800',
   applicant: 'bg-amber-100 text-amber-800',
-  in_process: 'bg-purple-100 text-purple-800',
-  funded: 'bg-green-200 text-green-900',
-  partner: 'bg-cyan-100 text-cyan-800',
+  in_process: 'bg-brand-light text-brand',
+  funded: 'bg-go-light text-go-dark',
+  partner: 'bg-accent/15 text-ink',
   archived: 'bg-red-100 text-red-700',
 };
 
