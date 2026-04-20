@@ -12,7 +12,7 @@ const LABEL_MAP = {
   purpose: { purchase: 'Purchase', refinance: 'Refinance' },
   occupancy: { primary: 'Primary Residence', secondary: 'Second Home', investment: 'Investment' },
   propertyType: { sfr: 'Single Family', condo: 'Condo', townhome: 'Townhome', multi_unit: 'Multi-Unit', manufactured: 'Manufactured' },
-  refiPurpose: { rate_term: 'Lower My Rate', cash_out: 'Cash Out Equity', streamline: 'Streamline / FHA / VA' },
+  refiPurpose: { rate_term: 'Lower My Rate', limited: 'Limited Cash-Out', cashout: 'Cash Out Equity', streamline: 'Streamline / FHA / VA' },
   employmentStatus: { employed: 'Employed', self_employed: 'Self-Employed', retired: 'Retired', other: 'Other' },
   maritalStatus: { married: 'Married', unmarried: 'Unmarried', separated: 'Separated' },
   citizenshipStatus: { citizen: 'U.S. Citizen', permanent_resident: 'Permanent Resident', non_permanent_resident: 'Non-Permanent Resident' },
@@ -218,7 +218,7 @@ export default function Step6Review({ onBack }) {
             <ReviewItem label="Refi Purpose" value={mapLabel('refiPurpose', data.refiPurpose)} />
             <ReviewItem label="Estimated Value" value={formatCurrency(data.estimatedValue)} />
             <ReviewItem label="Current Balance" value={formatCurrency(data.currentBalance)} />
-            {data.refiPurpose === 'cash_out' && (
+            {data.refiPurpose === 'cashout' && (
               <ReviewItem label="Cash-Out Amount" value={formatCurrency(data.cashOutAmount)} />
             )}
           </>

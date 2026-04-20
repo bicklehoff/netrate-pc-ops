@@ -22,13 +22,32 @@
  *     and form-level 'second_home' migrated to the canonical code
  */
 
-// Loan purpose — scenarios.loan_purpose enum.
-// Lead detail page extends this with heloc / reverse entries pending a
-// separate UX split (purpose vs loan_type conflation). Tracked as open item.
+// Loan purpose — 3-level URLA hierarchy (see vocab audit 2026-04-20).
+//
+// LOAN_PURPOSES — top-level, used for pricing scenarios (flat 3-value enum)
+// and loans.purpose (flat 2-value enum, cashout bucket empty at level 1).
+// Scenarios keep cashout as a top-level value for LLPA-grid lookup.
 export const LOAN_PURPOSES = [
   { value: 'purchase',  label: 'Purchase' },
   { value: 'refinance', label: 'Rate/Term Refi' },
   { value: 'cashout',   label: 'Cash-Out Refi' },
+];
+
+// REFI_PURPOSES — URLA level 2. Only populated when loans.purpose='refinance'.
+// 'limited' is a small cashout refi that doesn't trip cashout LLPAs.
+// 'streamline' pairs with loan_type='fha' (FHA Streamline) or 'va' (IRRRL).
+export const REFI_PURPOSES = [
+  { value: 'rate_term',  label: 'Rate/Term' },
+  { value: 'limited',    label: 'Limited Cash-Out' },
+  { value: 'cashout',    label: 'Cash-Out' },
+  { value: 'streamline', label: 'Streamline' },
+];
+
+// CASHOUT_REASONS — URLA level 3. Only populated when refi_purpose='cashout'.
+export const CASHOUT_REASONS = [
+  { value: 'debt_consolidation', label: 'Debt Consolidation' },
+  { value: 'home_improvement',   label: 'Home Improvement' },
+  { value: 'other',              label: 'Other' },
 ];
 
 // Property type — loans.property_type + scenarios.property_type.
