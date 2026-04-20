@@ -10,6 +10,8 @@
  * FINAL PRICE = 100 → PAR → no cost, no credit
  */
 
+import { FHA_UFMIP_RATE } from '@/lib/constants/fha';
+
 // ─── Step 1: Get base price from rate_prices ────────────────────────
 
 /**
@@ -369,9 +371,9 @@ export function priceRate(rateEntry, product, scenario, lenderAdj, brokerConfig,
   const isConventional = loanType === 'conventional';
   const isFha = loanType === 'fha';
 
-  // FHA: UFMIP (1.75%) is financed into the loan
-  // FHA: UFMIP rate from lender config (default 1.75% if not set)
-  const ufmipRate = brokerConfig?.fhaUfmip || 0.0175;
+  // FHA: UFMIP is financed into the loan. Rate from lender config if set,
+  // otherwise the HUD regulatory baseline from constants/fha.js.
+  const ufmipRate = brokerConfig?.fhaUfmip || FHA_UFMIP_RATE;
   const ufmip = isFha ? Math.round(loanAmount * ufmipRate) : 0;
   const effectiveLoanAmount = loanAmount + ufmip;
 

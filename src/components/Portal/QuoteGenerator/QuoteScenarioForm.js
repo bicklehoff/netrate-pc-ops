@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useCallback, useEffect } from 'react';
 import { getCountiesByState, classifyLoan, getLoanLimits } from '@/data/county-loan-limits';
+import { FHA_UFMIP_RATE } from '@/lib/constants/fha';
 
 const STATES = ['CA', 'CO', 'OR', 'TX'];
 const LOAN_TYPES = [
@@ -390,8 +391,8 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
           </div>
           {scenario.loan_type === 'fha' && effectiveLoan > 0 && (
             <div>
-              <span className="text-amber-400 text-xs">+ UFMIP (1.75%)</span>
-              <div className="font-mono font-bold text-amber-300">${fmt(effectiveLoan + Math.round(effectiveLoan * 0.0175))}</div>
+              <span className="text-amber-400 text-xs">+ UFMIP ({(FHA_UFMIP_RATE * 100).toFixed(2)}%)</span>
+              <div className="font-mono font-bold text-amber-300">${fmt(effectiveLoan + Math.round(effectiveLoan * FHA_UFMIP_RATE))}</div>
             </div>
           )}
           <div>
