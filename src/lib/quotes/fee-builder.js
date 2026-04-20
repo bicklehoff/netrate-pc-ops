@@ -16,6 +16,7 @@
 
 import sql from '@/lib/db';
 import { calculateEscrowSections } from './escrow-calc';
+import { FHA_UFMIP_RATE } from '@/lib/constants/fha';
 
 // 10-minute cache for fee templates (they rarely change)
 let templateCache = { data: new Map(), fetchedAt: 0 };
@@ -87,8 +88,6 @@ function getFhaMipRate(term, ltv, baseLoanAmount) {
   }
   return (ltv <= 95 ? 0.0050 : 0.0055) + extra;
 }
-
-const FHA_UFMIP_RATE = 0.0175; // 1.75%
 
 /**
  * Build fee breakdown for a quote.
