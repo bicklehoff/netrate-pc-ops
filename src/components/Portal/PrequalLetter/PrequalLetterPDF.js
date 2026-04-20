@@ -1,6 +1,8 @@
 // PrequalLetterPDF.js — @react-pdf/renderer component for Pre-Qualification Letters
-// Single-page professional PDF with NetRate Mortgage branding (2026 retheme).
-// Uses react-pdf primitives (Document, Page, View, Text, Svg, Line, Rect) — NO HTML/CSS.
+// Single-page professional PDF in the NetRate design system.
+// Uses react-pdf primitives (Document, Page, View, Text, Svg, Rect) — NO HTML/CSS.
+//
+// Hex values mirror Work/Dev/DESIGN-SYSTEM.md — when tokens change, update both.
 
 import {
   Document,
@@ -8,19 +10,18 @@ import {
   View,
   Text,
   Svg,
-  Line,
   Rect,
   StyleSheet,
 } from '@react-pdf/renderer';
 
-// ---------- Brand Colors (2026 retheme) ----------
+// ---------- Brand colors — mirror of Work/Dev/DESIGN-SYSTEM.md ----------
 
-const BRAND = '#024c4f';
-
-const BRAND_LIGHT = '#e6f0f0';
-const YELLOW = '#fff000';
-const DEEP = '#012d30';
-const GREEN = '#059669';
+const BRAND = '#2E6BA8';       // brand.DEFAULT
+const BRAND_DARK = '#24578C';  // brand.dark — footer trust bar
+const BRAND_LIGHT = '#E6EEF7'; // brand.light — decorative brand fills
+const YELLOW = '#FFC220';      // accent.DEFAULT — yellow stripe + logo-mark slashes
+const GREEN = '#059669';       // go.DEFAULT — success/check accents
+// Tailwind stock grays retained for neutral scale — no design-system tokens yet.
 const GRAY_100 = '#f3f4f6';
 const GRAY_200 = '#e5e7eb';
 const GRAY_300 = '#d1d5db';
@@ -30,24 +31,17 @@ const GRAY_700 = '#374151';
 const GRAY_800 = '#1f2937';
 const GRAY_900 = '#111827';
 
-// ---------- Logo Mark (D-variation: yellow slashes on teal rounded square) ----------
+// ---------- Logo Mark — mirrors the canonical equal-parallel-slashes mark in src/app/layout.js.
+// Four vertical bars on a white rounded square. Three yellow, one brand-blue (the tall middle).
 
 function LogoMark({ size = 36 }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 44 44">
-      <Rect x="0" y="0" width="44" height="44" rx="14" ry="14" fill={BRAND} />
-      <Line
-        x1="10" y1="33" x2="19" y2="11"
-        stroke={YELLOW}
-        strokeWidth="4.5"
-        strokeLinecap="round"
-      />
-      <Line
-        x1="25" y1="33" x2="34" y2="11"
-        stroke={YELLOW}
-        strokeWidth="4.5"
-        strokeLinecap="round"
-      />
+      <Rect x="0" y="0" width="44" height="44" rx="8" ry="8" fill="#FFFFFF" stroke="rgba(26,31,46,0.12)" />
+      <Rect x="9"  y="24" width="5" height="11" rx="1" ry="1" fill={YELLOW} />
+      <Rect x="17" y="21" width="5" height="14" rx="1" ry="1" fill={YELLOW} />
+      <Rect x="25" y="12" width="5" height="23" rx="1" ry="1" fill={BRAND} />
+      <Rect x="33" y="26" width="5" height="9"  rx="1" ry="1" fill={YELLOW} />
     </Svg>
   );
 }
@@ -274,7 +268,7 @@ const s = StyleSheet.create({
     bottom: 24,
     left: 48,
     right: 48,
-    backgroundColor: DEEP,
+    backgroundColor: BRAND_DARK,
     borderRadius: 4,
     paddingVertical: 5,
     paddingHorizontal: 10,
