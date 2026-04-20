@@ -78,11 +78,11 @@ function mapPropertyType(subPropType) {
   if (!subPropType) return null;
   const lower = subPropType.toLowerCase();
   if (lower.includes('condo')) return 'condo';
-  if (lower.includes('townhouse') || lower.includes('town')) return 'townhouse';
+  if (lower.includes('townhouse') || lower.includes('town')) return 'townhome';
   if (lower.includes('multi') || lower.includes('2-4') || lower.includes('duplex') || lower.includes('triplex')) return 'multi_unit';
   if (lower.includes('manufactured') || lower.includes('mobile')) return 'manufactured';
   if (lower.includes('pud')) return 'pud';
-  return 'single_family';
+  return 'sfr';
 }
 
 // ─── Loan Type Mapping ──────────────────────────────────────────────

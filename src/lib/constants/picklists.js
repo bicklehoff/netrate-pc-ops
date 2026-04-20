@@ -14,8 +14,10 @@
  *   - loan_purpose 'cashout' wins over 'cash_out' (0 rows persist either
  *     today; code convention wins; QuoteScenarioForm + QuoteWizard already
  *     write 'cashout')
- *   - property_type 'single_family' canonical; legacy 'sfr' (2 loans) +
- *     'SFH-Detached' (11) + 'sitebuilt' (6) left as-is pending cleanup
+ *   - property_type canonical is pricing-native ('sfr'/'condo'/'townhome'/
+ *     'pud'/'multi_unit'/'manufactured') — see audit doc for the
+ *     unification story. Migration 015 normalized loans.property_type
+ *     to this vocab.
  *   - occupancy 'secondary' canonical; legacy 'primary_residence' (1)
  *     and form-level 'second_home' migrated to the canonical code
  */
@@ -30,16 +32,16 @@ export const LOAN_PURPOSES = [
 ];
 
 // Property type — loans.property_type + scenarios.property_type.
-// Canonical set; legacy rows in loans (SFH-Detached, sitebuilt, sfr, Condo)
-// are mapped via src/lib/picklists/aliases.js if a UI needs to render
-// back-compat labels; not included here.
+// Canonical: pricing-native. Rate sheet parsers emit this vocab; ZOD
+// application validator enforces it; MISMO + MCR exporters translate
+// from it. Per Work/Dev/audits/SCENARIO-VOCABULARY-AUDIT-2026-04-20.md.
 export const PROPERTY_TYPES = [
-  { value: 'single_family', label: 'Single Family' },
-  { value: 'condo',         label: 'Condo' },
-  { value: 'townhome',      label: 'Townhome' },
-  { value: 'pud',           label: 'PUD' },
-  { value: '2-4unit',       label: '2-4 Unit' },
-  { value: 'manufactured',  label: 'Manufactured' },
+  { value: 'sfr',          label: 'Single Family' },
+  { value: 'condo',        label: 'Condo' },
+  { value: 'townhome',     label: 'Townhome' },
+  { value: 'pud',          label: 'PUD' },
+  { value: 'multi_unit',   label: '2-4 Unit' },
+  { value: 'manufactured', label: 'Manufactured' },
 ];
 
 // Occupancy — loans.occupancy + scenarios.occupancy.

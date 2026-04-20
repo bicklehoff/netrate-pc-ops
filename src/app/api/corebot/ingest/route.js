@@ -68,6 +68,20 @@ function normalizeStatus(ldoxStatus) {
   return STATUS_MAP[ldoxStatus] || 'draft';
 }
 
+// Normalize LDOX free-text property_type to canonical pricing-native vocab.
+// Matches mismo-parser.js mapPropertyType + applies same rules.
+function normalizePropertyType(raw) {
+  if (!raw) return null;
+  const upper = String(raw).toUpperCase();
+  if (upper.includes('SINGLE') || upper.includes('SFR') || upper.includes('DETACHED')) return 'sfr';
+  if (upper.includes('CONDO')) return 'condo';
+  if (upper.includes('TOWN')) return 'townhome';
+  if (upper.includes('MULTI') || upper.includes('2UNIT') || upper.includes('3UNIT') || upper.includes('4UNIT') || upper.includes('2-4')) return 'multi_unit';
+  if (upper.includes('MANUFACTURED') || upper.includes('MOBILE')) return 'manufactured';
+  if (upper.includes('PUD')) return 'pud';
+  return null; // unrecognized → null, don't write mystery values
+}
+
 function parseDate(val) {
   if (!val || val === '') return null;
   const d = new Date(val);
@@ -196,7 +210,9 @@ async function processLoan(loanData) {
   const purchasePrice = loanData.purchasePrice ? parseFloat(loanData.purchasePrice) : null;
   const estimatedValue = loanData.appraisalValue ? parseFloat(loanData.appraisalValue) : null;
   const numUnits = loanData.units ? parseInt(loanData.units, 10) : null;
-  const propertyType = loanData.propertyType?.name || null;
+  // LDOX property_type.name arrives as free-text ("SFH-Detached", "Single
+  // Family", etc.). Normalize to our canonical pricing-native vocab.
+  const propertyType = normalizePropertyType(loanData.propertyType?.name);
   const propertyAddress = normalizeAddress(loanData.subjectPropertyAddress);
   const currentAddress = normalizeAddress(borrowerData?.currentAddress);
   const creditScore = loanData.creditScore ? parseInt(loanData.creditScore, 10) : null;

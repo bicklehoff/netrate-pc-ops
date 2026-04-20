@@ -12,6 +12,7 @@ import {
   LEAD_SOURCES,
   APPLICATION_CHANNELS,
 } from '@/lib/constants/mcr-fields';
+import { PROPERTY_TYPES as PROPERTY_TYPE_OPTIONS } from '@/lib/constants/picklists';
 
 // Convert label maps to option arrays
 const actionTakenOptions = Object.entries(ACTION_TAKEN_LABELS).map(([v, l]) => ({ value: v, label: l }));
@@ -41,16 +42,6 @@ const OCCUPANCY_OPTIONS = [
   { value: 'primary', label: 'Primary Residence' },
   { value: 'secondary', label: 'Second Home' },
   { value: 'investment', label: 'Investment Property' },
-];
-
-const PROPERTY_TYPE_OPTIONS = [
-  { value: 'SFH-Detached', label: 'SFH-Detached' },
-  { value: 'SFH-Attached', label: 'SFH-Attached' },
-  { value: 'Condo', label: 'Condo' },
-  { value: 'Townhome', label: 'Townhome' },
-  { value: 'Multi-Family', label: 'Multi-Family (2-4)' },
-  { value: 'Manufactured', label: 'Manufactured' },
-  { value: 'PUD', label: 'PUD' },
 ];
 
 function formatAddress(addr) {

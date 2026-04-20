@@ -59,8 +59,8 @@ function mismoOccupancy(occ) {
 
 function mismoPropertyType(type) {
   const map = {
-    single_family: 'Detached', condo: 'Condominium', townhouse: 'Attached',
-    multi_unit: 'Detached', manufactured: 'ManufacturedHousing',
+    sfr: 'Detached', condo: 'Condominium', townhome: 'Attached',
+    pud: 'Detached', multi_unit: 'Detached', manufactured: 'ManufacturedHousing',
   };
   return map[type] || 'Detached';
 }

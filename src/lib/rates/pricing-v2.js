@@ -514,7 +514,7 @@ export function priceRate(rateEntry, product, scenario, lenderAdj, brokerConfig,
         const pg = pf.productGroup;
         if (pg === 'condo' && scenarioPropertyType !== 'condo') continue;
         if (pg === 'manufactured' && scenarioPropertyType !== 'manufactured') continue;
-        if (pg === '2to4unit' && scenarioPropertyType !== '2-4unit' && scenarioPropertyType !== '2to4unit') continue;
+        if (pg === '2to4unit' && scenarioPropertyType !== 'multi_unit' && scenarioPropertyType !== '2to4unit') continue;
         if (pg === 'investment' && scenarioOccupancy !== 'investment') continue;
         if (pg === 'secondHome' && scenarioOccupancy !== 'secondHome') continue;
         if (pg === 'arm' && !isArm) continue;
