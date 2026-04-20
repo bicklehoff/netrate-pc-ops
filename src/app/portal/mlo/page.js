@@ -14,9 +14,6 @@ import XmlImportModal from '@/components/Portal/XmlImportModal';
 import {
   ALL_STATUSES,
   STATUS_LABELS,
-  ACTIVE_STATUSES,
-  SETTLED_STATUSES,
-  CANCELLED_STATUSES,
   TIER1_FILTERS,
 } from '@/lib/constants/loan-statuses';
 
