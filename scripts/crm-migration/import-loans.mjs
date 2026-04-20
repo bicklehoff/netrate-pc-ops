@@ -307,7 +307,8 @@ async function run() {
       occupancy,
       propertyType,
       loanType,
-      loanTerm: parseInt(row['Amortization Term']) || null,
+      // Zoho 'Amortization Term' is in months; loans.loan_term is years (migration 017).
+      loanTerm: (() => { const m = parseInt(row['Amortization Term']); return Number.isNaN(m) ? null : Math.round(m / 12); })(),
       numUnits: parseInt(row['Number of Units']) || null,
       creditScore: parseInt(row['Loan Fico']) || null,
       numBorrowers: parseInt(row['Borrower Count']) || 1,

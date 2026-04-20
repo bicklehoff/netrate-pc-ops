@@ -277,7 +277,7 @@ export default function XmlImportModal({ open, onClose }) {
                   <Field label="Loan Type" value={preview.loan.loan_type} />
                   <Field label="Amount" value={preview.loan.loan_amount ? `$${Number(preview.loan.loan_amount).toLocaleString()}` : null} />
                   <Field label="Rate" value={preview.loan.interest_rate ? `${preview.loan.interest_rate}%` : null} />
-                  <Field label="Term" value={preview.loan.loan_term ? `${preview.loan.loan_term} months` : null} />
+                  <Field label="Term" value={preview.loan.loan_term ? `${preview.loan.loan_term} years` : null} />
                   <Field label="Occupancy" value={preview.loan.occupancy} />
                   <Field label="Property Type" value={preview.loan.property_type} />
                   <Field label="Purchase Price" value={preview.loan.purchase_price ? `$${Number(preview.loan.purchase_price).toLocaleString()}` : null} />

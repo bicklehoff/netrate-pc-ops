@@ -335,10 +335,12 @@ const LOAN_TYPE_DISPLAY = {
   usda: 'USDA Rural',
 };
 
+// Keyed on years (loans.loan_term is years per migration 017).
 const LOAN_TERM_DISPLAY = {
-  360: '30 Year Fixed',
-  240: '20 Year Fixed',
-  180: '15 Year Fixed',
+  30: '30 Year Fixed',
+  25: '25 Year Fixed',
+  20: '20 Year Fixed',
+  15: '15 Year Fixed',
 };
 
 // ---------- Component ----------
@@ -469,7 +471,7 @@ export default function PrequalLetterPDF({ data }) {
             <View style={s.detailRow}>
               <Text style={s.detailLabel}>Loan Term</Text>
               <Text style={s.detailValue}>
-                {LOAN_TERM_DISPLAY[loan_term] || `${loan_term} months`}
+                {LOAN_TERM_DISPLAY[loan_term] || `${loan_term} years`}
               </Text>
             </View>
             <View style={s.detailRow}>

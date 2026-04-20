@@ -99,7 +99,7 @@ export default function PrequalLetterModal({ loan, session, onClose }) {
         loan_amount: loan.loan_amount || '',
         ltv: computeLTV(loan.loan_amount, loan.purchase_price),
         loan_type: loan.loan_type || '',
-        loan_term: loan.loan_term || 360,
+        loan_term: loan.loan_term || 30,
         interest_rate: loan.interest_rate || '',
         reference_number: loan.loan_number || loan.id?.slice(0, 8) || '',
         mlo_name: loan.mlo?.first_name

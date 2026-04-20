@@ -202,7 +202,10 @@ async function processLoan(loanData) {
   // ── 3. Build loan field values ────────────────────────────
   const loanAmount = loanData.loanAmount ? parseFloat(loanData.loanAmount) : null;
   const interestRate = loanData.noteRate ? parseFloat(loanData.noteRate) : null;
-  const loanTerm = loanData.term ? parseInt(loanData.term, 10) : null;
+  // LDox loanData.term arrives in MONTHS; our loans.loan_term is YEARS
+  // (migration 017). Translate at this ingest boundary.
+  const loanTermMonths = loanData.term ? parseInt(loanData.term, 10) : null;
+  const loanTerm = loanTermMonths != null ? Math.round(loanTermMonths / 12) : null;
   const purpose = loanData.purpose?.name?.toLowerCase() || null;
   const occupancy = loanData.occupancy?.name?.toLowerCase() || null;
   const loanType = loanData.loanType?.name?.toLowerCase() || null;
