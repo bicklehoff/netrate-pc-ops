@@ -8,7 +8,12 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import SectionCard from '@/components/Portal/Core/SectionCard';
+import { STATUS_COLORS_SOFT as LOAN_STATUS_COLORS } from '@/lib/constants/loan-statuses';
 
+// Contact status palette (contacts.status values: past_client, subscriber,
+// lead, applicant, in_process, funded, partner, archived). Separate from
+// loan status — contacts and loans are different entities with different
+// lifecycles.
 const STATUS_COLORS = {
   past_client: 'bg-green-100 text-green-800',
   subscriber: 'bg-gray-100 text-gray-700',
@@ -18,19 +23,6 @@ const STATUS_COLORS = {
   funded: 'bg-go-light text-go-dark',
   partner: 'bg-accent/15 text-ink',
   archived: 'bg-red-100 text-red-700',
-};
-
-const LOAN_STATUS_COLORS = {
-  draft: 'bg-gray-100 text-gray-700',
-  applied: 'bg-blue-100 text-blue-800',
-  processing: 'bg-yellow-100 text-yellow-800',
-  submitted_uw: 'bg-purple-100 text-purple-800',
-  cond_approved: 'bg-orange-100 text-orange-800',
-  ctc: 'bg-green-100 text-green-800',
-  docs_out: 'bg-teal-100 text-teal-800',
-  funded: 'bg-green-200 text-green-900',
-  denied: 'bg-red-100 text-red-800',
-  archived: 'bg-gray-100 text-gray-600',
 };
 
 function timeAgo(date) {

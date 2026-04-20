@@ -1,20 +1,20 @@
-// Loan status picklist — canonical set for the MLO portal pipeline.
+// Loan status — canonical picklist, labels, colors for loans.status.
 //
-// Extracted from src/app/portal/mlo/page.js + PipelineTable.js (which
-// agreed on values).
+// Pre-submission loans use key 'draft' as of migration 013 (2026-04-20)
+// which unified the legacy 'prospect' value (LDOX-derived) with 'draft'
+// (portal-written). User-facing label for 'draft' stays "Prospect"
+// because that's how MLOs talk about this stage in the pipeline.
 //
-// Consumers: MLO dashboard status filters, PipelineTable column rendering,
-// status dropdowns in bulk actions.
+// Two color palettes exported:
+//   STATUS_COLORS       — bold (bg-*-500 text-white). Pipeline badges.
+//   STATUS_COLORS_SOFT  — light (bg-*-100 text-*-800). Loan-detail top bar,
+//                         contact-detail loan list, any compact inline pill.
 //
-// NOT YET CONSOLIDATED: StatusHeader.js + NotesActivitySection.js maintain
-// their own inline STATUS_LABELS using the legacy key 'draft' (= 'Prospect').
-// The codebase writes both 'draft' (leads/convert, quotes, create-inbound) and
-// 'prospect' (corebot/ingest) to the loans.status column. Consolidating these
-// callers into this module is blocked on a DB audit + migration to pick one
-// canonical value. Tracked as D7 audit findings LD-4 / LD-5 + D8 Pass 6 MLO-5.
+// Consumers: PipelineTable, MLO dashboard, StatusHeader, NotesActivity-
+// Section, contacts/[id]/page, any new surface rendering loan status.
 
 export const ALL_STATUSES = [
-  'prospect',
+  'draft',
   'applied',
   'processing',
   'submitted_uw',
@@ -30,7 +30,7 @@ export const ALL_STATUSES = [
 ];
 
 export const STATUS_LABELS = {
-  prospect: 'Prospect',
+  draft: 'Prospect',
   applied: 'Applied',
   processing: 'Processing',
   submitted_uw: 'In UW',
@@ -45,11 +45,9 @@ export const STATUS_LABELS = {
   archived: 'Archived',
 };
 
-// Unified color palette — matches PipelineTable.js which had the richer set.
-// StatusHeader.js has its own lighter palette (bg-*-100 text-*-700) which
-// diverges from this; consolidation pending DB audit on 'draft' vs 'prospect'.
+// Bold palette for pipeline badges.
 export const STATUS_COLORS = {
-  prospect: 'bg-slate-200 text-slate-800',
+  draft: 'bg-slate-200 text-slate-800',
   applied: 'bg-blue-500 text-white',
   processing: 'bg-amber-500 text-white',
   submitted_uw: 'bg-purple-500 text-white',
@@ -64,9 +62,28 @@ export const STATUS_COLORS = {
   archived: 'bg-gray-400 text-white',
 };
 
+// Light palette for compact inline badges (loan-detail top bar,
+// contact-detail loan list). Harmonized from StatusHeader.js +
+// contacts/[id]/page.js local maps that diverged in PR #113.
+export const STATUS_COLORS_SOFT = {
+  draft: 'bg-gray-100 text-gray-700',
+  applied: 'bg-blue-100 text-blue-800',
+  processing: 'bg-yellow-100 text-yellow-800',
+  submitted_uw: 'bg-purple-100 text-purple-800',
+  cond_approved: 'bg-orange-100 text-orange-800',
+  suspended: 'bg-red-50 text-red-700',
+  ctc: 'bg-green-100 text-green-800',
+  docs_out: 'bg-teal-100 text-teal-800',
+  funded: 'bg-green-200 text-green-900',
+  settled: 'bg-green-100 text-green-800',
+  withdrawn: 'bg-gray-200 text-gray-500',
+  denied: 'bg-red-100 text-red-800',
+  archived: 'bg-gray-200 text-gray-500',
+};
+
 // Grouped status sets for pipeline filtering.
 export const ACTIVE_STATUSES = [
-  'prospect',
+  'draft',
   'applied',
   'processing',
   'submitted_uw',

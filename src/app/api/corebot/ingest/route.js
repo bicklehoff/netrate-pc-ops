@@ -15,10 +15,12 @@ import { enrichPropertyAddress } from '@/lib/geocode';
 // ─── Status Mapping: LDox → Core ────────────────────────────
 // Core statuses were modeled after LDox lifecycle.
 
+// LDOX "Prospect" / "Web Application" / "Prequalification" all map to
+// the unified pre-submission key 'draft' (migration 013, 2026-04-20).
 const STATUS_MAP = {
-  'Prospect':              'prospect',
-  'Web Application':       'prospect',
-  'Prequalification':      'prospect',
+  'Prospect':              'draft',
+  'Web Application':       'draft',
+  'Prequalification':      'draft',
   'Application':           'applied',
   'Processing':            'processing',
   'Submitted':             'submitted_uw',
@@ -45,7 +47,7 @@ const STATUS_MAP = {
 
 // Ball-in-court derived from status
 const BALL_IN_COURT = {
-  prospect: 'borrower',
+  draft: 'borrower',
   applied: 'mlo',
   processing: 'mlo',
   submitted_uw: 'lender',
@@ -62,8 +64,8 @@ const BALL_IN_COURT = {
 // ─── Helpers ─────────────────────────────────────────────────
 
 function normalizeStatus(ldoxStatus) {
-  if (!ldoxStatus) return 'prospect';
-  return STATUS_MAP[ldoxStatus] || 'prospect';
+  if (!ldoxStatus) return 'draft';
+  return STATUS_MAP[ldoxStatus] || 'draft';
 }
 
 function parseDate(val) {
@@ -269,8 +271,8 @@ async function processLoan(loanData) {
   } else {
     // Create new
     isNew = true;
-    const applicationStep = coreStatus === 'prospect' ? 1 : 6;
-    const submittedAt = coreStatus !== 'prospect' ? new Date() : null;
+    const applicationStep = coreStatus === 'draft' ? 1 : 6;
+    const submittedAt = coreStatus !== 'draft' ? new Date() : null;
     const rows = await sql`
       INSERT INTO loans (
         contact_id, mlo_id, status, ball_in_court, ldox_loan_id, loan_number,
