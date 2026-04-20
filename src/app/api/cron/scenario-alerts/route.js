@@ -86,10 +86,30 @@ export async function GET(request) {
         };
 
         const result = await priceScenario(pricingInput);
-        const topRates = (result.results || [])
-          .sort((a, b) => a.rate - b.rate)
-          .slice(0, 3)
-          .map(r => ({
+
+        // Par-anchored ladder — same rule as my-rates/reprice. Row 0 is the
+        // par rate (borrower's actual today's rate). Rows 1-2 are the next
+        // two at-or-above-par by rate. Change-detection anchors on par so
+        // alerts fire on real rate movement, not on discount-heavy rows
+        // shifting between lenders.
+        const allResults = result.results || [];
+        const parRow = result.parRow || null;
+        const aboveParOrdered = allResults
+          .filter((r) => r.finalPrice >= 100 && r !== parRow)
+          .sort((a, b) => a.rate - b.rate);
+        const fallbackOrdered = allResults
+          .filter((r) => r !== parRow)
+          .sort((a, b) => a.rate - b.rate);
+        const sourceLadder = parRow
+          ? [parRow, ...aboveParOrdered, ...fallbackOrdered]
+          : fallbackOrdered;
+        const seen = new Set();
+        const topRates = [];
+        for (const r of sourceLadder) {
+          const key = `${r.rate}:${r.finalPrice}:${r.lender}:${r.program}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          topRates.push({
             rate: r.rate,
             apr: r.apr,
             monthlyPI: r.monthlyPI,
@@ -98,14 +118,20 @@ export async function GET(request) {
             rebateDollars: r.rebateDollars,
             discountDollars: r.discountDollars,
             lenderFee: r.lenderFee,
-          }));
+            isPar: r === parRow,
+          });
+          if (topRates.length >= 3) break;
+        }
 
         if (!topRates.length) {
           skipped++;
           continue;
         }
 
-        // Compute rate change from last pricing
+        // Compute rate change from last pricing — anchored on par rate
+        // (topRates[0] is now par by construction above). Stable anchor
+        // means alerts fire on actual rate moves, not on the cheapest-
+        // discount-row jitter we had before.
         const prevRates = scenario.last_pricing_data;
         const bestRate = topRates[0]?.rate || null;
         const bestRatePrev = Array.isArray(prevRates) && prevRates[0]?.rate
