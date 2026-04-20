@@ -3,39 +3,28 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { usePicklists } from '@/lib/picklists/client';
 
-const PURPOSES = [
-  { value: 'purchase', label: 'Purchase' },
-  { value: 'refinance', label: 'Refinance' },
-  { value: 'cashout', label: 'Cash-Out Refi' },
+// Leads-form-specific extras for the "purpose" dropdown. heloc and reverse
+// are not URLA loan_purpose codes — they're loan types. The leads form
+// conflates purpose with product intent pending a UX split into two
+// dropdowns (tracked as open item: "leads-form-purpose-split").
+const LEADS_EXTRA_PURPOSES = [
   { value: 'heloc', label: 'HELOC / 2nd' },
   { value: 'reverse', label: 'Reverse' },
-];
-
-const PROPERTY_TYPES = [
-  { value: 'sfr', label: 'Single Family' },
-  { value: 'condo', label: 'Condo' },
-  { value: 'townhome', label: 'Townhome' },
-  { value: '2-4unit', label: '2-4 Unit' },
-  { value: 'manufactured', label: 'Manufactured' },
-];
-
-const OCCUPANCY = [
-  { value: 'primary', label: 'Primary Residence' },
-  { value: 'second_home', label: 'Second Home' },
-  { value: 'investment', label: 'Investment' },
-];
-
-const STATES = [
-  { value: 'CO', label: 'Colorado' },
-  { value: 'CA', label: 'California' },
-  { value: 'TX', label: 'Texas' },
-  { value: 'OR', label: 'Oregon' },
 ];
 
 export default function LeadDetailPage() {
   const { id } = useParams();
   const router = useRouter();
+  const picklists = usePicklists({ scope: 'licensed' });
+  const PURPOSES = useMemo(
+    () => [...picklists.purposes, ...LEADS_EXTRA_PURPOSES],
+    [picklists.purposes]
+  );
+  const PROPERTY_TYPES = picklists.property_types;
+  const OCCUPANCY = picklists.occupancy;
+  const STATES = picklists.states;
   const [lead, setLead] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

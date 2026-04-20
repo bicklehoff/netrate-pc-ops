@@ -3,110 +3,22 @@
 import { useMemo, useState, useCallback, useEffect } from 'react';
 import { getCountiesByState, classifyLoan, getLoanLimits } from '@/data/county-loan-limits';
 import { FHA_UFMIP_RATE } from '@/lib/constants/fha';
+import { usePicklists } from '@/lib/picklists/client';
+import { getDefaultClosingDate, deriveFromClosing } from '@/lib/dates/quote-defaults';
 
-const STATES = ['CA', 'CO', 'OR', 'TX'];
-const LOAN_TYPES = [
-  { value: 'conventional', label: 'Conventional' },
-  { value: 'fha', label: 'FHA' },
-  { value: 'va', label: 'VA' },
-  { value: 'dscr', label: 'DSCR' },
-  { value: 'bankstatement', label: 'Bank Statement' },
-];
-const PURPOSES = [
-  { value: 'purchase', label: 'Purchase' },
-  { value: 'refinance', label: 'Rate/Term Refi' },
-  { value: 'cashout', label: 'Cash-Out Refi' },
-];
-const TERMS = [30, 25, 20, 15];
-const LOCK_DAYS = [15, 30, 45, 60];
-
-// Format number with commas (e.g., 400000 → "400,000")
 function fmt(n) {
   if (n == null || n === '') return '';
   return Number(n).toLocaleString('en-US', { maximumFractionDigits: 0 });
 }
 
-// Parse formatted number back (e.g., "400,000" → 400000)
 function unfmt(s) {
   if (!s) return '';
   return s.replace(/,/g, '');
 }
 
-// Add N business days (skip weekends)
-function addBusinessDays(dateStr, days) {
-  const d = new Date(dateStr + 'T12:00:00');
-  let added = 0;
-  while (added < days) {
-    d.setDate(d.getDate() + 1);
-    const dow = d.getDay();
-    if (dow !== 0 && dow !== 6) added++;
-  }
-  return d.toISOString().split('T')[0];
-}
-
-/**
- * Default closing date: 4 business days before the last business day of the current month.
- */
-// Format Date as YYYY-MM-DD in local time (avoids toISOString UTC shift)
-function fmtDate(d) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${dd}`;
-}
-
-/**
- * Default closing date: 4 business days BEFORE the last business day of the month.
- * Example: if last biz day is Fri May 29 → walk back 4 biz days → Mon May 25 is last,
- *          then Fri 22, Thu 21, Wed 20 → closing = Wed May 20.
- * Wait — re-reading: "4 business days before the last business day."
- * If last biz day is Fri 29th: Thu 28, Wed 27, Tue 26, Mon 25 → closing = Mon 25th.
- */
-function getDefaultClosingDate() {
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-  // Try current month, then next month
-  for (let offset = 0; offset <= 1; offset++) {
-    const y = now.getFullYear();
-    const m = now.getMonth() + offset;
-    // Last calendar day of target month
-    const lastDay = new Date(y, m + 1, 0);
-    // Find last business day (walk backward past weekends)
-    while (lastDay.getDay() === 0 || lastDay.getDay() === 6) {
-      lastDay.setDate(lastDay.getDate() - 1);
-    }
-    // Walk back 4 business days from that last business day
-    const closing = new Date(lastDay);
-    let count = 0;
-    while (count < 4) {
-      closing.setDate(closing.getDate() - 1);
-      if (closing.getDay() !== 0 && closing.getDay() !== 6) count++;
-    }
-    // Use this if it's today or in the future
-    if (closing >= today) return fmtDate(closing);
-  }
-  // Fallback — next month (shouldn't reach here)
-  return fmtDate(new Date(now.getFullYear(), now.getMonth() + 1, 15));
-}
-
-/**
- * From a closing date, derive funding date and first payment date.
- * CO + TX purchase: same day. CA + OR purchase: +3 biz days. All refis: +3 biz days.
- * first_payment_date: 1st of 2nd month after closing (estimate; fee editor refines from funding day).
- */
-function deriveFromClosing(closing, state, purpose) {
-  if (!closing) return {};
-  const isRefi = purpose === 'refinance' || purpose === 'cashout';
-  const needsDelay = isRefi || state === 'CA' || state === 'OR';
-  const fundingDate = needsDelay ? addBusinessDays(closing, 3) : closing;
-  const [y, m] = closing.split('-').map(Number);
-  const fp = new Date(y, m + 1, 1);
-  const firstPaymentDate = `${fp.getFullYear()}-${String(fp.getMonth() + 1).padStart(2, '0')}-01`;
-  return { funding_date: fundingDate, first_payment_date: firstPaymentDate };
-}
-
 export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loading }) {
+  const picklists = usePicklists({ scope: 'licensed' });
+  const { states, loan_types: LOAN_TYPES, purposes: PURPOSES, terms: TERMS, lock_days: LOCK_DAYS } = picklists;
   const update = (field, value) => onChange({ ...scenario, [field]: value });
   const [lastEdited, setLastEdited] = useState('pct');
   // Persist zip from scenario so it survives back-navigation
@@ -137,7 +49,7 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
       if (!place) return;
 
       const st = place['state abbreviation'];
-      if (!st || !STATES.includes(st)) return;
+      if (!st || !states.some(s => s.value === st)) return;
 
       // Use FCC Census Block API with lat/lon to get county name
       const lat = place.latitude;
@@ -169,7 +81,7 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
     } catch { /* ignore lookup failures */ } finally {
       setZipLoading(false);
     }
-  }, [scenario, onChange]);
+  }, [scenario, onChange, states]);
 
   // Purchase: interlinked property value / down payment / loan amount
   const purchaseCalc = useMemo(() => {
@@ -325,7 +237,7 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
             />
             {scenario.county && <div className="text-[10px] text-cyan-600 mt-0.5">{scenario.county} County, {scenario.state}</div>}
           </div>
-          <SelectField label="State" value={scenario.state} options={STATES.map(s => ({ value: s, label: s }))} onChange={v => {
+          <SelectField label="State" value={scenario.state} options={states} onChange={v => {
             onChange({ ...scenario, state: v, county: '', ...deriveFromClosing(scenario.closing_date, v, scenario.purpose) });
           }} />
           <div>

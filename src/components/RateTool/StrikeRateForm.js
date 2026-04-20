@@ -11,9 +11,17 @@
  * Source prop tracks where the signup originated for analytics.
  */
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { usePicklists } from '@/lib/picklists/client';
 
-const LOAN_TYPES = [
+// Strike-rate-trackable products. Subset of ref_loan_types active codes —
+// excludes HECM / HELOC / bankstatement / other, where "target rate"
+// doesn't map cleanly to a marketable number.
+const STRIKE_TRACKABLE_CODES = new Set([
+  'conventional', 'fha', 'va', 'usda', 'jumbo', 'dscr',
+]);
+
+const FALLBACK_LOAN_TYPES = [
   { value: 'conventional', label: 'Conventional' },
   { value: 'fha', label: 'FHA' },
   { value: 'va', label: 'VA' },
@@ -28,6 +36,12 @@ export default function StrikeRateForm({
   defaultRate = '',
   compact = false,
 }) {
+  const picklists = usePicklists();
+  const loanTypeOptions = useMemo(() => {
+    const fromDb = (picklists.loan_types || []).filter((lt) => STRIKE_TRACKABLE_CODES.has(lt.value));
+    return fromDb.length > 0 ? fromDb : FALLBACK_LOAN_TYPES;
+  }, [picklists.loan_types]);
+
   const [mode, setMode] = useState('strike'); // 'strike' or 'watch'
   const [email, setEmail] = useState('');
   const [loanType, setLoanType] = useState(defaultLoanType);
@@ -154,7 +168,7 @@ export default function StrikeRateForm({
               onChange={(e) => setLoanType(e.target.value)}
               className="flex-1 px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand focus:border-brand outline-none bg-white"
             >
-              {LOAN_TYPES.map(lt => (
+              {loanTypeOptions.map(lt => (
                 <option key={lt.value} value={lt.value}>{lt.label}</option>
               ))}
             </select>
