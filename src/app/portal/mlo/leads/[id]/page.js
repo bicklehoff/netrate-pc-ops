@@ -196,13 +196,13 @@ export default function LeadDetailPage() {
           <button
             onClick={handleRunQuote}
             disabled={quoting}
-            className="px-4 py-2 text-sm font-bold bg-go text-white rounded-lg hover:bg-go-dark transition-colors disabled:opacity-50"
+            className="px-4 py-2 text-sm font-medium bg-white text-brand border border-brand rounded-lg hover:bg-brand-light transition-colors disabled:opacity-50"
           >
             {quoting ? 'Running...' : 'Run Quote'}
           </button>
           <Link
             href={quoteGeneratorUrl}
-            className="px-4 py-2 text-sm font-medium bg-cyan-700 text-white rounded-lg hover:bg-cyan-800 transition-colors"
+            className="px-4 py-2 text-sm font-medium bg-white text-brand border border-brand rounded-lg hover:bg-brand-light transition-colors"
           >
             Generate Quote
           </Link>
@@ -210,7 +210,7 @@ export default function LeadDetailPage() {
             <button
               onClick={handleConvert}
               disabled={converting}
-              className="px-4 py-2 text-sm font-medium bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
+              className="px-4 py-2 text-sm font-bold bg-go text-white rounded-lg hover:bg-go-dark transition-colors disabled:opacity-50"
             >
               {converting ? 'Converting...' : 'Convert to Loan'}
             </button>
@@ -224,9 +224,12 @@ export default function LeadDetailPage() {
           <button
             onClick={() => runContactAction('send_portal_invite')}
             disabled={actionLoading}
-            className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 px-3 py-1.5 rounded-lg text-sm hover:bg-gray-50 transition-colors disabled:opacity-50"
+            className="flex items-center gap-1.5 bg-white border border-gray-200 text-ink-mid px-3 py-1.5 rounded-lg text-sm hover:bg-gray-50 transition-colors disabled:opacity-50"
           >
-            <span>🔗</span> Send Portal Invite
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+            </svg>
+            Send Portal Invite
           </button>
           <button
             onClick={() => {
@@ -241,9 +244,12 @@ export default function LeadDetailPage() {
               runContactAction('send_needs_list', { documents: docs });
             }}
             disabled={actionLoading}
-            className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 px-3 py-1.5 rounded-lg text-sm hover:bg-gray-50 transition-colors disabled:opacity-50"
+            className="flex items-center gap-1.5 bg-white border border-gray-200 text-ink-mid px-3 py-1.5 rounded-lg text-sm hover:bg-gray-50 transition-colors disabled:opacity-50"
           >
-            <span>📋</span> Send Needs List
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+            </svg>
+            Send Needs List
           </button>
           {actionLoading && <span className="text-xs text-gray-400 ml-2">Sending...</span>}
         </div>
@@ -252,7 +258,7 @@ export default function LeadDetailPage() {
       {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">{error}</div>}
       {success && <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-4 text-sm">{success}</div>}
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left: Scenario Inputs */}
         <div className="space-y-4">
           <div className="bg-white border border-gray-200 rounded-xl p-5">
@@ -368,7 +374,7 @@ export default function LeadDetailPage() {
               <h3 className="font-semibold text-gray-900">Quotes</h3>
               <Link
                 href={quoteGeneratorUrl}
-                className="text-xs font-medium bg-cyan-600 text-white px-3 py-1.5 rounded-lg hover:bg-cyan-700 transition-colors"
+                className="text-xs font-medium bg-white text-brand border border-brand px-3 py-1.5 rounded-lg hover:bg-brand-light transition-colors"
               >
                 + New Quote
               </Link>
@@ -385,7 +391,7 @@ export default function LeadDetailPage() {
                   <Link
                     key={q.id}
                     href={`/portal/mlo/quotes/${q.id}`}
-                    className="flex items-center justify-between p-3 border border-gray-100 rounded-lg hover:border-cyan-200 hover:bg-cyan-50/30 transition-colors"
+                    className="flex items-center justify-between p-3 border border-gray-100 rounded-lg hover:border-brand/30 hover:bg-brand-light/30 transition-colors"
                   >
                     <div>
                       <div className="text-sm font-medium text-gray-900">
@@ -450,8 +456,8 @@ export default function LeadDetailPage() {
           transition: border-color 0.15s;
         }
         .input-field:focus {
-          border-color: #0891b2;
-          box-shadow: 0 0 0 2px rgba(8, 145, 178, 0.1);
+          border-color: #2E6BA8;
+          box-shadow: 0 0 0 2px rgba(46, 107, 168, 0.15);
         }
       `}</style>
     </div>
