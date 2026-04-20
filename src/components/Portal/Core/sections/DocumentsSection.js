@@ -7,31 +7,7 @@ import { useState } from 'react';
 import SectionCard from '../SectionCard';
 import DocWorkspace from './DocWorkspace';
 import PayrollSection from '../../PayrollSection';
-
-const DOC_TYPES = [
-  { value: 'pay_stub', label: 'Pay Stub' },
-  { value: 'w2', label: 'W-2' },
-  { value: 'bank_statement', label: 'Bank Statement' },
-  { value: 'tax_return', label: 'Tax Return' },
-  { value: 'id', label: 'Photo ID' },
-  { value: 'other', label: 'Other' },
-];
-
-const DOC_STATUS_COLORS = {
-  requested: 'bg-amber-100 text-amber-800',
-  uploaded: 'bg-blue-100 text-blue-800',
-  reviewed: 'bg-purple-100 text-purple-800',
-  accepted: 'bg-green-100 text-green-800',
-  rejected: 'bg-red-100 text-red-800',
-};
-
-const DOC_STATUS_LABELS = {
-  requested: 'Requested',
-  uploaded: 'Uploaded',
-  reviewed: 'Under Review',
-  accepted: 'Accepted',
-  rejected: 'Rejected',
-};
+import { DOC_TYPES, DOC_STATUS_LABELS, DOC_STATUS_COLORS } from '@/lib/constants/doc-statuses';
 
 export default function DocumentsSection({ loan, onRefresh }) {
   const [docForm, setDocForm] = useState({ open: false, docType: 'pay_stub', label: '', notes: '' });

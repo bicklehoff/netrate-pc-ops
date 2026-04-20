@@ -1,12 +1,17 @@
 // Loan status picklist — canonical set for the MLO portal pipeline.
 //
 // Extracted from src/app/portal/mlo/page.js + PipelineTable.js (which
-// agreed on values). LoanDetailView.js uses a different initial status
-// name ('draft' vs 'prospect') and is NOT yet consolidated here pending
-// a DB audit — see D8 Pass 6 MLO-5 finding.
+// agreed on values).
 //
 // Consumers: MLO dashboard status filters, PipelineTable column rendering,
 // status dropdowns in bulk actions.
+//
+// NOT YET CONSOLIDATED: StatusHeader.js + NotesActivitySection.js maintain
+// their own inline STATUS_LABELS using the legacy key 'draft' (= 'Prospect').
+// The codebase writes both 'draft' (leads/convert, quotes, create-inbound) and
+// 'prospect' (corebot/ingest) to the loans.status column. Consolidating these
+// callers into this module is blocked on a DB audit + migration to pick one
+// canonical value. Tracked as D7 audit findings LD-4 / LD-5 + D8 Pass 6 MLO-5.
 
 export const ALL_STATUSES = [
   'prospect',
@@ -41,9 +46,8 @@ export const STATUS_LABELS = {
 };
 
 // Unified color palette — matches PipelineTable.js which had the richer set.
-// LoanDetailView used a lighter palette (bg-*-100 text-*-700) which diverged
-// from this; consolidating into one canonical palette when LoanDetailView is
-// migrated (pending DB audit on 'draft' vs 'prospect' status name).
+// StatusHeader.js has its own lighter palette (bg-*-100 text-*-700) which
+// diverges from this; consolidation pending DB audit on 'draft' vs 'prospect'.
 export const STATUS_COLORS = {
   prospect: 'bg-slate-200 text-slate-800',
   applied: 'bg-blue-500 text-white',

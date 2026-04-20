@@ -34,7 +34,7 @@ export default function ApplicationSection({ loan }) {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  if (loading) return <div className="flex justify-center py-16"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#005ac0]" /></div>;
+  if (loading) return <div className="flex justify-center py-16"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand" /></div>;
   if (!app) return <p className="text-xs text-gray-400 text-center py-12">No application data available</p>;
 
   const borrowers = app.loanBorrowers || [];
@@ -99,28 +99,28 @@ export default function ApplicationSection({ loan }) {
   return (
     <div className="font-['Inter'] -mx-6 -mt-6">
       {/* ═══ TOP NAV BAR ═══ */}
-      <header className="flex justify-between items-center px-5 h-11 bg-slate-50/90 backdrop-blur-xl border-b border-slate-100">
+      <header className="flex justify-between items-center px-5 h-11 bg-surface-alt/90 backdrop-blur-xl border-b border-ink/10">
         <div className="flex items-center gap-5">
-          <span className="text-sm font-extrabold text-slate-900 font-['Manrope']">CRM Master Worksheet</span>
+          <span className="text-sm font-extrabold text-ink font-sans">CRM Master Worksheet</span>
           <nav className="flex gap-3">
-            <button onClick={handleDownload} className="uppercase tracking-wider text-[10px] font-bold text-[#005ac0] border-b-2 border-[#005ac0] pb-0.5">XML</button>
-            <button onClick={() => handleSnapshot(null)} disabled={exporting} className="uppercase tracking-wider text-[10px] font-bold text-slate-400 hover:text-slate-700 pb-0.5 disabled:opacity-50">
+            <button onClick={handleDownload} className="uppercase tracking-wider text-[10px] font-bold text-brand border-b-2 border-brand pb-0.5">XML</button>
+            <button onClick={() => handleSnapshot(null)} disabled={exporting} className="uppercase tracking-wider text-[10px] font-bold text-ink-subtle hover:text-ink-mid pb-0.5 disabled:opacity-50">
               {exporting ? '...' : 'Export'}
             </button>
-            <button onClick={() => handleSnapshot('LenDox')} disabled={exporting} className="uppercase tracking-wider text-[10px] font-bold text-slate-400 hover:text-slate-700 pb-0.5 disabled:opacity-50">Snapshot</button>
+            <button onClick={() => handleSnapshot('LenDox')} disabled={exporting} className="uppercase tracking-wider text-[10px] font-bold text-ink-subtle hover:text-ink-mid pb-0.5 disabled:opacity-50">Snapshot</button>
           </nav>
         </div>
         <div className="flex items-center gap-4">
           {exportMsg && <span className="text-[9px] text-green-600 bg-green-50 px-2 py-0.5 rounded-full">{exportMsg}</span>}
           <div className="text-right">
-            <span className="text-[9px] font-bold text-[#005ac0] uppercase tracking-widest block">{loan.status?.replace(/_/g, ' ').toUpperCase() || 'DRAFT'}</span>
-            <span className="text-xs font-bold text-slate-900">{primName}{coName}</span>
+            <span className="text-[9px] font-bold text-brand uppercase tracking-widest block">{loan.status?.replace(/_/g, ' ').toUpperCase() || 'DRAFT'}</span>
+            <span className="text-xs font-bold text-ink">{primName}{coName}</span>
           </div>
         </div>
       </header>
 
       {/* ═══ 4-COLUMN GRID ═══ */}
-      <main className="p-3 bg-[#f2f4f5]">
+      <main className="p-3 bg-surface-alt">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
 
           {/* ─── COLUMN 1: Property + Loan Terms + Declarations ─── */}
@@ -136,7 +136,7 @@ export default function ApplicationSection({ loan }) {
                 <div className="grid grid-cols-3 gap-2">
                   <div><DL>Price</DL><DV>{fmt$0(loan.purchase_price)}</DV></div>
                   <div><DL>Appraised</DL><DV>{fmt$0(loan.appraisedValue)}</DV></div>
-                  <div><DL>Down Pmt</DL><DV className="text-[#006a62] font-bold">{loan.down_payment ? fmt$0(loan.down_payment) : '—'}</DV></div>
+                  <div><DL>Down Pmt</DL><DV className="text-go font-bold">{loan.down_payment ? fmt$0(loan.down_payment) : '—'}</DV></div>
                 </div>
               </div>
             </Panel>
@@ -145,22 +145,22 @@ export default function ApplicationSection({ loan }) {
             <Panel icon="payments" title="LOAN TERMS" badge={`ID: ${loan.loan_number || '—'}`}>
               <div className="space-y-2.5">
                 {/* Base Loan Amount */}
-                <div className="bg-[#f2f4f5] rounded p-2 border-l-[3px] border-[#005ac0]">
-                  <DL className="text-[#005ac0]">Base Loan Amount</DL>
-                  <p className="text-lg font-extrabold text-[#191c1d] font-['Manrope']">{fmt$(loan.loan_amount)}</p>
+                <div className="bg-surface-alt rounded p-2 border-l-[3px] border-brand">
+                  <DL className="text-brand">Base Loan Amount</DL>
+                  <p className="text-lg font-extrabold text-ink font-sans">{fmt$(loan.loan_amount)}</p>
                 </div>
                 {/* Note Rate */}
-                <div className="bg-[#f2f4f5] rounded p-2 border-l-[3px] border-[#006a62]">
-                  <DL className="text-[#006a62]">Note Rate</DL>
-                  <p className="text-lg font-extrabold text-[#191c1d] font-['Manrope']">{loan.interest_rate ? fmtPct(loan.interest_rate) : '—'}</p>
+                <div className="bg-surface-alt rounded p-2 border-l-[3px] border-go">
+                  <DL className="text-go">Note Rate</DL>
+                  <p className="text-lg font-extrabold text-ink font-sans">{loan.interest_rate ? fmtPct(loan.interest_rate) : '—'}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div><DL>LTV / CLTV</DL><DV>{ltv} / {ltv}</DV></div>
                   <div><DL>Term / Amort</DL><DV>{loan.loan_term || 360} / {amortMap[app.amortizationType] || 'Fixed'}</DV></div>
                 </div>
                 <div className="bg-[#eceeef] p-2 rounded text-[10px]">
-                  <p className="font-bold text-[#191c1d]">{loan.loanProgram || loanDesc}</p>
-                  <p className="text-slate-500">Lender: {loan.lender_name || '—'}</p>
+                  <p className="font-bold text-ink">{loan.loanProgram || loanDesc}</p>
+                  <p className="text-ink-subtle">Lender: {loan.lender_name || '—'}</p>
                 </div>
               </div>
             </Panel>
@@ -182,27 +182,27 @@ export default function ApplicationSection({ loan }) {
             {/* Asset Detail */}
             <Panel title="ASSET DETAIL" action="+">
               {assets.length === 0 ? (
-                <p className="text-[10px] text-slate-400 py-3 text-center">No assets recorded</p>
+                <p className="text-[10px] text-ink-subtle py-3 text-center">No assets recorded</p>
               ) : (
                 <table className="w-full text-[11px] leading-relaxed">
                   <thead>
                     <tr className="text-left border-b border-[#eceeef]">
-                      <th className="pb-1 font-semibold text-slate-500 text-[10px]">Institution</th>
-                      <th className="pb-1 text-right font-semibold text-slate-500 text-[10px]">Balance</th>
+                      <th className="pb-1 font-semibold text-ink-subtle text-[10px]">Institution</th>
+                      <th className="pb-1 text-right font-semibold text-ink-subtle text-[10px]">Balance</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#eceeef]/50">
                     {assets.map((a) => (
                       <tr key={a.id}>
-                        <td className="py-1 text-[#191c1d]">{a.institution || `${a.accountType || 'Account'}`}</td>
+                        <td className="py-1 text-ink">{a.institution || `${a.accountType || 'Account'}`}</td>
                         <td className="py-1 text-right font-medium">{fmt$(a.balance)}</td>
                       </tr>
                     ))}
                   </tbody>
                   <tfoot>
-                    <tr className="border-t border-[#d8e2ff]">
-                      <td className="pt-1.5 font-bold text-[#005ac0] text-[10px]">TOTAL ASSETS</td>
-                      <td className="pt-1.5 text-right font-bold text-[#005ac0]">{fmt$(totalAssets)}</td>
+                    <tr className="border-t border-brand-light">
+                      <td className="pt-1.5 font-bold text-brand text-[10px]">TOTAL ASSETS</td>
+                      <td className="pt-1.5 text-right font-bold text-brand">{fmt$(totalAssets)}</td>
                     </tr>
                   </tfoot>
                 </table>
@@ -214,9 +214,9 @@ export default function ApplicationSection({ loan }) {
               <table className="w-full text-[10px]">
                 <thead>
                   <tr className="text-left border-b border-[#eceeef]">
-                    <th className="pb-1 text-slate-500 uppercase font-semibold">Source</th>
-                    <th className="pb-1 text-right text-slate-500 uppercase font-semibold">Borr</th>
-                    {coBorrower && <th className="pb-1 text-right text-slate-500 uppercase font-semibold">Co-B</th>}
+                    <th className="pb-1 text-ink-subtle uppercase font-semibold">Source</th>
+                    <th className="pb-1 text-right text-ink-subtle uppercase font-semibold">Borr</th>
+                    {coBorrower && <th className="pb-1 text-right text-ink-subtle uppercase font-semibold">Co-B</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#eceeef]/50">
@@ -225,10 +225,10 @@ export default function ApplicationSection({ loan }) {
                   <IncRow label="Commission" a={primInc.commissionMonthly} b={coInc.commissionMonthly} co={!!coBorrower} />
                   <IncRow label="Other" a={primInc.otherMonthly} b={coInc.otherMonthly} co={!!coBorrower} />
                 </tbody>
-                <tfoot className="bg-[#d8e2ff]/20">
+                <tfoot className="bg-brand-light/20">
                   <tr className="font-bold">
                     <td className="py-1.5 pl-1 text-[10px]">GROSS TOTAL</td>
-                    <td className="py-1.5 pr-1 text-right text-[#005ac0] text-xs" colSpan={coBorrower ? 2 : 1}>{fmt$(grossTotal)}</td>
+                    <td className="py-1.5 pr-1 text-right text-brand text-xs" colSpan={coBorrower ? 2 : 1}>{fmt$(grossTotal)}</td>
                   </tr>
                 </tfoot>
               </table>
@@ -239,9 +239,9 @@ export default function ApplicationSection({ loan }) {
               <Panel title="CREDIT PROFILES">
                 <div className="grid grid-cols-2 gap-3">
                   {borrowers.map((lb) => (
-                    <div key={lb.id} className="bg-[#f2f4f5] p-2 rounded">
-                      <p className="text-[9px] font-bold text-slate-400 uppercase">{lb.borrower?.first_name} {lb.borrower?.last_name}</p>
-                      <p className="text-sm font-bold text-[#191c1d] mt-0.5">{loan.credit_score || '—'}</p>
+                    <div key={lb.id} className="bg-surface-alt p-2 rounded">
+                      <p className="text-[9px] font-bold text-ink-subtle uppercase">{lb.borrower?.first_name} {lb.borrower?.last_name}</p>
+                      <p className="text-sm font-bold text-ink mt-0.5">{loan.credit_score || '—'}</p>
                     </div>
                   ))}
                 </div>
@@ -251,15 +251,15 @@ export default function ApplicationSection({ loan }) {
             {/* Employment */}
             <Panel title="EMPLOYMENT">
               {borrowers.map((lb) => (lb.employments || []).map((emp) => (
-                <div key={emp.id} className="border-l-2 border-slate-200 pl-2 mb-2.5 last:mb-0">
+                <div key={emp.id} className="border-l-2 border-ink/10 pl-2 mb-2.5 last:mb-0">
                   <div className="flex justify-between items-start">
-                    <p className="text-[11px] font-bold text-[#191c1d]">{emp.employer_name || '—'}</p>
-                    {emp.selfEmployed && <span className="bg-[#e6e8e9] px-1.5 py-0.5 rounded text-[8px] font-black uppercase text-slate-600">Self-Emp</span>}
+                    <p className="text-[11px] font-bold text-ink">{emp.employer_name || '—'}</p>
+                    {emp.selfEmployed && <span className="bg-[#e6e8e9] px-1.5 py-0.5 rounded text-[8px] font-black uppercase text-ink-mid">Self-Emp</span>}
                   </div>
-                  <p className="text-[10px] text-slate-500">{emp.position || '—'} &middot; {fmtShortDate(emp.startDate)} - {emp.endDate ? fmtShortDate(emp.endDate) : 'Present'}</p>
+                  <p className="text-[10px] text-ink-subtle">{emp.position || '—'} &middot; {fmtShortDate(emp.startDate)} - {emp.endDate ? fmtShortDate(emp.endDate) : 'Present'}</p>
                 </div>
               )))}
-              {borrowers.every((lb) => !lb.employments?.length) && <p className="text-[10px] text-slate-400 py-2 text-center">No employment records</p>}
+              {borrowers.every((lb) => !lb.employments?.length) && <p className="text-[10px] text-ink-subtle py-2 text-center">No employment records</p>}
             </Panel>
           </div>
 
@@ -268,32 +268,32 @@ export default function ApplicationSection({ loan }) {
             {/* Liability Detail */}
             <Panel title="LIABILITY DETAIL">
               {liabilities.length === 0 ? (
-                <p className="text-[10px] text-slate-400 py-3 text-center">No liabilities recorded</p>
+                <p className="text-[10px] text-ink-subtle py-3 text-center">No liabilities recorded</p>
               ) : (
                 <table className="w-full text-[10px]">
                   <thead>
                     <tr className="text-left border-b border-[#eceeef]">
-                      <th className="pb-1 text-slate-500 font-semibold">Creditor</th>
-                      <th className="pb-1 text-right text-slate-500 font-semibold">Bal</th>
-                      <th className="pb-1 text-right text-slate-500 font-semibold">Pmt</th>
-                      <th className="pb-1 text-center text-slate-500 font-semibold">P/O</th>
+                      <th className="pb-1 text-ink-subtle font-semibold">Creditor</th>
+                      <th className="pb-1 text-right text-ink-subtle font-semibold">Bal</th>
+                      <th className="pb-1 text-right text-ink-subtle font-semibold">Pmt</th>
+                      <th className="pb-1 text-center text-ink-subtle font-semibold">P/O</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#eceeef]/50">
                     {liabilities.map((l) => (
                       <tr key={l.id}>
-                        <td className="py-1 text-[#191c1d]">{l.creditor || '—'}</td>
+                        <td className="py-1 text-ink">{l.creditor || '—'}</td>
                         <td className="py-1 text-right">{fmt$0(l.unpaidBalance)}</td>
                         <td className="py-1 text-right">{fmt$0(l.monthlyPayment)}</td>
                         <td className="py-1 text-center">
-                          <input type="checkbox" readOnly checked={l.paidOffAtClosing} className="rounded w-3 h-3 text-[#005ac0] border-slate-300" />
+                          <input type="checkbox" readOnly checked={l.paidOffAtClosing} className="rounded w-3 h-3 text-brand border-ink/20" />
                         </td>
                       </tr>
                     ))}
                   </tbody>
-                  <tfoot className="border-t border-slate-200">
+                  <tfoot className="border-t border-ink/10">
                     <tr>
-                      <td className="pt-1.5 font-bold text-slate-500 text-[10px]" colSpan={2}>MONTHLY DEBT</td>
+                      <td className="pt-1.5 font-bold text-ink-subtle text-[10px]" colSpan={2}>MONTHLY DEBT</td>
                       <td className="pt-1.5 text-right font-black text-xs" colSpan={2}>{fmt$(totalLiabPmt)}</td>
                     </tr>
                   </tfoot>
@@ -304,15 +304,15 @@ export default function ApplicationSection({ loan }) {
             {/* Real Estate Owned */}
             <Panel title="REAL ESTATE OWNED">
               {reos.length === 0 ? (
-                <p className="text-[10px] text-slate-400 py-2 text-center">No properties</p>
+                <p className="text-[10px] text-ink-subtle py-2 text-center">No properties</p>
               ) : reos.map((reo) => (
-                <div key={reo.id} className="bg-[#f2f4f5] p-2 rounded border border-[#c1c6d6]/10 mb-2 last:mb-0">
-                  <p className="text-[10px] font-bold text-[#191c1d]">{fmtAddr(reo.address)}</p>
+                <div key={reo.id} className="bg-surface-alt p-2 rounded border border-[#c1c6d6]/10 mb-2 last:mb-0">
+                  <p className="text-[10px] font-bold text-ink">{fmtAddr(reo.address)}</p>
                   <div className="grid grid-cols-2 gap-1 mt-1 text-[10px]">
-                    <span className="text-slate-500">Value: {fmt$0(reo.presentMarketValue)}</span>
-                    <span className="text-slate-500">Mtg: {fmt$0(reo.mortgageBalance)}</span>
-                    <span className="text-slate-500">Pmt: {fmt$0(reo.mortgagePayment)}</span>
-                    <span className="text-[#006a62] font-bold">Net Rent: {fmt$0(reo.netRentalIncome)}</span>
+                    <span className="text-ink-subtle">Value: {fmt$0(reo.presentMarketValue)}</span>
+                    <span className="text-ink-subtle">Mtg: {fmt$0(reo.mortgageBalance)}</span>
+                    <span className="text-ink-subtle">Pmt: {fmt$0(reo.mortgagePayment)}</span>
+                    <span className="text-go font-bold">Net Rent: {fmt$0(reo.netRentalIncome)}</span>
                   </div>
                 </div>
               ))}
@@ -321,29 +321,29 @@ export default function ApplicationSection({ loan }) {
             {/* Monthly PITI */}
             <Panel title="MONTHLY PITI">
               <div className="space-y-1 text-[11px]">
-                <div className="flex justify-between"><span className="text-slate-600">P & I</span><span className="font-medium">{fmt$(loan.monthlyPayment)}</span></div>
-                <div className="pt-2 mt-2 border-t border-slate-100 flex justify-between items-end">
-                  <span className="font-bold text-[#005ac0] text-[10px] uppercase">Total Monthly</span>
-                  <span className="text-lg font-extrabold font-['Manrope'] text-[#191c1d]">{fmt$(loan.monthlyPayment)}</span>
+                <div className="flex justify-between"><span className="text-ink-mid">P & I</span><span className="font-medium">{fmt$(loan.monthlyPayment)}</span></div>
+                <div className="pt-2 mt-2 border-t border-ink/10 flex justify-between items-end">
+                  <span className="font-bold text-brand text-[10px] uppercase">Total Monthly</span>
+                  <span className="text-lg font-extrabold font-sans text-ink">{fmt$(loan.monthlyPayment)}</span>
                 </div>
               </div>
             </Panel>
 
             {/* Qualifying Ratios */}
-            <Panel title="QUALIFYING RATIOS" className="border border-[#005ac0]/10">
+            <Panel title="QUALIFYING RATIOS" className="border border-brand/10">
               <div className="grid grid-cols-3 gap-2 py-1">
                 <div className="text-center">
-                  <p className="text-[9px] text-slate-500 font-bold uppercase">Front (HTI)</p>
-                  <p className="text-xl font-extrabold text-[#191c1d]">{frontRatio}{frontRatio !== '—' ? '%' : ''}</p>
+                  <p className="text-[9px] text-ink-subtle font-bold uppercase">Front (HTI)</p>
+                  <p className="text-xl font-extrabold text-ink">{frontRatio}{frontRatio !== '—' ? '%' : ''}</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-[9px] text-slate-500 font-bold uppercase">Back (DTI)</p>
-                  <p className="text-xl font-extrabold text-[#191c1d]">{backRatio}{backRatio !== '—' ? '%' : ''}</p>
+                  <p className="text-[9px] text-ink-subtle font-bold uppercase">Back (DTI)</p>
+                  <p className="text-xl font-extrabold text-ink">{backRatio}{backRatio !== '—' ? '%' : ''}</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-[9px] text-slate-500 font-bold uppercase">Reserves</p>
-                  <p className="text-xl font-extrabold text-[#006a62]">{reserves}</p>
-                  {reserves !== '—' && <p className="text-[8px] text-slate-400">Months</p>}
+                  <p className="text-[9px] text-ink-subtle font-bold uppercase">Reserves</p>
+                  <p className="text-xl font-extrabold text-go">{reserves}</p>
+                  {reserves !== '—' && <p className="text-[8px] text-ink-subtle">Months</p>}
                 </div>
               </div>
             </Panel>
@@ -359,9 +359,9 @@ export default function ApplicationSection({ loan }) {
                 <TxRow label="Discount Points" value={fmt$(tx.discountPoints)} />
                 {tx.sellerConcessions && <TxRow label="Seller Concessions" value={`(${fmt$(tx.sellerConcessions)})`} red />}
                 {tx.subordinateFinancing && <TxRow label="Subordinate Fin." value={fmt$(tx.subordinateFinancing)} />}
-                <div className="bg-[#7af7e8]/20 p-2 rounded mt-2 border border-[#7af7e8]/40 flex justify-between items-center">
-                  <span className="font-black text-[#005049] uppercase tracking-tight text-[10px]">Total Cash Needed</span>
-                  <span className="text-lg font-extrabold text-[#005049] font-['Manrope']">{fmt$(tx.cashFromBorrower)}</span>
+                <div className="bg-go/20 p-2 rounded mt-2 border border-go/40 flex justify-between items-center">
+                  <span className="font-black text-go-dark uppercase tracking-tight text-[10px]">Total Cash Needed</span>
+                  <span className="text-lg font-extrabold text-go-dark font-sans">{fmt$(tx.cashFromBorrower)}</span>
                 </div>
               </div>
             </Panel>
@@ -372,15 +372,15 @@ export default function ApplicationSection({ loan }) {
                 <div className="flex gap-2 border-b border-[#eceeef] mb-3">
                   <button
                     onClick={() => setBorrowerTab(0)}
-                    className={`text-[10px] font-bold pb-1.5 px-1 transition-colors ${borrowerTab === 0 ? 'border-b-2 border-[#005ac0] text-[#005ac0]' : 'text-slate-400'}`}
+                    className={`text-[10px] font-bold pb-1.5 px-1 transition-colors ${borrowerTab === 0 ? 'border-b-2 border-brand text-brand' : 'text-ink-subtle'}`}
                   >BORROWER</button>
                   <button
                     onClick={() => setBorrowerTab(1)}
-                    className={`text-[10px] font-bold pb-1.5 px-1 transition-colors ${borrowerTab === 1 ? 'border-b-2 border-[#005ac0] text-[#005ac0]' : 'text-slate-400'}`}
+                    className={`text-[10px] font-bold pb-1.5 px-1 transition-colors ${borrowerTab === 1 ? 'border-b-2 border-brand text-brand' : 'text-ink-subtle'}`}
                   >CO-BORROWER</button>
                 </div>
               )}
-              {!borrowers.length && <p className="text-[10px] text-slate-400 py-2">No borrower data</p>}
+              {!borrowers.length && <p className="text-[10px] text-ink-subtle py-2">No borrower data</p>}
               {activeBorrower && (
                 <div className="space-y-2 text-[11px]">
                   <div className="grid grid-cols-2 gap-2">
@@ -389,22 +389,22 @@ export default function ApplicationSection({ loan }) {
                   </div>
                   <div><DL>Cell Phone</DL><DV>{activeBorrower.cellPhone || '—'}</DV></div>
                   <div><DL>Citizenship</DL><DV>{citizenMap[activeBorrower.citizenship] || '—'}</DV></div>
-                  <div className="bg-[#f2f4f5] p-2 rounded mt-1">
-                    <p className="text-[9px] font-bold text-slate-400 uppercase">Current Address</p>
-                    <p className="text-[11px] leading-tight text-[#191c1d] mt-0.5">
+                  <div className="bg-surface-alt p-2 rounded mt-1">
+                    <p className="text-[9px] font-bold text-ink-subtle uppercase">Current Address</p>
+                    <p className="text-[11px] leading-tight text-ink mt-0.5">
                       {fmtAddr(activeBorrower.currentAddress)}
                       {(activeBorrower.addressYears || activeBorrower.addressMonths) && (
-                        <span className="text-slate-400"> ({activeBorrower.addressYears || 0}yr {activeBorrower.addressMonths || 0}mo)</span>
+                        <span className="text-ink-subtle"> ({activeBorrower.addressYears || 0}yr {activeBorrower.addressMonths || 0}mo)</span>
                       )}
                     </p>
                   </div>
                   {activeBorrower.previousAddress && (
-                    <div className="bg-[#f2f4f5] p-2 rounded">
-                      <p className="text-[9px] font-bold text-slate-400 uppercase">Previous Address</p>
-                      <p className="text-[11px] leading-tight text-[#191c1d] mt-0.5">
+                    <div className="bg-surface-alt p-2 rounded">
+                      <p className="text-[9px] font-bold text-ink-subtle uppercase">Previous Address</p>
+                      <p className="text-[11px] leading-tight text-ink mt-0.5">
                         {fmtAddr(activeBorrower.previousAddress)}
                         {(activeBorrower.previousAddressYears || activeBorrower.previousAddressMonths) && (
-                          <span className="text-slate-400"> ({activeBorrower.previousAddressYears || 0}yr {activeBorrower.previousAddressMonths || 0}mo)</span>
+                          <span className="text-ink-subtle"> ({activeBorrower.previousAddressYears || 0}yr {activeBorrower.previousAddressMonths || 0}mo)</span>
                         )}
                       </p>
                     </div>
@@ -427,7 +427,7 @@ export default function ApplicationSection({ loan }) {
             ) : (
               <div className="bg-white rounded-xl shadow-sm border-2 border-dashed border-[#c1c6d6]/30 flex items-center justify-center opacity-40 py-4">
                 <div className="text-center">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase">ARM Details (N/A)</p>
+                  <p className="text-[10px] font-bold text-ink-subtle uppercase">ARM Details (N/A)</p>
                 </div>
               </div>
             )}
@@ -436,10 +436,10 @@ export default function ApplicationSection({ loan }) {
       </main>
 
       {/* ═══ FOOTER BAR ═══ */}
-      <footer className="flex justify-between items-center px-6 h-7 bg-slate-900">
+      <footer className="flex justify-between items-center px-6 h-7 bg-ink">
         <div className="flex gap-3">
           <span className="text-teal-400 text-[10px] uppercase tracking-tight">Lender: {loan.lender_name || '—'}</span>
-          <span className="text-slate-400 text-[10px]">| LO: {loan.mlo ? `${loan.mlo.first_name} ${loan.mlo.last_name}` : '—'} | Loan #{loan.loan_number || '—'}</span>
+          <span className="text-ink-subtle text-[10px]">| LO: {loan.mlo ? `${loan.mlo.first_name} ${loan.mlo.last_name}` : '—'} | Loan #{loan.loan_number || '—'}</span>
         </div>
         <div className="flex items-center gap-4">
           <span className="text-teal-400 text-[10px]">AUS: —</span>
@@ -459,13 +459,13 @@ function Panel({ icon, title, badge, action, className = '', children }) {
     <section className={`bg-white rounded-xl shadow-sm p-3 ${className}`}>
       {title && (
         <div className="flex justify-between items-center mb-2">
-          <h2 className="text-[11px] font-bold text-[#005ac0] flex items-center gap-1.5">
+          <h2 className="text-[11px] font-bold text-brand flex items-center gap-1.5">
             {icon && <span className="material-symbols-outlined text-sm">{icon}</span>}
             {title}
           </h2>
           <div className="flex items-center gap-2">
-            {badge && <span className="text-[9px] bg-[#d8e2ff] text-[#004494] px-2 py-0.5 rounded-full font-bold">{badge}</span>}
-            {action && <button className="text-[#005ac0] hover:bg-[#d8e2ff] w-5 h-5 rounded flex items-center justify-center text-sm font-bold transition-colors">{action}</button>}
+            {badge && <span className="text-[9px] bg-brand-light text-brand-dark px-2 py-0.5 rounded-full font-bold">{badge}</span>}
+            {action && <button className="text-brand hover:bg-brand-light w-5 h-5 rounded flex items-center justify-center text-sm font-bold transition-colors">{action}</button>}
           </div>
         </div>
       )}
@@ -475,18 +475,18 @@ function Panel({ icon, title, badge, action, className = '', children }) {
 }
 
 function DL({ children, className = '' }) {
-  return <p className={`text-[10px] text-[#414754] uppercase tracking-wide font-semibold ${className}`}>{children}</p>;
+  return <p className={`text-[10px] text-ink-mid uppercase tracking-wide font-semibold ${className}`}>{children}</p>;
 }
 
 function DV({ children, bold, className = '' }) {
-  return <p className={`text-[12px] text-[#191c1d] ${bold ? 'font-bold' : 'font-medium'} ${className}`}>{children}</p>;
+  return <p className={`text-[12px] text-ink ${bold ? 'font-bold' : 'font-medium'} ${className}`}>{children}</p>;
 }
 
 function DeclRow({ label, on, bad }) {
-  const color = bad ? 'bg-[#ba1a1a]' : on ? 'bg-[#006a62]' : 'bg-slate-300';
+  const color = bad ? 'bg-[#ba1a1a]' : on ? 'bg-go' : 'bg-ink-subtle/40';
   return (
     <div className="flex justify-between items-center py-0.5">
-      <span className="text-[11px] text-[#191c1d]">{label}</span>
+      <span className="text-[11px] text-ink">{label}</span>
       <div className={`w-2 h-2 rounded-full ${color}`} />
     </div>
   );
@@ -495,9 +495,9 @@ function DeclRow({ label, on, bad }) {
 function IncRow({ label, a, b, co }) {
   return (
     <tr>
-      <td className="py-1 text-slate-600">{label}</td>
-      <td className="py-1 text-right text-[#191c1d]">{fmt$0(a)}</td>
-      {co && <td className="py-1 text-right text-[#191c1d]">{fmt$0(b)}</td>}
+      <td className="py-1 text-ink-mid">{label}</td>
+      <td className="py-1 text-right text-ink">{fmt$0(a)}</td>
+      {co && <td className="py-1 text-right text-ink">{fmt$0(b)}</td>}
     </tr>
   );
 }
@@ -505,8 +505,8 @@ function IncRow({ label, a, b, co }) {
 function TxRow({ label, value, red }) {
   return (
     <div className="flex justify-between py-0.5">
-      <span className={red ? 'text-[#ba1a1a] font-medium' : 'text-slate-600'}>{label}</span>
-      <span className={`font-medium ${red ? 'text-[#ba1a1a]' : 'text-[#191c1d]'}`}>{value}</span>
+      <span className={red ? 'text-[#ba1a1a] font-medium' : 'text-ink-mid'}>{label}</span>
+      <span className={`font-medium ${red ? 'text-[#ba1a1a]' : 'text-ink'}`}>{value}</span>
     </div>
   );
 }
