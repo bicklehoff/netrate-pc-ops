@@ -544,13 +544,13 @@ export default function PipelineTable({ loans, allLoans, mloList, selectedIds, o
         return (
           <Link href={`/portal/mlo/loans/${loan.id}`} className="flex items-center gap-2">
             <img
-              src={`https://ui-avatars.com/api/?name=${encodeURIComponent((loan.borrower_name || '?').split(' ').map(n => n[0]).join(''))}&size=32&background=0891b2&color=fff&bold=true&format=svg`}
+              src={`https://ui-avatars.com/api/?name=${encodeURIComponent((loan.borrower_name || '?').split(' ').map(n => n[0]).join(''))}&size=32&background=2E6BA8&color=fff&bold=true&format=svg`}
               alt="" className="w-7 h-7 rounded-full shrink-0"
             />
             <div className="min-w-0">
-              <span className="block font-bold text-slate-900 truncate">{loan.borrower_name}</span>
+              <span className="block font-bold text-ink truncate">{loan.borrower_name}</span>
               {loan.borrower_email && (
-                <span className="block text-[10px] text-slate-400 truncate">{loan.borrower_email}</span>
+                <span className="block text-[10px] text-ink-subtle truncate">{loan.borrower_email}</span>
               )}
             </div>
           </Link>
@@ -572,7 +572,7 @@ export default function PipelineTable({ loans, allLoans, mloList, selectedIds, o
           </span>
         ) : <span className="text-xs text-gray-300">—</span>;
       case 'interest_rate':
-        return <span className="text-sm font-semibold text-slate-800 tabular-nums">{loan.interest_rate ? `${loan.interest_rate}%` : '—'}</span>;
+        return <span className="text-sm font-semibold text-ink tabular-nums">{loan.interest_rate ? `${loan.interest_rate}%` : '—'}</span>;
       case 'loan_term':
         return <span className="text-xs text-gray-600">{loan.loan_term ? `${loan.loan_term}yr` : '—'}</span>;
       case 'mlo_name':
@@ -580,13 +580,13 @@ export default function PipelineTable({ loans, allLoans, mloList, selectedIds, o
           <EditableSelect value={loan.mlo_id || ''} options={mloOptions}
             onSave={val => onLoanUpdate(loan.id, { mlo_id: val || null })}
             renderValue={val => {
-              if (!val) return <span className="text-slate-300 text-sm">Unassigned</span>;
+              if (!val) return <span className="text-ink-subtle text-sm">Unassigned</span>;
               const mlo = mloList.find(m => m.id === val);
               const name = mlo ? mlo.name : 'Unknown';
               const initials = name.split(' ').map(n => n[0]).join('');
               const short = name.split(' ').length > 1 ? `${name.split(' ')[0][0]}. ${name.split(' ').slice(1).join(' ')}` : name;
               return (
-                <span className="flex items-center gap-1.5 text-sm font-medium text-slate-800">
+                <span className="flex items-center gap-1.5 text-sm font-medium text-ink">
                   <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(initials)}&size=24&background=64748b&color=fff&bold=true&format=svg`} alt="" className="w-5 h-5 rounded-full" />
                   {short}
                 </span>
@@ -606,7 +606,7 @@ export default function PipelineTable({ loans, allLoans, mloList, selectedIds, o
           />
         );
       case 'loan_amount':
-        return <span className="text-slate-900 font-semibold tabular-nums">{formatCurrency(loan.loan_amount || loan.purchase_price || loan.estimated_value)}</span>;
+        return <span className="text-ink font-semibold tabular-nums">{formatCurrency(loan.loan_amount || loan.purchase_price || loan.estimated_value)}</span>;
       case 'lock_expiration':
         return loan.lock_expiration ? (
           <span className={`text-xs ${isExpired(loan.lock_expiration) ? 'text-red-600 font-medium' : isExpiringSoon(loan.lock_expiration) ? 'text-amber-600 font-medium' : 'text-gray-600'}`}>
@@ -687,7 +687,7 @@ export default function PipelineTable({ loans, allLoans, mloList, selectedIds, o
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-gray-200 bg-slate-50">
+            <tr className="border-b border-gray-200 bg-surface-alt">
               <th className="w-6"></th>
               <th className="px-3 py-3 w-10">
                 <input type="checkbox" checked={allSelected}
@@ -700,12 +700,12 @@ export default function PipelineTable({ loans, allLoans, mloList, selectedIds, o
                 const isSorted = sortKey === col.key;
                 const hasFilter = columnFilters[col.key] != null;
                 return (
-                  <th key={col.key} className={`px-3 py-3 font-bold text-xs uppercase tracking-wider text-slate-700 ${col.minW || ''} ${col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'}`}>
+                  <th key={col.key} className={`px-3 py-3 font-bold text-xs uppercase tracking-wider text-ink-mid ${col.minW || ''} ${col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'}`}>
                     <div className={`flex items-center gap-1 ${col.align === 'right' ? 'justify-end' : col.align === 'center' ? 'justify-center' : ''}`}>
                       {/* Sort button */}
                       {col.sortable ? (
                         <button onClick={() => handleSort(col.key)}
-                          className={`flex items-center gap-0.5 transition-colors ${isSorted ? 'text-primary font-black' : 'text-slate-700 hover:text-slate-900'}`}>
+                          className={`flex items-center gap-0.5 transition-colors ${isSorted ? 'text-brand font-black' : 'text-ink-mid hover:text-ink'}`}>
                           {col.label}
                           {isSorted && (
                             <span className="text-[10px]">{sortDir === 'asc' ? '▲' : '▼'}</span>
@@ -719,7 +719,7 @@ export default function PipelineTable({ loans, allLoans, mloList, selectedIds, o
                       {col.filterable && (
                         <div className="relative">
                           <button onClick={e => { e.stopPropagation(); setActiveFilterCol(activeFilterCol === col.key ? null : col.key); }}
-                            className={`ml-0.5 p-0.5 rounded transition-colors ${hasFilter ? 'text-orange-600 bg-orange-50' : 'text-slate-400 hover:text-slate-600'}`}
+                            className={`ml-0.5 p-0.5 rounded transition-colors ${hasFilter ? 'text-orange-600 bg-orange-50' : 'text-ink-subtle hover:text-ink-mid'}`}
                             title={`Filter ${col.label}`}>
                             <svg className="w-3 h-3" fill={hasFilter ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                               <path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
