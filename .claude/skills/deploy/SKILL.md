@@ -83,7 +83,42 @@ Confirm the top commit hash and message match what you just pushed. If they don'
 
 After code changes are complete, present a summary of everything that changed. Then **stop and wait** for David to say **"build"** before running anything.
 
-**Run Gate 0 (branch verification) first.** Then:
+**Run Gate 0 (branch verification) first.** Then determine which lane applies (see §1.1).
+
+### 1.1 — Lane detection (build-affecting vs docs-only)
+
+Not every change exercises the Next.js build. Markdown docs under `Work/**`, `docs/**`, `.claude/**`, or root `*.md` never reach Vercel's bundler, so rebuilding `src/` locally just recompiles unchanged code. This is wasteful and adds noise. Detect the lane once, before building:
+
+```bash
+# Files changed vs origin/main (includes staged, unstaged, untracked)
+CHANGED=$( ( git diff --name-only origin/main -- ; git ls-files --others --exclude-standard ) | sort -u )
+echo "$CHANGED"
+
+# Does ANY changed file live in a build-affecting path?
+BUILD_AFFECTING=$(echo "$CHANGED" | grep -E '^(src/|prisma/|public/|scripts/|package\.json$|package-lock\.json$|next\.config\.|tailwind\.config\.|postcss\.config\.|jsconfig\.json$|tsconfig\.json$|vercel\.json$|middleware\.|\.env($|\.))' || true)
+
+if [ -z "$BUILD_AFFECTING" ]; then
+  echo "LANE: docs-only — skipping local build. Vercel preview is the gate."
+else
+  echo "LANE: build-affecting — running full build."
+  echo "$BUILD_AFFECTING"
+fi
+```
+
+**Build-affecting paths** (full build required):
+- `src/**`, `prisma/**`, `public/**`, `scripts/**`
+- `package.json`, `package-lock.json`
+- `next.config.*`, `tailwind.config.*`, `postcss.config.*`, `jsconfig.json`, `tsconfig.json`, `vercel.json`
+- `middleware.*`, `.env*` (root)
+
+**Docs-only paths** (build skipped):
+- `Work/**`, `docs/**`, `.claude/**`, `.github/**`
+- Root `*.md` (README, CLAUDE.md, REGISTRY.md, etc.)
+- `.gitignore`, anything not in the build-affecting list above
+
+When in doubt, treat as build-affecting. Running `npm run build` on a docs-only PR is only wasted minutes; skipping build on a code PR can ship a regression.
+
+### 1.2 — Build-affecting lane
 
 ```bash
 npm run build
@@ -98,10 +133,18 @@ Common build killers (ESLint errors that block Vercel):
 
 If the build fails, fix and repeat from `npm run build`. Don't move forward until it's clean.
 
-After a clean build:
+### 1.3 — Docs-only lane
+
+Skip `npm run build`. State explicitly to David: *"Docs-only change — skipping local build. Vercel preview (Gate 4) is the gate."* Note "docs-only" in the eventual PR body so reviewers see why there's no build artifact.
+
+Do NOT use this lane if ANY file in the diff lands in a build-affecting path, even if the other files are docs. Mixed PRs always take the build-affecting lane.
+
+### 1.4 — Final sanity check (both lanes)
 
 ```bash
-git diff main --stat
+git diff origin/main --stat
+# plus, if there are untracked files you intend to commit:
+git status --short
 ```
 
 Show David the changed files as a final sanity check.
@@ -252,7 +295,8 @@ These are non-negotiable. Never skip them, even if David asks:
 |-------|-----------|---------|-----------------|
 | Pre-flight | (auto) | `git status`, branch from main | Clean working tree |
 | **Gate 0** | **(auto)** | **`git branch --show-current`** | **Branch matches intent** |
-| Build | "build" | Gate 0 → `npm run build` | Zero ESLint errors |
+| Build (build-affecting) | "build" | Gate 0 → lane check → `npm run build` | Zero ESLint errors |
+| Build (docs-only) | "build" | Gate 0 → lane check → **skip build** | Lane is docs-only; Vercel preview gates merge |
 | Push | "push" | Gate 0 → `git push -u origin $BRANCH` → verify `git log origin/$BRANCH` | Commit on correct remote |
 | PR | "PR" | Gate 0 → `gh pr create` + prepend #N | PR URL posted |
 | Preview | (auto) | `gh pr checks` poll | All checks pass |
