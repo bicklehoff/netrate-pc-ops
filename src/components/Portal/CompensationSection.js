@@ -4,6 +4,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { splitCompensation } from '@/lib/payroll';
 
 function fmt$(val) {
   if (val == null) return '—';
@@ -36,15 +37,13 @@ export default function CompensationSection({ loan }) {
   const tracker = payrollDetails?.trackerResult || {};
   const payload = payrollDetails?.trackerPayload || {};
 
-  const HOUSE_FEE_RATE = 0.12948857;
-
   const grossComp = cd.brokerCompensation || payload.grossComp;
   const reimbSelections = cd._reimbursementSelections || [];
   const totalReimb = reimbSelections.reduce((sum, r) => sum + (r.editedAmount || 0), 0);
   const wireTotal = cd.totalDueToBroker || payload.wireTotal;
-  // Calculate comp split locally — no TrackerPortal dependency
-  const houseFee = grossComp ? Number(grossComp) * HOUSE_FEE_RATE : null;
-  const loComp = grossComp && houseFee != null ? Number(grossComp) - houseFee : null;
+  // Calculate comp split via shared helper — single source of truth for
+  // HOUSE_FEE_RATE (see src/lib/payroll.js)
+  const { houseFee, loComp } = splitCompensation(grossComp);
   const cdNumber = tracker.cdNumber;
   const status = tracker.status;
 

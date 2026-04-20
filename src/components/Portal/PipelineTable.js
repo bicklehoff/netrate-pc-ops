@@ -7,31 +7,14 @@
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
+import { STATUS_LABELS, STATUS_COLORS, ALL_STATUSES } from '@/lib/constants/loan-statuses';
 
 // ─── Constants ──────────────────────────────────────────────
-
-const STATUS_LABELS = {
-  prospect: 'Prospect', applied: 'Applied', processing: 'Processing',
-  submitted_uw: 'In UW', cond_approved: 'Cond. Approved', suspended: 'Suspended',
-  ctc: 'Clear to Close', docs_out: 'Docs Out', funded: 'Funded',
-  settled: 'Settled', withdrawn: 'Withdrawn', denied: 'Denied', archived: 'Archived',
-};
-
-const STATUS_COLORS = {
-  prospect: 'bg-slate-200 text-slate-800', applied: 'bg-blue-500 text-white',
-  processing: 'bg-amber-500 text-white', submitted_uw: 'bg-purple-500 text-white',
-  cond_approved: 'bg-orange-500 text-white', suspended: 'bg-red-500 text-white',
-  ctc: 'bg-emerald-500 text-white', docs_out: 'bg-teal-500 text-white',
-  funded: 'bg-emerald-600 text-white', settled: 'bg-green-700 text-white',
-  withdrawn: 'bg-gray-400 text-white', denied: 'bg-red-600 text-white',
-  archived: 'bg-gray-400 text-white',
-};
-
-const ALL_STATUSES = [
-  'prospect', 'applied', 'processing', 'submitted_uw',
-  'cond_approved', 'ctc', 'docs_out', 'funded',
-  'settled', 'withdrawn', 'suspended', 'denied', 'archived',
-];
+// Status picklist now lives in src/lib/constants/loan-statuses.js. Loan
+// purpose/type label sets below are still local pending consolidation
+// with loan-types.js — there's a 'cash_out' vs 'cashout' value divergence
+// across the codebase that needs a DB audit before unification. See D8
+// Pass 6 MLO-2/3/6 findings.
 
 const PURPOSE_LABELS = { purchase: 'Purch', refinance: 'Refi', cash_out: 'C/O', heloc: 'HELOC', hecm: 'HECM' };
 const PURPOSE_COLORS = { purchase: 'bg-blue-100 text-blue-800 font-bold', refinance: 'bg-purple-100 text-purple-800 font-bold', cash_out: 'bg-orange-100 text-orange-800 font-bold', heloc: 'bg-teal-100 text-teal-800 font-bold', hecm: 'bg-pink-100 text-pink-800 font-bold', construction: 'bg-yellow-100 text-yellow-800 font-bold' };
