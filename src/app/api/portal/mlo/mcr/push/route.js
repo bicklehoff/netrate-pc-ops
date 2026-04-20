@@ -17,13 +17,28 @@ function deriveQmStatus(loanType) {
     case 'usda':
       return 'qm';
     case 'dscr':
-    case 'bank_statement':
+    case 'bankstatement':
       return 'non_qm';
     case 'hecm':
       return 'not_subject';
     default:
       return 'qm';
   }
+}
+
+// ─── Property Type → MCR/HMDA code ────────────────────────────
+// Translates our internal canonical to the vocabulary the downstream MCR
+// receiver expects (one_to_four_family, condominium, manufactured_home).
+function mcrPropertyType(type) {
+  const map = {
+    sfr:          'one_to_four_family',
+    condo:        'condominium',
+    townhome:     'one_to_four_family',
+    pud:          'one_to_four_family',
+    multi_unit:   'one_to_four_family',
+    manufactured: 'manufactured_home',
+  };
+  return map[type] || 'one_to_four_family';
 }
 
 // ─── State Name → USPS Abbreviation ──────────────────────────
@@ -104,7 +119,7 @@ export async function POST() {
         propertyState,
         loanType,
         loanPurpose: loan.purpose || null,
-        propertyType: loan.property_type || 'one_to_four_family',
+        propertyType: mcrPropertyType(loan.property_type),
         lienPosition: loan.lien_status || 'first',
         occupancy: loan.occupancy || 'owner_occupied',
         mloNmlsId: loan.mlo_nmls || null,

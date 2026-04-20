@@ -567,11 +567,12 @@ function mapOccupancy(raw) {
 
 function mapPropertyType(raw) {
   const upper = (raw || '').toUpperCase();
-  if (upper.includes('SINGLE') || upper.includes('SFR') || upper.includes('DETACHED')) return 'single_family';
+  if (upper.includes('SINGLE') || upper.includes('SFR') || upper.includes('DETACHED')) return 'sfr';
   if (upper.includes('CONDO')) return 'condo';
-  if (upper.includes('TOWN')) return 'townhouse';
+  if (upper.includes('TOWN')) return 'townhome';
   if (upper.includes('MULTI') || upper.includes('2UNIT') || upper.includes('3UNIT') || upper.includes('4UNIT')) return 'multi_unit';
   if (upper.includes('MANUFACTURED') || upper.includes('MOBILE')) return 'manufactured';
+  if (upper.includes('PUD')) return 'pud';
   return raw?.toLowerCase() || null;
 }
 

@@ -65,7 +65,7 @@ export default function ApplicationSection({ loan }) {
   const purposeMap = { purchase: 'Purchase', refinance: 'Rate/Term Refi', cash_out: 'Cash-Out Refi' };
   const typeMap = { conventional: 'Conv.', fha: 'FHA', va: 'VA', usda: 'USDA', jumbo: 'Jumbo' };
   const occMap = { primary: 'Primary', secondary: 'Second Home', investment: 'Investment' };
-  const propMap = { single_family: 'SFR-Det', condo: 'Condo', townhouse: 'Townhouse', multi_unit: 'Multi-Unit', manufactured: 'Mfg' };
+  const propMap = { sfr: 'SFR', condo: 'Condo', townhome: 'Townhome', pud: 'PUD', multi_unit: 'Multi-Unit', manufactured: 'Mfg' };
   const amortMap = { fixed: 'Fixed', arm: 'ARM', balloon: 'Balloon' };
   const housingMap = { own: 'Own', rent: 'Rent', free: 'Living Rent Free' };
   const citizenMap = { us_citizen: 'U.S. Citizen', permanent_resident: 'Perm. Resident', non_permanent_resident: 'Non-Perm. Resident' };

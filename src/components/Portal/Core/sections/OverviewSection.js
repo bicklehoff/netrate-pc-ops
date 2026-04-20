@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import EditableField from '../EditableField';
 import PrequalLetterModal from '../../PrequalLetter/PrequalLetterModal';
+import { PROPERTY_TYPES as PROPERTY_TYPE_OPTIONS } from '@/lib/constants/picklists';
 
 // ─── Constants ──────────────────────────────────────────────
 
@@ -32,13 +33,6 @@ const OCCUPANCY_OPTIONS = [
   { value: 'primary', label: 'Primary' }, { value: 'secondary', label: '2nd Home' },
   { value: 'investment', label: 'Investment' },
 ];
-const PROPERTY_TYPE_OPTIONS = [
-  { value: 'SFH-Detached', label: 'SFH-Det' }, { value: 'SFH-Attached', label: 'SFH-Att' },
-  { value: 'Condo', label: 'Condo' }, { value: 'Townhome', label: 'Town' },
-  { value: 'Multi-Family', label: 'Multi' }, { value: 'Manufactured', label: 'Mfg' },
-  { value: 'PUD', label: 'PUD' },
-];
-
 // ─── Helpers ────────────────────────────────────────────────
 
 function fmt$(val) {
