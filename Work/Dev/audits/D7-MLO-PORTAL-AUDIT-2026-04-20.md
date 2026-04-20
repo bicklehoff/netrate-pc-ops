@@ -346,13 +346,25 @@ The legacy "PRs 16–19 pipeline / lead detail / quote builder / dashboard" fram
 
 **Deliverable size:** ~8 file edits. 1 PR.
 
-### PR D7-6 · Quote PDF retheme (borrower-visible regression)
+### PR D7-6 · Borrower-facing PDF retheme (scope expanded 2026-04-20)
+
+**Original scope (audit v1):** QuotePDF.js only.
+
+**Expanded scope (per David during implementation):** both borrower-facing PDFs.
 
 **Scope:**
-- QB-5: change `BRAND = '#0891b2'` → `BRAND = '#2E6BA8'` in `QuotePDF.js`. Add secondary tokens for go / accent where used. Verify PDF renders correctly (headless render + visual diff).
-- Add the PDF brand color to DESIGN-SYSTEM.md "Email Templates" section (extend to cover PDF).
+- **QB-5 (`QuotePDF.js`)** — local color constants block migrated from retired cyan (`#0891b2`, `#0e7490`, `#ecfeff`) to brand tokens. Added `BRAND_LIGHT = #E6EEF7`. Surface / ink / outline constants aligned to DESIGN-SYSTEM.md. Docstring updated.
+- **New finding: `PrequalLetterPDF.js`** — surfaced during implementation. File was entirely on the retired **teal** palette: `BRAND = '#024c4f'`, `BRAND_LIGHT = '#e6f0f0'`, `YELLOW = '#fff000'`, `DEEP = '#012d30'`. Also using the **old D-variation logo mark** (teal rounded square + diagonal `<Line>` slashes) — violates the "equal parallel slashes per `src/app/layout.js`" rule documented in memory.
+  - All brand/teal colors migrated to DESIGN-SYSTEM.md tokens.
+  - `YELLOW` (`#fff000`) → `#FFC220` (`accent.DEFAULT`).
+  - `DEEP` constant dropped in favor of `BRAND_DARK = '#24578C'` for the footer trust bar.
+  - LogoMark component rewritten to mirror the canonical `src/app/layout.js` mark: 4 vertical bars (3 yellow, 1 brand-blue tall middle) on a white rounded square (rx=8) with subtle ink-at-12%-opacity stroke. Uses `<Rect>` primitives (react-pdf `<Line>` import removed).
+  - Tailwind stock grays retained — design system doesn't yet ship neutral-scale tokens.
+- **DESIGN-SYSTEM.md** — new "PDF Templates" section mirroring "Email Templates" pattern: local constants block, "never use retired cyan/teal" rule, credit/debit state-BG exceptions, doctring mirror requirement. "When tokens change" checklist extended with step 4 for PDF template local-constants blocks.
 
-**Deliverable size:** 1-2 file edits. 1 PR. Ships with the others — low-risk.
+**Deliverable size:** 2 PDF files + 1 DESIGN-SYSTEM.md doc-update. 1 PR.
+
+**Closes:** audit finding **QB-5** + the newly-surfaced PrequalLetterPDF retheme + retired-logo swap.
 
 ### Deferred — nav/IA redesign (dedicated session)
 
@@ -422,3 +434,4 @@ The IA redesign (PR D7-7 candidates) is explicitly **out of D7's "done" definiti
 
 - **2026-04-20 (v1)** — initial audit filed. Grounded in current HEAD state (post-PR #115). Rewrites D7 PR plan as 6 surface-scoped PRs + a deferred block (IA + copy + API rename + HECM). Supersedes `PIPELINE-UI-SPEC.md` (Stitch-mockup narrow update pre-dating D9a + design-system lock).
 - **2026-04-20 (v1.1)** — collaborative review with David. Decisions: (1) "Borrower" is the user-facing role label, `contacts` is the schema module — IA-1 / PT-4 closed. (2) `primary` class confirmed as intended-`brand`. (3) Nav/IA redesign (IA-2 through IA-7) pulled out of D7 entirely → dedicated consultation session. (4) PR D7-4 split confirmed (FHA UFMIP own PR). (5) Picklist split confirmed (Q7): STATES + LOAN_TYPES → DB tables (`ref_licensed_states`, `ref_loan_types`), remaining picklists → constants. PR D7-3 scope rewritten accordingly; MLO-6 alias resolved as "jumbo and bank_statement are distinct codes, not aliases."
+- **2026-04-20 (v1.2)** — PR D7-6 scope expanded during implementation. Discovered `PrequalLetterPDF.js` was still on the retired **teal** palette (`#024c4f` / `#012d30` / `#e6f0f0`, `#fff000`) AND using the retired D-variation logo mark (diagonal Line slashes on teal) — a violation of the "equal parallel slashes per layout.js" rule. David approved expansion. §8 PR D7-6 rewritten to cover both borrower-facing PDFs + DESIGN-SYSTEM.md "PDF Templates" section.

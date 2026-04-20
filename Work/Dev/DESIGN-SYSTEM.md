@@ -131,9 +131,40 @@ Pattern for emails:
 
 ---
 
+## PDF Templates (`@react-pdf/renderer`)
+
+PDFs can't use Tailwind either — use inline `StyleSheet.create` with these exact hex values. Declare a local constants block at the top of each PDF component mirroring the tokens you need. Current examples:
+- `src/components/Portal/QuoteGenerator/QuotePDF.js` — borrower rate quote (4-page)
+- `src/components/Portal/PrequalLetter/PrequalLetterPDF.js` — pre-qualification letter
+
+Pattern for PDFs:
+```js
+const BRAND = '#2E6BA8';       // brand.DEFAULT
+const BRAND_DARK = '#24578C';  // brand.dark
+const BRAND_LIGHT = '#E6EEF7'; // brand.light
+const SURFACE = '#FAFAF7';     // surface.page
+const SURFACE_LOW = '#F5F4F1'; // surface.alt
+const ON_SURFACE = '#1A1F2E';  // ink.DEFAULT
+const ON_SURFACE_VAR = '#4A5C6E'; // ink.mid
+const OUTLINE = '#7A8E9E';     // ink.subtle
+const GREEN = '#059669';       // go.DEFAULT
+const WHITE = '#ffffff';
+```
+
+Usage rules:
+- **Never use retired cyan** (`#0891b2`, `#0e7490`, `#ecfeff`) — migrate on sight.
+- **Brand-colored surfaces** (e.g. totals row, section accents) → `BRAND`.
+- **Subtle brand fills** (milestone badges, left accent bars) → `BRAND_LIGHT`.
+- **Primary forward-motion callouts** (Apply, View, etc.) → `GREEN`.
+- **Tailwind stock shades** (`#ecfdf5` green-50, `#fef2f2` red-50, `#dc2626` red-600) are OK for credit/debit / success / error state tints — the design system doesn't ship explicit state tokens yet.
+- Docstring at the top of each PDF should note *"Hex values mirror DESIGN-SYSTEM.md"* so future devs know to keep them in sync.
+
+---
+
 ## When tokens change
 
 1. Update `tailwind.config.js` (source of truth)
 2. Update this file to match
 3. Grep for old hex values and migrate: `Grep(pattern: "#2E6BA8|#059669|#FFC220|...")` in `src/`
-4. Update the memory file `project_homepage_retheme.md` so future sessions pick up the change
+4. Update email templates' inline hex + PDF templates' local constants blocks
+5. Update the memory file `project_homepage_retheme.md` so future sessions pick up the change

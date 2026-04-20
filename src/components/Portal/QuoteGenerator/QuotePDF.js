@@ -1,26 +1,29 @@
 /**
- * QuotePDF — Borrower rate quote with Financial Architect design language.
+ * QuotePDF — Borrower rate quote in the NetRate design system.
  *
  * Page 1: Loan Summary — 3-rate side-by-side comparison, key figures, cash to close
  * Page 2: Monthly Payments — detailed payment breakdown per rate
  * Page 3: Closing Costs — fee sections A-G, daily interest, totals
  * Page 4: Amortization Schedule — yearly principal/interest/balance
+ *
+ * Hex values mirror Work/Dev/DESIGN-SYSTEM.md — when tokens change, update both.
  */
 
 import { Document, Page, View, Text, StyleSheet } from '@react-pdf/renderer';
 
-/* ── Design Tokens ── */
-const BRAND = '#0891b2';       // cyan-600
-const BRAND_DARK = '#0e7490';  // cyan-700
-const SURFACE = '#f8f9fb';
-const SURFACE_LOW = '#f2f4f6';
-const SURFACE_HIGH = '#e6e8ea';
-const ON_SURFACE = '#191c1e';
-const ON_SURFACE_VAR = '#434652';
-const OUTLINE = '#737783';
-const OUTLINE_VAR = '#c3c6d4';
-const GREEN = '#059669';
-const RED = '#dc2626';
+/* ── Design tokens — mirror of tailwind.config.js / DESIGN-SYSTEM.md ── */
+const BRAND = '#2E6BA8';       // brand.DEFAULT
+const BRAND_DARK = '#24578C';  // brand.dark
+const BRAND_LIGHT = '#E6EEF7'; // brand.light
+const SURFACE = '#FAFAF7';     // surface.page (canvas)
+const SURFACE_LOW = '#F5F4F1'; // surface.alt
+const SURFACE_HIGH = '#e6e8ea';// neutral elevated surface (no direct token; kept)
+const ON_SURFACE = '#1A1F2E';  // ink.DEFAULT
+const ON_SURFACE_VAR = '#4A5C6E'; // ink.mid
+const OUTLINE = '#7A8E9E';     // ink.subtle
+const OUTLINE_VAR = '#c3c6d4'; // ghost border (low-opacity ink; kept as neutral)
+const GREEN = '#059669';       // go.DEFAULT
+const RED = '#dc2626';         // error state (Tailwind stock; no design-system token)
 const WHITE = '#ffffff';
 
 const s = StyleSheet.create({
@@ -117,7 +120,7 @@ const s = StyleSheet.create({
   amortCellBold: { fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: ON_SURFACE, textAlign: 'right' },
   amortLabelCell: { fontSize: 8.5, color: ON_SURFACE_VAR },
   milestoneBadge: { backgroundColor: '#ecfdf5', borderRadius: 8, paddingVertical: 3, paddingHorizontal: 8, marginRight: 8, marginBottom: 6 },
-  milestoneBadgeBlue: { backgroundColor: '#ecfeff' },
+  milestoneBadgeBlue: { backgroundColor: BRAND_LIGHT },
   milestoneText: { fontSize: 7, fontFamily: 'Helvetica-Bold' },
   milestoneGreen: { color: GREEN },
   milestoneCyan: { color: BRAND_DARK },
