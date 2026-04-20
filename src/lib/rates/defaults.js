@@ -1,10 +1,20 @@
 /**
- * Default borrower scenario used across the site.
+ * Default borrower scenario — last-known-good fallback for server-side
+ * pricing calls AND initial form state for the RateTool client component.
+ *
+ * As of D9b.5 (migration 010), the server-side source of truth is the
+ * `site_scenarios` table — row `homepage_default` mirrors these values
+ * exactly. Server pricing code loads via `loadSiteScenario('homepage_default')`
+ * which falls back to these constants if the DB read fails.
+ *
+ * The RateTool client component still seeds its initial form state from
+ * these constants (can't easily fetch from DB for first render). Keep
+ * this file in sync with the DB seed row when admin-tuning the homepage
+ * default. If the two ever drift, the borrower sees the DB values on the
+ * homepage rate card but the RateTool starts with the stale constants
+ * until they type anything.
  *
  * Matches MND (Mortgage News Daily) assumptions: 780 FICO, 75% LTV, purchase.
- * Used by: homepage, pricing API, pricing engine, rate history, calculators.
- *
- * Change here → changes everywhere.
  */
 
 // FHA standard baseline limit (65% of conforming limit)

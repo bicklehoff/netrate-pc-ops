@@ -18,7 +18,7 @@
 import sql from '@/lib/db';
 import { priceScenario } from './price-scenario';
 import { pickParRate } from './pick-par-rate';
-import { DEFAULT_SCENARIO } from './defaults';
+import { loadSiteScenario, loadSurfaceConfig } from './site-scenario-config';
 import { calculateMonthlyPI, calculateAPR } from '@/lib/mortgage-math';
 
 const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -58,28 +58,34 @@ function formatDateShort(d) {
  * priceScenario() reads per-lender compRate/caps from rate_lenders and
  * deducts broker comp from the wholesale sheet price — the result is
  * the LPC rate a borrower would see.
+ *
+ * Scenario defaults + filter flags load from DB (site_scenarios +
+ * surface_pricing_config) via the DAL. DAL falls back to DEFAULT_SCENARIO
+ * constants if the DB read fails, so this path is safe even before the
+ * migration has been applied.
  */
-async function priceOne(loanType, termYears) {
+async function priceOne(scenario, config, loanType, termYears) {
   const result = await priceScenario({
-    loanAmount: DEFAULT_SCENARIO.loanAmount,
-    propertyValue: DEFAULT_SCENARIO.propertyValue,
-    loanPurpose: DEFAULT_SCENARIO.loanPurpose,
-    state: DEFAULT_SCENARIO.state,
-    creditScore: DEFAULT_SCENARIO.fico,
+    loanAmount: scenario.loanAmount,
+    propertyValue: scenario.propertyValue,
+    loanPurpose: scenario.loanPurpose,
+    state: scenario.state,
+    creditScore: scenario.fico,
     loanType,
     term: termYears,
     productType: 'fixed',
-    lockDays: DEFAULT_SCENARIO.lockDays,
-    // Default broker config (LPC) — do NOT pass borrowerPaid: true. The
-    // pricer reads comp_rate + caps from rate_lenders per lender and
-    // applies them inside priceRate(). That's exactly what we want for
-    // public display.
-    // Public-display filters — only show standard owner-occupied
-    // fully-amortizing conforming products, matching historical homepage-db.
-    excludeStreamline: true,
-    excludeInterestOnly: true,
-    excludeHighBalance: true,
-    excludeJumbo: true,
+    lockDays: scenario.lockDays,
+    // Broker comp: do NOT pass borrowerPaid unless the surface config
+    // explicitly opts in. The pricer reads per-lender comp from
+    // rate_lenders and deducts it inside priceRate() — that's the LPC
+    // rate a borrower sees for public display.
+    borrowerPaid: config.borrowerPaid,
+    // Filter flags loaded from surface_pricing_config per D9b.6.
+    excludeStreamline: config.excludeStreamline,
+    excludeInterestOnly: config.excludeInterestOnly,
+    excludeHighBalance: config.excludeHighBalance,
+    excludeBuydowns: config.excludeBuydowns,
+    excludeJumbo: config.excludeJumbo,
   });
 
   if (!result?.results?.length) return null;
@@ -100,7 +106,7 @@ async function priceOne(loanType, termYears) {
     );
   }
 
-  const loanAmount = DEFAULT_SCENARIO.loanAmount;
+  const loanAmount = scenario.loanAmount;
   const netCost = ((100 - picked.finalPrice) * loanAmount) / 100;
   const financeCharges = Math.max(0, netCost);
 
@@ -131,13 +137,20 @@ export async function getHomepageLiveRates() {
       return cache.data;
     }
 
-    // Sequential to avoid hammering the DB/connection pool. These aren't
-    // parallelizable cheaply either — priceScenario caches lender data
-    // internally for 2 min, so the 2nd-4th calls hit cache.
-    const conv30 = await priceOne('conventional', 30);
-    const conv15 = await priceOne('conventional', 15);
-    const fha30 = await priceOne('fha', 30);
-    const va30 = await priceOne('va', 30);
+    // Load scenario + surface config once per render — DB-backed with
+    // DEFAULT_SCENARIO fallback (see site-scenario-config.js).
+    const [scenario, config] = await Promise.all([
+      loadSiteScenario('homepage_default'),
+      loadSurfaceConfig('homepage'),
+    ]);
+
+    // Sequential pricing to avoid hammering the DB/connection pool.
+    // priceScenario caches lender data internally for 2 min — calls 2-4
+    // hit cache.
+    const conv30 = await priceOne(scenario, config, 'conventional', 30);
+    const conv15 = await priceOne(scenario, config, 'conventional', 15);
+    const fha30 = await priceOne(scenario, config, 'fha', 30);
+    const va30 = await priceOne(scenario, config, 'va', 30);
 
     const result = {
       dateShort: formatDateShort(latestSheetDate),
