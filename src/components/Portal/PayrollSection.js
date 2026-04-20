@@ -10,6 +10,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { splitCompensation } from '@/lib/payroll';
 
 function formatDate(dateStr) {
   if (!dateStr) return '';
@@ -543,10 +544,9 @@ export default function PayrollSection({ loan }) {
 
             {/* Compensation breakdown from CD */}
             {isExtracted && extraction.data.brokerCompensation != null && (() => {
-              const HOUSE_FEE_RATE = 0.12948857;
-              const gross = Number(extraction.data.brokerCompensation);
-              const house = gross * HOUSE_FEE_RATE;
-              const lo = gross - house;
+              const { gross, houseFee: house, loComp: lo } = splitCompensation(
+                extraction.data.brokerCompensation
+              );
               const pickedReimb = reimbursements.filter(r => r.selected).reduce((sum, r) => sum + (r.editedAmount || 0), 0);
               const anticipatedPayment = lo + pickedReimb;
               return (

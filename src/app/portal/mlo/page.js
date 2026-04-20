@@ -11,40 +11,14 @@ import { useRouter } from 'next/navigation';
 
 import PipelineTable from '@/components/Portal/PipelineTable';
 import XmlImportModal from '@/components/Portal/XmlImportModal';
-
-// ─── Status Groupings ────────────────────────────────────────
-const ACTIVE_STATUSES = ['prospect', 'applied', 'processing', 'submitted_uw', 'cond_approved', 'ctc', 'docs_out', 'funded'];
-const SETTLED_STATUSES = ['settled'];
-const CANCELLED_STATUSES = ['withdrawn', 'denied', 'suspended'];
-
-const TIER1_FILTERS = [
-  { value: 'active', label: 'Active', statuses: ACTIVE_STATUSES },
-  { value: 'settled', label: 'Settled', statuses: SETTLED_STATUSES },
-  { value: 'cancelled', label: 'Cancelled', statuses: CANCELLED_STATUSES },
-  { value: 'all', label: 'All', statuses: null },
-];
-
-const STATUS_LABELS = {
-  prospect: 'Prospect',
-  applied: 'Applied',
-  processing: 'Processing',
-  submitted_uw: 'In UW',
-  cond_approved: 'Cond. Approved',
-  suspended: 'Suspended',
-  ctc: 'Clear to Close',
-  docs_out: 'Docs Out',
-  funded: 'Funded',
-  settled: 'Settled',
-  withdrawn: 'Withdrawn',
-  denied: 'Denied',
-  archived: 'Archived',
-};
-
-const ALL_STATUSES = [
-  'prospect', 'applied', 'processing', 'submitted_uw',
-  'cond_approved', 'ctc', 'docs_out', 'funded',
-  'settled', 'withdrawn', 'suspended', 'denied', 'archived',
-];
+import {
+  ALL_STATUSES,
+  STATUS_LABELS,
+  ACTIVE_STATUSES,
+  SETTLED_STATUSES,
+  CANCELLED_STATUSES,
+  TIER1_FILTERS,
+} from '@/lib/constants/loan-statuses';
 
 
 // ─── Bulk Action Bar ──────────────────────────────────────────
