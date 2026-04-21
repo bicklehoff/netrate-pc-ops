@@ -85,10 +85,29 @@ export default function PrequalLetterModal({ loan, session, onClose }) {
     if (!loan || initialized.current) return;
     initialized.current = true;
 
+    // Fields that must ALWAYS come from the current MLO session / loan, not
+    // from stale saved state. Saved form state predates features like the
+    // headshot, so spreading `saved` on top of prev would leave mloPhotoUrl
+    // empty and the photo silently skip rendering.
+    const origin = typeof window !== 'undefined'
+      ? window.location.origin
+      : 'https://www.netratemortgage.com';
+    const mloOverrides = {
+      mlo_name: loan.mlo?.first_name
+        ? `${loan.mlo.first_name} ${loan.mlo.last_name || ''}`.trim()
+        : session?.user?.name || 'David Burson',
+      mloNmls: loan.mlo?.nmls || '641790',
+      mloPhone: '303-444-5251',
+      mloEmail: loan.mlo?.email || session?.user?.email || 'david@netratemortgage.com',
+      mloPhotoUrl: loan.mlo?.photo_url || `${origin}/david-burson.jpg`,
+    };
+
     const saved = loan.prequalLetterData;
     if (saved && typeof saved === 'object') {
-      // Restore saved form state
-      setForm((prev) => ({ ...prev, ...saved }));
+      // Restore saved form state, but force-refresh MLO identity fields so
+      // new defaults (e.g. the photo) reach letters that were auto-saved
+      // before those fields existed.
+      setForm((prev) => ({ ...prev, ...saved, ...mloOverrides }));
     } else {
       // First time — pre-fill from loan data
       setForm((prev) => ({
@@ -106,17 +125,7 @@ export default function PrequalLetterModal({ loan, session, onClose }) {
         mlo_name: loan.mlo?.first_name
           ? `${loan.mlo.first_name} ${loan.mlo.last_name || ''}`.trim()
           : session?.user?.name || 'David Burson',
-        mloNmls: loan.mlo?.nmls || '641790',
-        mloPhone: '303-444-5251',
-        mloEmail: loan.mlo?.email || session?.user?.email || 'david@netratemortgage.com',
-        // Staff headshot. @react-pdf's <Image> requires a fully-qualified
-        // URL — a relative path silently fails and cascades into neighboring
-        // Views failing to render too (lost us the trust-bar stars in #138).
-        // Compute absolute URL from window.location.origin so previews work
-        // on any Vercel URL; fall back to the production host for SSR safety.
-        mloPhotoUrl: loan.mlo?.photo_url || `${
-          typeof window !== 'undefined' ? window.location.origin : 'https://www.netratemortgage.com'
-        }/david-burson.jpg`,
+        ...mloOverrides,
       }));
     }
   }, [loan, session]);
