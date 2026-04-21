@@ -17,6 +17,7 @@
 import sql from '@/lib/db';
 import { calculateEscrowSections } from './escrow-calc';
 import { FHA_UFMIP_RATE } from '@/lib/constants/fha';
+import { getConformingBaseline } from '@/lib/rates/ref-loan-limits';
 
 // 10-minute cache for fee templates (they rarely change)
 let templateCache = { data: new Map(), fetchedAt: 0 };
@@ -79,9 +80,14 @@ function toNum(val) {
  * FHA annual MIP rate based on term, LTV, and base loan amount.
  * Current schedule (case numbers assigned on/after 3/20/2023).
  * Returns annual rate as a decimal (e.g. 0.0055 = 55 bps).
+ *
+ * The high-balance surcharge (+25 bps) applies when the base loan amount
+ * exceeds the national 1-unit conforming baseline — `highBalanceThreshold`
+ * is sourced from ref_conforming_baselines so FHFA annual updates flow
+ * through without code edits.
  */
-function getFhaMipRate(term, ltv, baseLoanAmount) {
-  const isHighBalance = baseLoanAmount > 726200;
+function getFhaMipRate(term, ltv, baseLoanAmount, highBalanceThreshold) {
+  const isHighBalance = baseLoanAmount > highBalanceThreshold;
   const extra = isHighBalance ? 0.0025 : 0;
   if (term <= 15) {
     return (ltv <= 90 ? 0.0015 : 0.0040) + extra;
@@ -170,7 +176,10 @@ export async function buildFeeBreakdown({
   // ── FHA calculations ────────────────────────────────────────────────────
   const isFha = loanType === 'fha';
   const ufmip = isFha ? Math.round(loanAmount * FHA_UFMIP_RATE) : 0;
-  const annualMipRate = isFha ? getFhaMipRate(term, ltv, loanAmount) : 0;
+  const fhaHighBalanceThreshold = isFha
+    ? (await getConformingBaseline()).baseline_1unit
+    : null;
+  const annualMipRate = isFha ? getFhaMipRate(term, ltv, loanAmount, fhaHighBalanceThreshold) : 0;
   // Monthly MIP is on the total loan amount (base + financed UFMIP)
   const monthlyMip = isFha ? Math.round((loanAmount + ufmip) * annualMipRate / 12 * 100) / 100 : 0;
 

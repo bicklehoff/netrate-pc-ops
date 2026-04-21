@@ -9,8 +9,7 @@
  */
 
 import sql from '@/lib/db';
-import { classifyLoan, getLoanLimits } from '@/data/county-loan-limits';
-import { FHA_BASELINE_LIMIT } from '@/lib/rates/defaults';
+import { classifyLoan, getLoanLimits, getConformingBaseline } from '@/lib/rates/ref-loan-limits';
 
 // 5-minute cache for lender/product metadata
 let metaCache = { data: null, fetchedAt: 0 };
@@ -81,18 +80,21 @@ export async function checkEligibility(scenario) {
     loanPurpose = 'purchase',
   } = scenario;
 
-  // County loan limits
+  // County loan limits. FHA's conforming→high-balance threshold is 65% of
+  // the 1-unit baseline conforming limit — read from ref_conforming_baselines
+  // so FHFA updates propagate without code changes.
   let loanClassification = null;
   if (county && state) {
-    const limits = getLoanLimits(state, county);
+    const limits = await getLoanLimits(state, county);
     if (limits) {
       if (loanType === 'fha') {
-        const fhaBaseline = FHA_BASELINE_LIMIT;
+        const baseline = await getConformingBaseline();
+        const fhaBaseline = Math.round(baseline.baseline_1unit * 0.65);
         if (loanAmount <= fhaBaseline) loanClassification = 'conforming';
         else if (loanAmount <= limits.fhaLimit) loanClassification = 'highBalance';
         else loanClassification = 'jumbo';
       } else {
-        loanClassification = classifyLoan(loanAmount, state, county);
+        loanClassification = await classifyLoan(loanAmount, state, county);
       }
 
       if (loanClassification === 'jumbo') {
