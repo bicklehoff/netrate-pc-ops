@@ -57,10 +57,11 @@ export function deriveIdentity(scenario) {
 }
 
 /**
- * Convert a scenario_rates row to the old quote scenarios JSONB shape.
- * Used when the API needs to return the same shape as borrower_quotes.scenarios.
+ * Convert a scenario_rates row to the legacy quote "scenarios" JSONB shape.
+ * The quote API clients still expect the pre-unification response shape;
+ * this keeps their contract stable while the data comes from scenario_rates.
  * @param {object} rate - scenario_rates row
- * @returns {object} Old-format rate object
+ * @returns {object} Legacy-format rate object
  */
 export function rateRowToQuoteShape(rate) {
   return {
@@ -84,11 +85,11 @@ export function rateRowToQuoteShape(rate) {
 }
 
 /**
- * Convert scenario_fee_items rows back to the old fee_breakdown JSONB shape.
- * Used when the API needs to return the same shape as borrower_quotes.fee_breakdown.
+ * Convert scenario_fee_items rows back to the legacy fee_breakdown JSONB shape.
+ * Quote responses still use the pre-unification fee_breakdown structure.
  * @param {object[]} feeItems - scenario_fee_items rows
  * @param {object} scenario - The parent scenario (for totals)
- * @returns {object} Old-format fee_breakdown object
+ * @returns {object} Legacy-format fee_breakdown object
  */
 export function feeItemsToBreakdownShape(feeItems, scenario = {}) {
   const SECTION_LABELS = {
@@ -137,10 +138,11 @@ export function feeItemsToBreakdownShape(feeItems, scenario = {}) {
 }
 
 /**
- * Convert a full scenario (with rates[] and feeItems[]) to the old borrower_quotes shape.
- * Used by APIs that need to return backward-compatible responses.
+ * Convert a full scenario (with rates[] and feeItems[]) to the legacy quote shape
+ * that quote-viewer + MLO-quote APIs emit. Preserves the pre-unification response
+ * contract so UI clients don't need to change.
  * @param {object} scenario - Scenario with rates[] and feeItems[]
- * @returns {object} Old-format quote object
+ * @returns {object} Legacy-format quote object
  */
 export function scenarioToQuoteShape(scenario) {
   const rates = scenario.rates || [];
@@ -198,10 +200,10 @@ export function scenarioToQuoteShape(scenario) {
 }
 
 /**
- * Convert a scenario to the old saved_scenarios shape.
- * Used by My Rates and rate alert APIs.
+ * Convert a scenario to the legacy saved-scenario shape used by My Rates
+ * and rate alert APIs. Preserves the pre-unification response contract.
  * @param {object} scenario - Scenario with rates[]
- * @returns {object} Old-format saved scenario object
+ * @returns {object} Legacy-format saved scenario object
  */
 export function scenarioToSavedShape(scenario) {
   const rates = scenario.rates || [];

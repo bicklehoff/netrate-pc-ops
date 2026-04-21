@@ -1,9 +1,9 @@
 # FoH April — Audit + UAD Spec
 
-**Status:** Active · D1 ✅ re-verified · D2 ✅ fully closed · D3 ✅ re-verified · D4 ✅ re-verified · D5 ✅ closed (absorbed into D9a) · D6 🟡 soak (PR 14 drop ~2026-04-29) · D7 ✅ core shipped (IA redesign deferred) · D8 ✅ inventory complete; remediations streamed into D7 + vocab audit · D9 🔄 D9a ✅ complete; D9b 7/13 shipped (.1–.7); D9c/d/e queued
+**Status:** Active · D1 ✅ re-verified · D2 ✅ fully closed · D3 ✅ re-verified · D4 ✅ re-verified · D5 ✅ closed (absorbed into D9a) · D6 ✅ complete (PR 14 drop shipped 2026-04-21) · D7 ✅ core shipped (IA redesign deferred) · D8 ✅ inventory complete; remediations streamed into D7 + vocab audit · D9 🔄 D9a ✅ complete; D9b 7/13 shipped (.1–.7); D9c/d/e queued
 **Name:** FoH April (Front-of-House April 2026) — the combined audit + UAD effort, David-named 2026-04-17. Formerly "Site Audit 2026"; audit (retrospective) + UAD (prospective) are one continuous effort.
 **Current driver:** PC Dev (`zen-sammet-6cf8be` worktree)
-**Last updated:** 2026-04-21 (v1.8 — D7 6 core PRs shipped (#117-#122); Scenario Vocabulary Audit filed + 3 of 4 PRs shipped (#124-#126); D9b.1-.7 pricing unification complete (homepage-db retired, par-rule unified across 4 surfaces, site_scenarios + surface_pricing_config + homepage_rate_cache DB-tunable); CoreCRM inbound webhook + auto-email live (#92/#94); all Claw→PC relays swept + resolved. D6 PR 14 soak countdown: 8 days to 2026-04-29.)
+**Last updated:** 2026-04-21 (v1.9 — D6 PR 14 shipped same day as v1.8 refresh. Migration 018 dropped `borrower_quotes` + `saved_scenarios`; `scenario_alert_queue` FK retargeted to `scenarios`. First live use of the Neon-branch rehearsal protocol documented in DEV-PLAYBOOK.md — rehearsal + prod runs both clean, 4/4 statements OK, 0 orphans.)
 **Canonical location:** this file
 
 > One audit. One spec. One driver at a time. Everything else defers to this doc.
@@ -171,7 +171,7 @@ Multi-tenant readiness. Two halves: (1) organization_id on existing tables + rou
   - D0 verification (2026-04-15): re-audit at [`D0-VERIFICATION-D5-ORG-SCOPING-2026-04-15.md`](./D0-VERIFICATION-D5-ORG-SCOPING-2026-04-15.md). Full route inventory (44 routes checked). Found one critical regression: `GET /api/portal/mlo/scenario-alerts` was missing the org filter on its scenarios JOIN, leaking cross-org scenario-alert queue items including joined borrower PII. Introduced in PR #68 after #60's sweep had already run. Resolved in PR #76 — both GET default view and PATCH approve/decline inner SELECT upgraded to `INNER JOIN scenarios s ... AND s.organization_id = ${orgId}`. All other 43 routes verified clean.
 - **Second half — superseded by D9:** Mac's UAB directive (unified users + roles + loan_users, session cmo04p434kxp16tv7) was never actioned by PC. This work is now absorbed into D9 (UAD), which expands the scope from identity-only to the full data architecture (contacts, staff, deals, service providers, pricing unification). D5 will be marked ✅ when D9 Layer 1 ships with org_id on all new tables.
 
-### D6 · Unified pricing / scenarios — 🟡 soak (PR 14 drop ~2026-04-29)
+### D6 · Unified pricing / scenarios — ✅ complete (2026-04-21)
 
 Collapse the separate borrower_quotes, saved_scenarios, and MLO quote storage into one scenarios table with scoped visibility. Extend to non-QM (DSCR).
 
@@ -185,9 +185,9 @@ Collapse the separate borrower_quotes, saved_scenarios, and MLO quote storage in
   - #70 Everstream rate CSV + LLPA XLSX parsers + ingest (PR 15b)
   - #71 DSCR pricer module (PR 15c)
   - #72 DSCR rate page + calculator wired to live API (PR 15d)
+  - **PR 14 (2026-04-21)** — migration 018 drops `borrower_quotes` + `saved_scenarios`. `scenario_alert_queue.scenario_id` FK redirected from `saved_scenarios.id` → `scenarios.id` before drop. Rehearsed on Neon branch per DEV-PLAYBOOK.md protocol before prod run. 56 rows (43 borrower_quotes + 13 saved_scenarios) already in `scenarios` via backfill preserved UUIDs. 70 alert queue rows preserved, 0 orphans post-run. Prisma schema cleaned (BorrowerQuote + SavedScenario models deleted, ScenarioAlertQueue relation retargeted to Scenario). 8 src/ docstrings updated away from legacy table names.
 - **Outstanding:**
-  - **PR 14 — drop `borrower_quotes` + `saved_scenarios` tables.** Soak ends ~2026-04-29 (8 days from v1.8). Verify no readers in code + confirm DAL is writing only to `scenarios` + drop via migration. Data migration bug risk → use Neon-branch rehearsal pattern (see DEV-PLAYBOOK.md).
-  - Core Non-QM LLPA parser (DSCR Plus + Expanded Prime Plus core tier adjustments) — follow-up to PR 15c. Narrow scope.
+  - Core Non-QM LLPA parser (DSCR Plus + Expanded Prime Plus core tier adjustments) — follow-up to PR 15c. Narrow scope, tracked under D6 but not blocking D6 completion.
 
 ### D7 · MLO Portal UX — ✅ core shipped (IA redesign deferred)
 
@@ -307,16 +307,16 @@ Ordered work list. Inventory passes and remediation PRs interleave by default (s
 23. ✅ **Scenario Vocabulary Audit filed** — [`SCENARIO-VOCABULARY-AUDIT-2026-04-20.md`](./SCENARIO-VOCABULARY-AUDIT-2026-04-20.md). 4 canonical vocabularies identified.
 24. ✅ **Vocab audit PRs 1-3 shipped** — property_type (#124 + migration 015, 687 rows), loan_purpose URLA hierarchy + cashout_reason column (#125 + migration 016, 95 rows), loan_term months→years (#126 + migration 017, 777 rows; ordering bug caught mid-run, 659 rows restored manually, SQL rewritten for replay safety — DEV-PLAYBOOK.md now has Neon-branch rehearsal protocol).
 
-### Done 2026-04-21 (this session so far)
+### Done 2026-04-21 (this session)
 
 25. ✅ **Claw→PC relay queue swept** — all 6 inbound Claw relays resolved. Backlog #75 (7 compliance fixes) + #77 (Strike Rate) + #78 (CoreCRM) marked done. 3 new backlog items filed (#86 related-articles widget, #87 Ahrefs re-crawl verification, #88 DSCR screening workflow).
 26. ✅ **DEV-PLAYBOOK.md migration rehearsal protocol** — documented Neon-branch approach for data migrations.
+27. ✅ **README v1.8 refresh** shipped (PR #127) — catches audit index up to ~42 PRs since v1.5.
+28. ✅ **D6 PR 14 drop** — migration 018 retired legacy quote tables; first live exercise of the Neon-branch rehearsal protocol. Details under D6 dimension above.
 
 ### Next up
 
-27. **README refresh → v1.8** (this session) — reflect all of the above. ⬅ in progress
-28. **D6 PR 14 drop** — soak ends 2026-04-29 (8 days). Drop `borrower_quotes` + `saved_scenarios` tables. Rehearse on Neon branch first. **Highest time-pressure item.**
-29. **Vocab audit PR 4 — NonQM parser realignment** — 6,840-row `nonqm_adjustment_rules` migration (noo→investment, second→secondary, co_refi→cashout, nco_refi→refinance) + pricing-v2.js:519 secondHome bug fix + `adjustment_rules.purpose='irrrl'` keep-vs-rename decision (753 VA IRRRL rows). **Needs DSCR regression test before/after.** ~1-2 hrs. Risk-concentrated.
+29. **Vocab audit PR 4 — NonQM parser realignment** — 6,840-row `nonqm_adjustment_rules` migration (noo→investment, second→secondary, co_refi→cashout, nco_refi→refinance) + pricing-v2.js:519 secondHome bug fix + `adjustment_rules.purpose='irrrl'` keep-vs-rename decision (753 VA IRRRL rows). **Needs DSCR regression test before/after.** ~1-2 hrs. Risk-concentrated — Neon-branch rehearsal mandatory.
 30. **D9b.8 verify** — confirm #109 sub-financing-comparison rewrite fully closed D9b.8 scope (sub-financing-comparison.js was the original target; check for residual hardcoded GSE LLPA logic).
 31. **D9b.9 pricer-integrated tool defaults** — purchase-calculator, refi-analyzer, cost-of-waiting. Unblocked. Clean scope.
 32. **D9b.13 getFicoBand de-dup** — engine.js (>=800) vs pricing-v2.js (>=780). Decide canonical + consolidate.
@@ -410,6 +410,7 @@ After completion, this doc moves to archive status and a fresh `SITE-AUDIT-2027.
 - **2026-04-16 (v1.4)** — batch 1 D8 inventory complete (Passes 2/6/7/8). D0 re-audits for D1/D2/D4 also complete. **§2c "Re-architecture deference" added** — new triage principle stating that findings D9 will naturally absorb should be deferred rather than patched with throwaway fixes, unless the finding is (a) security-critical, (b) actively harming users *right now* in a non-fallback path, or (c) observability/tooling that survives D9. PR #80 shipped 2 critical D4 findings (SMS cross-org leak + pipeline bulk-cap). Pending PR ships CRON-2/CRON-12 (health-check observability). D1 re-verified with residual `err.message` leaks batched for follow-up. D2 fully closed — residual-files note was false alarm. D4 re-verified ✅ with other dialer routes flagged for a follow-up pass. Queue reshaped: batch 2 (Passes 3/4/5) is next; D9d reference-data schema design batches all inventory findings together after batch 2 converges.
 - **2026-04-17 (v1.5)** — **FoH April rename** (combined audit + UAD). Discovered batch 2 D8 inventory (Passes 3/4/5) was already filed 2026-04-16; README stale. PR #83 (2026-04-16) landed: CA licensing (MKT-COMP-1), aggregateRating schema (SEO-20), Texas stale prose (MKT-B4), company+auth constants modules. Small ship-now PR in flight (vigorous-cartwright worktree): GBP rename URLs centralized through `GBP_REVIEW_URL` (MKT-B2/SEO-17 — GBP renamed Locus→NetRate 2026-04-17), `/rates/dscr` added to sitemap (SEO-15a), equity-page meta historical framing (MKT-D4a), about-page year-label consistency (MKT-B3). **D9 Layer 1 migration plan** drafted — current schema is much further along than UAD implied (application modules from `1003-BUILD-SPEC.md` are modeled); Layer 1 is rename + merge migration, not greenfield. Option B (in-place) recommended. 5 open decisions for David at [`UAD-LAYER-1-MIGRATION-PLAN.md`](../UAD-LAYER-1-MIGRATION-PLAN.md) §8. Pass 5 confirmed Application LITE field list has 100% coverage against current intake wizard.
 - **2026-04-21 (v1.8)** — **4-day refresh catching up ~42 PRs** (#84–#126) that shipped after v1.5. Headline deltas: **D9a fully complete** — Layer 1a–1c + lead conversion (#93) + inbound webhook (#92) + auto-email (#94). **D9b 7/13 shipped** — homepage-db retired (#107), par-rule unified across 4 surfaces (#112), `site_scenarios` + `surface_pricing_config` + `homepage_rate_cache` DB-tunable (#114/#115). **D7 audit filed + 6 core PRs shipped** (#117-#122 + #123 status unification) — design system locked across MLO portal. **Scenario Vocabulary Audit filed** (2026-04-20) with 3 of 4 PRs shipped (#124/#125/#126); migration 017 ordering bug caught mid-run, 659 rows restored from Neon PITR, DEV-PLAYBOOK.md now has Neon-branch rehearsal protocol. **Claw→PC relay queue fully swept** — all 6 inbound relays resolved, backlogs #75/#77/#78 marked done, 3 new backlog items (#86/#87/#88) filed for genuinely-open remnants. Next pressure point: **D6 PR 14 soak ends 2026-04-29** (8 days) — drop `borrower_quotes` + `saved_scenarios`. D9c/d/e still queued.
+- **2026-04-21 (v1.9)** — **D6 PR 14 shipped same day as v1.8 refresh.** Migration 018 retired `borrower_quotes` (43 rows) + `saved_scenarios` (13 rows); `scenario_alert_queue.scenario_id` FK retargeted from `saved_scenarios.id` → `scenarios.id`. First live exercise of the Neon-branch rehearsal protocol added in v1.8 — rehearsal + prod runs both clean (4/4 statements OK, 70 queue rows preserved, 0 orphans). Prisma `BorrowerQuote` + `SavedScenario` models deleted; 8 src/ docstrings updated away from legacy table names. D6 dimension now ✅ complete.
 
 ## 12. Appendix — where to find things
 

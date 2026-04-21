@@ -357,7 +357,7 @@ export default function LeadDetailPage() {
 
         {/* Right: Quotes */}
         <div className="space-y-4">
-          {/* Full quote wizard quotes (BorrowerQuote) */}
+          {/* Full quote wizard quotes (scenarios with owner_type='mlo', source='mlo_quote') */}
           <div className="bg-white border border-gray-200 rounded-xl p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-gray-900">Quotes</h3>

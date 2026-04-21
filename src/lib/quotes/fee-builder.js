@@ -1,6 +1,6 @@
 /**
  * Fee template builder — loads state/county/purpose fee templates
- * and builds the sections A-H JSON for BorrowerQuote.feeBreakdown.
+ * and builds the sections A-H JSON for the scenario fee_breakdown response.
  *
  * Section A: Origination Charges
  * Section B: Services You Cannot Shop For
