@@ -11,24 +11,9 @@ import {
   Text,
   Svg,
   Rect,
-  Polygon,
   Image,
   StyleSheet,
 } from '@react-pdf/renderer';
-
-// ---------- Star (SVG polygon) — Helvetica's ★ glyph renders unreliably in
-// @react-pdf/renderer depending on the build's font fallback chain, so we
-// draw the star directly. 5-point star centered in 12×12 viewBox.
-function Star({ size = 8, color }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 12 12">
-      <Polygon
-        points="6,0.8 7.5,4.5 11.5,4.8 8.4,7.3 9.4,11.2 6,9.1 2.6,11.2 3.6,7.3 0.5,4.8 4.5,4.5"
-        fill={color}
-      />
-    </Svg>
-  );
-}
 
 // ---------- Brand colors — mirror of Work/Dev/DESIGN-SYSTEM.md ----------
 
@@ -580,13 +565,7 @@ export default function PrequalLetterPDF({ data }) {
         {/* ===== TRUST BAR (pinned to bottom, dark band) ===== */}
         <View style={s.trustBar}>
           <View style={s.trustItem}>
-            <View style={[s.starRow, { marginBottom: 2 }]}>
-              <Star size={9} color={YELLOW} />
-              <Star size={9} color={YELLOW} />
-              <Star size={9} color={YELLOW} />
-              <Star size={9} color={YELLOW} />
-              <Star size={9} color={YELLOW} />
-            </View>
+            <Text style={[s.trustValue, { color: YELLOW, fontSize: 10 }]}>4.9 / 5.0</Text>
             <Text style={s.trustLabel}>Google Reviews</Text>
           </View>
 

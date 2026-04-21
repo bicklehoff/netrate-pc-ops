@@ -9,6 +9,38 @@ This skill enforces the deploy procedure as an interactive gate-enforced checkli
 
 The reason for this rigidity is that the NetRate website is a live customer-facing mortgage rate tool. A bad deploy means borrowers see wrong rates, broken calculators, or a down site. The gates exist because catching issues at each stage is dramatically cheaper than catching them in production.
 
+## Blast-Radius Tiering (Gate word ceremony vs. auto-advance)
+
+Not every change carries the same blast radius. A DB migration and an MLO-only PDF tweak do not deserve the same gate ceremony — four "build / push / PR / merge" keystrokes on a 2-line copy fix is friction without corresponding risk reduction. The tiering is a deliberate opt-in: the default is full gates, and David names the tier at deploy start.
+
+### Tier A — full gates (default)
+
+Require explicit go-ahead at every gate. Use for any change that can reach a borrower, a rate, a loan record, or an auth surface. Examples:
+
+- DB migrations, schema changes, or anything under `prisma/**`
+- Pricing engine (`src/lib/rates/**`, `src/lib/pricing-nonqm/**`)
+- Auth, session, middleware, webhook handlers
+- Public-facing pages (homepage, `/rates`, `/refinance`, marketing pages)
+- Shared constants (`src/lib/constants/**`), picklists, design tokens
+- Anything that touches `package.json`, `next.config.*`, `vercel.json`
+
+Default lane when in doubt. Default lane when any file in the diff matches the above.
+
+### Tier B — single gate (`/deploy --tier=B` or "deploy as tier B")
+
+Require one go-ahead ("deploy") and auto-advance through build → push → PR → preview-watch → merge. Stop and ask on any gate failure. Use only for changes whose blast radius is bounded to an authenticated internal surface with a quick reverse-and-try-again cost. Examples:
+
+- MLO portal UI changes with no DB or pricing touch (pipeline table styles, prequal letter component, quote-generator UI)
+- Docs-only changes (`Work/**`, `docs/**`, `.claude/**`, root `*.md`)
+- PDF components (`src/components/Portal/PrequalLetter/**`)
+- Isolated copy edits on non-marketing pages
+
+Tier B is an opt-in per PR — David either says "deploy as tier B", or I propose it at PR-start and he confirms. If any Tier B assumption turns out wrong mid-flight (e.g. the diff grows to touch pricing), I stop and revert to Tier A gates.
+
+### Default behavior
+
+When a deploy starts without an explicit tier, announce the tier proposal based on the diff, get David's confirmation, then proceed. Never assume Tier B on my own — tier selection is a conversation, not a Claude decision.
+
 ## Gate -1: Deploy Lock (Concurrent Session Safety)
 
 Before entering the deploy pipeline, check whether another session is already deploying:
