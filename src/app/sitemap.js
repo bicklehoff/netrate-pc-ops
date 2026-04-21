@@ -232,12 +232,9 @@ export default async function sitemap() {
       changeFrequency: 'monthly',
       priority: 0.8,
     },
-    {
-      url: `${BASE_URL}/tools/hecm-optimizer`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.7,
-    },
+    // /tools/hecm-optimizer intentionally NOT in public sitemap — it's an
+    // MLO-auth-gated tool (returns 307 to login for unauthenticated crawlers)
+    // and was flagging as a sitemap-redirect issue in the Ahrefs audit.
     {
       url: `${BASE_URL}/tools/purchase-calculator`,
       lastModified: new Date(),
