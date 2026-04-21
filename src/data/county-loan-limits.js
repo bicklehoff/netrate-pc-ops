@@ -5,6 +5,21 @@
  *
  * Data covers all 3235 US counties/territories.
  * All multi-unit limits use exact FHFA-published values (not calculated from multipliers).
+ *
+ * ─── Role after D9d (2026-04-22) ──────────────────────────────────────
+ * This file is a CLIENT-SIDE MIRROR of ref_conforming_baselines +
+ * ref_county_loan_limits. Server-side pricing reads from the DB via
+ * src/lib/rates/ref-loan-limits.js — that is the source of truth.
+ *
+ * This file exists so synchronous client components (RateTool/ScenarioForm,
+ * Portal/QuoteGenerator/QuoteScenarioForm) can render county dropdowns and
+ * high-cost badges without a round-trip on every state change.
+ *
+ * Drift is prevented by scripts/check-loan-limits-parity.mjs. Run it when
+ * FHFA publishes new limits (every November) — update both this file and
+ * the DB seed, then re-run the parity script.
+ *
+ * Do not import from this file in server-side pricing code. Use the DAL.
  */
 
 // 2026 Baseline conforming loan limits
