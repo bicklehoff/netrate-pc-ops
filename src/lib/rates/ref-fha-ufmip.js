@@ -7,10 +7,16 @@
  * param, 1-hour in-memory cache, explicit throw on missing row (no
  * silent hardcoded fallback — per D9d §5).
  *
- * This module ships with migration 022 but has no runtime consumers yet.
- * A follow-up PR retires the FHA_UFMIP_RATE constant in
- * src/lib/constants/fha.js from server-side pricing code (pricing-v2.js
- * + fee-builder.js) and wires those call sites through this DAL.
+ * Consumers (server-side pricing path):
+ *   - src/lib/rates/price-scenario.js resolves fhaUfmip for each lender
+ *     (lender-specific override from rate_lenders.fha_ufmip first, else
+ *     this DAL for the HUD regulatory baseline).
+ *   - src/lib/quotes/fee-builder.js reads UFMIP rate for fee breakdown.
+ *   - src/lib/rates/pricing-v2.js no longer falls back to a constant —
+ *     it throws if brokerConfig.fhaUfmip is missing on an FHA loan.
+ *
+ * src/lib/constants/fha.js retains a client-side FHA_UFMIP_RATE mirror
+ * for QuoteScenarioForm's synchronous display label only.
  *
  * See Work/Dev/audits/D9d-REFERENCE-DATA-SPEC.md §4.2 for the table
  * design and §5 for DAL conventions.

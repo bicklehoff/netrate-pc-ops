@@ -10,8 +10,6 @@
  * FINAL PRICE = 100 → PAR → no cost, no credit
  */
 
-import { FHA_UFMIP_RATE } from '@/lib/constants/fha';
-
 // ─── Step 1: Get base price from rate_prices ────────────────────────
 
 /**
@@ -380,9 +378,17 @@ export function priceRate(rateEntry, product, scenario, lenderAdj, brokerConfig,
   const isConventional = loanType === 'conventional';
   const isFha = loanType === 'fha';
 
-  // FHA: UFMIP is financed into the loan. Rate from lender config if set,
-  // otherwise the HUD regulatory baseline from constants/fha.js.
-  const ufmipRate = brokerConfig?.fhaUfmip || FHA_UFMIP_RATE;
+  // FHA: UFMIP is financed into the loan. The rate is resolved upstream
+  // in price-scenario.js — lender-specific override from rate_lenders if
+  // present, otherwise the HUD regulatory baseline from ref_fha_ufmip
+  // (D9d · migration 022). priceRate() is synchronous, so the caller must
+  // have populated brokerConfig.fhaUfmip before reaching this point. No
+  // fallback constant — per D9d §5, missing reference data is a hard
+  // error, not silently papered over.
+  if (isFha && (brokerConfig?.fhaUfmip == null)) {
+    throw new Error('priceRate: FHA loan requires brokerConfig.fhaUfmip — set via rate_lenders.fha_ufmip or resolved from ref_fha_ufmip upstream');
+  }
+  const ufmipRate = brokerConfig?.fhaUfmip ?? 0;
   const ufmip = isFha ? Math.round(loanAmount * ufmipRate) : 0;
   const effectiveLoanAmount = loanAmount + ufmip;
 
