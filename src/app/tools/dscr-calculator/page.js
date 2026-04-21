@@ -22,8 +22,8 @@ const UNITS_TO_PROPERTY = {
 
 const PURPOSE_TO_API = {
   purchase: 'purchase',
-  refinance: 'nco_refi',
-  cashout: 'co_refi',
+  refinance: 'rate_term',
+  cashout: 'cashout',
 };
 
 function fmtD(n) { return '$' + Math.round(n).toLocaleString(); }
@@ -146,7 +146,7 @@ export default function DSCRCalculator() {
             fico,
             cltv: Math.round(ltv * 100) / 100,
             state,
-            occupancy: 'noo',
+            occupancy: 'investment',
             loan_purpose: PURPOSE_TO_API[purpose] || 'purchase',
             property_type: UNITS_TO_PROPERTY[units] || 'sfr',
             loan_size: loanAmount,

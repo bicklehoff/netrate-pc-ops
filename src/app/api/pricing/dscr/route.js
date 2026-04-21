@@ -17,8 +17,8 @@
  *   fico:             760,
  *   cltv:             70,                      // percent
  *   state:            "CO",                    // 2-letter
- *   occupancy:        "noo",                   // DSCR is always NOO
- *   loan_purpose:     "purchase" | "nco_refi" | "co_refi",
+ *   occupancy:        "investment",            // DSCR is always NOO (canonical: investment)
+ *   loan_purpose:     "purchase" | "rate_term" | "cashout",
  *   property_type:    "sfr" | "2unit" | "pud" | "condo" | ...,
  *   loan_size:        320000,
  *

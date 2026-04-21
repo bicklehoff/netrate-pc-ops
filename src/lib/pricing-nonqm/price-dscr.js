@@ -74,8 +74,8 @@ export async function loadActiveDscrSheet(sql, lender_code = LENDER_CODE) {
  * @param {number}   scenario.fico
  * @param {number}   scenario.cltv              percent, e.g. 70
  * @param {string}   scenario.state             2-letter
- * @param {'primary'|'second'|'noo'} scenario.occupancy
- * @param {'purchase'|'nco_refi'|'co_refi'} scenario.loan_purpose
+ * @param {'primary'|'secondary'|'investment'} scenario.occupancy
+ * @param {'purchase'|'rate_term'|'cashout'} scenario.loan_purpose
  * @param {string}   scenario.property_type     'sfr'|'pud'|'condo'|'2unit'|...
  * @param {number}   scenario.loan_size         loan amount in dollars
  * @param {number}  [scenario.dscr_ratio]       e.g. 1.20 — required UNLESS dscr_inputs provided

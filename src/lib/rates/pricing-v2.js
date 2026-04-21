@@ -516,7 +516,7 @@ export function priceRate(rateEntry, product, scenario, lenderAdj, brokerConfig,
         if (pg === 'manufactured' && scenarioPropertyType !== 'manufactured') continue;
         if (pg === '2to4unit' && scenarioPropertyType !== 'multi_unit' && scenarioPropertyType !== '2to4unit') continue;
         if (pg === 'investment' && scenarioOccupancy !== 'investment') continue;
-        if (pg === 'secondHome' && scenarioOccupancy !== 'secondHome') continue;
+        if (pg === 'secondHome' && scenarioOccupancy !== 'secondary') continue;
         if (pg === 'arm' && !isArm) continue;
         if (pg === 'highBalArm' && !isArm) continue;
         if (pg === 'highBalFixed15' && (isArm || term !== 15)) continue;
@@ -532,7 +532,7 @@ export function priceRate(rateEntry, product, scenario, lenderAdj, brokerConfig,
         if (pf.productGroup === 'condo' && scenarioPropertyType !== 'condo') continue;
         if (pf.productGroup === 'manufactured' && scenarioPropertyType !== 'manufactured') continue;
         if (pf.productGroup === '3-4unit' && scenarioPropertyType !== '3-4unit') continue;
-        if (pf.productGroup === 'secondHome' && scenarioOccupancy !== 'secondHome') continue;
+        if (pf.productGroup === 'secondHome' && scenarioOccupancy !== 'secondary') continue;
         if (pf.productGroup === 'investment' && scenarioOccupancy !== 'investment') continue;
       }
       // Occupancy adjustments only apply to non-primary residence
