@@ -1,9 +1,9 @@
 # FoH April — Audit + UAD Spec
 
-**Status:** Active · D1 ✅ re-verified · D2 ✅ fully closed · D3 ✅ re-verified · D4 ✅ re-verified · D5 ✅ closed (absorbed into D9a) · D6 ✅ complete (PR 14 drop shipped 2026-04-21) · D7 ✅ core shipped (IA redesign deferred) · D8 ✅ inventory complete; remediations streamed into D7 + vocab audit · D9 🔄 D9a ✅ complete; D9b ✅ complete (all assigned items .3–.11, .13); D9d ✅ non-HECM scope complete; D9c/e queued · D10 🆕 filed (2/3 initial findings shipped)
+**Status:** Active · D1 ✅ re-verified (6 public-route `err.message` residuals pinned) · D2 ✅ fully closed · D3 ✅ re-verified · D4 ✅ re-verified (dialer residual enumerated: 15/16 routes unscoped — **High priority** security follow-up) · D5 ✅ closed (absorbed into D9a) · D6 ✅ complete (Core NonQM LLPA parser residual tracked) · D7 ✅ core shipped (IA redesign deferred; 6 polish residuals) · D8 ✅ inventory complete; remediations streamed into D7 + vocab audit · D9 🔄 D9a ✅ complete; D9b ✅ complete (all assigned items .3–.11, .13); D9d ✅ non-HECM scope complete (11 tables + 2 formalized + 2 dropped — all verified in prod DB 2026-04-22); D9c/e queued · D10 🆕 filed (2/3 initial findings shipped, D10.3 deferred to IA) · **Scenario Vocab Audit ✅ all 4 PRs shipped** (property_type #124, loan_purpose #125, loan_term #126, nonqm canonicalize #129 — all 4 canonical vocabularies verified live in prod DB 2026-04-22)
 **Name:** FoH April (Front-of-House April 2026) — the combined audit + UAD effort, David-named 2026-04-17. Formerly "Site Audit 2026"; audit (retrospective) + UAD (prospective) are one continuous effort.
-**Current driver:** PC Dev (`zen-sammet-6cf8be` worktree)
-**Last updated:** 2026-04-21 (v1.9 — D6 PR 14 shipped same day as v1.8 refresh. Migration 018 dropped `borrower_quotes` + `saved_scenarios`; `scenario_alert_queue` FK retargeted to `scenarios`. First live use of the Neon-branch rehearsal protocol documented in DEV-PLAYBOOK.md — rehearsal + prod runs both clean, 4/4 statements OK, 0 orphans.)
+**Current driver:** PC Dev (`magical-hypatia-ffaf85` worktree)
+**Last updated:** 2026-04-22 (v1.18 — full FoH April re-audit. 5 parallel dimension verifications. All ✅ dimension claims held: D9d 13/13 tables verified, D9b 6/6 pricing-unification checks clean, Vocab 4/4 PRs verified canonical in prod. Two header corrections: D4 dialer residual enumerated (15/16 routes unscoped, promoted to High priority security) + HECM optimizer retheme corrected 7→9 files. §7 "Next up" queue fully rewritten — stale Vocab PR 4 entry removed, D4 dialer elevated, 3 post-vocab data-quality follow-ups added.)
 **Canonical location:** this file
 
 > One audit. One spec. One driver at a time. Everything else defers to this doc.
@@ -130,11 +130,11 @@ Every-line review for OWASP-class vulnerabilities, credential exposure, unsafe d
 
 - **Shipped:** PR #52 (security audit — 8 vulnerabilities patched across 27 files)
 - **D0 verification (2026-04-16):** re-audit at [`D0-VERIFICATION-D1-SECURITY-2026-04-16.md`](./D0-VERIFICATION-D1-SECURITY-2026-04-16.md). All 8 PR #52 patches held at HEAD. No regressions from PRs #53–#79.
-- **Residual findings (batched for follow-up PR, lower priority):**
-  - 7 public/unauth routes still leak raw `err.message` (`strike-rate`, `saved-scenario`, `saved-scenario/update`, `pricing/dscr` ×2, `market/national-rates` ×2, `my-rates`)
-  - `/api/my-rates:26` leaks matched-lead count in auth error message
+- **Residual findings (re-verified 2026-04-22, line numbers pinned):**
+  - 6 public/unauth routes leak raw `err.message`: `strike-rate:148`, `saved-scenario:168`, `saved-scenario/update:137`, `pricing/dscr:133`, `market/national-rates:75+130`, `my-rates:60`
+  - `/api/my-rates:26` leaks lead count in auth error message (`Invalid token (found ${leads?.length || 0} leads)`)
   - ~11 MLO-protected routes leak `err.message` to authenticated callers (lower risk)
-  - No rate limiting on public POSTs (`strike-rate`, `saved-scenario`, `pricing`, both `pricing/dscr` endpoints)
+  - No rate limiting anywhere in `src/app/api/**` (verified via grep — zero middleware imports)
 - **Deferred:** full security audit (plaintext secrets in `~/.claude` skill files, API key rotation, `~/.netrate/auth.json` pattern, repo-wide scan) — tracked as PLATFORM-2026 backlog item #73, P=medium.
 
 ### D2 · camelCase / snake_case consistency — ✅ fully closed (2026-04-16)
@@ -161,7 +161,7 @@ Ownership checks, foreign key enforcement, transactional boundaries, PII handlin
 - **Shipped:** #55 (data integrity — 7 issues patched), #56 (hide product names from public rate tool — show only in debug mode).
 - **D0 verification (2026-04-16):** re-audit at [`D0-VERIFICATION-D4-DATA-INTEGRITY-2026-04-16.md`](./D0-VERIFICATION-D4-DATA-INTEGRITY-2026-04-16.md). 5 PR #55 patches verified correct. **2 critical new findings surfaced and shipped in PR #80:** (a) `GET /api/dialer/sms/threads` had no `organization_id` filter — cross-org SMS PII leak including plaintext message bodies; (b) `PATCH /api/portal/mlo/pipeline` bulk-cap guard was unreachable dead code due to brace scoping.
 - **Schema-integrity follow-up (2026-04-21, PR #___)** — original D4 re-audit checked route-level ownership + cross-org leaks but did not check table-level schema defaults. Discovered via a live failure: the Zoho corebot ingest webhook was silently dropping every incoming loan because `loans.id` has no `DEFAULT gen_random_uuid()` and the INSERT forgot to supply one. Audit of all primary-key columns across 10 core tables found **7 tables with `id UUID NOT NULL` and no default**: `loans`, `contacts`, `loan_events`, `loan_borrowers`, `documents`, `call_logs`, `staff`. PR #97 (2026-04-17) had previously fixed three call sites but never patched the defaults. **Migration 021** sets `DEFAULT gen_random_uuid()` on all 7, plus the corebot ingest INSERT gets an explicit `gen_random_uuid()` for defense-in-depth. Ships under §2c criterion #2 (actively harming real ingress; cannot wait for D9). D9 does not touch these defaults — fix is permanent.
-- **Residual (flagged for follow-up pass):** other routes under `src/app/api/dialer/**` also do not scope by `organization_id`. Only `/threads` was in the D4 audit scope; remaining dialer routes need their own audit pass.
+- **Residual (2026-04-22 re-audit, enumerated):** of the 16 routes under `src/app/api/dialer/**`, only `/sms/threads` (PR #80) has an `organization_id` filter. **15 other dialer routes lack org_id filtering.** Of those, the NextAuth-protected surfaces (`/calls`, `/calls/[id]/notes`, `/contacts`, `/contacts/[id]`, `/contacts/search`, `/sms/send`, `/token`) carry the same cross-org PII leak shape that PR #80 closed on `/threads`. The Twilio-webhook routes (`/call-complete`, `/incoming`, `/recording-status`, `/sms/incoming`, `/sms/status`, `/voice`, `/voicemail`, `/status`) are signature-gated but still write/read without org scoping — lower risk but same underlying gap. Full follow-up PR needed; priority elevated from "flagged" to "High · security" in §7.
 
 ### D5 · Org scoping — 🔄 half-done (first half re-verified, second half unshipped)
 
@@ -205,7 +205,7 @@ Audit doc: [`D7-MLO-PORTAL-AUDIT-2026-04-20.md`](./D7-MLO-PORTAL-AUDIT-2026-04-2
 - **Deferred to dedicated IA consultation session with David (IA-2 through IA-7):** Quotes nav disambiguation; "Backlog" nav placement; "Today"/Tasks/Calendar landing; tools submenu grouping; call history in nav; dark nav rail decision. Per audit §8 "Deferred — nav/IA redesign".
 - **Small residuals parked for a follow-up polish PR:**
   - LE-3 product UX call (merge Run Quote + Generate Quote?)
-  - HECM optimizer retheme (~7 files, large cyan surface)
+  - HECM optimizer retheme — 9 files confirmed via 2026-04-22 re-audit (ScenarioTable, PrintView, RateInputs, RefiSection, SaveLoadModal, OptimizerGrid, ApplicationSection, BorrowerInputs, FeesSection). Blocked on the standalone HECM project — retheme on code that's about to be rewritten is throwaway work.
   - Quote list / quote detail (QL-*) retheme
   - API response rename `borrower_*` → `contact_*` on `/api/portal/mlo/pipeline` + `/api/portal/mlo/loans/[id]`
   - `loan-states.js` (long-form) vs `loan-statuses.js` (short-form) STATUS_LABELS harmonization
@@ -323,25 +323,47 @@ Ordered work list. Inventory passes and remediation PRs interleave by default (s
 27. ✅ **README v1.8 refresh** shipped (PR #127) — catches audit index up to ~42 PRs since v1.5.
 28. ✅ **D6 PR 14 drop** — migration 018 retired legacy quote tables; first live exercise of the Neon-branch rehearsal protocol. Details under D6 dimension above.
 
-### Next up
+### Next up (punch list reconciled 2026-04-22 after full FoH April re-audit)
 
-29. **Vocab audit PR 4 — NonQM parser realignment** — 6,840-row `nonqm_adjustment_rules` migration (noo→investment, second→secondary, co_refi→cashout, nco_refi→refinance) + pricing-v2.js:519 secondHome bug fix + `adjustment_rules.purpose='irrrl'` keep-vs-rename decision (753 VA IRRRL rows). **Needs DSCR regression test before/after.** ~1-2 hrs. Risk-concentrated — Neon-branch rehearsal mandatory.
-30. **D9b.8 verify** — confirm #109 sub-financing-comparison rewrite fully closed D9b.8 scope (sub-financing-comparison.js was the original target; check for residual hardcoded GSE LLPA logic).
-31. **D9b.9 pricer-integrated tool defaults** — purchase-calculator, refi-analyzer, cost-of-waiting. Unblocked. Clean scope.
-32. **D9b.13 getFicoBand de-dup** — engine.js (>=800) vs pricing-v2.js (>=780). Decide canonical + consolidate.
-33. **D9d ref-data schema design** — aggregate Pass 1/2/6/7/8 reference-data findings (13+ proposed tables from Pass 8 alone; MKT-E2 loan-limits-2025.json; BP-1 closing costs) into unified `ref_*` schema. Unblocks D9b.10 (FHA_BASELINE_LIMIT) and D9b.11 (state closing-cost map).
-34. **D7 nav/IA redesign (IA-2 through IA-7)** — dedicated consultation session with David. Not a self-service PR.
-35. **D7 small residuals PR** — LE-3 product call, HECM optimizer retheme, quote list/detail retheme, API response `borrower_*`→`contact_*` rename, STATUS_LABELS harmonization, docs_out teal-500 token. Bundle or split as convenient.
-36. **Remaining Claw items** (new backlog #86/#87/#88 + pre-existing #76 /refinance + #79 sequence engine) — priority order TBD.
+**High priority — security:**
 
-### Later (post-D9b wrap)
+29. **D4 dialer route org-scoping fix** — 15 of 16 dialer routes lack `organization_id` filtering (see D4 residual). 7 NextAuth-protected routes have the same cross-org PII leak shape as the `/threads` fix in PR #80. Recommend bundling into one security PR (`fix/dialer-org-scoping`) with a shared `scopeByOrg(sql, orgId)` helper. **Neon-branch rehearsal optional** (route-level code change, no data migration). ~2-3 hrs with smoke tests.
 
-37. **D9c scenario/quote model** — composable calc modules, shareable quote links, borrower scenario save.
-38. **D9e application modules** — clean segment model for deal data.
-39. **D1 follow-up** — public-route `err.message` leaks + rate limiting (batched residuals from D1 D0 re-audit); later, broader security audit per backlog #73.
-40. **D4 follow-up** — audit remaining `src/app/api/dialer/**` routes for `organization_id` scoping (only `/threads` was in D4 audit scope).
-41. **BP-9 DB audit → ship** — largely addressed by D7-3 `ref_loan_types`, but verify borrower-portal application wizard reads from same source.
-42. **MKT-B3 volume numbers** — needs fresh 2026-YTD numbers from David OR continues as 2025-labeled historical stats.
+**Medium — security & pricing correctness:**
+
+30. **D1 err.message leaks + rate limiting** — 6 public routes confirmed leaking raw `err.message` (`strike-rate:148`, `saved-scenario:168`, `saved-scenario/update:137`, `pricing/dscr:133`, `market/national-rates:75+130`, `my-rates:60`). No rate-limit middleware anywhere in `src/app/api/**`. Bundle into one "D1 public-API hardening" PR. ~1-2 hrs.
+31. **D6 Core NonQM LLPA parser** — Everstream DSCR Plus + Expanded Prime Plus core tier adjustments explicitly skipped in `everstream-llpas.js:18-19` ("NOT handled here — follow-up PR"). Tracked under D6 but not blocking D6 completion.
+
+**Architectural — session-of-its-own:**
+
+32. **D9c scenario/quote model** — composable calc modules, shareable quote links (Layer 3 Lite), borrower scenario save. Multi-PR effort.
+33. **D9e application modules** — clean segment model for deal data. Multi-PR.
+34. **HECM standalone project** (scoped out of D9d 2026-04-22) — `ref_hecm_pricing` rate-sheet pipeline + HECM consumer retirement + FOA `ref_lender_corrections`. Blocks HECM optimizer retheme in item 35 below.
+35. **D7 nav/IA redesign (IA-2 through IA-7 + D10.3 Prequal discoverability)** — dedicated consultation session with David. Not a self-service PR.
+
+**D7 small residuals (bundle as convenient):**
+
+36. **LE-3 product call** — Run Quote vs Generate Quote merge — product decision needed first.
+37. **Quote list/detail retheme** — `src/app/portal/mlo/quotes/page.js` still on cyan/teal palette.
+38. **borrower_* → contact_* API rename** — pipeline + loans/[id] routes. 48 references across 9 files (QuoteWizard, QuoteScenarioForm, QuotePDF, HecmOptimizer, PayrollSection). Tier A with quote-generation smoke test.
+39. **STATUS_LABELS harmonization** — `loan-states.js` (has `rate_alert`) vs `loan-statuses.js` (has `settled`/`withdrawn`). Different keys. Design call needed: which map wins, where does `rate_alert` live.
+40. **docs_out teal-500 token** — `loan-statuses.js:57` hardcodes `bg-teal-500 text-white`. Trivial extract to a const if doing other work in the file.
+41. **HECM optimizer retheme (9 files)** — blocked on HECM standalone project; do not retheme throwaway code.
+
+**Data quality (post-vocab follow-ups surfaced in re-audit):**
+
+42. **Column-name unification** — `loans.loan_term` vs `scenarios.term` vs `rate_products.term`. Values are canonical (years) but column name diverges. Trivial rename migration when convenient.
+43. **`loans.refi_purpose` NULL gap** — 464 refi rows have null `refi_purpose` (only 68 of 532 refis are classified). Not a vocab defect; a data-completeness issue from historical imports. Needs classification strategy call.
+44. **`loans.loan_term` non-standard values** — 24 rows have 12 / 19 / 28 / 29 year terms. Likely remaining-term values from historical imports (documented as a known issue in the vocab audit §3.5).
+
+**Externally blocked:**
+
+45. **`ref_fha_annual_mip`** — pending `case_number_date` tracking implementation in loan schema (D9d spec §8).
+
+**Needs David input:**
+
+46. **MKT-B3 volume numbers** — needs fresh 2026-YTD numbers OR continues as 2025-labeled historical stats.
+47. **Claw backlog items** — #86 related-articles widget, #87 Ahrefs re-crawl verification, #88 DSCR screening workflow, plus pre-existing #76 /refinance + #79 sequence engine.
 
 ### Done criteria per item
 
@@ -412,6 +434,7 @@ After completion, this doc moves to archive status and a fresh `SITE-AUDIT-2027.
 
 ## 11. Change log
 
+- **2026-04-22 (v1.18)** — **Full FoH April re-audit.** David asked for "a full audit of everything we've done today, then re-evaluate what we think is left, then update README before signing off." Ran five parallel dimension verifications: D9d table-by-table (DB), D9b pricing-unification residuals (grep), D1/D4 security residuals (grep + route enumeration), D7 residuals current state, Scenario Vocab canonicalization full DB sweep. **All ✅ dimension claims held** — 13/13 D9d tables verified with exact row counts, 6/6 pricing-unification checks clean, all 4 vocabs canonical in prod (zero legacy residue). **Two header corrections:** (1) D4 dialer residual enumerated — `/sms/threads` is the only scoped route out of 16; 15 others lack `organization_id` filtering (7 NextAuth-protected carry same cross-org leak shape as PR #80's fix). Promoted to **High priority · security** in §7. (2) D7 HECM optimizer retheme corrected from "~7 files" to "9 files confirmed" (ScenarioTable, PrintView, RateInputs, RefiSection, SaveLoadModal, OptimizerGrid, ApplicationSection, BorrowerInputs, FeesSection) — and explicitly marked blocked on standalone HECM project. **§7 "Next up" queue fully rewritten** — stale Vocab PR 4 entry removed (shipped as #129 on 2026-04-21 same day as v1.8 refresh, which is why it remained in the queue). Queue now reconciled by priority: D4 dialer (High/security) → D1 hardening + D6 core NonQM parser (Medium) → D9c/D9e/HECM-project (Architectural) → D7 polish bundle → post-vocab data-quality follow-ups (column-name unification, refi_purpose NULL gap, loan_term non-standard values) → externally blocked. D10.1 + D10.2 both verified shipped in code. **Three new post-vocab findings surfaced in re-audit:** (a) `loans.loan_term` vs `scenarios.term` vs `rate_products.term` column-name mismatch, (b) 464 refi rows with NULL refi_purpose (data-completeness gap from historical imports), (c) 24 rows with non-standard loan_term values. None are defects — all filed as low-priority follow-ups. **D1 residuals pinned** to specific line numbers (6 routes, not 7 — prior count double-counted pricing/dscr). README now reflects accurate current state; single coherent punch list at §7.
 - **2026-04-15 (v1)** — initial spec filed. D1–D5 marked ✅ based on PRs #45–#60 shipped history. D6 marked 🔄 with 3 items pending. D7 marked ⏳. D8 marked 🆕 with Pass 1 (pricer) complete, Passes 2–8 queued. Pricer inventory folded in as cross-references in §9 and filed as sibling doc.
 - **2026-04-15 (v1.1)** — clarified that remediation is part of the audit (not a separate phase), added §2b "Interleave vs batch" defaulting to interleave, reshaped the queue (§7) to interleave inventory + ship-immediately remediations with an explicit batched-remediation block for cross-surface schema design.
 - **2026-04-15 (v1.2)** — post-D0-re-audit update. Ran D0 verification re-audits (§6 header distinguishes claimed-done from re-verified-done). D3 and D5 fully re-audited; D1/D2/D4 agents terminated mid-investigation and will be re-spawned. Two ship-immediately remediations landed: PR #76 (D5 cross-org scenario-alerts leak) and PR #77 (D3 homepage EMPTY_ADJ fallback + shared `empty-adj.js` module). D3 remediation was partial: closed the silent hardcoded-fallback cascade, but homepage-db still diverges from `/api/pricing` for the DEFAULT_SCENARIO (5.875% vs 5.990%). Divergence parked as a seed finding for D8 Pass 2 along with the existing page.js fallback and DSCR-widget inline-picker findings. Queue in §7 reshaped to reflect actual tonight-state and what's next.
