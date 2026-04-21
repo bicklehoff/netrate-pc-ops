@@ -398,23 +398,50 @@ export default function PipelineTable({ loans, allLoans, mloList, selectedIds, o
   const [showViewPicker, setShowViewPicker] = useState(false);
   const [savedViews, setSavedViews] = useState({ views: [], activeView: null });
 
-  // Load persisted state on mount
+  // Load persisted state on mount. Auto-surface newly-added columns:
+  // we record the full column list known at save time as `knownColumns`
+  // so on load we can detect which columns are new (exist now, weren't
+  // in the snapshot). Any new column that's defaultVisible gets added
+  // to the user's visible set. This preserves explicit hides of
+  // previously-known columns while surfacing additions to the pipeline
+  // schema. Missing knownColumns (state saved before this fix) triggers
+  // a one-time sync — add any currently-defaultVisible column not in
+  // the saved visible set.
   useEffect(() => {
     const saved = loadState();
     if (saved) {
       if (saved.sortKey) setSortKey(saved.sortKey);
       if (saved.sortDir) setSortDir(saved.sortDir);
       if (saved.columnFilters) setColumnFilters(saved.columnFilters);
-      if (saved.visibleColumns) setVisibleColumns(new Set(saved.visibleColumns));
+      if (saved.visibleColumns) {
+        const visible = new Set(saved.visibleColumns);
+        const knownAtSave = Array.isArray(saved.knownColumns)
+          ? new Set(saved.knownColumns)
+          : null;
+        for (const col of COLUMNS) {
+          if (!col.defaultVisible) continue;
+          if (knownAtSave) {
+            // schema-versioned: add if column is new since last save
+            if (!knownAtSave.has(col.key)) visible.add(col.key);
+          } else {
+            // legacy (pre-fix) state: one-time migration — add any
+            // default-visible column the user doesn't already have
+            if (!visible.has(col.key)) visible.add(col.key);
+          }
+        }
+        setVisibleColumns(visible);
+      }
     }
     setSavedViews(loadViews());
   }, []);
 
-  // Persist state on change
+  // Persist state on change. knownColumns records the current schema so
+  // the next load can diff against it.
   useEffect(() => {
     saveState({
       sortKey, sortDir, columnFilters,
       visibleColumns: Array.from(visibleColumns),
+      knownColumns: COLUMNS.map(c => c.key),
     });
   }, [sortKey, sortDir, columnFilters, visibleColumns]);
 
