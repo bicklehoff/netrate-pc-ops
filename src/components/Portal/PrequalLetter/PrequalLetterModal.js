@@ -109,10 +109,14 @@ export default function PrequalLetterModal({ loan, session, onClose }) {
         mloNmls: loan.mlo?.nmls || '641790',
         mloPhone: '303-444-5251',
         mloEmail: loan.mlo?.email || session?.user?.email || 'david@netratemortgage.com',
-        // Staff headshot. Falls back to David's public asset so the letter
-        // always has a face next to the signature. Per-MLO photos can be
-        // wired in later via staff.photo_url.
-        mloPhotoUrl: loan.mlo?.photo_url || '/david-burson.jpg',
+        // Staff headshot. @react-pdf's <Image> requires a fully-qualified
+        // URL — a relative path silently fails and cascades into neighboring
+        // Views failing to render too (lost us the trust-bar stars in #138).
+        // Compute absolute URL from window.location.origin so previews work
+        // on any Vercel URL; fall back to the production host for SSR safety.
+        mloPhotoUrl: loan.mlo?.photo_url || `${
+          typeof window !== 'undefined' ? window.location.origin : 'https://www.netratemortgage.com'
+        }/david-burson.jpg`,
       }));
     }
   }, [loan, session]);
