@@ -267,9 +267,9 @@ const s = StyleSheet.create({
     gap: 10,
   },
   signaturePhoto: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
+    width: 44,
+    height: 44,
+    borderRadius: 6,
     objectFit: 'cover',
   },
   signatureIdCol: { flexDirection: 'column' },
