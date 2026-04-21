@@ -297,7 +297,7 @@ const s = StyleSheet.create({
   },
   trustLabel: {
     fontSize: 7,
-    color: '#9ca3af',
+    color: '#E5E7EB',
   },
   trustValue: {
     fontSize: 8,
