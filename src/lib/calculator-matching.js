@@ -16,7 +16,7 @@ function buildQueryString(params) {
 }
 
 /**
- * @param {object} scenarioData — the scenario inputs from SavedScenario.scenarioData
+ * @param {object} scenarioData — the scenario inputs (scenarios.scenario_data JSONB)
  * @param {number} [bestRate] — the current best rate from lastPricingData (optional)
  * @returns {Array<{name: string, path: string, label: string, url: string}>}
  */

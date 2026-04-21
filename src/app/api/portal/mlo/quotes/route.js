@@ -6,7 +6,7 @@
  *
  * Reads/writes the unified scenarios tables. MLO quotes are stored with
  *   owner_type='mlo', source='mlo_quote', visibility='internal'
- * Response shapes match the legacy borrower_quotes shape via scenarioToQuoteShape().
+ * Response shapes match the legacy (pre-unification) quote shape via scenarioToQuoteShape().
  */
 
 import { NextResponse } from 'next/server';

@@ -2,8 +2,8 @@
 // GET /api/my-rates?token=xxx
 // Token-based auth (like quote viewer), no cookie session needed.
 //
-// Reads from the unified scenarios table; responds in legacy saved_scenarios shape
-// via scenarioToSavedShape().
+// Reads from the unified scenarios table; responds in the legacy saved-scenario
+// shape (pre-unification) via scenarioToSavedShape().
 
 import { NextResponse } from 'next/server';
 import sql from '@/lib/db';
@@ -47,7 +47,7 @@ export async function GET(request) {
       LIMIT 1
     `;
 
-    // Shape each scenario into legacy saved_scenarios format
+    // Shape each scenario into the legacy saved-scenario response format
     const scenarios = scenarioRows.map(s => scenarioToSavedShape({ ...s, rates: s.rates || [] }));
 
     return NextResponse.json({

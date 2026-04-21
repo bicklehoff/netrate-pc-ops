@@ -5,7 +5,7 @@
  * PATCH /api/portal/mlo/quotes/:id — update quote fields (scenario, fees, selected rates)
  *
  * Reads/writes unified scenarios tables. Responses use scenarioToQuoteShape()
- * for backward compatibility with the borrower_quotes shape.
+ * for backward compatibility with the legacy (pre-unification) quote shape.
  */
 
 import { NextResponse } from 'next/server';

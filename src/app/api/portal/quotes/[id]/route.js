@@ -6,7 +6,8 @@
  * Public-ish endpoint — authenticated via magic token (from email link).
  * Tracks viewedAt on first access. Returns quote data for the borrower view.
  *
- * Reads from unified scenarios table; responds in legacy borrower_quotes shape.
+ * Reads from unified scenarios table; responds in the legacy quote shape
+ * (pre-unification) for backward compatibility with existing clients.
  */
 
 import { NextResponse } from 'next/server';
