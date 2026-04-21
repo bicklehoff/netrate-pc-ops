@@ -37,7 +37,7 @@ const GRAY_900 = '#111827';
 function LogoMark({ size = 36 }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 44 44">
-      <Rect x="0" y="0" width="44" height="44" rx="8" ry="8" fill="#FFFFFF" stroke="rgba(26,31,46,0.12)" />
+      <Rect x="0" y="0" width="44" height="44" rx="8" ry="8" fill="#FFFFFF" stroke="#1A1F2E" strokeOpacity="0.12" />
       <Rect x="9"  y="24" width="5" height="11" rx="1" ry="1" fill={YELLOW} />
       <Rect x="17" y="21" width="5" height="14" rx="1" ry="1" fill={YELLOW} />
       <Rect x="25" y="12" width="5" height="23" rx="1" ry="1" fill={BRAND} />
@@ -125,7 +125,7 @@ const s = StyleSheet.create({
     fontSize: 11,
     color: GRAY_700,
     lineHeight: 1.45,
-    marginBottom: 5,
+    marginBottom: 8,
   },
 
   // Property address callout
@@ -136,7 +136,8 @@ const s = StyleSheet.create({
     borderLeftWidth: 3,
     borderLeftColor: BRAND,
     borderRadius: 3,
-    marginBottom: 8,
+    marginTop: 4,
+    marginBottom: 14,
   },
   propertyText: {
     fontSize: 11,
@@ -148,7 +149,7 @@ const s = StyleSheet.create({
   heroRow: {
     flexDirection: 'row',
     gap: 10,
-    marginBottom: 8,
+    marginBottom: 16,
   },
   heroBox: {
     flex: 1,
@@ -175,7 +176,7 @@ const s = StyleSheet.create({
   detailsRow: {
     flexDirection: 'row',
     gap: 14,
-    marginBottom: 6,
+    marginBottom: 14,
   },
   detailsCol: { flex: 1 },
   detailsTitle: {
@@ -239,12 +240,13 @@ const s = StyleSheet.create({
     fontSize: 9,
     color: GRAY_600,
     lineHeight: 1.35,
+    marginTop: 4,
     marginBottom: 4,
   },
 
   // Signature block
   signatureBlock: {
-    marginTop: 6,
+    marginTop: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
@@ -253,8 +255,8 @@ const s = StyleSheet.create({
     width: 180,
     borderBottomWidth: 1,
     borderBottomColor: BRAND,
-    marginBottom: 4,
-    marginTop: 12,
+    marginBottom: 6,
+    marginTop: 40,
   },
   signatureName: { fontSize: 12, fontFamily: 'Helvetica-Bold', color: GRAY_900 },
   signatureDetail: { fontSize: 9, color: GRAY_500, marginTop: 1 },
@@ -306,6 +308,7 @@ const s = StyleSheet.create({
 
   // Disclaimer
   disclaimer: {
+    marginTop: 18,
     marginBottom: 34,
   },
   disclaimerText: {
@@ -333,6 +336,9 @@ const LOAN_TYPE_DISPLAY = {
   fha: 'FHA',
   va: 'VA',
   usda: 'USDA Rural',
+  jumbo: 'Jumbo',
+  nonqm: 'Non-QM',
+  other: 'Other',
 };
 
 // Keyed on years (loans.loan_term is years per migration 017).
@@ -471,12 +477,18 @@ export default function PrequalLetterPDF({ data }) {
             <View style={s.detailRow}>
               <Text style={s.detailLabel}>Loan Term</Text>
               <Text style={s.detailValue}>
-                {LOAN_TERM_DISPLAY[loan_term] || `${loan_term} years`}
+                {(() => {
+                  // loans.loan_term is years per migration 017, but legacy records
+                  // and user-typed overrides sometimes hold months (360/180). Normalize.
+                  const n = Number(loan_term);
+                  const years = n > 50 ? Math.round(n / 12) : n;
+                  return LOAN_TERM_DISPLAY[years] || `${years} Year Fixed`;
+                })()}
               </Text>
             </View>
             <View style={s.detailRow}>
               <Text style={s.detailLabel}>Loan-to-Value</Text>
-              <Text style={s.detailValue}>{ltv ? `${Number(ltv).toFixed(1)}%` : '—'}</Text>
+              <Text style={s.detailValue}>{ltv ? `${Number(ltv).toFixed(2)}%` : '—'}</Text>
             </View>
             {interest_rate ? (
               <View style={s.detailRow}>
