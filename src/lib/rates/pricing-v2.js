@@ -87,7 +87,7 @@ function getFicoLtvAdjustment(creditScore, ltv, loanPurpose, llpaGrids) {
   if (!grid) return 0;
 
   // Find FICO band
-  const ficoBand = getFicoBand(creditScore);
+  const ficoBand = ficoBandKey(creditScore);
   const ficoRow = grid[ficoBand];
   if (!ficoRow) return 0;
 
@@ -132,7 +132,7 @@ function getFicoLtvRawValue(creditScore, ltv, loanPurpose, llpaGrids) {
   // (FHA ficoPriceAdj is a flat FICO→LTV grid, not purpose-split)
   const effectiveGrid = grid || llpaGrids;
 
-  const ficoBand = getFicoBand(creditScore);
+  const ficoBand = ficoBandKey(creditScore);
   const ficoRow = effectiveGrid[ficoBand];
   if (!ficoRow) return 0;
 
@@ -167,7 +167,16 @@ function getFicoLtvRawValue(creditScore, ltv, loanPurpose, llpaGrids) {
   return 0;
 }
 
-function getFicoBand(score) {
+/**
+ * Build the FICO-band LOOKUP KEY used against rate-sheet LLPA tables.
+ * 780+ merges into one bucket ('>=780') because that's how parsers + the
+ * db-adj-loader serialize the top tier of rate sheets.
+ *
+ * NOT the same as `getFicoBand()` in engine.js — that one is for UI
+ * display (splits 800+ from 780-799). See engine.js header for the
+ * rationale on keeping them distinct.
+ */
+function ficoBandKey(score) {
   if (score >= 780) return '>=780';
   if (score >= 760) return '760-779';
   if (score >= 740) return '740-759';
@@ -395,14 +404,14 @@ export function priceRate(rateEntry, product, scenario, lenderAdj, brokerConfig,
       const ficoLtvCost = getFicoLtvAdjustment(creditScore, ltv, loanPurpose, ficoGrids);
       if (ficoLtvCost !== 0) {
         price -= ficoLtvCost;
-        breakdown.push({ label: `FICO/LTV (${getFicoBand(creditScore)}, ${ltv}%)`, value: -ficoLtvCost });
+        breakdown.push({ label: `FICO/LTV (${ficoBandKey(creditScore)}, ${ltv}%)`, value: -ficoLtvCost });
       }
     } else {
       // Core FHA: values are signed — positive = credit, negative = cost
       const ficoLtvVal = getFicoLtvRawValue(creditScore, ltv, loanPurpose, ficoGrids);
       if (ficoLtvVal !== 0) {
         price += ficoLtvVal;
-        breakdown.push({ label: `FICO/LTV (${getFicoBand(creditScore)}, ${ltv}%)`, value: ficoLtvVal });
+        breakdown.push({ label: `FICO/LTV (${ficoBandKey(creditScore)}, ${ltv}%)`, value: ficoLtvVal });
       }
     }
   }

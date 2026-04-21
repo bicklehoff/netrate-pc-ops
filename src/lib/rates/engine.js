@@ -3,7 +3,14 @@
  * Pure functions, no UI dependencies.
  *
  * calculatePI and calculateAPR re-exported from the canonical mortgage-math.js.
- * getFicoBand and getLtvBandIndex remain here (used by pricing engine and components).
+ * getFicoBand (display-layer labels) and getLtvBandIndex live here.
+ *
+ * NOTE on `getFicoBand`: this is the DISPLAY-layer band utility — returns
+ * fine-grained labels like '>=800' vs '780-799' to tell the UI user their
+ * exact band. It is NOT the same as the LLPA-lookup key formatter used
+ * internally by pricing-v2.js (see `ficoBandKey()` there), which merges
+ * 780+ into a single bucket to match how rate sheet parsers key their
+ * tables. The two are intentionally distinct — do not merge.
  */
 
 export { calculateMonthlyPI as calculatePI, calculateAPR } from '@/lib/mortgage-math';
