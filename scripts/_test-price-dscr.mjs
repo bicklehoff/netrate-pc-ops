@@ -21,7 +21,7 @@ const scenario = {
   fico: 740,
   cltv: 70,
   state: 'CO',
-  occupancy: 'noo',
+  occupancy: 'investment',
   loan_purpose: 'purchase',
   property_type: 'sfr',
   loan_size: 500_000,
@@ -81,12 +81,12 @@ if (skipped.length) {
   console.log('\nSkip reasons:', reasons);
 }
 
-// Second scenario: NOO CO Refi 5/6 ARM, FICO 700, CLTV 75
+// Second scenario: Investment cash-out refi 5/6 ARM, FICO 700, CLTV 75
 const armScenario = {
   ...scenario,
   product_type: 'arm',
   arm_fixed_period: 5,
-  loan_purpose: 'co_refi',
+  loan_purpose: 'cashout',
   fico: 700,
   cltv: 75,
 };

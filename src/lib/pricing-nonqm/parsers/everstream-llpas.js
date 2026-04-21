@@ -53,16 +53,19 @@ const CLTV_BANDS = [
 ];
 
 // 9 section labels in the FICO×CLTV block, exact left-col strings.
+// Emits the canonical scenario vocab (agency-native occupancy +
+// flat pricing-shaped loan_purpose), not Everstream's sheet labels.
+// See Work/Dev/audits/SCENARIO-VOCABULARY-AUDIT-2026-04-20.md §2.
 const SECTION_MAP = {
-  'Primary Purchase':    { occupancy: 'primary', loan_purpose: 'purchase' },
-  'Primary NCO Refi':    { occupancy: 'primary', loan_purpose: 'nco_refi' },
-  'Primary CO Refi':     { occupancy: 'primary', loan_purpose: 'co_refi' },
-  'Second Purchase':     { occupancy: 'second',  loan_purpose: 'purchase' },
-  'Second NCO Refi':     { occupancy: 'second',  loan_purpose: 'nco_refi' },
-  'Second CO Refi':      { occupancy: 'second',  loan_purpose: 'co_refi' },
-  'NOO Purchase':        { occupancy: 'noo',     loan_purpose: 'purchase' },
-  'NOO NCO Refi':        { occupancy: 'noo',     loan_purpose: 'nco_refi' },
-  'NOO CO Refi':         { occupancy: 'noo',     loan_purpose: 'co_refi' },
+  'Primary Purchase':    { occupancy: 'primary',    loan_purpose: 'purchase'  },
+  'Primary NCO Refi':    { occupancy: 'primary',    loan_purpose: 'rate_term' },
+  'Primary CO Refi':     { occupancy: 'primary',    loan_purpose: 'cashout'   },
+  'Second Purchase':     { occupancy: 'secondary',  loan_purpose: 'purchase'  },
+  'Second NCO Refi':     { occupancy: 'secondary',  loan_purpose: 'rate_term' },
+  'Second CO Refi':      { occupancy: 'secondary',  loan_purpose: 'cashout'   },
+  'NOO Purchase':        { occupancy: 'investment', loan_purpose: 'purchase'  },
+  'NOO NCO Refi':        { occupancy: 'investment', loan_purpose: 'rate_term' },
+  'NOO CO Refi':         { occupancy: 'investment', loan_purpose: 'cashout'   },
 };
 
 const TIER_SHEET_MAP = {

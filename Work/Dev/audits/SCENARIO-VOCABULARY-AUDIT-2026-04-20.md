@@ -290,3 +290,14 @@ PR 4: occupancy nonqm parser realignment (code-only).
 ## 9 · Priority & next step
 
 **Ship order:** property_type (PR 1) first — largest surface, most-broken user-facing (MLO dropdown round-trip), migration is clean. Then nonqm parser realignment (PR 4 — code-only, reduces future migration risk). Then loan_purpose/refi_purpose (PR 2 — needs semantic sign-off). Then loan_term (PR 3 — trivial, conservative migration).
+
+---
+
+## 10 · Shipped PRs
+
+- **PR 1 — property_type** (#124, migration 015, 2026-04-20): 687 `single_family`/`SFH-*` rows → `sfr`; 1 `2-4unit` → `multi_unit`. MLO portal + parsers + MISMO + MCR + CRM migration aligned on pricing-native vocab.
+- **PR 2 — loan_purpose URLA hierarchy** (#125, migration 016, 2026-04-20): 95 legacy LDOX refi_purpose strings normalized; new `loans.cashout_reason` column; 3-level hierarchy locked in.
+- **PR 3 — loan_term months→years** (#126, migration 017, 2026-04-20): 777 rows converted. Migration ordering bug caught mid-run (659 rows nulled → restored from PITR); DEV-PLAYBOOK.md now has Neon-branch rehearsal protocol.
+- **PR 4 — nonqm vocab canonicalize** (#___, migration 019, 2026-04-21): 10,260 `nonqm_adjustment_rules` rows aligned (noo→investment, second→secondary, nco_refi→rate_term, co_refi→cashout). 7 `scenarios.loan_purpose='refinance'` rows → `rate_term`. Parser SECTION_MAP emits canonical going forward. Also fixed latent pricing-v2.js:519/535 bug — `scenarioOccupancy !== 'secondHome'` never matched canonical `'secondary'`, so all second-home LLPAs were silently skipped. Agency `adjustment_rules.purpose='irrrl'` intentionally kept (LS vendor vocab match). Rehearsed on Neon branch before prod run; DSCR pricing output byte-identical to pre-migration baseline.
+
+**Audit complete.** All 4 canonical vocabularies unified.
