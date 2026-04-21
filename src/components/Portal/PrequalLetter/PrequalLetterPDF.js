@@ -468,7 +468,7 @@ export default function PrequalLetterPDF({ data }) {
             <Text style={s.heroValue}>{fmtDollar(purchase_price)}</Text>
           </View>
           <View style={s.heroBox}>
-            <Text style={s.heroLabel}>Max Loan Amount</Text>
+            <Text style={s.heroLabel}>Loan Amount</Text>
             <Text style={s.heroValue}>{fmtDollar(loan_amount)}</Text>
           </View>
         </View>
