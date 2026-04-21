@@ -116,6 +116,12 @@ export default async function sitemap() {
       priority: 0.7,
     },
     {
+      url: `${BASE_URL}/refinance`,
+      lastModified: new Date(),
+      changeFrequency: 'daily',
+      priority: 0.9,
+    },
+    {
       url: `${BASE_URL}/refinance-playbook`,
       lastModified: new Date(),
       changeFrequency: 'monthly',
