@@ -15,6 +15,28 @@ Every schema change needs a migration file. `prisma db push` applies changes to 
 3. Review the generated SQL in `prisma/migrations/`
 4. Commit both the schema AND migration file together
 
+### Data migrations: branch first, then apply to prod
+
+For any migration with `UPDATE`/`DELETE` using value-based `WHERE` clauses, run it against a Neon branch before touching production. Schema-only changes (`ADD COLUMN`, `CREATE INDEX`) don't need this.
+
+```bash
+# 1. Create a branch (Neon console or CLI — 30 seconds)
+neon branches create --name migration-NNN-test
+
+# 2. Run against the branch
+PC_DATABASE_URL=<branch-connection-string> node scripts/_run-migration-NNN.mjs
+
+# 3. Verify the post-run distribution matches expectations
+
+# 4. Delete the branch, run against prod
+neon branches delete migration-NNN-test
+node scripts/_run-migration-NNN.mjs
+```
+
+The runner already accepts any `DATABASE_URL`, so no special mode needed — just point it at the branch URL. The branch is a full copy of prod data at that instant.
+
+**Why this matters:** Migration 017 (loan_term months→years) had a statement ordering bug — the `/12` pass ran before the outlier null, so `WHERE loan_term = 30` matched all 659 just-converted 30-year rows instead of the one Rocket Mortgage outlier. 659 rows were nulled and had to be restored manually from Neon PITR. A branch run would have shown the wrong post-run distribution immediately.
+
 ### Hand-written migrations: always use IF NOT EXISTS
 Prisma's auto-generated migrations use bare `ALTER TABLE ADD COLUMN` which fails if the column exists. When writing manual SQL:
 ```sql
