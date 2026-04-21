@@ -294,12 +294,12 @@ async function processLoan(loanData) {
     const submittedAt = coreStatus !== 'draft' ? new Date() : null;
     const rows = await sql`
       INSERT INTO loans (
-        contact_id, mlo_id, status, ball_in_court, ldox_loan_id, loan_number,
+        id, contact_id, mlo_id, status, ball_in_court, ldox_loan_id, loan_number,
         loan_amount, interest_rate, loan_term, purpose, occupancy, loan_type,
         lender_name, purchase_price, estimated_value, num_units, property_type,
         property_address, current_address, credit_score, application_step, submitted_at
       ) VALUES (
-        ${borrower.id}, ${mloId}, ${coreStatus}, ${ballInCourt}, ${ldoxLoanId}, ${loanNumber},
+        gen_random_uuid(), ${borrower.id}, ${mloId}, ${coreStatus}, ${ballInCourt}, ${ldoxLoanId}, ${loanNumber},
         ${loanAmount}, ${interestRate}, ${loanTerm}, ${purpose}, ${occupancy}, ${loanType},
         ${lenderName}, ${purchasePrice}, ${estimatedValue}, ${numUnits}, ${propertyType},
         ${propertyAddress ? JSON.stringify(propertyAddress) : null}::jsonb,
