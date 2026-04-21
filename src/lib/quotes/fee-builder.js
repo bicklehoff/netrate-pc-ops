@@ -16,7 +16,7 @@
 
 import sql from '@/lib/db';
 import { calculateEscrowSections } from './escrow-calc';
-import { FHA_UFMIP_RATE } from '@/lib/constants/fha';
+import { getFhaUfmip } from '@/lib/rates/ref-fha-ufmip';
 import { getConformingBaseline } from '@/lib/rates/ref-loan-limits';
 
 // 10-minute cache for fee templates (they rarely change)
@@ -175,7 +175,11 @@ export async function buildFeeBreakdown({
 
   // ── FHA calculations ────────────────────────────────────────────────────
   const isFha = loanType === 'fha';
-  const ufmip = isFha ? Math.round(loanAmount * FHA_UFMIP_RATE) : 0;
+  // UFMIP rate: sourced from ref_fha_ufmip (D9d · migration 022). Keyed
+  // by loan purpose; case_type defaults to 'standard' (we don't track
+  // pre-2009 grandfathered streamlines at this layer).
+  const ufmipRate = isFha ? await getFhaUfmip({ loanPurpose: purpose }) : 0;
+  const ufmip = isFha ? Math.round(loanAmount * ufmipRate) : 0;
   const fhaHighBalanceThreshold = isFha
     ? (await getConformingBaseline()).baseline_1unit
     : null;

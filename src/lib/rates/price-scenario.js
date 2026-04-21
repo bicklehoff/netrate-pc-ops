@@ -16,6 +16,7 @@ import { DEFAULT_SCENARIO } from '@/lib/rates/defaults';
 import { EMPTY_ADJ } from '@/lib/rates/empty-adj';
 import { pickParRate } from '@/lib/rates/pick-par-rate';
 import { classifyLoan, getLoanLimits, getConformingBaseline } from '@/lib/rates/ref-loan-limits';
+import { getFhaUfmip } from '@/lib/rates/ref-fha-ufmip';
 
 const CACHE_TTL_MS = 2 * 60 * 1000;
 let rateCache = { data: null, fetchedAt: 0 };
@@ -137,16 +138,26 @@ export async function priceScenario(body) {
     // For FTHB cross-type, don't skip lenders missing FHA config — they may have HomeReady/HomePossible
     const needsFha = scenario.loanType === 'fha';
     const hasFthbCrossType = scenario.firstTimeBuyer && needsFha;
-    if (needsFha && lenderData.fhaUfmip == null && !hasFthbCrossType) {
-      configWarnings.push(`${lenderName}: missing fhaUfmip in rate_lenders — set FHA UFMIP rate for FHA pricing`);
-      continue;
+
+    // FHA UFMIP: per-lender override from rate_lenders if set, otherwise the
+    // HUD regulatory baseline from ref_fha_ufmip (D9d · migration 022). No
+    // silent fallback to a hardcoded constant — per D9d §5 the DAL is the
+    // only source of truth for externally-authored rates.
+    let fhaUfmip = lenderData.fhaUfmip;
+    if (needsFha && fhaUfmip == null && !hasFthbCrossType) {
+      try {
+        fhaUfmip = await getFhaUfmip({ loanPurpose: scenario.loanPurpose });
+      } catch (err) {
+        configWarnings.push(`${lenderName}: FHA UFMIP unavailable (${err.message})`);
+        continue;
+      }
     }
 
     const brokerConfig = {
       compRate: body.borrowerPaid ? 0 : lenderData.compRate,
       compCapPurchase: body.borrowerPaid ? 0 : lenderData.compCap.purchase,
       compCapRefi: body.borrowerPaid ? 0 : lenderData.compCap.refinance,
-      fhaUfmip: lenderData.fhaUfmip,
+      fhaUfmip,
     };
 
     const lenderAdj = await getDbLenderAdj(lenderId, scenario.loanType);
