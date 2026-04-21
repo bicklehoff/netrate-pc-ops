@@ -37,8 +37,11 @@ export async function GET(req) {
 
     const pattern = q ? `%${q}%` : null;
 
-    // Main query with includes
-    // Using sql() call syntax for dynamic ORDER BY
+    // Main query with includes. sortCol + orderDir come from validated
+    // allowlists above; safe to interpolate as string literals. Remaining
+    // inputs are parameterized via $N. Uses sql.query() for parameterized
+    // form — raw sql(query, [params]) call-style is not supported by the
+    // current @neondatabase/serverless client (tagged-template only).
     const contactQuery = `
       SELECT c.*,
         json_build_object('id', m.id, 'first_name', m.first_name, 'last_name', m.last_name) AS assigned_mlo,
@@ -54,7 +57,8 @@ export async function GET(req) {
       ORDER BY ${sortCol} ${orderDir}
       LIMIT $6 OFFSET $7
     `;
-    const contacts = await sql(contactQuery, [orgId, pattern, tag, status, filterMloId, limit, offset]);
+    const contactResult = await sql.query(contactQuery, [orgId, pattern, tag, status, filterMloId, limit, offset]);
+    const contacts = contactResult.rows;
 
     // Post-migration: contact IS borrower. Pull loans for borrower-role contacts directly.
     const borrowerContactIds = contacts.filter(c => c.role === 'borrower').map(c => c.id);
