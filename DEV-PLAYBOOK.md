@@ -17,7 +17,20 @@ Every schema change needs a migration file. `prisma db push` applies changes to 
 
 ### Data migrations: branch first, then apply to prod
 
-For any migration with `UPDATE`/`DELETE` using value-based `WHERE` clauses, run it against a Neon branch before touching production. Schema-only changes (`ADD COLUMN`, `CREATE INDEX`) don't need this.
+Neon-branch rehearsal is **mandatory** when the migration can corrupt existing data — specifically, any migration with `UPDATE`/`DELETE` using value-based `WHERE` clauses, or multi-step data transforms where statement ordering matters.
+
+Rehearsal is **optional** (skip allowed) when the migration is purely additive and cannot corrupt anything:
+
+| Case | Rehearse? | Why |
+|---|---|---|
+| `UPDATE`/`DELETE` on existing table with value-based `WHERE` | ✅ mandatory | Statement ordering, type coercion, or row-shape surprises can corrupt data |
+| Multi-step data transform on existing rows | ✅ mandatory | Migration 017 class — ordering bugs |
+| New-column `ADD COLUMN` on existing table | ⏭ skip | Purely additive |
+| `CREATE INDEX` | ⏭ skip | Read-path only |
+| New-table `CREATE TABLE IF NOT EXISTS` + seed rows with `ON CONFLICT DO NOTHING` | ⏭ skip | Cannot touch existing data; bad seed is visible immediately in the runner's verification output and trivial to fix on an otherwise-empty table |
+| Empty-schema-first table (D9d §8 Q2 style) | ⏭ skip | No data at all — nothing to verify |
+
+The principle: **rehearse when the blast radius includes live rows.** Don't cargo-cult the protocol on migrations that are structurally incapable of destroying anything.
 
 ```bash
 # 1. Create a branch (Neon console or CLI — 30 seconds)
