@@ -59,8 +59,10 @@ export const OFFICE_ADDRESS = {
 export const OFFICE_ADDRESS_LINE =
   `${OFFICE_ADDRESS.street}, ${OFFICE_ADDRESS.city}, ${OFFICE_ADDRESS.state} ${OFFICE_ADDRESS.zip}`;
 
-// Primary domain + URL bases
-export const COMPANY_DOMAIN = 'netratemortgage.com';
+// Primary domain + URL bases. Uses the `www.` host to match the site's
+// canonical form (see PR #99 — all internal URLs canonicalize to www.).
+// The bare domain redirects to www. at the DNS/Vercel layer.
+export const COMPANY_DOMAIN = 'www.netratemortgage.com';
 export const COMPANY_URL = `https://${COMPANY_DOMAIN}`;
 
 // Licensed states — source of truth for the site's areaServed claims.
