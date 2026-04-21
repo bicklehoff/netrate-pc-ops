@@ -12,10 +12,10 @@
 import { priceRate } from '@/lib/rates/pricing-v2';
 import { getDbLenderAdj } from '@/lib/rates/db-adj-loader';
 import { loadRateDataFromDB } from '@/lib/rates/db-loader';
-import { DEFAULT_SCENARIO, FHA_BASELINE_LIMIT } from '@/lib/rates/defaults';
+import { DEFAULT_SCENARIO } from '@/lib/rates/defaults';
 import { EMPTY_ADJ } from '@/lib/rates/empty-adj';
 import { pickParRate } from '@/lib/rates/pick-par-rate';
-import { classifyLoan, getLoanLimits } from '@/data/county-loan-limits';
+import { classifyLoan, getLoanLimits, getConformingBaseline } from '@/lib/rates/ref-loan-limits';
 
 const CACHE_TTL_MS = 2 * 60 * 1000;
 let rateCache = { data: null, fetchedAt: 0 };
@@ -81,15 +81,19 @@ export async function priceScenario(body) {
     firstTimeBuyer: body.firstTimeBuyer || false,
   };
 
-  // County-based loan classification
+  // County-based loan classification.
+  // FHA's conforming→high-balance threshold is 65% of the baseline 1-unit
+  // conforming limit (the "FHA floor"). Read from ref_conforming_baselines
+  // instead of a hardcoded constant so FHFA updates propagate automatically.
   const county = body.county || null;
   let loanClassification = null;
   let countyLimits = null;
   if (county && scenario.state) {
-    countyLimits = getLoanLimits(scenario.state, county);
+    countyLimits = await getLoanLimits(scenario.state, county);
     if (countyLimits) {
       if (scenario.loanType === 'fha') {
-        const fhaBaseline = FHA_BASELINE_LIMIT;
+        const baseline = await getConformingBaseline();
+        const fhaBaseline = Math.round(baseline.baseline_1unit * 0.65);
         if (loanAmount <= fhaBaseline) {
           loanClassification = 'conforming';
         } else if (loanAmount <= countyLimits.fhaLimit) {
@@ -98,7 +102,7 @@ export async function priceScenario(body) {
           loanClassification = 'jumbo';
         }
       } else {
-        loanClassification = classifyLoan(loanAmount, scenario.state, county);
+        loanClassification = await classifyLoan(loanAmount, scenario.state, county);
       }
     }
   }

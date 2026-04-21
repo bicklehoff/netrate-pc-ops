@@ -17,9 +17,10 @@
  * Matches MND (Mortgage News Daily) assumptions: 780 FICO, 75% LTV, purchase.
  */
 
-// FHA standard baseline limit (65% of conforming limit)
-// Single source of truth — update here when FHFA raises limits
-export const FHA_BASELINE_LIMIT = Math.round(832750 * 0.65); // $541,288
+// FHA baseline (65% of 1-unit conforming baseline) is sourced from
+// ref_conforming_baselines via getConformingBaseline() in ref-loan-limits.js.
+// Server code that needs the threshold reads it from the DAL; this file
+// stays UI-friendly (sync constants for client form seeding).
 
 export const DEFAULT_SCENARIO = {
   fico: 780,
