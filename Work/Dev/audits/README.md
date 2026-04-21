@@ -154,12 +154,13 @@ Financial correctness of `priceRate()` and the surrounding ingest pipeline. Catc
 - **Out of scope:** DSCR pricer (separate domain, see D6), non-QM parsers (same).
 - **Note:** D3 audited the *computation*. It did not audit the *inputs* to the computation for staleness — that's D8.
 
-### D4 · Data integrity — ✅ re-verified (2026-04-16)
+### D4 · Data integrity — ✅ re-verified (2026-04-16), 🔄 schema-integrity follow-up (2026-04-21)
 
 Ownership checks, foreign key enforcement, transactional boundaries, PII handling, display-layer hygiene.
 
 - **Shipped:** #55 (data integrity — 7 issues patched), #56 (hide product names from public rate tool — show only in debug mode).
 - **D0 verification (2026-04-16):** re-audit at [`D0-VERIFICATION-D4-DATA-INTEGRITY-2026-04-16.md`](./D0-VERIFICATION-D4-DATA-INTEGRITY-2026-04-16.md). 5 PR #55 patches verified correct. **2 critical new findings surfaced and shipped in PR #80:** (a) `GET /api/dialer/sms/threads` had no `organization_id` filter — cross-org SMS PII leak including plaintext message bodies; (b) `PATCH /api/portal/mlo/pipeline` bulk-cap guard was unreachable dead code due to brace scoping.
+- **Schema-integrity follow-up (2026-04-21, PR #___)** — original D4 re-audit checked route-level ownership + cross-org leaks but did not check table-level schema defaults. Discovered via a live failure: the Zoho corebot ingest webhook was silently dropping every incoming loan because `loans.id` has no `DEFAULT gen_random_uuid()` and the INSERT forgot to supply one. Audit of all primary-key columns across 10 core tables found **7 tables with `id UUID NOT NULL` and no default**: `loans`, `contacts`, `loan_events`, `loan_borrowers`, `documents`, `call_logs`, `staff`. PR #97 (2026-04-17) had previously fixed three call sites but never patched the defaults. **Migration 021** sets `DEFAULT gen_random_uuid()` on all 7, plus the corebot ingest INSERT gets an explicit `gen_random_uuid()` for defense-in-depth. Ships under §2c criterion #2 (actively harming real ingress; cannot wait for D9). D9 does not touch these defaults — fix is permanent.
 - **Residual (flagged for follow-up pass):** other routes under `src/app/api/dialer/**` also do not scope by `organization_id`. Only `/threads` was in the D4 audit scope; remaining dialer routes need their own audit pass.
 
 ### D5 · Org scoping — 🔄 half-done (first half re-verified, second half unshipped)
