@@ -67,6 +67,7 @@ export default function PrequalLetterModal({ loan, session, onClose }) {
     mloNmls: '',
     mloPhone: '',
     mloEmail: '',
+    mloPhotoUrl: '',
   });
 
   const [pdfBusy, setPdfBusy] = useState(false);
@@ -108,6 +109,10 @@ export default function PrequalLetterModal({ loan, session, onClose }) {
         mloNmls: loan.mlo?.nmls || '641790',
         mloPhone: '303-444-5251',
         mloEmail: loan.mlo?.email || session?.user?.email || 'david@netratemortgage.com',
+        // Staff headshot. Falls back to David's public asset so the letter
+        // always has a face next to the signature. Per-MLO photos can be
+        // wired in later via staff.photo_url.
+        mloPhotoUrl: loan.mlo?.photo_url || '/david-burson.jpg',
       }));
     }
   }, [loan, session]);
