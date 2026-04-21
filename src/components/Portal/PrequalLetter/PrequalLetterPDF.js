@@ -11,6 +11,7 @@ import {
   Text,
   Svg,
   Rect,
+  Image,
   StyleSheet,
 } from '@react-pdf/renderer';
 
@@ -238,7 +239,7 @@ const s = StyleSheet.create({
   // Conditions note
   conditionsText: {
     fontSize: 9,
-    color: GRAY_600,
+    color: GRAY_800,
     lineHeight: 1.35,
     marginTop: 4,
     marginBottom: 4,
@@ -259,10 +260,22 @@ const s = StyleSheet.create({
     marginTop: 40,
   },
   signatureName: { fontSize: 12, fontFamily: 'Helvetica-Bold', color: GRAY_900 },
-  signatureDetail: { fontSize: 9, color: GRAY_500, marginTop: 1 },
+  signatureDetail: { fontSize: 9, color: GRAY_700, marginTop: 1 },
+  signatureIdRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  signaturePhoto: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    objectFit: 'cover',
+  },
+  signatureIdCol: { flexDirection: 'column' },
   companyBlockRight: { alignItems: 'flex-end', justifyContent: 'flex-end' },
   companyBlock: { fontSize: 10, color: BRAND, fontFamily: 'Helvetica-Bold' },
-  nmlsBlock: { fontSize: 9, color: GRAY_500, marginTop: 1 },
+  nmlsBlock: { fontSize: 9, color: GRAY_700, marginTop: 1 },
 
   // Trust bar
   trustBar: {
@@ -313,7 +326,7 @@ const s = StyleSheet.create({
   },
   disclaimerText: {
     fontSize: 8,
-    color: GRAY_500,
+    color: GRAY_700,
     lineHeight: 1.4,
   },
 });
@@ -369,6 +382,7 @@ export default function PrequalLetterPDF({ data }) {
     mloNmls,
     mloPhone,
     mloEmail,
+    mloPhotoUrl,
   } = data;
 
   const verificationItems = [
@@ -529,9 +543,14 @@ export default function PrequalLetterPDF({ data }) {
           <View>
             <Text style={s.sincerely}>Sincerely,</Text>
             <View style={s.signatureLine} />
-            <Text style={s.signatureName}>{mlo_name}</Text>
-            <Text style={s.signatureDetail}>NMLS #{mloNmls}</Text>
-            <Text style={s.signatureDetail}>{mloPhone} | {mloEmail}</Text>
+            <View style={s.signatureIdRow}>
+              {mloPhotoUrl ? <Image src={mloPhotoUrl} style={s.signaturePhoto} /> : null}
+              <View style={s.signatureIdCol}>
+                <Text style={s.signatureName}>{mlo_name}</Text>
+                <Text style={s.signatureDetail}>NMLS #{mloNmls}</Text>
+                <Text style={s.signatureDetail}>{mloPhone} | {mloEmail}</Text>
+              </View>
+            </View>
           </View>
           <View style={s.companyBlockRight}>
             <Text style={s.companyBlock}>NetRate Mortgage LLC</Text>
@@ -550,21 +569,20 @@ export default function PrequalLetterPDF({ data }) {
         {/* ===== TRUST BAR (pinned to bottom, dark band) ===== */}
         <View style={s.trustBar}>
           <View style={s.trustItem}>
-            <View style={s.starRow}>
+            <View style={[s.starRow, { marginBottom: 2 }]}>
               <Text style={s.star}>★</Text>
               <Text style={s.star}>★</Text>
               <Text style={s.star}>★</Text>
               <Text style={s.star}>★</Text>
               <Text style={s.star}>★</Text>
             </View>
-            <Text style={s.trustValue}>4.9 / 5.0</Text>
             <Text style={s.trustLabel}>Google Reviews</Text>
           </View>
 
           <View style={s.trustDivider} />
 
           <View style={s.trustItem}>
-            <Text style={[s.trustValue, { color: YELLOW, fontSize: 10 }]}>A+</Text>
+            <Text style={[s.trustValue, { fontSize: 10 }]}>A+</Text>
             <Text style={s.trustLabel}>BBB Rating</Text>
           </View>
 
