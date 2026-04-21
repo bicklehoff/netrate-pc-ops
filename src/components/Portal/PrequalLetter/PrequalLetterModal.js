@@ -205,6 +205,7 @@ export default function PrequalLetterModal({ loan, session, onClose }) {
     mloNmls: form.mloNmls,
     mloPhone: form.mloPhone,
     mloEmail: form.mloEmail,
+    mloPhotoUrl: form.mloPhotoUrl,
   });
 
   // Generate PDF blob (shared)
