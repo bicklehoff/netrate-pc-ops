@@ -111,18 +111,18 @@ From Pass 8 §3, grouped by domain. Each table links back to its Pass 8 finding 
 
 ### 4.4 Geographic / tax
 
-| Table | Absorbs | Keys | Notes |
-|---|---|---|---|
-| `ref_state_tax_rates` | REF-13 | `(state, effective_from)` | State-average effective property tax rate. |
-| `ref_county_tax_rates` | REF-14 | `(state, county_fips, effective_from)` | County-level. `is_placeholder` flag marks rows that are still state-avg stubs until real data is sourced. |
-| `ref_state_closing_costs` | REF-15 | `(state, effective_from)` | Third-party cost estimates per state. |
-| `ref_fee_templates` (rename of existing `fee_templates`) | REF-16 | `(state, county, purpose, effective_from)` | Already exists; formalize the schema + add admin write path. |
+| Table | Absorbs | Keys | Notes | Status |
+|---|---|---|---|---|
+| `ref_state_tax_rates` | REF-13 | `(state, effective_from)` | State-average effective property tax rate. | ✅ shipped (migration 027, #156) |
+| `ref_county_tax_rates` | REF-14 | `(state, county_fips, effective_from)` | County-level. `is_placeholder` flag marks rows that are still state-avg stubs until real data is sourced. | ✅ schema shipped, empty (migration 027, #156) |
+| `ref_state_closing_costs` | REF-15 | `(state, effective_from)` | Third-party cost estimates per state. | ✅ shipped (migration 024, #153) |
+| ~~`ref_fee_templates` (rename of existing)~~ | REF-16 | ~~`(state, county, purpose, effective_from)`~~ | **Rename dropped (2026-04-22).** `fee_templates` stays as its existing name — it's a fee-template catalog with operational fields (`id uuid`, `status`, `label`, 25 per-fee columns), not a pure reference table per the §2 inclusion test. The `ref_*` naming convention is for externally-authored reference data; renaming a live operational catalog for cosmetic consistency would require: create new table with same 28 cols, copy 12 rows, update `src/lib/quotes/fee-builder.js` (3 SELECTs), deploy, drop old table — real blast radius for zero correctness or cadence benefit. **Decision:** `fee_templates` remains the canonical fee-catalog table; D9d does not touch it. | 🛑 dropped |
 
 ### 4.5 Business scope
 
-| Table | Absorbs | Keys | Notes |
-|---|---|---|---|
-| `ref_licensed_states` (already shipped in PR #122) | REF-17 | `(code)` | Already exists from D7-3 picklist work. Formalize as the canonical licensed-states reference; D9d doesn't rebuild it. |
+| Table | Absorbs | Keys | Notes | Status |
+|---|---|---|---|---|
+| `ref_licensed_states` | REF-17 | `(code)` | Ref table of the states NetRate is licensed in. Built during D7-3 picklist consolidation; formalizing here that it counts as the D9d licensed-states reference — no rebuild, no additional DAL. Consumers use `src/lib/picklists/db-loader.js` + `/api/picklists`. | ✅ shipped in PR #122 (migration 012) |
 
 ---
 
@@ -182,20 +182,24 @@ Long-term: a daily **staleness audit** scheduled task (builds on D8 Pass 7 findi
 
 ---
 
-## 7 · Build order
+## 7 · Build order (historical + current)
 
-Ordered by blast radius of today's staleness + ease of the first cut:
+Ordered roughly by blast radius of today's staleness + ease of the first cut. Status as of 2026-04-22.
 
-| # | Table | PR | Notes |
+| # | Table | PR | Status |
 |---|---|---|---|
-| 1 | `ref_conforming_baselines` + `ref_county_loan_limits` | **This PR** (migration 020) + follow-up consumer PR | Highest blast radius — every pricing path reads limits. First-consumer retirement (`src/data/county-loan-limits.js`) in the follow-up PR keeps this one reviewable. |
-| 2 | `ref_fha_ufmip` | follow-up | B3 is already flagged as a live fallback risk (pricer falls to 0.0175 if `rate_lenders.fha_ufmip` is null). High-value retirement. |
-| 3 | `ref_fha_annual_mip` | follow-up | Blocked on tracking FHA case number date (§6 Q2). |
-| 4 | `ref_state_tax_rates`, `ref_state_closing_costs`, `ref_county_tax_rates` | follow-up | Geographic — natural cluster. |
-| 5 | `ref_hecm_*` (limits, ufmip, annual mip, plf, pricing) | follow-up | HECM cluster. `ref_hecm_pricing` also promotes HECM into the main rate-sheet pipeline (REF-12). |
-| 6 | `ref_va_funding_fee` | follow-up | Lowest priority — no pricing path charges it today. |
+| 1 | `ref_conforming_baselines` + `ref_county_loan_limits` | migration 020 + #147 (parity + D9b.10 closeout) | ✅ shipped |
+| 2 | `ref_fha_ufmip` | migration 022 (#148) + consumer retirement (#151) | ✅ shipped |
+| 3 | `ref_fha_annual_mip` | — | ⏳ blocked on tracking FHA case number date (§6 Q2) |
+| 4 | `ref_state_closing_costs` | migration 024 (#153) | ✅ shipped (closed D9b.11) |
+| 5 | `ref_state_tax_rates` + `ref_county_tax_rates` | migration 027 (#156) | ✅ shipped (state seeded 51 rows; county empty per pattern) |
+| 6 | `ref_va_funding_fee` | migration 023 (#149) | ✅ schema shipped, empty per §8 Q2 |
+| 7 | `ref_licensed_states` | PR #122 (migration 012) | ✅ shipped pre-D9d; formalized here |
+| 8 | HECM cluster (`ref_hecm_limits` / `ref_hecm_ufmip` / `ref_hecm_annual_mip` / `ref_hecm_plf` / `ref_hecm_pricing`) | migrations 025-026 for 4 of 5 | 🔄 4 shipped (limits/ufmip/annual/plf); `ref_hecm_pricing` scoped into the **standalone HECM project** (David, 2026-04-22) — rate-sheet pipeline integration lives there, not in the D9d throughput batch |
+| 9 | ~~`ref_fee_templates`~~ | — | 🛑 dropped — `fee_templates` stays as-is (operational catalog, not pure reference data; see §4.4) |
+| 10 | `ref_lender_corrections` (optional) | — | ⏸ deferred (FOA-specific, scoped into HECM project) |
 
-Each follow-up PR is scoped: migration + DAL + retire consumers for that one table family.
+Each follow-up PR is scoped: migration + DAL + (when the DAL has consumers to wire) consumer retirement.
 
 ---
 
