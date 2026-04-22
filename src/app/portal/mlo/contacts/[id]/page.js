@@ -309,6 +309,34 @@ export default function ContactDetailPage() {
         </div>
       )}
 
+      {/* Quick Note — full-width above the grid so it's reachable mid-call on mobile */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-4">
+        <label className="block text-xs font-medium text-gray-500 mb-2 uppercase tracking-wide">Quick Note</label>
+        <textarea
+          value={noteText}
+          onChange={(e) => setNoteText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+              e.preventDefault();
+              addNote();
+            }
+          }}
+          placeholder="Add a note to this contact..."
+          rows={2}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none resize-y"
+        />
+        <div className="mt-2 flex items-center gap-2">
+          <button
+            onClick={addNote}
+            disabled={addingNote || !noteText.trim()}
+            className="bg-go text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-go-dark transition-colors disabled:opacity-50 flex-1 sm:flex-initial"
+          >
+            {addingNote ? 'Saving...' : 'Save Note'}
+          </button>
+          <span className="text-xs text-gray-400 hidden sm:inline">Ctrl/⌘+Enter to save</span>
+        </div>
+      </div>
+
       {/* Two-column layout: Info left, Timeline right */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Left column — 2/3 */}
@@ -498,27 +526,6 @@ export default function ContactDetailPage() {
 
         {/* Right column — 1/3: Timeline */}
         <div className="space-y-4">
-          {/* Add Note */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={noteText}
-                onChange={(e) => setNoteText(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && addNote()}
-                placeholder="Add a note..."
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none"
-              />
-              <button
-                onClick={addNote}
-                disabled={addingNote || !noteText.trim()}
-                className="bg-go text-white px-3 py-2 rounded-lg text-sm font-bold hover:bg-go-dark transition-colors disabled:opacity-50"
-              >
-                {addingNote ? '...' : 'Add'}
-              </button>
-            </div>
-          </div>
-
           {/* Timeline */}
           <SectionCard title="Activity" badge={timeline.length}>
             {timeline.length === 0 ? (
