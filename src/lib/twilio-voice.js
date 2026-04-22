@@ -98,6 +98,9 @@ export function buildOutboundTwiml(to, callerId) {
  * @returns {string} TwiML XML
  */
 export function buildIncomingTwiml(clientIdentity, callerName, fallbackNumber) {
+  // The url= on <Number> fires /api/dialer/whisper when the cell leg answers,
+  // BEFORE the caller is bridged. Whisper plays privately to the MLO so they
+  // hear "NetRate Mortgage call from {name}" before connecting to the caller.
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Dial timeout="30" action="/api/dialer/call-complete">
@@ -105,7 +108,7 @@ export function buildIncomingTwiml(clientIdentity, callerName, fallbackNumber) {
       <Identity>${clientIdentity}</Identity>
       ${callerName ? `<Parameter name="callerName" value="${callerName}" />` : ''}
     </Client>
-    ${fallbackNumber ? `<Number>${fallbackNumber}</Number>` : ''}
+    ${fallbackNumber ? `<Number url="/api/dialer/whisper">${fallbackNumber}</Number>` : ''}
   </Dial>
   <Say>Sorry, no one is available to take your call. Please leave a message after the beep.</Say>
   <Record maxLength="120" transcribe="true" action="/api/dialer/voicemail" />
