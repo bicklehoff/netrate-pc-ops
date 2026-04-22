@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Link from 'next/link';
 import { getUtmParams, formatUtmString } from '@/lib/utm';
 import { trackLeadFormSubmit } from '@/lib/analytics';
@@ -14,6 +14,8 @@ export default function ContactPage() {
     message: '',
   });
   const [smsConsent, setSmsConsent] = useState(false);
+  const [websiteUrl, setWebsiteUrl] = useState(''); // honeypot — real users never see this
+  const formLoadedAt = useRef(Date.now());
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -36,6 +38,8 @@ export default function ContactPage() {
           message: messageWithUtm,
           leadSource: 'Website - Contact Form',
           smsConsent,
+          website_url: websiteUrl,
+          formLoadedAt: formLoadedAt.current,
         }),
       });
 
@@ -143,6 +147,21 @@ export default function ContactPage() {
           </p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Honeypot — hidden from real users, bots fill it. Positioned off-screen
+            rather than display:none so naive bots don't skip it. */}
+        <div aria-hidden="true" style={{ position: 'absolute', left: '-9999px', width: '1px', height: '1px', overflow: 'hidden' }}>
+          <label htmlFor="website_url">Website (leave blank)</label>
+          <input
+            id="website_url"
+            type="text"
+            name="website_url"
+            tabIndex={-1}
+            autoComplete="off"
+            value={websiteUrl}
+            onChange={(e) => setWebsiteUrl(e.target.value)}
+          />
+        </div>
+
         <div className="grid md:grid-cols-2 gap-4">
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Name *</label>

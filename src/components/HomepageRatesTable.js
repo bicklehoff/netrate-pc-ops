@@ -5,6 +5,8 @@ import { LO_CONFIG } from '@/lib/rates/config';
 
 function LeadModal({ product, onClose }) {
   const [form, setForm] = useState({ name: '', phone: '', email: '' });
+  const [websiteUrl, setWebsiteUrl] = useState(''); // honeypot
+  const formLoadedAt = useRef(Date.now());
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState(null);
@@ -40,6 +42,8 @@ function LeadModal({ product, onClose }) {
           phone: form.phone,
           source: 'homepage_rate_table',
           sourceDetail: `${product.product} — ${product.rate} rate, ${product.apr} APR, ${product.payment}/mo`,
+          website_url: websiteUrl,
+          formLoadedAt: formLoadedAt.current,
         }),
       });
 
@@ -113,6 +117,11 @@ function LeadModal({ product, onClose }) {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-3">
+                <div aria-hidden="true" style={{ position: 'absolute', left: '-9999px', width: '1px', height: '1px', overflow: 'hidden' }}>
+                  <label htmlFor="hp_website_url">Website (leave blank)</label>
+                  <input id="hp_website_url" type="text" name="website_url" tabIndex={-1} autoComplete="off"
+                    value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} />
+                </div>
                 <input
                   ref={nameRef}
                   type="text"

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { LO_CONFIG } from '@/lib/rates/config';
 import { getUtmParams, formatUtmString } from '@/lib/utm';
 import { trackLeadFormSubmit } from '@/lib/analytics';
@@ -20,6 +20,8 @@ function formatScenarioSummary(scenario) {
 export default function LeadCapture({ scenario }) {
   const [form, setForm] = useState({ name: "", email: "", phone: "", message: "" });
   const [smsConsent, setSmsConsent] = useState(false);
+  const [websiteUrl, setWebsiteUrl] = useState(''); // honeypot
+  const formLoadedAt = useRef(Date.now());
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -44,6 +46,8 @@ export default function LeadCapture({ scenario }) {
           phone: form.phone,
           message: fullMessage,
           smsConsent,
+          website_url: websiteUrl,
+          formLoadedAt: formLoadedAt.current,
         }),
       });
 
@@ -79,6 +83,11 @@ export default function LeadCapture({ scenario }) {
         Tell us about your situation and we&apos;ll send you a personalized recommendation with full fee breakdown, cash to close, and savings analysis.
       </p>
       <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div aria-hidden="true" style={{ position: 'absolute', left: '-9999px', width: '1px', height: '1px', overflow: 'hidden' }}>
+          <label htmlFor="lc_website_url">Website (leave blank)</label>
+          <input id="lc_website_url" type="text" name="website_url" tabIndex={-1} autoComplete="off"
+            value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} />
+        </div>
         <input type="text" placeholder="Full Name" required value={form.name}
           onChange={e => setForm({ ...form, name: e.target.value })}
           className="border border-gray-300 rounded px-3 py-2 text-sm" />
