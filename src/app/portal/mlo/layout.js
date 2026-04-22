@@ -18,6 +18,21 @@ export default function MloLayout({ children }) {
     return () => { document.body.style.overflow = ''; };
   }, []);
 
+  // Register the service worker scoped to /portal/. Required for PWA install
+  // + future push notifications. Scaffold only — no caching / no push handler
+  // in this PR. Registration is idempotent; browsers skip re-install when the
+  // sw.js file hasn't changed.
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
+    // Located at public/portal/sw.js so default scope resolves to /portal/
+    // without needing a Service-Worker-Allowed header.
+    navigator.serviceWorker
+      .register('/portal/sw.js')
+      .catch((err) => {
+        console.error('Service worker registration failed:', err);
+      });
+  }, []);
+
   return (
     <SessionProvider>
       <DialerProvider>
