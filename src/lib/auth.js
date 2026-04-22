@@ -55,6 +55,24 @@ export const authOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 days — MLO sessions persist across browser restarts
   },
 
+  // Explicit cookie config so the session cookie's Max-Age attribute matches
+  // session.maxAge. NextAuth's defaults don't always propagate session.maxAge
+  // to the Set-Cookie header, leaving the cookie as session-only — which iOS
+  // PWAs then drop when the app process is killed, forcing re-login on every
+  // launch.
+  cookies: {
+    sessionToken: {
+      name: '__Secure-next-auth.session-token',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: true,
+        maxAge: 30 * 24 * 60 * 60, // 30 days
+      },
+    },
+  },
+
   callbacks: {
     async jwt({ token, user }) {
       // On initial sign-in, add custom fields to the JWT
