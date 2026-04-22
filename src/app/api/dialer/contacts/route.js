@@ -1,22 +1,14 @@
-// Dialer Contacts API — CRUD for contacts
-// GET: List/search contacts
-// POST: Create a new contact
-// Auth: MLO session required
-
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { requireMloSession, unauthorizedResponse } from '@/lib/require-mlo-session';
 import sql from '@/lib/db';
 import { normalizePhone } from '@/lib/normalize-phone';
 
 export async function GET(req) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return Response.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const { session, orgId } = await requireMloSession();
+  if (!session) return unauthorizedResponse();
 
   const { searchParams } = new URL(req.url);
-  const q = searchParams.get('q');           // Search query
-  const tag = searchParams.get('tag');       // Filter by tag
+  const q = searchParams.get('q');
+  const tag = searchParams.get('tag');
   const page = parseInt(searchParams.get('page') || '1', 10);
   const limit = parseInt(searchParams.get('limit') || '50', 10);
   const offset = (page - 1) * limit;
@@ -32,14 +24,16 @@ export async function GET(req) {
             (SELECT COUNT(*)::int FROM call_logs WHERE contact_id = c.id) AS call_log_count,
             (SELECT COUNT(*)::int FROM sms_messages WHERE contact_id = c.id) AS sms_message_count
           FROM contacts c
-          WHERE ${tag} = ANY(c.tags)
+          WHERE c.organization_id = ${orgId}
+            AND ${tag} = ANY(c.tags)
             AND (c.first_name ILIKE ${pattern} OR c.last_name ILIKE ${pattern} OR c.email ILIKE ${pattern} OR c.phone LIKE ${pattern} OR c.company ILIKE ${pattern})
           ORDER BY c.updated_at DESC
           LIMIT ${limit} OFFSET ${offset}
         `,
         sql`
           SELECT COUNT(*)::int AS total FROM contacts c
-          WHERE ${tag} = ANY(c.tags)
+          WHERE c.organization_id = ${orgId}
+            AND ${tag} = ANY(c.tags)
             AND (c.first_name ILIKE ${pattern} OR c.last_name ILIKE ${pattern} OR c.email ILIKE ${pattern} OR c.phone LIKE ${pattern} OR c.company ILIKE ${pattern})
         `,
       ]);
@@ -51,13 +45,15 @@ export async function GET(req) {
             (SELECT COUNT(*)::int FROM call_logs WHERE contact_id = c.id) AS call_log_count,
             (SELECT COUNT(*)::int FROM sms_messages WHERE contact_id = c.id) AS sms_message_count
           FROM contacts c
-          WHERE c.first_name ILIKE ${pattern} OR c.last_name ILIKE ${pattern} OR c.email ILIKE ${pattern} OR c.phone LIKE ${pattern} OR c.company ILIKE ${pattern}
+          WHERE c.organization_id = ${orgId}
+            AND (c.first_name ILIKE ${pattern} OR c.last_name ILIKE ${pattern} OR c.email ILIKE ${pattern} OR c.phone LIKE ${pattern} OR c.company ILIKE ${pattern})
           ORDER BY c.updated_at DESC
           LIMIT ${limit} OFFSET ${offset}
         `,
         sql`
           SELECT COUNT(*)::int AS total FROM contacts c
-          WHERE c.first_name ILIKE ${pattern} OR c.last_name ILIKE ${pattern} OR c.email ILIKE ${pattern} OR c.phone LIKE ${pattern} OR c.company ILIKE ${pattern}
+          WHERE c.organization_id = ${orgId}
+            AND (c.first_name ILIKE ${pattern} OR c.last_name ILIKE ${pattern} OR c.email ILIKE ${pattern} OR c.phone LIKE ${pattern} OR c.company ILIKE ${pattern})
         `,
       ]);
     } else if (tag) {
@@ -67,11 +63,12 @@ export async function GET(req) {
             (SELECT COUNT(*)::int FROM call_logs WHERE contact_id = c.id) AS call_log_count,
             (SELECT COUNT(*)::int FROM sms_messages WHERE contact_id = c.id) AS sms_message_count
           FROM contacts c
-          WHERE ${tag} = ANY(c.tags)
+          WHERE c.organization_id = ${orgId}
+            AND ${tag} = ANY(c.tags)
           ORDER BY c.updated_at DESC
           LIMIT ${limit} OFFSET ${offset}
         `,
-        sql`SELECT COUNT(*)::int AS total FROM contacts c WHERE ${tag} = ANY(c.tags)`,
+        sql`SELECT COUNT(*)::int AS total FROM contacts c WHERE c.organization_id = ${orgId} AND ${tag} = ANY(c.tags)`,
       ]);
     } else {
       [contacts, countRows] = await Promise.all([
@@ -80,10 +77,11 @@ export async function GET(req) {
             (SELECT COUNT(*)::int FROM call_logs WHERE contact_id = c.id) AS call_log_count,
             (SELECT COUNT(*)::int FROM sms_messages WHERE contact_id = c.id) AS sms_message_count
           FROM contacts c
+          WHERE c.organization_id = ${orgId}
           ORDER BY c.updated_at DESC
           LIMIT ${limit} OFFSET ${offset}
         `,
-        sql`SELECT COUNT(*)::int AS total FROM contacts`,
+        sql`SELECT COUNT(*)::int AS total FROM contacts WHERE organization_id = ${orgId}`,
       ]);
     }
 
@@ -95,13 +93,10 @@ export async function GET(req) {
 }
 
 export async function POST(req) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return Response.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const { session, orgId } = await requireMloSession();
+  if (!session) return unauthorizedResponse();
 
   const body = await req.json();
-  // borrowerId is ignored post-migration — contact IS the borrower; promote via role='borrower' instead
   const { firstName, lastName, email, phone, company, source, tags, notes } = body;
 
   if (!firstName || !lastName) {
@@ -110,14 +105,14 @@ export async function POST(req) {
 
   try {
     const rows = await sql`
-      INSERT INTO contacts (first_name, last_name, email, phone, company, source, tags, notes, updated_at)
-      VALUES (${firstName}, ${lastName}, ${email || null}, ${normalizePhone(phone) || phone || null}, ${company || null}, ${source || 'manual'}, ${tags || []}, ${notes || null}, NOW())
+      INSERT INTO contacts (organization_id, first_name, last_name, email, phone, company, source, tags, notes, updated_at)
+      VALUES (${orgId}, ${firstName}, ${lastName}, ${email || null}, ${normalizePhone(phone) || phone || null}, ${company || null}, ${source || 'manual'}, ${tags || []}, ${notes || null}, NOW())
       RETURNING *
     `;
 
     return Response.json({ contact: rows[0] }, { status: 201 });
   } catch (e) {
     console.error('Contact create failed:', e);
-    return Response.json({ error: e.message }, { status: 500 });
+    return Response.json({ error: 'Failed to create contact' }, { status: 500 });
   }
 }

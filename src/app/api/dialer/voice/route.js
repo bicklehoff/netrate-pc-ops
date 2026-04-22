@@ -1,13 +1,8 @@
 import { validateTwilioSignature, twilioForbiddenResponse } from "@/lib/twilio-validate";
-// Dialer Voice Webhook — Handles outbound call routing
-// Twilio POSTs here when a browser client initiates a call via device.connect().
-// Returns TwiML that tells Twilio to dial the destination number.
-//
-// This is the "Voice URL" configured in your TwiML App.
-
 import { buildOutboundTwiml } from '@/lib/twilio-voice';
 import sql from '@/lib/db';
 import { normalizePhone } from '@/lib/normalize-phone';
+import { DEFAULT_ORG_ID } from '@/lib/constants/org';
 
 export async function POST(req) {
   const formData = await req.formData();
@@ -46,8 +41,8 @@ export async function POST(req) {
   if (mloId) {
     try {
       await sql`
-        INSERT INTO call_logs (mlo_id, contact_id, direction, from_number, to_number, status, twilio_call_sid)
-        VALUES (${mloId}, ${contactId}, 'outbound', ${process.env.TWILIO_PHONE_NUMBER || ''}, ${normalizedTo || to}, 'initiated', ${callSid})
+        INSERT INTO call_logs (organization_id, mlo_id, contact_id, direction, from_number, to_number, status, twilio_call_sid)
+        VALUES (${DEFAULT_ORG_ID}, ${mloId}, ${contactId}, 'outbound', ${process.env.TWILIO_PHONE_NUMBER || ''}, ${normalizedTo || to}, 'initiated', ${callSid})
       `;
     } catch (e) {
       console.error('Failed to log outbound call:', e);
