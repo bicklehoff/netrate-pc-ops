@@ -46,6 +46,7 @@ import { NextResponse } from 'next/server';
 import { neon } from '@neondatabase/serverless';
 import { loadActiveDscrSheet, priceDscrScenario } from '@/lib/pricing-nonqm/price-dscr';
 import { apiError } from '@/lib/api/safe-error';
+import { rateLimit } from '@/lib/api/rate-limit';
 
 // Cache the sheet in memory per serverless instance. Rate sheets change at most
 // daily; we tolerate a minute of staleness in exchange for avoiding a DB round
@@ -87,6 +88,9 @@ function validate(body) {
 }
 
 export async function POST(request) {
+  const limited = await rateLimit(request, { scope: 'pricing-dscr', limit: 60, window: '1 m' });
+  if (limited) return limited;
+
   try {
     const body = await request.json();
     const errors = validate(body);
