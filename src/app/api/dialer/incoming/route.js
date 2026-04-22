@@ -35,15 +35,17 @@ export async function POST(req) {
   // staff member if the number isn't mapped (shouldn't happen in prod, but
   // avoids dropping the call during rollouts).
   let targetIdentity = 'mlo-default';
+  let fallbackNumber = null;
   try {
     let mlos = normalizedTo
-      ? await sql`SELECT id FROM staff WHERE twilio_phone_number = ${normalizedTo} AND is_active = true LIMIT 1`
+      ? await sql`SELECT id, phone FROM staff WHERE twilio_phone_number = ${normalizedTo} AND is_active = true LIMIT 1`
       : [];
     if (!mlos.length) {
-      mlos = await sql`SELECT id FROM staff WHERE is_active = true ORDER BY created_at LIMIT 1`;
+      mlos = await sql`SELECT id, phone FROM staff WHERE is_active = true ORDER BY created_at LIMIT 1`;
     }
     if (mlos.length > 0) {
       targetIdentity = `mlo-${mlos[0].id}`;
+      fallbackNumber = mlos[0].phone || null;
 
       await sql`
         INSERT INTO call_logs (organization_id, mlo_id, contact_id, direction, from_number, to_number, status, twilio_call_sid)
@@ -54,6 +56,6 @@ export async function POST(req) {
     console.error('MLO lookup failed:', e);
   }
 
-  const twiml = buildIncomingTwiml(targetIdentity, callerName);
+  const twiml = buildIncomingTwiml(targetIdentity, callerName, fallbackNumber);
   return new Response(twiml, { headers: { 'Content-Type': 'text/xml' } });
 }
