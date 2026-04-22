@@ -20,13 +20,22 @@ export async function POST(req) {
     );
   }
 
-  // Extract MLO ID from the client identity (format: "client:mlo-<uuid>")
   const mloId = from?.replace('client:mlo-', '') || null;
-
-  // Normalize destination phone for consistent lookup
   const normalizedTo = normalizePhone(to);
 
-  // Look up contact by phone number
+  // Look up the MLO's assigned Twilio number — this becomes the outbound caller ID.
+  let mloTwilioNumber = null;
+  if (mloId) {
+    try {
+      const staffRows = await sql`SELECT twilio_phone_number FROM staff WHERE id = ${mloId} LIMIT 1`;
+      mloTwilioNumber = staffRows[0]?.twilio_phone_number || null;
+    } catch (e) {
+      console.error('Staff Twilio number lookup failed:', e);
+    }
+  }
+
+  const callerId = mloTwilioNumber || process.env.TWILIO_PHONE_NUMBER || '';
+
   let contactId = null;
   if (normalizedTo) {
     try {
@@ -37,18 +46,17 @@ export async function POST(req) {
     }
   }
 
-  // Log the outbound call
   if (mloId) {
     try {
       await sql`
         INSERT INTO call_logs (organization_id, mlo_id, contact_id, direction, from_number, to_number, status, twilio_call_sid)
-        VALUES (${DEFAULT_ORG_ID}, ${mloId}, ${contactId}, 'outbound', ${process.env.TWILIO_PHONE_NUMBER || ''}, ${normalizedTo || to}, 'initiated', ${callSid})
+        VALUES (${DEFAULT_ORG_ID}, ${mloId}, ${contactId}, 'outbound', ${callerId}, ${normalizedTo || to}, 'initiated', ${callSid})
       `;
     } catch (e) {
       console.error('Failed to log outbound call:', e);
     }
   }
 
-  const twiml = buildOutboundTwiml(to);
+  const twiml = buildOutboundTwiml(to, callerId);
   return new Response(twiml, { headers: { 'Content-Type': 'text/xml' } });
 }

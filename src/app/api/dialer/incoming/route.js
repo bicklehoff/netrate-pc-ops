@@ -13,8 +13,8 @@ export async function POST(req) {
   const to = formData.get('To');           // Your Twilio number
   const callSid = formData.get('CallSid');
 
-  // Normalize caller phone for consistent lookup
   const normalizedFrom = normalizePhone(from);
+  const normalizedTo = normalizePhone(to);
 
   // Look up the caller in contacts
   let callerName = null;
@@ -31,17 +31,23 @@ export async function POST(req) {
     }
   }
 
-  // Find the first available MLO to ring.
+  // Route to the MLO who owns this Twilio number. Falls back to any active
+  // staff member if the number isn't mapped (shouldn't happen in prod, but
+  // avoids dropping the call during rollouts).
   let targetIdentity = 'mlo-default';
   try {
-    const mlos = await sql`SELECT id FROM staff LIMIT 1`;
+    let mlos = normalizedTo
+      ? await sql`SELECT id FROM staff WHERE twilio_phone_number = ${normalizedTo} AND is_active = true LIMIT 1`
+      : [];
+    if (!mlos.length) {
+      mlos = await sql`SELECT id FROM staff WHERE is_active = true ORDER BY created_at LIMIT 1`;
+    }
     if (mlos.length > 0) {
       targetIdentity = `mlo-${mlos[0].id}`;
 
-      // Log the inbound call
       await sql`
         INSERT INTO call_logs (organization_id, mlo_id, contact_id, direction, from_number, to_number, status, twilio_call_sid)
-        VALUES (${DEFAULT_ORG_ID}, ${mlos[0].id}, ${contactId}, 'inbound', ${normalizedFrom || from || ''}, ${normalizePhone(to) || to || ''}, 'ringing', ${callSid})
+        VALUES (${DEFAULT_ORG_ID}, ${mlos[0].id}, ${contactId}, 'inbound', ${normalizedFrom || from || ''}, ${normalizedTo || to || ''}, 'ringing', ${callSid})
       `;
     }
   } catch (e) {

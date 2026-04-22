@@ -71,14 +71,17 @@ export function generateAccessToken(identity) {
 
 /**
  * Build TwiML for an outbound call (MLO → contact).
+ * callerId is the MLO's own Twilio number (from staff.twilio_phone_number).
+ * Falls back to TWILIO_PHONE_NUMBER only when the MLO has no number assigned.
  * @param {string} to - Phone number to dial (E.164)
- * @param {string} callerId - Caller ID to display (your Twilio number)
+ * @param {string} callerId - Caller ID to display
  * @returns {string} TwiML XML
  */
-export function buildOutboundTwiml(to, callerId = TWILIO_PHONE_NUMBER) {
+export function buildOutboundTwiml(to, callerId) {
+  const resolvedCallerId = callerId || TWILIO_PHONE_NUMBER;
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Dial callerId="${callerId}" record="record-from-answer-dual" recordingStatusCallback="/api/dialer/recording-status">
+  <Dial callerId="${resolvedCallerId}" record="record-from-answer-dual" recordingStatusCallback="/api/dialer/recording-status">
     <Number>${to}</Number>
   </Dial>
 </Response>`;
@@ -119,12 +122,29 @@ export function buildVoicemailTwiml() {
 
 /**
  * Send an SMS via Twilio Programmable Messaging API.
+ * When `from` is provided, sends explicitly from that number (per-staff routing).
+ * When omitted, falls back to MessagingServiceSid (Twilio auto-selects) or the
+ * legacy TWILIO_PHONE_NUMBER env var.
  * @param {string} to - Recipient phone (E.164)
  * @param {string} body - Message text
+ * @param {string} [from] - Sender phone (E.164) — the MLO's staff.twilio_phone_number
  * @returns {Promise<object>} Twilio API response
  */
-export async function sendSms(to, body) {
+export async function sendSms(to, body, from) {
   const auth = Buffer.from(`${TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`).toString('base64');
+
+  const params = {
+    To: to,
+    Body: body,
+    StatusCallback: 'https://www.netratemortgage.com/api/dialer/sms/status',
+  };
+  if (from) {
+    params.From = from;
+  } else if (process.env.TWILIO_MESSAGING_SERVICE_SID) {
+    params.MessagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
+  } else {
+    params.From = TWILIO_PHONE_NUMBER;
+  }
 
   const res = await fetch(
     `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`,
@@ -134,12 +154,7 @@ export async function sendSms(to, body) {
         Authorization: `Basic ${auth}`,
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: new URLSearchParams({
-        To: to,
-        MessagingServiceSid: process.env.TWILIO_MESSAGING_SERVICE_SID,
-        Body: body,
-        StatusCallback: 'https://www.netratemortgage.com/api/dialer/sms/status',
-      }),
+      body: new URLSearchParams(params),
     }
   );
 
