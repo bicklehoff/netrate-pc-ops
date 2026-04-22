@@ -35,6 +35,7 @@ export default function DialerProvider({ children }) {
   const [isMuted, setIsMuted] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
   const [callerInfo, setCallerInfo] = useState(null);      // { name, phone, contactId }
+  const [recentInboundCall, setRecentInboundCall] = useState(null); // sticky context after cell pickup / caller hangup
   const [error, setError] = useState(null);
 
   const deviceRef = useRef(null);
@@ -96,12 +97,19 @@ export default function DialerProvider({ children }) {
             setIncomingCall(call);
             setCallState(INCOMING);
 
-            // Try to extract caller info from custom parameters
+            // Extract caller info from TwiML <Parameter>s emitted by
+            // /api/dialer/incoming → buildIncomingTwiml
             const callerName = call.customParameters?.get('callerName');
-            setCallerInfo({
+            const contactId = call.customParameters?.get('contactId');
+            const info = {
               name: callerName || null,
               phone: call.parameters?.From || 'Unknown',
-            });
+              contactId: contactId || null,
+            };
+            setCallerInfo(info);
+            // Populate sticky record immediately — persists through 'cancel'
+            // (cell answered or caller hung up) so the MLO still has context
+            setRecentInboundCall({ ...info, at: Date.now() });
           }
         });
 
@@ -144,14 +152,18 @@ export default function DialerProvider({ children }) {
     });
 
     call.on('disconnect', () => {
+      // Call was active on the browser and ended — clear sticky record too
       setCallState(IDLE);
       setActiveCall(null);
       setCallerInfo(null);
+      setRecentInboundCall(null);
       setIsMuted(false);
       stopTimer();
     });
 
     call.on('cancel', () => {
+      // Caller hung up OR the call was answered elsewhere (cell). Preserve
+      // recentInboundCall so the sticky popup still shows caller context.
       setCallState(IDLE);
       setActiveCall(null);
       setIncomingCall(null);
@@ -160,9 +172,11 @@ export default function DialerProvider({ children }) {
     });
 
     call.on('reject', () => {
+      // MLO explicitly declined — clear everything, they don't want context.
       setCallState(IDLE);
       setIncomingCall(null);
       setCallerInfo(null);
+      setRecentInboundCall(null);
     });
 
     call.on('error', (err) => {
@@ -240,6 +254,18 @@ export default function DialerProvider({ children }) {
     }
   }, [activeCall]);
 
+  /** Manually dismiss the sticky recent-call popup */
+  const dismissRecentInboundCall = useCallback(() => {
+    setRecentInboundCall(null);
+  }, []);
+
+  // Auto-clear recentInboundCall after 2 minutes so it doesn't linger forever.
+  useEffect(() => {
+    if (!recentInboundCall) return;
+    const t = setTimeout(() => setRecentInboundCall(null), 120_000);
+    return () => clearTimeout(t);
+  }, [recentInboundCall]);
+
   const value = {
     // State
     deviceReady,
@@ -249,6 +275,7 @@ export default function DialerProvider({ children }) {
     isMuted,
     callDuration,
     callerInfo,
+    recentInboundCall,
     error,
 
     // Constants
@@ -265,6 +292,7 @@ export default function DialerProvider({ children }) {
     hangup,
     toggleMute,
     sendDigits,
+    dismissRecentInboundCall,
   };
 
   return (
