@@ -45,6 +45,7 @@
 import { NextResponse } from 'next/server';
 import { neon } from '@neondatabase/serverless';
 import { loadActiveDscrSheet, priceDscrScenario } from '@/lib/pricing-nonqm/price-dscr';
+import { apiError } from '@/lib/api/safe-error';
 
 // Cache the sheet in memory per serverless instance. Rate sheets change at most
 // daily; we tolerate a minute of staleness in exchange for avoiding a DB round
@@ -128,11 +129,7 @@ export async function POST(request) {
       },
     });
   } catch (err) {
-    console.error('DSCR pricing API error:', err);
-    return NextResponse.json(
-      { error: 'DSCR pricing error', message: err.message },
-      { status: 500 }
-    );
+    return apiError(err, 'DSCR pricing error', 500, { scope: 'pricing-dscr' });
   }
 }
 
@@ -148,6 +145,6 @@ export async function GET() {
       llpa_count: sheet.llpa_count,
     });
   } catch (err) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return apiError(err, 'DSCR sheet unavailable', 500, { scope: 'pricing-dscr-meta' });
   }
 }

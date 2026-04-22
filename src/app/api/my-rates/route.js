@@ -8,6 +8,7 @@
 import { NextResponse } from 'next/server';
 import sql from '@/lib/db';
 import { scenarioToSavedShape } from '@/lib/scenarios/transform';
+import { apiError } from '@/lib/api/safe-error';
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
@@ -23,7 +24,7 @@ export async function GET(request) {
     const lead = leads?.[0] || null;
 
     if (!lead || !lead.email) {
-      return NextResponse.json({ error: `Invalid token (found ${leads?.length || 0} leads)` }, { status: 401 });
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
     // Find ALL leads with the same email (borrower may have saved multiple scenarios)
@@ -56,7 +57,6 @@ export async function GET(request) {
       scenarios,
     });
   } catch (err) {
-    console.error('My Rates GET error:', err.message, err.stack);
-    return NextResponse.json({ error: `Load failed: ${err.message}` }, { status: 500 });
+    return apiError(err, 'Load failed', 500, { scope: 'my-rates' });
   }
 }
