@@ -31,6 +31,25 @@ export const metadata = {
   title: `${COMPANY_NAME} | Today\'s Rates, Zero Pitch`,
   description: `See today\'s real mortgage rates with transparent pricing. No sales pitch, no commitment. ${COMPANY_NAME} — ${OFFICE_ADDRESS.city}, ${OFFICE_ADDRESS.state}.`,
   keywords: `mortgage rates, refinance, home loan, Colorado mortgage, ${COMPANY_NAME}`,
+  manifest: '/manifest.webmanifest',
+  icons: {
+    icon: [
+      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/icons/icon-180.png', sizes: '180x180', type: 'image/png' },
+    ],
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'NetRate',
+  },
+};
+
+export const viewport = {
+  themeColor: '#2E6BA8',
 };
 
 // areaServed list for Organization + FinancialService. Names must match
