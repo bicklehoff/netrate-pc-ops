@@ -9,6 +9,7 @@ import sql from '@/lib/db';
 import { priceScenario } from '@/lib/rates/price-scenario';
 import { calcMonthlyPI } from '@/lib/rates/math';
 import { updateScenario, replaceScenarioRates } from '@/lib/scenarios/db';
+import { apiError } from '@/lib/api/safe-error';
 
 export async function POST(request) {
   try {
@@ -133,7 +134,6 @@ export async function POST(request) {
       viewToken: token,
     });
   } catch (err) {
-    console.error('Update scenario error:', err.message, err.stack);
-    return NextResponse.json({ error: `Update failed: ${err.message}` }, { status: 500 });
+    return apiError(err, 'Update failed', 500, { scope: 'saved-scenario-update' });
   }
 }

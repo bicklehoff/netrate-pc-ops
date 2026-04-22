@@ -5,6 +5,7 @@ import { sendEmail } from '@/lib/resend';
 import { rateAlertWelcomeTemplate } from '@/lib/email-templates/borrower';
 import { calcMonthlyPI } from '@/lib/rates/math';
 import { createScenario } from '@/lib/scenarios/db';
+import { apiError } from '@/lib/api/safe-error';
 
 const FREQUENCY_DEFAULTS = {
   daily: ['mon', 'tue', 'wed', 'thu', 'fri'],
@@ -164,7 +165,6 @@ export async function POST(request) {
       emailStatus,
     });
   } catch (err) {
-    console.error('Save scenario API error:', err.message, err.stack);
-    return NextResponse.json({ error: `Save failed: ${err.message}` }, { status: 500 });
+    return apiError(err, 'Save failed', 500, { scope: 'saved-scenario' });
   }
 }

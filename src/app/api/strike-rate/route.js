@@ -21,6 +21,7 @@
 import { NextResponse } from 'next/server';
 import { neon } from '@neondatabase/serverless';
 import crypto from 'crypto';
+import { apiError } from '@/lib/api/safe-error';
 
 const sql = neon(process.env.PC_DATABASE_URL || process.env.DATABASE_URL);
 
@@ -143,11 +144,7 @@ export async function POST(request) {
     }, { status: 201 });
 
   } catch (err) {
-    console.error('Strike rate API error:', err);
-    return NextResponse.json(
-      { error: 'Failed to create alert', detail: err.message },
-      { status: 500 }
-    );
+    return apiError(err, 'Failed to create alert', 500, { scope: 'strike-rate' });
   }
 }
 
