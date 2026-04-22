@@ -6,5 +6,12 @@
         "hookPath": ".claude/hooks/guard-main-push.sh"
       }
     ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(\"/c/Program Files/GitHub CLI/gh.exe\":*)",
+      "Bash(npx vercel:*)",
+      "Bash(npx prisma:*)"
+    ]
   }
 }
