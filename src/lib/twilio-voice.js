@@ -97,16 +97,36 @@ export function buildOutboundTwiml(to, callerId) {
  * @param {string} [fallbackNumber] - MLO's personal cell (E.164) for parallel ring
  * @returns {string} TwiML XML
  */
-export function buildIncomingTwiml(clientIdentity, callerName, fallbackNumber) {
+function xmlAttrEscape(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+export function buildIncomingTwiml(clientIdentity, callerName, fallbackNumber, contactId) {
   // The url= on <Number> fires /api/dialer/whisper when the cell leg answers,
   // BEFORE the caller is bridged. Whisper plays privately to the MLO so they
   // hear "NetRate Mortgage call from {name}" before connecting to the caller.
+  //
+  // callerName + contactId are passed as TwiML <Parameter>s on the <Client>
+  // so the browser dialer can show caller info on ring AND link "Open contact"
+  // from the sticky popup during/after the call.
+  const nameParam = callerName
+    ? `<Parameter name="callerName" value="${xmlAttrEscape(callerName)}" />`
+    : '';
+  const contactIdParam = contactId
+    ? `<Parameter name="contactId" value="${xmlAttrEscape(contactId)}" />`
+    : '';
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Dial timeout="30" action="/api/dialer/call-complete">
     <Client>
       <Identity>${clientIdentity}</Identity>
-      ${callerName ? `<Parameter name="callerName" value="${callerName}" />` : ''}
+      ${nameParam}
+      ${contactIdParam}
     </Client>
     ${fallbackNumber ? `<Number url="/api/dialer/whisper">${fallbackNumber}</Number>` : ''}
   </Dial>

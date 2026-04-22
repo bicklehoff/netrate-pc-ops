@@ -56,6 +56,6 @@ export async function POST(req) {
     console.error('MLO lookup failed:', e);
   }
 
-  const twiml = buildIncomingTwiml(targetIdentity, callerName, fallbackNumber);
+  const twiml = buildIncomingTwiml(targetIdentity, callerName, fallbackNumber, contactId);
   return new Response(twiml, { headers: { 'Content-Type': 'text/xml' } });
 }
