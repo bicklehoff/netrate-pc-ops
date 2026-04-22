@@ -12,6 +12,7 @@
 import { NextResponse } from 'next/server';
 import { neon } from '@neondatabase/serverless';
 import { apiError } from '@/lib/api/safe-error';
+import { rateLimit } from '@/lib/api/rate-limit';
 
 function getSql() {
   return neon(process.env.PC_DATABASE_URL || process.env.DATABASE_URL);
@@ -27,7 +28,10 @@ const LOAN_TYPE_TO_KEY = {
   '7_6_arm': 'arm',
 };
 
-export async function GET() {
+export async function GET(request) {
+  const limited = await rateLimit(request, { scope: 'national-rates', limit: 60, window: '1 m' });
+  if (limited) return limited;
+
   try {
     const sql = getSql();
     const rows = await sql`

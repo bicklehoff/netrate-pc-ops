@@ -10,8 +10,12 @@ import { priceScenario } from '@/lib/rates/price-scenario';
 import { calcMonthlyPI } from '@/lib/rates/math';
 import { updateScenario, replaceScenarioRates } from '@/lib/scenarios/db';
 import { apiError } from '@/lib/api/safe-error';
+import { rateLimit } from '@/lib/api/rate-limit';
 
 export async function POST(request) {
+  const limited = await rateLimit(request, { scope: 'saved-scenario-update', limit: 10, window: '1 m' });
+  if (limited) return limited;
+
   try {
     const { token, scenarioData, selectedRates } = await request.json();
 

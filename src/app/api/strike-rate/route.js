@@ -22,6 +22,7 @@ import { NextResponse } from 'next/server';
 import { neon } from '@neondatabase/serverless';
 import crypto from 'crypto';
 import { apiError } from '@/lib/api/safe-error';
+import { rateLimit } from '@/lib/api/rate-limit';
 
 const sql = neon(process.env.PC_DATABASE_URL || process.env.DATABASE_URL);
 
@@ -32,6 +33,9 @@ function isValidEmail(email) {
 
 // POST — Create new alert
 export async function POST(request) {
+  const limited = await rateLimit(request, { scope: 'strike-rate', limit: 5, window: '1 m' });
+  if (limited) return limited;
+
   try {
     const body = await request.json();
 

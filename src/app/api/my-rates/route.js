@@ -9,8 +9,12 @@ import { NextResponse } from 'next/server';
 import sql from '@/lib/db';
 import { scenarioToSavedShape } from '@/lib/scenarios/transform';
 import { apiError } from '@/lib/api/safe-error';
+import { rateLimit } from '@/lib/api/rate-limit';
 
 export async function GET(request) {
+  const limited = await rateLimit(request, { scope: 'my-rates', limit: 30, window: '1 m' });
+  if (limited) return limited;
+
   const { searchParams } = new URL(request.url);
   const token = searchParams.get('token');
 

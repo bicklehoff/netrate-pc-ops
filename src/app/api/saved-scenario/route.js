@@ -6,6 +6,7 @@ import { rateAlertWelcomeTemplate } from '@/lib/email-templates/borrower';
 import { calcMonthlyPI } from '@/lib/rates/math';
 import { createScenario } from '@/lib/scenarios/db';
 import { apiError } from '@/lib/api/safe-error';
+import { rateLimit } from '@/lib/api/rate-limit';
 
 const FREQUENCY_DEFAULTS = {
   daily: ['mon', 'tue', 'wed', 'thu', 'fri'],
@@ -17,6 +18,9 @@ const FREQUENCY_DEFAULTS = {
 const DEFAULT_ORG_ID = '00000000-0000-4000-8000-000000000001';
 
 export async function POST(request) {
+  const limited = await rateLimit(request, { scope: 'saved-scenario', limit: 5, window: '1 m' });
+  if (limited) return limited;
+
   try {
     const body = await request.json();
     const { name, email, phone, scenarioData, alertFrequency, alertDays, selectedRates } = body;
