@@ -1,12 +1,7 @@
 import { validateTwilioSignature, twilioForbiddenResponse } from "@/lib/twilio-validate";
-// Dialer SMS Incoming Webhook — Receives inbound SMS from Twilio
-// Twilio POSTs here when someone texts your Twilio phone number.
-// Stores the message and returns TwiML (empty response = no auto-reply).
-//
-// Configure this URL as the "Messaging Webhook" on your Twilio phone number.
-
 import sql from '@/lib/db';
 import { normalizePhone } from '@/lib/normalize-phone';
+import { DEFAULT_ORG_ID } from '@/lib/constants/org';
 
 export async function POST(req) {
   const formData = await req.formData();
@@ -35,8 +30,8 @@ export async function POST(req) {
   // Store the inbound message
   try {
     await sql`
-      INSERT INTO sms_messages (contact_id, direction, from_number, to_number, body, status, twilio_message_sid)
-      VALUES (${contactId}, 'inbound', ${normalizedFrom || from || ''}, ${normalizePhone(to) || to || ''}, ${body || ''}, 'received', ${messageSid})
+      INSERT INTO sms_messages (organization_id, contact_id, direction, from_number, to_number, body, status, twilio_message_sid)
+      VALUES (${DEFAULT_ORG_ID}, ${contactId}, 'inbound', ${normalizedFrom || from || ''}, ${normalizePhone(to) || to || ''}, ${body || ''}, 'received', ${messageSid})
     `;
   } catch (e) {
     console.error('Failed to store incoming SMS:', e);

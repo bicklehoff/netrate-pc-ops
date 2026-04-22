@@ -1,16 +1,9 @@
-// Dialer Contact Search — Fast typeahead search for the dialer
-// Returns minimal contact data for quick lookup (used by ContactSearch component).
-// Auth: MLO session required
-
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { requireMloSession, unauthorizedResponse } from '@/lib/require-mlo-session';
 import sql from '@/lib/db';
 
 export async function GET(req) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return Response.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const { session, orgId } = await requireMloSession();
+  if (!session) return unauthorizedResponse();
 
   const { searchParams } = new URL(req.url);
   const q = searchParams.get('q');
@@ -24,11 +17,14 @@ export async function GET(req) {
     const contacts = await sql`
       SELECT id, first_name, last_name, phone, email, company, tags
       FROM contacts
-      WHERE first_name ILIKE ${pattern}
-        OR last_name ILIKE ${pattern}
-        OR email ILIKE ${pattern}
-        OR phone LIKE ${pattern}
-        OR company ILIKE ${pattern}
+      WHERE organization_id = ${orgId}
+        AND (
+          first_name ILIKE ${pattern}
+          OR last_name ILIKE ${pattern}
+          OR email ILIKE ${pattern}
+          OR phone LIKE ${pattern}
+          OR company ILIKE ${pattern}
+        )
       ORDER BY updated_at DESC
       LIMIT 10
     `;

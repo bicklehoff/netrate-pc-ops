@@ -1,13 +1,8 @@
 import { validateTwilioSignature, twilioForbiddenResponse } from "@/lib/twilio-validate";
-// Dialer Incoming Call Webhook — Routes inbound calls to MLO browser clients
-// Twilio POSTs here when someone calls your Twilio phone number.
-// Returns TwiML that rings the appropriate MLO's browser client.
-//
-// This is the "Voice URL" on your Twilio phone number configuration.
-
 import { buildIncomingTwiml } from '@/lib/twilio-voice';
 import sql from '@/lib/db';
 import { normalizePhone } from '@/lib/normalize-phone';
+import { DEFAULT_ORG_ID } from '@/lib/constants/org';
 
 export async function POST(req) {
   const formData = await req.formData();
@@ -45,8 +40,8 @@ export async function POST(req) {
 
       // Log the inbound call
       await sql`
-        INSERT INTO call_logs (mlo_id, contact_id, direction, from_number, to_number, status, twilio_call_sid)
-        VALUES (${mlos[0].id}, ${contactId}, 'inbound', ${normalizedFrom || from || ''}, ${normalizePhone(to) || to || ''}, 'ringing', ${callSid})
+        INSERT INTO call_logs (organization_id, mlo_id, contact_id, direction, from_number, to_number, status, twilio_call_sid)
+        VALUES (${DEFAULT_ORG_ID}, ${mlos[0].id}, ${contactId}, 'inbound', ${normalizedFrom || from || ''}, ${normalizePhone(to) || to || ''}, 'ringing', ${callSid})
       `;
     }
   } catch (e) {
