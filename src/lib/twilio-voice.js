@@ -88,13 +88,16 @@ export function buildOutboundTwiml(to, callerId) {
 }
 
 /**
- * Build TwiML to route an incoming call to an MLO's browser client.
+ * Build TwiML to route an incoming call to an MLO.
+ * Rings the browser client AND the MLO's personal cell in parallel inside a
+ * single <Dial> — first to answer wins. If neither answers in 30s, falls
+ * through to voicemail.
  * @param {string} clientIdentity - The Twilio Client identity to ring (e.g. "mlo-uuid")
- * @param {string} [callerName] - Optional name to display
+ * @param {string} [callerName] - Optional name to display on the browser client
+ * @param {string} [fallbackNumber] - MLO's personal cell (E.164) for parallel ring
  * @returns {string} TwiML XML
  */
-export function buildIncomingTwiml(clientIdentity, callerName) {
-  // Ring the browser client for 30s, if no answer go to voicemail
+export function buildIncomingTwiml(clientIdentity, callerName, fallbackNumber) {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Dial timeout="30" action="/api/dialer/call-complete">
@@ -102,6 +105,7 @@ export function buildIncomingTwiml(clientIdentity, callerName) {
       <Identity>${clientIdentity}</Identity>
       ${callerName ? `<Parameter name="callerName" value="${callerName}" />` : ''}
     </Client>
+    ${fallbackNumber ? `<Number>${fallbackNumber}</Number>` : ''}
   </Dial>
   <Say>Sorry, no one is available to take your call. Please leave a message after the beep.</Say>
   <Record maxLength="120" transcribe="true" action="/api/dialer/voicemail" />
