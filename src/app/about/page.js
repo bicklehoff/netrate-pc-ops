@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { GBP_REVIEW_URL } from '@/lib/constants/company';
 
@@ -135,11 +136,13 @@ export default function AboutPage() {
 
           {/* Headshot + Google badge */}
           <div className="flex flex-col items-center gap-5">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <Image
               src="/david-burson.jpg"
               alt="David Burson — Mortgage Broker, NetRate Mortgage"
+              width={224}
+              height={224}
               className="w-56 h-56 rounded-2xl object-cover object-top shadow-lg border-2 border-gray-100"
+              priority
             />
             <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm w-full">
               <div className="flex items-center gap-3 mb-3">
