@@ -126,9 +126,10 @@ export function buildVoicemailTwiml() {
 
 /**
  * Send an SMS via Twilio Programmable Messaging API.
- * When `from` is provided, sends explicitly from that number (per-staff routing).
- * When omitted, falls back to MessagingServiceSid (Twilio auto-selects) or the
- * legacy TWILIO_PHONE_NUMBER env var.
+ * Routes through the Messaging Service (for A2P 10DLC campaign compliance)
+ * when TWILIO_MESSAGING_SERVICE_SID is set; the service MUST contain every
+ * number we'd want to send from. When `from` is provided, Twilio uses it as
+ * the explicit sender — the number must be in the service's pool.
  * @param {string} to - Recipient phone (E.164)
  * @param {string} body - Message text
  * @param {string} [from] - Sender phone (E.164) — the MLO's staff.twilio_phone_number
@@ -142,10 +143,14 @@ export async function sendSms(to, body, from) {
     Body: body,
     StatusCallback: 'https://www.netratemortgage.com/api/dialer/sms/status',
   };
-  if (from) {
-    params.From = from;
-  } else if (process.env.TWILIO_MESSAGING_SERVICE_SID) {
+  // Route through Messaging Service whenever configured — this is what attaches
+  // the outbound to our registered A2P campaign. Sending with a bare `From` (no
+  // service) is non-compliant for business messaging and Twilio rejects it.
+  if (process.env.TWILIO_MESSAGING_SERVICE_SID) {
     params.MessagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
+    if (from) params.From = from; // explicit sender selection within the service
+  } else if (from) {
+    params.From = from;
   } else {
     params.From = TWILIO_PHONE_NUMBER;
   }
