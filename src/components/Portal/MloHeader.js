@@ -5,6 +5,7 @@
 
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
+import PushNotificationButton from './PushNotificationButton';
 
 const MLO_PHOTOS = {
   'Jamie Cunningham': '/images/team/jamie-cunningham.jpg',
@@ -66,8 +67,9 @@ export default function MloHeader() {
         <span className="text-xs text-gray-400 hidden md:inline">· 303-444-5251</span>
       </div>
 
-      {/* Right: Logged-in user */}
+      {/* Right: Notifications + logged-in user */}
       <div className="flex items-center gap-3">
+        <PushNotificationButton />
         <div className="text-right hidden sm:block">
           <div className="text-sm font-medium text-gray-700">{userName}</div>
           <div className="text-[10px] text-gray-400">{userEmail}</div>
