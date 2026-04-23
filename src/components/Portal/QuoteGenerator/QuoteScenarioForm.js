@@ -148,9 +148,9 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
       <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
         <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider mb-4">Borrower</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Field label="Name" value={scenario.borrower_name} onChange={v => update('borrower_name', v)} placeholder="Borrower name" />
-          <Field label="Email" value={scenario.borrower_email} onChange={v => update('borrower_email', v)} placeholder="email@example.com" type="email" />
-          <Field label="Phone" value={scenario.borrower_phone} onChange={v => update('borrower_phone', v)} placeholder="303-555-1234" type="tel" />
+          <Field label="Name" value={scenario.contact_name} onChange={v => update('contact_name', v)} placeholder="Borrower name" />
+          <Field label="Email" value={scenario.contact_email} onChange={v => update('contact_email', v)} placeholder="email@example.com" type="email" />
+          <Field label="Phone" value={scenario.contact_phone} onChange={v => update('contact_phone', v)} placeholder="303-555-1234" type="tel" />
         </div>
       </div>
 

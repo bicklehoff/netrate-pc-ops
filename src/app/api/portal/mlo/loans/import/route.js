@@ -219,7 +219,7 @@ export async function PUT(request) {
       success: true,
       loan_id: loan.id,
       contact_id: borrower.id,
-      borrower_name: `${primary.firstName} ${primary.lastName}`,
+      contact_name: `${primary.firstName} ${primary.lastName}`,
       loan_number: loanData.loanNumber,
       status: statusOverride,
     });

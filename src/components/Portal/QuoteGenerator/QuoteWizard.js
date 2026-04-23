@@ -24,9 +24,9 @@ export default function QuoteWizard({ prefill }) {
   const initState   = prefill?.state    || 'CO';
   const initPurpose = prefill?.purpose  || 'purchase';
   const [scenario, setScenario] = useState({
-    borrower_name: prefill?.borrower_name || '',
-    borrower_email: prefill?.borrower_email || '',
-    borrower_phone: prefill?.borrower_phone || '',
+    contact_name: prefill?.contact_name || '',
+    contact_email: prefill?.contact_email || '',
+    contact_phone: prefill?.contact_phone || '',
     contact_id: prefill?.contact_id || null,
     leadId: prefill?.leadId || null,
     loan_id: prefill?.loan_id || null,
@@ -74,9 +74,9 @@ export default function QuoteWizard({ prefill }) {
     // Normalize snake_case state keys to camelCase for the API
     const payload = {
       ...merged,
-      borrowerName: merged.borrower_name || merged.borrowerName,
-      borrowerEmail: merged.borrower_email || merged.borrowerEmail,
-      borrowerPhone: merged.borrower_phone || merged.borrowerPhone,
+      contactName: merged.contact_name || merged.contactName,
+      contactEmail: merged.contact_email || merged.contactEmail,
+      contactPhone: merged.contact_phone || merged.contactPhone,
       loanType: merged.loan_type || merged.loanType,
       propertyValue: merged.property_value || merged.propertyValue,
       loanAmount: merged.loan_amount || merged.loanAmount,
@@ -157,11 +157,11 @@ export default function QuoteWizard({ prefill }) {
 
   const handleSendToBorrower = useCallback(async () => {
     if (!quoteId) return;
-    if (!scenario.borrower_email) {
-      setError('Add borrower email before sending');
+    if (!scenario.contact_email) {
+      setError('Add contact email before sending');
       return;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(scenario.borrower_email)) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(scenario.contact_email)) {
       setError('Enter a valid email address');
       return;
     }
@@ -194,7 +194,7 @@ export default function QuoteWizard({ prefill }) {
     } finally {
       setLoading(false);
     }
-  }, [quoteId, scenario.borrower_email, handleSaveDraft]);
+  }, [quoteId, scenario.contact_email, handleSaveDraft]);
 
   const handlePreviewPDF = useCallback(async () => {
     if (selectedRates.length === 0) return;
@@ -207,7 +207,7 @@ export default function QuoteWizard({ prefill }) {
       const blob = await pdf(
         QuotePDF({
           quote: {
-            borrower_name: scenario.borrower_name || 'Borrower',
+            contact_name: scenario.contact_name || 'Borrower',
             purpose: scenario.purpose,
             loan_amount: scenario.loan_amount,
             property_value: scenario.property_value,
@@ -267,7 +267,7 @@ export default function QuoteWizard({ prefill }) {
 
       {sendResult?.success && (
         <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-          <div className="text-green-800 font-medium text-sm">Quote sent to {scenario.borrower_email}</div>
+          <div className="text-green-800 font-medium text-sm">Quote sent to {scenario.contact_email}</div>
           <div className="text-green-600 text-xs mt-1">
             PDF attached + portal link included. Borrower can view at the link in their email.
           </div>

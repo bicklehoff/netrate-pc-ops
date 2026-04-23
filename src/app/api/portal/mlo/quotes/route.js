@@ -49,11 +49,11 @@ export async function GET(request) {
     // backward compatibility, expose old-shape fields alongside. Identity
     // comes from deriveIdentity (contact → lead → legacy).
     const quotes = scenarios.map((s) => {
-      const { borrower_name, borrower_email } = deriveIdentity(s);
+      const { contact_name, contact_email } = deriveIdentity(s);
       return {
       id: s.id,
-      borrower_name,
-      borrower_email,
+      contact_name,
+      contact_email,
       purpose: s.loan_purpose,
       loan_amount: s.loan_amount,
       loan_type: s.loan_type,
@@ -213,9 +213,9 @@ export async function POST(request) {
       if (!existingLead[0]) resolvedLeadId = null;
     }
 
-    if (!resolvedLeadId && body.borrowerEmail) {
+    if (!resolvedLeadId && body.contactEmail) {
       const existingByEmail = await sql`
-        SELECT id FROM leads WHERE email = ${body.borrowerEmail} AND mlo_id = ${mloId} AND organization_id = ${orgId} LIMIT 1
+        SELECT id FROM leads WHERE email = ${body.contactEmail} AND mlo_id = ${mloId} AND organization_id = ${orgId} LIMIT 1
       `;
       if (existingByEmail[0]) {
         resolvedLeadId = existingByEmail[0].id;
@@ -226,10 +226,10 @@ export async function POST(request) {
             loan_purpose, loan_amount, property_value, property_state, property_county,
             credit_score, mlo_id, created_at, updated_at
           ) VALUES (
-            ${orgId}, ${body.borrowerEmail}, ${body.borrowerPhone || null},
-            ${body.borrowerName || body.borrowerEmail},
-            ${body.borrowerName ? body.borrowerName.split(' ')[0] : null},
-            ${body.borrowerName ? body.borrowerName.split(' ').slice(1).join(' ') || null : null},
+            ${orgId}, ${body.contactEmail}, ${body.contactPhone || null},
+            ${body.contactName || body.contactEmail},
+            ${body.contactName ? body.contactName.split(' ')[0] : null},
+            ${body.contactName ? body.contactName.split(' ').slice(1).join(' ') || null : null},
             'quote_generator', 'quoted',
             ${body.purpose}, ${loanAmount}, ${safePropertyValue},
             ${pricingInput.state}, ${pricingInput.county || null},

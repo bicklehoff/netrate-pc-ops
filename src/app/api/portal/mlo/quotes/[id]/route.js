@@ -57,12 +57,15 @@ export async function PATCH(request, { params }) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
-    // Map legacy camelCase body fields to scenarios snake_case columns
+    // Map legacy camelCase body fields to scenarios snake_case columns.
+    // Note: DB columns are still borrower_name/email/phone (soak period).
+    // Post-UAD D9a, API surface uses contact_* naming but legacy denorm
+    // columns haven't been dropped yet — a follow-up PR removes them.
     const fields = {};
 
     // Scalar strings
     const scalarMap = {
-      borrowerName: 'borrower_name', borrowerEmail: 'borrower_email', borrowerPhone: 'borrower_phone',
+      contactName: 'borrower_name', contactEmail: 'borrower_email', contactPhone: 'borrower_phone',
       purpose: 'loan_purpose', propertyType: 'property_type', occupancy: 'occupancy', loanType: 'loan_type',
       state: 'state', county: 'county', currentLender: 'current_lender',
     };

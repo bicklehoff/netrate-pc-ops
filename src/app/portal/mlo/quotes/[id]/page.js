@@ -36,9 +36,9 @@ export default function QuoteDetailPage() {
     contact_id: quote.contact_id,
     leadId: quote.leadId,
     loan_id: quote.loan_id,
-    borrower_name: quote.borrower_name,
-    borrower_email: quote.borrower_email,
-    borrower_phone: quote.borrower_phone,
+    contact_name: quote.contact_name,
+    contact_email: quote.contact_email,
+    contact_phone: quote.contact_phone,
     purpose: quote.purpose,
     loan_type: quote.loan_type,
     property_value: Number(quote.property_value),
@@ -60,7 +60,7 @@ export default function QuoteDetailPage() {
         <Link href="/portal/mlo/quotes" className="text-sm text-gray-500 hover:text-gray-700">&larr; Quotes</Link>
         <span className="text-gray-300">|</span>
         <h1 className="text-lg font-bold text-gray-900">
-          {quote.borrower_name || 'Unnamed Quote'}
+          {quote.contact_name || 'Unnamed Quote'}
         </h1>
         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
           quote.status === 'sent' ? 'bg-blue-100 text-blue-700' :

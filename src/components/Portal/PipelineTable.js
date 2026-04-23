@@ -26,7 +26,7 @@ const VIEWS_KEY = 'netrate_pipeline_views';
 // ─── Column Definitions ─────────────────────────────────────
 
 const COLUMNS = [
-  { key: 'borrower_name', label: 'Borrower', align: 'left', sortable: true, filterable: 'select', defaultVisible: true, minW: 'min-w-[160px]' },
+  { key: 'contact_name', label: 'Borrower', align: 'left', sortable: true, filterable: 'select', defaultVisible: true, minW: 'min-w-[160px]' },
   { key: 'loan_number', label: 'Loan #', align: 'left', sortable: true, filterable: 'select', defaultVisible: true, editable: true },
   { key: 'lender_name', label: 'Lender', align: 'left', sortable: true, filterable: 'select', defaultVisible: true, editable: true },
   { key: 'purpose', label: 'Purpose', align: 'center', sortable: true, filterable: 'select', defaultVisible: true },
@@ -338,9 +338,9 @@ function ExpandedDetail({ loan }) {
     <div className="grid grid-cols-4 gap-x-6 gap-y-3 p-4 text-sm">
       <div className="space-y-2">
         <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100 pb-1">Borrower</div>
-        <DetailField label="Name" value={loan.borrower_name} />
-        <DetailField label="Email" value={loan.borrower_email} />
-        <DetailField label="Phone" value={loan.borrower_phone} />
+        <DetailField label="Name" value={loan.contact_name} />
+        <DetailField label="Email" value={loan.contact_email} />
+        <DetailField label="Phone" value={loan.contact_phone} />
         <DetailField label="FICO" value={loan.credit_score} />
         {loan.co_borrowers?.length > 0 && (
           <div className="pt-1">
@@ -567,17 +567,17 @@ export default function PipelineTable({ loans, allLoans, mloList, selectedIds, o
   // ─── Render cell value ────────────────────────────────────
   const renderCell = (loan, col) => {
     switch (col.key) {
-      case 'borrower_name':
+      case 'contact_name':
         return (
           <Link href={`/portal/mlo/loans/${loan.id}`} className="flex items-center gap-2">
             <img
-              src={`https://ui-avatars.com/api/?name=${encodeURIComponent((loan.borrower_name || '?').split(' ').map(n => n[0]).join(''))}&size=32&background=2E6BA8&color=fff&bold=true&format=svg`}
+              src={`https://ui-avatars.com/api/?name=${encodeURIComponent((loan.contact_name || '?').split(' ').map(n => n[0]).join(''))}&size=32&background=2E6BA8&color=fff&bold=true&format=svg`}
               alt="" className="w-7 h-7 rounded-full shrink-0"
             />
             <div className="min-w-0">
-              <span className="block font-bold text-ink truncate">{loan.borrower_name}</span>
-              {loan.borrower_email && (
-                <span className="block text-[10px] text-ink-subtle truncate">{loan.borrower_email}</span>
+              <span className="block font-bold text-ink truncate">{loan.contact_name}</span>
+              {loan.contact_email && (
+                <span className="block text-[10px] text-ink-subtle truncate">{loan.contact_email}</span>
               )}
             </div>
           </Link>
@@ -785,7 +785,7 @@ export default function PipelineTable({ loans, allLoans, mloList, selectedIds, o
                       }} className="rounded border-gray-300 text-brand focus:ring-brand/30" />
                     </td>
                     {visibleCols.map(col => (
-                      <td key={col.key} className={`px-3 py-3.5 ${col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : ''} ${col.key === 'borrower_name' ? 'max-w-[200px]' : ''}`}>
+                      <td key={col.key} className={`px-3 py-3.5 ${col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : ''} ${col.key === 'contact_name' ? 'max-w-[200px]' : ''}`}>
                         {renderCell(loan, col)}
                       </td>
                     ))}

@@ -396,7 +396,7 @@ export default function XmlImportModal({ open, onClose }) {
               <div>
                 <p className="text-lg font-semibold text-gray-900">Loan Imported</p>
                 <p className="text-sm text-gray-500 mt-1">
-                  {result.borrower_name}
+                  {result.contact_name}
                   {result.loan_number ? ` · #${result.loan_number}` : ''}
                 </p>
               </div>

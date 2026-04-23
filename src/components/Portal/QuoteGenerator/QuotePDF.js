@@ -192,7 +192,7 @@ function buildAmortization(loanAmount, annualRate, termYears) {
    QuotePDF Component
    ══════════════════════════════════════════════════ */
 export default function QuotePDF({ quote, scenarios, fees, closing_date, funding_date, first_payment_date }) {
-  const borrowerName = quote.borrower_name || 'Valued Client';
+  const borrowerName = quote.contact_name || 'Valued Client';
   const date = new Date().toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' });
   const rates = (scenarios || []).slice(0, 3).sort((a, b) => b.rate - a.rate);
   const loanAmount = Number(quote.loan_amount);

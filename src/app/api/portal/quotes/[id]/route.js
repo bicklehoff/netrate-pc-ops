@@ -13,7 +13,7 @@
 import { NextResponse } from 'next/server';
 import sql from '@/lib/db';
 import { getScenarioById, updateScenario } from '@/lib/scenarios/db';
-import { scenarioToQuoteShape } from '@/lib/scenarios/transform';
+import { scenarioToQuoteShape, deriveIdentity } from '@/lib/scenarios/transform';
 
 export async function GET(request, { params }) {
   try {
@@ -43,8 +43,12 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: 'Quote not found' }, { status: 404 });
     }
 
-    // Verify the borrower email matches the scenario
-    if (scenario.borrower_email?.toLowerCase() !== borrower.email?.toLowerCase()) {
+    // Verify the contact email matches the scenario. Use deriveIdentity so
+    // the check cascades through contact JOIN → lead JOIN → legacy denorm
+    // (the legacy `scenarios.borrower_email` column is no longer written
+    // post-Layer-1c; reading it raw here was a silent access-check bug).
+    const identity = deriveIdentity(scenario);
+    if (identity.contact_email?.toLowerCase() !== borrower.email?.toLowerCase()) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
@@ -67,7 +71,7 @@ export async function GET(request, { params }) {
     return NextResponse.json({
       quote: {
         id: quote.id,
-        borrower_name: quote.borrower_name,
+        contact_name: quote.contact_name,
         purpose: quote.purpose,
         property_value: quote.property_value,
         loan_amount: quote.loan_amount,

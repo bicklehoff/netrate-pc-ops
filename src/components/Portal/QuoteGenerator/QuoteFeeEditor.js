@@ -607,9 +607,9 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
             Preview PDF
           </button>
           <button onClick={onSendToBorrower}
-            disabled={loading || !scenario.borrower_email || selectedRates.length === 0}
+            disabled={loading || !scenario.contact_email || selectedRates.length === 0}
             className="px-5 py-2 bg-cyan-600 text-white rounded-lg text-sm font-bold hover:bg-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            title={!scenario.borrower_email ? 'Add borrower email to send' : 'Send quote with PDF to borrower'}>
+            title={!scenario.contact_email ? 'Add contact email to send' : 'Send quote with PDF to borrower'}>
             {loading ? 'Sending...' : 'Send to Borrower'}
           </button>
         </div>

@@ -88,9 +88,9 @@ export default function QuotesListPage() {
                 <tr key={q.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-4 py-3">
                     <Link href={`/portal/mlo/quotes/${q.id}`} className="text-cyan-600 hover:underline font-medium">
-                      {q.borrower_name || 'Unnamed'}
+                      {q.contact_name || 'Unnamed'}
                     </Link>
-                    {q.borrower_email && <div className="text-xs text-gray-400">{q.borrower_email}</div>}
+                    {q.contact_email && <div className="text-xs text-gray-400">{q.contact_email}</div>}
                   </td>
                   <td className="px-4 py-3 text-xs text-gray-600">
                     {q.loan_type?.toUpperCase()} | {q.purpose} | {q.state} | {q.fico} FICO | {q.term}yr
