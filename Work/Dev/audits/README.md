@@ -1,9 +1,9 @@
 # FoH April — Audit + UAD Spec
 
-**Status:** Active · D1 ✅ re-verified (6 public-route `err.message` residuals pinned) · D2 ✅ fully closed · D3 ✅ re-verified · D4 ✅ re-verified (dialer residual enumerated: 15/16 routes unscoped — **High priority** security follow-up) · D5 ✅ closed (absorbed into D9a) · D6 ✅ complete (Core NonQM LLPA parser residual tracked) · D7 ✅ core shipped (IA redesign deferred; 6 polish residuals) · D8 ✅ inventory complete; remediations streamed into D7 + vocab audit · D9 🔄 D9a ✅ complete; D9b ✅ complete (all assigned items .3–.11, .13); D9d ✅ non-HECM scope complete (11 tables + 2 formalized + 2 dropped — all verified in prod DB 2026-04-22); D9c/e queued · D10 🆕 filed (2/3 initial findings shipped, D10.3 deferred to IA) · **Scenario Vocab Audit ✅ all 4 PRs shipped** (property_type #124, loan_purpose #125, loan_term #126, nonqm canonicalize #129 — all 4 canonical vocabularies verified live in prod DB 2026-04-22)
+**Status:** Active · D1 ✅ fully closed (PRs #174/#175/#176 — err.message sanitized, per-IP rate limiting, contact-form anti-spam) · D2 ✅ fully closed · D3 ✅ re-verified · D4 ✅ fully closed (PR #159 patched all 15 dialer routes) · D5 ✅ closed (absorbed into D9a) · D6 ✅ complete (Core NonQM LLPA parser residual tracked) · D7 ✅ core shipped (IA redesign deferred; 6 polish residuals) · D8 ✅ inventory complete; remediations streamed into D7 + vocab audit · D9 🔄 D9a ✅ complete; D9b ✅ complete (all assigned items .3–.11, .13); D9d ✅ non-HECM scope complete (11 tables + 2 formalized + 2 dropped — all verified in prod DB 2026-04-22); D9c/e queued · D10 🆕 filed (2/3 initial findings shipped, D10.3 deferred to IA) · **Scenario Vocab Audit ✅ all 4 PRs shipped** (property_type #124, loan_purpose #125, loan_term #126, nonqm canonicalize #129 — all 4 canonical vocabularies verified live in prod DB 2026-04-22)
 **Name:** FoH April (Front-of-House April 2026) — the combined audit + UAD effort, David-named 2026-04-17. Formerly "Site Audit 2026"; audit (retrospective) + UAD (prospective) are one continuous effort.
 **Current driver:** PC Dev (`magical-hypatia-ffaf85` worktree)
-**Last updated:** 2026-04-22 (v1.18 — full FoH April re-audit. 5 parallel dimension verifications. All ✅ dimension claims held: D9d 13/13 tables verified, D9b 6/6 pricing-unification checks clean, Vocab 4/4 PRs verified canonical in prod. Two header corrections: D4 dialer residual enumerated (15/16 routes unscoped, promoted to High priority security) + HECM optimizer retheme corrected 7→9 files. §7 "Next up" queue fully rewritten — stale Vocab PR 4 entry removed, D4 dialer elevated, 3 post-vocab data-quality follow-ups added.)
+**Last updated:** 2026-04-23 (v1.19 — D1 + D4 fully closed. D1: PR #174 sanitized 7 public-route `err.message` leaks + removed orphaned unauth POST `/api/market/national-rates`; PR #175 added per-IP Upstash rate limiting on 6 public endpoints with fail-open semantics; PR #176 killed contact-form spam with 3 stacked signals (honeypot + time-trap + Upstash 'lead' scope at 5/hr). D4: PR #159 patched all 15 unscoped dialer routes with `organization_id` filtering. §7 "Next up" queue reconciled — High priority and D1 Medium items removed. D6 Core NonQM LLPA parser now top bounded-scope item.)
 **Canonical location:** this file
 
 > One audit. One spec. One driver at a time. Everything else defers to this doc.
@@ -124,18 +124,18 @@ Under these rules: even with two sessions awake, at most one can deploy, and usu
 
 The audit covers eight dimensions. Each dimension has its own completion state, scope, and artifacts.
 
-### D1 · Security — ✅ re-verified (2026-04-16)
+### D1 · Security — ✅ fully closed (2026-04-23)
 
 Every-line review for OWASP-class vulnerabilities, credential exposure, unsafe deserialization, missing auth guards.
 
-- **Shipped:** PR #52 (security audit — 8 vulnerabilities patched across 27 files)
+- **Shipped:**
+  - PR #52 (security audit — 8 vulnerabilities patched across 27 files)
+  - **PR #174 (2026-04-23)** — sanitized 7 public-route `err.message` leaks (`strike-rate:148`, `saved-scenario:168`, `saved-scenario/update:137`, `pricing/dscr:133`, `market/national-rates:75+130`, `my-rates:60`, `my-rates:26` lead-count leak). Also removed orphaned unauth `POST /api/market/national-rates` (zero callers via repo-wide grep, zero auth, UPSERT into national rate display). Fixing the hole by removing the hole.
+  - **PR #175 (2026-04-23)** — per-IP Upstash rate limiting on 6 public endpoints via `src/lib/api/rate-limit.js`. Fails open when `KV_REST_API_*` env vars missing or Upstash unreachable (a dead rate limiter must not take down the endpoint it protects). Per-route limits tuned to real usage: `strike-rate` + `saved-scenario` 5/min (single-use), `pricing/dscr` 60/min (300ms debounced calculator), `market/national-rates` 60/min (heavily cached), `my-rates` 30/min, `lead` 5/hour (highest-value form). Upstash Redis provisioned via Vercel marketplace integration (free tier, 10K commands/day, db `upstash-kv-cerulean-globe`). Reads `KV_REST_API_URL` + `KV_REST_API_TOKEN` directly (Vercel KV legacy naming the marketplace sets) rather than `UPSTASH_REDIS_REST_*`.
+  - **PR #176 (2026-04-23)** — contact-form anti-spam: off-screen honeypot field in all 3 `/api/lead` callers + `formLoadedAt` time-trap + swap of in-memory limiter for Upstash `lead` scope at 5/hour. Stack targets different bot pattern per filter: honeypot catches "fill every input" scrapers, time-trap catches non-JS + instant-POST bots, rate-limit catches sustained scripted attacks. All return silent fake-success so bots don't retry.
 - **D0 verification (2026-04-16):** re-audit at [`D0-VERIFICATION-D1-SECURITY-2026-04-16.md`](./D0-VERIFICATION-D1-SECURITY-2026-04-16.md). All 8 PR #52 patches held at HEAD. No regressions from PRs #53–#79.
-- **Residual findings (re-verified 2026-04-22, line numbers pinned):**
-  - 6 public/unauth routes leak raw `err.message`: `strike-rate:148`, `saved-scenario:168`, `saved-scenario/update:137`, `pricing/dscr:133`, `market/national-rates:75+130`, `my-rates:60`
-  - `/api/my-rates:26` leaks lead count in auth error message (`Invalid token (found ${leads?.length || 0} leads)`)
-  - ~11 MLO-protected routes leak `err.message` to authenticated callers (lower risk)
-  - No rate limiting anywhere in `src/app/api/**` (verified via grep — zero middleware imports)
-- **Deferred:** full security audit (plaintext secrets in `~/.claude` skill files, API key rotation, `~/.netrate/auth.json` pattern, repo-wide scan) — tracked as PLATFORM-2026 backlog item #73, P=medium.
+- **Residuals:** none — all 6 public-route `err.message` leaks closed, rate limiting live on 6 endpoints, contact-form hardened.
+- **Deferred (out of scope, tracked elsewhere):** full security audit (plaintext secrets in `~/.claude` skill files, API key rotation, `~/.netrate/auth.json` pattern, repo-wide scan) — PLATFORM-2026 backlog item #73, P=medium. If contact-form spam continues past 48h monitor window, ship Cloudflare Turnstile (~30 min).
 
 ### D2 · camelCase / snake_case consistency — ✅ fully closed (2026-04-16)
 
@@ -154,14 +154,17 @@ Financial correctness of `priceRate()` and the surrounding ingest pipeline. Catc
 - **Out of scope:** DSCR pricer (separate domain, see D6), non-QM parsers (same).
 - **Note:** D3 audited the *computation*. It did not audit the *inputs* to the computation for staleness — that's D8.
 
-### D4 · Data integrity — ✅ re-verified (2026-04-16), 🔄 schema-integrity follow-up (2026-04-21)
+### D4 · Data integrity — ✅ fully closed (2026-04-22)
 
 Ownership checks, foreign key enforcement, transactional boundaries, PII handling, display-layer hygiene.
 
-- **Shipped:** #55 (data integrity — 7 issues patched), #56 (hide product names from public rate tool — show only in debug mode).
-- **D0 verification (2026-04-16):** re-audit at [`D0-VERIFICATION-D4-DATA-INTEGRITY-2026-04-16.md`](./D0-VERIFICATION-D4-DATA-INTEGRITY-2026-04-16.md). 5 PR #55 patches verified correct. **2 critical new findings surfaced and shipped in PR #80:** (a) `GET /api/dialer/sms/threads` had no `organization_id` filter — cross-org SMS PII leak including plaintext message bodies; (b) `PATCH /api/portal/mlo/pipeline` bulk-cap guard was unreachable dead code due to brace scoping.
-- **Schema-integrity follow-up (2026-04-21, PR #___)** — original D4 re-audit checked route-level ownership + cross-org leaks but did not check table-level schema defaults. Discovered via a live failure: the Zoho corebot ingest webhook was silently dropping every incoming loan because `loans.id` has no `DEFAULT gen_random_uuid()` and the INSERT forgot to supply one. Audit of all primary-key columns across 10 core tables found **7 tables with `id UUID NOT NULL` and no default**: `loans`, `contacts`, `loan_events`, `loan_borrowers`, `documents`, `call_logs`, `staff`. PR #97 (2026-04-17) had previously fixed three call sites but never patched the defaults. **Migration 021** sets `DEFAULT gen_random_uuid()` on all 7, plus the corebot ingest INSERT gets an explicit `gen_random_uuid()` for defense-in-depth. Ships under §2c criterion #2 (actively harming real ingress; cannot wait for D9). D9 does not touch these defaults — fix is permanent.
-- **Residual (2026-04-22 re-audit, enumerated):** of the 16 routes under `src/app/api/dialer/**`, only `/sms/threads` (PR #80) has an `organization_id` filter. **15 other dialer routes lack org_id filtering.** Of those, the NextAuth-protected surfaces (`/calls`, `/calls/[id]/notes`, `/contacts`, `/contacts/[id]`, `/contacts/search`, `/sms/send`, `/token`) carry the same cross-org PII leak shape that PR #80 closed on `/threads`. The Twilio-webhook routes (`/call-complete`, `/incoming`, `/recording-status`, `/sms/incoming`, `/sms/status`, `/voice`, `/voicemail`, `/status`) are signature-gated but still write/read without org scoping — lower risk but same underlying gap. Full follow-up PR needed; priority elevated from "flagged" to "High · security" in §7.
+- **Shipped:**
+  - #55 (data integrity — 7 issues patched), #56 (hide product names from public rate tool — show only in debug mode).
+  - **PR #80 (2026-04-16)** — 2 critical findings from D0 re-audit: (a) `GET /api/dialer/sms/threads` had no `organization_id` filter — cross-org SMS PII leak including plaintext message bodies; (b) `PATCH /api/portal/mlo/pipeline` bulk-cap guard was unreachable dead code due to brace scoping.
+  - **Migration 021 (2026-04-21)** — schema-integrity: table-level `id UUID NOT NULL` with no default across 7 core tables (`loans`, `contacts`, `loan_events`, `loan_borrowers`, `documents`, `call_logs`, `staff`). Discovered via Zoho corebot ingest silently dropping every incoming loan. Migration sets `DEFAULT gen_random_uuid()` on all 7; corebot INSERT also gets explicit `gen_random_uuid()` for defense-in-depth. Ships under §2c criterion #2.
+  - **PR #159 (2026-04-22)** — dialer org-scoping. Patched all 15 unscoped routes under `src/app/api/dialer/**`: NextAuth-protected surfaces (`/calls`, `/calls/[id]/notes`, `/contacts`, `/contacts/[id]`, `/contacts/search`, `/sms/send`, `/token`) now filter by `organization_id` with the same shape as PR #80's `/threads` fix; Twilio-webhook routes (`/call-complete`, `/incoming`, `/recording-status`, `/sms/incoming`, `/sms/status`, `/voice`, `/voicemail`, `/status`) also scoped to the appropriate org via lookup on the inbound `To` number.
+- **D0 verification (2026-04-16):** re-audit at [`D0-VERIFICATION-D4-DATA-INTEGRITY-2026-04-16.md`](./D0-VERIFICATION-D4-DATA-INTEGRITY-2026-04-16.md). 5 PR #55 patches verified correct.
+- **Residuals:** none.
 
 ### D5 · Org scoping — 🔄 half-done (first half re-verified, second half unshipped)
 
@@ -323,47 +326,60 @@ Ordered work list. Inventory passes and remediation PRs interleave by default (s
 27. ✅ **README v1.8 refresh** shipped (PR #127) — catches audit index up to ~42 PRs since v1.5.
 28. ✅ **D6 PR 14 drop** — migration 018 retired legacy quote tables; first live exercise of the Neon-branch rehearsal protocol. Details under D6 dimension above.
 
-### Next up (punch list reconciled 2026-04-22 after full FoH April re-audit)
+### Done 2026-04-22 (D4 dialer closure)
 
-**High priority — security:**
+29. ✅ **D4 dialer route org-scoping** — PR #159 patched all 15 unscoped routes under `src/app/api/dialer/**`. NextAuth-protected surfaces now filter by `organization_id` with the same shape as PR #80's `/threads` fix; Twilio-webhook routes scoped to the appropriate org via lookup on the inbound `To` number. D4 dimension now fully closed.
 
-29. **D4 dialer route org-scoping fix** — 15 of 16 dialer routes lack `organization_id` filtering (see D4 residual). 7 NextAuth-protected routes have the same cross-org PII leak shape as the `/threads` fix in PR #80. Recommend bundling into one security PR (`fix/dialer-org-scoping`) with a shared `scopeByOrg(sql, orgId)` helper. **Neon-branch rehearsal optional** (route-level code change, no data migration). ~2-3 hrs with smoke tests.
+### Done 2026-04-23 (D1 public-API hardening + anti-spam)
 
-**Medium — security & pricing correctness:**
+30. ✅ **D1a err.message sanitization + orphaned POST removal** (PR #174) — sanitized 7 public-route `err.message` leaks (6 generic + 1 `my-rates` lead-count leak). Also removed orphaned unauth `POST /api/market/national-rates` (zero callers via repo-wide grep, zero auth, UPSERT into national rate display). Fixing the hole by removing the hole.
+31. ✅ **D1b per-IP rate limiting** (PR #175) — Upstash Redis via Vercel marketplace integration (free tier, 10K commands/day). Wrapper at `src/lib/api/rate-limit.js` exposes `rateLimit(request, { scope, limit, window })` — returns null on pass or NextResponse 429 with `Retry-After` + `X-RateLimit-*` headers on block. **Fails open** when `KV_REST_API_*` env vars missing or Upstash unreachable. Per-route limits tuned to real usage: `strike-rate` + `saved-scenario` 5/min (single-use), `pricing/dscr` 60/min (300ms debounced calculator), `market/national-rates` 60/min (heavily cached), `my-rates` 30/min.
+32. ✅ **Contact-form anti-spam stack** (PR #176) — honeypot field in all 3 `/api/lead` callers + `formLoadedAt` time-trap + Upstash `lead` scope at 5/hour. All 3 filters return silent fake-success so bots don't retry. Time-trap via client-provided timestamp has an inherent client-clock-skew weakness (accepted — honeypot does the real work against scraper-class bots; time-trap is defense-in-depth). Monitor for 48h; if MRQSUwflQBHOiAGjNgGND-style submissions continue, ship Cloudflare Turnstile (~30 min).
 
-30. **D1 err.message leaks + rate limiting** — 6 public routes confirmed leaking raw `err.message` (`strike-rate:148`, `saved-scenario:168`, `saved-scenario/update:137`, `pricing/dscr:133`, `market/national-rates:75+130`, `my-rates:60`). No rate-limit middleware anywhere in `src/app/api/**`. Bundle into one "D1 public-API hardening" PR. ~1-2 hrs.
-31. **D6 Core NonQM LLPA parser** — Everstream DSCR Plus + Expanded Prime Plus core tier adjustments explicitly skipped in `everstream-llpas.js:18-19` ("NOT handled here — follow-up PR"). Tracked under D6 but not blocking D6 completion.
+### Next up (punch list reconciled 2026-04-23 after D1 closure)
+
+**Medium — scope-bounded, session-sized:**
+
+33. **D6 Core NonQM LLPA parser** — Everstream DSCR Plus + Expanded Prime Plus core tier adjustments explicitly skipped in `everstream-llpas.js:18-19` ("NOT handled here — follow-up PR"). Tracked under D6 but not blocking D6 completion. `nonqm_adjustment_rules` table already live from vocab PR #129; this is parser-only.
 
 **Architectural — session-of-its-own:**
 
-32. **D9c scenario/quote model** — composable calc modules, shareable quote links (Layer 3 Lite), borrower scenario save. Multi-PR effort.
-33. **D9e application modules** — clean segment model for deal data. Multi-PR.
-34. **HECM standalone project** (scoped out of D9d 2026-04-22) — `ref_hecm_pricing` rate-sheet pipeline + HECM consumer retirement + FOA `ref_lender_corrections`. Blocks HECM optimizer retheme in item 35 below.
-35. **D7 nav/IA redesign (IA-2 through IA-7 + D10.3 Prequal discoverability)** — dedicated consultation session with David. Not a self-service PR.
+34. **D9c scenario/quote model** — composable calc modules, shareable quote links (Layer 3 Lite), borrower scenario save. Multi-PR effort.
+35. **D9e application modules** — clean segment model for deal data. Multi-PR.
+36. **HECM standalone project** (scoped out of D9d 2026-04-22) — `ref_hecm_pricing` rate-sheet pipeline + HECM consumer retirement + FOA `ref_lender_corrections`. Blocks HECM optimizer retheme in item 42 below.
+37. **D7 nav/IA redesign (IA-2 through IA-7 + D10.3 Prequal discoverability)** — dedicated consultation session with David. Not a self-service PR.
 
 **D7 small residuals (bundle as convenient):**
 
-36. **LE-3 product call** — Run Quote vs Generate Quote merge — product decision needed first.
-37. **Quote list/detail retheme** — `src/app/portal/mlo/quotes/page.js` still on cyan/teal palette.
-38. **borrower_* → contact_* API rename** — pipeline + loans/[id] routes. 48 references across 9 files (QuoteWizard, QuoteScenarioForm, QuotePDF, HecmOptimizer, PayrollSection). Tier A with quote-generation smoke test.
-39. **STATUS_LABELS harmonization** — `loan-states.js` (has `rate_alert`) vs `loan-statuses.js` (has `settled`/`withdrawn`). Different keys. Design call needed: which map wins, where does `rate_alert` live.
-40. **docs_out teal-500 token** — `loan-statuses.js:57` hardcodes `bg-teal-500 text-white`. Trivial extract to a const if doing other work in the file.
-41. **HECM optimizer retheme (9 files)** — blocked on HECM standalone project; do not retheme throwaway code.
+38. **LE-3 product call** — Run Quote vs Generate Quote merge — product decision needed first.
+39. **Quote list/detail retheme** — `src/app/portal/mlo/quotes/page.js` still on cyan/teal palette.
+40. **`borrower_* → contact_*` API rename** — pipeline + loans/[id] routes. 48 references across 9 files (QuoteWizard, QuoteScenarioForm, QuotePDF, HecmOptimizer, PayrollSection). Tier A with quote-generation smoke test. UAD follow-through — the schema already says `contact_id` post-D9a; the API surface is lagging.
+41. **STATUS_LABELS harmonization** — `loan-states.js` (has `rate_alert`) vs `loan-statuses.js` (has `settled`/`withdrawn`). Different keys. Design call needed: which map wins, where does `rate_alert` live.
+42. **`docs_out` teal-500 token** — `loan-statuses.js:57` hardcodes `bg-teal-500 text-white`. Trivial extract to a const if doing other work in the file.
+43. **HECM optimizer retheme (9 files)** — blocked on HECM standalone project; do not retheme throwaway code.
 
 **Data quality (post-vocab follow-ups surfaced in re-audit):**
 
-42. **Column-name unification** — `loans.loan_term` vs `scenarios.term` vs `rate_products.term`. Values are canonical (years) but column name diverges. Trivial rename migration when convenient.
-43. **`loans.refi_purpose` NULL gap** — 464 refi rows have null `refi_purpose` (only 68 of 532 refis are classified). Not a vocab defect; a data-completeness issue from historical imports. Needs classification strategy call.
-44. **`loans.loan_term` non-standard values** — 24 rows have 12 / 19 / 28 / 29 year terms. Likely remaining-term values from historical imports (documented as a known issue in the vocab audit §3.5).
+44. **Column-name unification** — `loans.loan_term` vs `scenarios.term` vs `rate_products.term`. Values are canonical (years) but column name diverges. Trivial rename migration when convenient.
+45. **`loans.refi_purpose` NULL gap** — 464 refi rows have null `refi_purpose` (only 68 of 532 refis are classified). Not a vocab defect; a data-completeness issue from historical imports. Needs classification strategy call.
+46. **`loans.loan_term` non-standard values** — 24 rows have 12 / 19 / 28 / 29 year terms. Likely remaining-term values from historical imports (documented as a known issue in the vocab audit §3.5).
 
 **Externally blocked:**
 
-45. **`ref_fha_annual_mip`** — pending `case_number_date` tracking implementation in loan schema (D9d spec §8).
+47. **`ref_fha_annual_mip`** — pending `case_number_date` tracking implementation in loan schema (D9d spec §8).
 
 **Needs David input:**
 
-46. **MKT-B3 volume numbers** — needs fresh 2026-YTD numbers OR continues as 2025-labeled historical stats.
-47. **Claw backlog items** — #86 related-articles widget, #87 Ahrefs re-crawl verification, #88 DSCR screening workflow, plus pre-existing #76 /refinance + #79 sequence engine.
+48. **MKT-B3 volume numbers** — needs fresh 2026-YTD numbers OR continues as 2025-labeled historical stats.
+49. **Claw backlog items** — #86 related-articles widget, #87 Ahrefs re-crawl verification, #88 DSCR screening workflow, plus pre-existing #76 /refinance + #79 sequence engine.
+
+**Cross-device pickup (outside FoH scope):**
+
+50. **Mac relay `relay_moam5f5e8zxys9tb` part 2** — pdf-tools signing queue wiring + migration + UI warning badge. Mac shipped part 1 (PR #48, commit 58da6a7) with the `strip-form-layer` + `audit-pdf` library. PC owes the signing queue intake/completion gates + `form_audit jsonb` schema addition.
+
+**Ops cleanup (non-code):**
+
+51. **Delete 2 test/spam leads from DB** — `fast@example.com` (smoke test from D1b) + the `MRQSUwflQBHOiAGjNgGND-style` scraper submission that slipped through before the honeypot landed.
 
 ### Done criteria per item
 
@@ -434,6 +450,7 @@ After completion, this doc moves to archive status and a fresh `SITE-AUDIT-2027.
 
 ## 11. Change log
 
+- **2026-04-23 (v1.19)** — **D1 + D4 fully closed.** D4 dialer org-scoping dimension closed via PR #159 (15 unscoped routes patched, shipped 2026-04-22 but README was not updated same session). D1 public-API hardening closed across three PRs shipped 2026-04-23: PR #174 sanitized 7 `err.message` leaks on 6 public routes + 1 `my-rates:26` lead-count leak, and removed the orphaned unauth `POST /api/market/national-rates` (zero callers, zero auth, UPSERT into national rate display) — fixing the hole by removing the hole. PR #175 shipped per-IP rate limiting via Upstash Redis (Vercel marketplace integration, free tier). Wrapper at `src/lib/api/rate-limit.js` fails **open** when env vars missing or Upstash unreachable (a dead rate limiter must not take down the endpoint it protects). PR #176 shipped contact-form anti-spam: off-screen honeypot in all 3 `/api/lead` callers + `formLoadedAt` time-trap + swap of in-memory limiter for Upstash `lead` scope at 5/hour. **Queue reconciliation:** old items 29 (D4) + 30 (D1) moved to "Done 2026-04-22" + "Done 2026-04-23" sections; Next up now starts at item 33 (D6 Core NonQM LLPA parser). **Two queue additions:** Mac relay `relay_moam5f5e8zxys9tb` part 2 (pdf-tools signing queue wiring — Mac shipped part 1 as PR #48) filed as item 50; spam/test lead DB cleanup filed as item 51 (ops task, non-code). Also pinned the UAD follow-through framing on item 40 (`borrower_* → contact_*` rename) — the schema has said `contact_id` since D9a; the API surface is lagging.
 - **2026-04-22 (v1.18)** — **Full FoH April re-audit.** David asked for "a full audit of everything we've done today, then re-evaluate what we think is left, then update README before signing off." Ran five parallel dimension verifications: D9d table-by-table (DB), D9b pricing-unification residuals (grep), D1/D4 security residuals (grep + route enumeration), D7 residuals current state, Scenario Vocab canonicalization full DB sweep. **All ✅ dimension claims held** — 13/13 D9d tables verified with exact row counts, 6/6 pricing-unification checks clean, all 4 vocabs canonical in prod (zero legacy residue). **Two header corrections:** (1) D4 dialer residual enumerated — `/sms/threads` is the only scoped route out of 16; 15 others lack `organization_id` filtering (7 NextAuth-protected carry same cross-org leak shape as PR #80's fix). Promoted to **High priority · security** in §7. (2) D7 HECM optimizer retheme corrected from "~7 files" to "9 files confirmed" (ScenarioTable, PrintView, RateInputs, RefiSection, SaveLoadModal, OptimizerGrid, ApplicationSection, BorrowerInputs, FeesSection) — and explicitly marked blocked on standalone HECM project. **§7 "Next up" queue fully rewritten** — stale Vocab PR 4 entry removed (shipped as #129 on 2026-04-21 same day as v1.8 refresh, which is why it remained in the queue). Queue now reconciled by priority: D4 dialer (High/security) → D1 hardening + D6 core NonQM parser (Medium) → D9c/D9e/HECM-project (Architectural) → D7 polish bundle → post-vocab data-quality follow-ups (column-name unification, refi_purpose NULL gap, loan_term non-standard values) → externally blocked. D10.1 + D10.2 both verified shipped in code. **Three new post-vocab findings surfaced in re-audit:** (a) `loans.loan_term` vs `scenarios.term` vs `rate_products.term` column-name mismatch, (b) 464 refi rows with NULL refi_purpose (data-completeness gap from historical imports), (c) 24 rows with non-standard loan_term values. None are defects — all filed as low-priority follow-ups. **D1 residuals pinned** to specific line numbers (6 routes, not 7 — prior count double-counted pricing/dscr). README now reflects accurate current state; single coherent punch list at §7.
 - **2026-04-15 (v1)** — initial spec filed. D1–D5 marked ✅ based on PRs #45–#60 shipped history. D6 marked 🔄 with 3 items pending. D7 marked ⏳. D8 marked 🆕 with Pass 1 (pricer) complete, Passes 2–8 queued. Pricer inventory folded in as cross-references in §9 and filed as sibling doc.
 - **2026-04-15 (v1.1)** — clarified that remediation is part of the audit (not a separate phase), added §2b "Interleave vs batch" defaulting to interleave, reshaped the queue (§7) to interleave inventory + ship-immediately remediations with an explicit batched-remediation block for cross-surface schema design.
