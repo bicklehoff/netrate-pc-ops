@@ -304,8 +304,9 @@ export async function PATCH(request, { params }) {
             const borrower = borrowerRows[0];
 
             await sql`
-              INSERT INTO loan_borrowers (id, loan_id, contact_id, borrower_type, ordinal, created_at, updated_at)
+              INSERT INTO loan_participants (id, loan_id, contact_id, role, ordinal, created_at, updated_at)
               VALUES (gen_random_uuid(), ${id}, ${borrower.id}, 'co_borrower', 1, NOW(), NOW())
+              ON CONFLICT DO NOTHING
             `;
 
             personsCreated.push({ ...person, contactId: borrower.id, secondaryContactId: contactId });
