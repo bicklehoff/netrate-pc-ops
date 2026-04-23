@@ -3,7 +3,7 @@
 // PATCH /api/portal/mlo/pipeline — Bulk update loans (status, mlo_id)
 //
 // Returns all loans for the authenticated MLO (or all loans if admin).
-// Includes borrower name, status, ball-in-court, pending doc count, and
+// Includes contact name, status, ball-in-court, pending doc count, and
 // editable fields (loan_number, lender_name, mlo_id).
 
 import { NextResponse } from 'next/server';
@@ -17,11 +17,11 @@ export async function GET() {
 
     if (!session) return unauthorizedResponse();
 
-    // Main loan query with borrower + mlo + dates JOINed
+    // Main loan query with contact + mlo + dates JOINed
     const loans = await sql`
       SELECT l.*,
-        b.first_name AS borrower_first_name, b.last_name AS borrower_last_name,
-        b.email AS borrower_email, b.phone AS borrower_phone, b.ssn_last_four,
+        b.first_name AS contact_first_name, b.last_name AS contact_last_name,
+        b.email AS contact_email, b.phone AS contact_phone, b.ssn_last_four,
         m.id AS mlo_ref_id, m.first_name AS mlo_first_name, m.last_name AS mlo_last_name,
         ld.application_date, ld.locked_date, ld.lock_expiration, ld.lock_term,
         ld.credit_pulled_date, ld.credit_expiration,
@@ -70,10 +70,10 @@ export async function GET() {
     // Transform for the pipeline table
     const pipeline = loans.map((loan) => ({
       id: loan.id,
-      // Borrower
-      borrower_name: `${loan.borrower_first_name} ${loan.borrower_last_name}`,
-      borrower_email: loan.borrower_email,
-      borrower_phone: loan.borrower_phone,
+      // Contact
+      contact_name: `${loan.contact_first_name} ${loan.contact_last_name}`,
+      contact_email: loan.contact_email,
+      contact_phone: loan.contact_phone,
       ssn_last_four: loan.ssn_last_four,
       // Co-borrowers
       co_borrowers: coMap.get(loan.id) || [],

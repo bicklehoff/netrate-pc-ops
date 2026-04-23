@@ -294,7 +294,7 @@ function LoanSummaryTab({ quote, scenarios, fees, loanAmount, propertyValue, ltv
           <div className="inline-block px-4 py-1 bg-[#f2f4f6] rounded-full mb-2">
             <p className="text-xs font-semibold text-[#737783]">OFFICIAL QUOTE REPORT</p>
           </div>
-          <h2 className="text-lg font-bold text-[#191c1e]">Borrower: {quote.borrower_name || 'Valued Client'}</h2>
+          <h2 className="text-lg font-bold text-[#191c1e]">Borrower: {quote.contact_name || 'Valued Client'}</h2>
           <p className="text-sm text-[#737783]">Date Prepared: {date}</p>
         </div>
       </div>

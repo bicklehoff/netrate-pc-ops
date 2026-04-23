@@ -42,14 +42,14 @@ export async function POST(request, { params }) {
     // Shape into legacy quote format for PDF/email
     const quote = scenarioToQuoteShape(scenario);
 
-    // Require borrower email
-    const borrowerEmail = quote.borrower_email;
-    if (!borrowerEmail) {
-      return NextResponse.json({ error: 'Borrower email is required to send a quote' }, { status: 400 });
+    // Require contact email (post-UAD identity)
+    const contactEmail = quote.contact_email;
+    if (!contactEmail) {
+      return NextResponse.json({ error: 'Contact email is required to send a quote' }, { status: 400 });
     }
 
-    const borrowerName = quote.borrower_name || 'Valued Client';
-    const firstName = borrowerName.split(' ')[0];
+    const contactName = quote.contact_name || 'Valued Client';
+    const firstName = contactName.split(' ')[0];
 
     // Generate PDF server-side
     let pdfBuffer;
@@ -62,13 +62,13 @@ export async function POST(request, { params }) {
       pdfBuffer = await renderToBuffer(
         React.createElement(QuotePDF, {
           quote: {
-            borrowerName,
+            contact_name: contactName,
             purpose: quote.purpose,
-            loanAmount: Number(quote.loan_amount),
-            propertyValue: Number(quote.property_value),
+            loan_amount: Number(quote.loan_amount),
+            property_value: Number(quote.property_value),
             ltv: Number(quote.ltv),
             fico: quote.fico,
-            loanType: quote.loan_type,
+            loan_type: quote.loan_type,
             state: quote.state,
             county: quote.county,
             term: quote.term,
@@ -90,9 +90,11 @@ export async function POST(request, { params }) {
       // Continue without PDF — still send email with link
     }
 
-    // Ensure contact (borrower role) exists for portal access (post-migration: borrower fields live on contacts)
+    // Ensure contact (borrower role) exists for portal access. `borrower`
+    // variable name refers to the borrower ROLE on this loan, not to the
+    // identity field shape — contacts table is the unified identity store.
     const borrowerRows = await sql`
-      SELECT * FROM contacts WHERE email = ${borrowerEmail.toLowerCase().trim()} AND organization_id = ${orgId} LIMIT 1
+      SELECT * FROM contacts WHERE email = ${contactEmail.toLowerCase().trim()} AND organization_id = ${orgId} LIMIT 1
     `;
     let borrower = borrowerRows[0];
 
@@ -101,9 +103,9 @@ export async function POST(request, { params }) {
       const created = await sql`
         INSERT INTO contacts (organization_id, email, first_name, last_name, phone, ssn_encrypted, dob_encrypted, ssn_last_four, role, marketing_stage, created_at, updated_at)
         VALUES (
-          ${orgId}, ${borrowerEmail.toLowerCase().trim()}, ${firstName},
-          ${borrowerName.split(' ').slice(1).join(' ') || 'Unknown'},
-          ${quote.borrower_phone || null},
+          ${orgId}, ${contactEmail.toLowerCase().trim()}, ${firstName},
+          ${contactName.split(' ').slice(1).join(' ') || 'Unknown'},
+          ${quote.contact_phone || null},
           ${encrypt('000000000')}, ${encrypt('1900-01-01')}, '0000',
           'borrower', 'in_process', NOW(), NOW()
         )
@@ -138,7 +140,7 @@ export async function POST(request, { params }) {
 
     // Send with PDF attachment if available
     const emailPayload = {
-      to: borrowerEmail,
+      to: contactEmail,
       ...template,
     };
 

@@ -306,7 +306,7 @@ export default function MloDashboardPage() {
     // Search filter
     if (search) {
       const q = search.toLowerCase();
-      const fields = [loan.borrower_name, loan.loan_number, loan.lender_name, loan.property_street, loan.borrower_email, loan.mlo_name, loan.purpose, loan.loan_type].filter(Boolean);
+      const fields = [loan.contact_name, loan.loan_number, loan.lender_name, loan.property_street, loan.contact_email, loan.mlo_name, loan.purpose, loan.loan_type].filter(Boolean);
       return fields.some(f => f.toLowerCase().includes(q));
     }
     return true;
