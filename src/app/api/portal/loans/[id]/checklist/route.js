@@ -18,12 +18,18 @@ export async function GET(request, { params }) {
 
     const { id } = await params;
 
-    // Verify borrower is associated with this loan (primary or co-borrower)
-    const loanBorrower = await sql`
-      SELECT id FROM loan_borrowers WHERE loan_id = ${id} AND contact_id = ${session.contactId} LIMIT 1
+    // Verify borrower is associated with this loan (primary or co-borrower).
+    // Reads from loan_participants (the junction table) — the authoritative
+    // identity model post-D9e. loan_borrowers still has matching rows today
+    // but is being retired; participant rows are source of truth.
+    const participant = await sql`
+      SELECT id FROM loan_participants
+      WHERE loan_id = ${id} AND contact_id = ${session.contactId}
+        AND role IN ('primary_borrower', 'co_borrower')
+      LIMIT 1
     `;
 
-    if (!loanBorrower[0]) {
+    if (!participant[0]) {
       return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
     }
 

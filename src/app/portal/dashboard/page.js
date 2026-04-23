@@ -23,12 +23,15 @@ export default async function BorrowerDashboardPage() {
   `;
   const borrower = borrowerRows[0];
 
-  // Find loans where this contact is either primary or co-borrower
+  // Find loans where this contact is either primary or co-borrower.
+  // Post-D9e: reads from loan_participants (authoritative junction)
+  // instead of the retiring loan_borrowers snapshot table.
   const loanBorrowers = await sql`
-    SELECT lb.loan_id, lb.borrower_type
-    FROM loan_borrowers lb
-    JOIN loans l ON lb.loan_id = l.id
-    WHERE lb.contact_id = ${session.contactId}
+    SELECT lp.loan_id, lp.role AS borrower_type
+    FROM loan_participants lp
+    JOIN loans l ON lp.loan_id = l.id
+    WHERE lp.contact_id = ${session.contactId}
+      AND lp.role IN ('primary_borrower', 'co_borrower')
     ORDER BY l.created_at DESC
   `;
   const loanIds = loanBorrowers.map((lb) => lb.loan_id);
@@ -60,11 +63,11 @@ export default async function BorrowerDashboardPage() {
         WHERE m.id = ANY(${loans.map(l => l.mlo_id).filter(Boolean)})
       `,
       sql`
-        SELECT lb.loan_id, c.first_name
-        FROM loan_borrowers lb
-        JOIN contacts c ON lb.contact_id = c.id
-        WHERE lb.loan_id = ANY(${loanIds})
-          AND lb.borrower_type = 'primary'
+        SELECT lp.loan_id, c.first_name
+        FROM loan_participants lp
+        JOIN contacts c ON lp.contact_id = c.id
+        WHERE lp.loan_id = ANY(${loanIds})
+          AND lp.role = 'primary_borrower'
       `,
     ]);
 

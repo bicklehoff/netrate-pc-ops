@@ -43,14 +43,15 @@ export async function GET() {
       ORDER BY l.updated_at DESC
     `;
 
-    // Fetch co-borrowers for all loans in one query
+    // Fetch co-borrowers for all loans via loan_participants (authoritative
+    // identity junction post-D9e). loan_borrowers is being retired.
     const loanIds = loans.map(l => l.id);
     const coBorrowers = loanIds.length ? await sql`
-      SELECT lb.loan_id, lb.borrower_type, b.first_name, b.last_name, b.email, b.phone
-      FROM loan_borrowers lb
-      JOIN contacts b ON lb.contact_id = b.id
-      WHERE lb.loan_id = ANY(${loanIds}) AND lb.borrower_type != 'primary'
-      ORDER BY lb.ordinal ASC
+      SELECT lp.loan_id, lp.role, b.first_name, b.last_name, b.email, b.phone
+      FROM loan_participants lp
+      JOIN contacts b ON lp.contact_id = b.id
+      WHERE lp.loan_id = ANY(${loanIds}) AND lp.role = 'co_borrower'
+      ORDER BY lp.ordinal ASC
     ` : [];
 
     // Group co-borrowers by loan_id
@@ -61,7 +62,7 @@ export async function GET() {
         name: `${cb.first_name} ${cb.last_name}`,
         email: cb.email,
         phone: cb.phone,
-        type: cb.borrower_type,
+        type: cb.role,
       });
     }
 
