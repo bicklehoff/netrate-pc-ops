@@ -231,60 +231,57 @@ export async function POST(request) {
     `;
     const loan = loanRows[0];
 
-    // ─── Create/Update LoanBorrower for Primary ────────────────
-    // Upsert: check if exists first (loan_borrowers.contact_id post-1b3)
-    const existingLB = await sql`
-      SELECT id FROM loan_borrowers WHERE loan_id = ${loan.id} AND contact_id = ${borrower.id} LIMIT 1
-    `;
+    // ─── Create/Update LoanParticipant + Satellites for Primary ─────
+    const lpOrgId = loan.organization_id || '00000000-0000-4000-8000-000000000001';
     const lbData = {
       marital_status: body.maritalStatus || null,
       current_address: safeJson(body.currentAddress) ? JSON.stringify(body.currentAddress) : null,
       address_years: safeInt(body.addressYears),
       address_months: safeInt(body.addressMonths),
-      mailing_address: body.mailingAddressSame ? null : (safeJson(body.mailingAddress) ? JSON.stringify(body.mailingAddress) : null),
-      employment_status: body.employmentStatus || null,
       employer_name: body.employerName || null,
       position_title: body.positionTitle || null,
       years_in_position: safeInt(body.yearsInPosition),
+      self_employed: body.employmentStatus === 'self_employed',
       monthly_base_income: safeDecimal(body.monthlyBaseIncome),
       other_monthly_income: safeDecimal(body.otherMonthlyIncome),
       other_income_source: body.otherIncomeSource || null,
     };
-
-    if (existingLB[0]) {
-      await sql`
-        UPDATE loan_borrowers SET
-          borrower_type = 'primary', ordinal = 0,
-          marital_status = ${lbData.marital_status},
-          current_address = ${lbData.current_address}::jsonb,
-          address_years = ${lbData.address_years}, address_months = ${lbData.address_months},
-          mailing_address = ${lbData.mailing_address}::jsonb,
-          employment_status = ${lbData.employment_status}, employer_name = ${lbData.employer_name},
-          position_title = ${lbData.position_title}, years_in_position = ${lbData.years_in_position},
-          monthly_base_income = ${lbData.monthly_base_income}, other_monthly_income = ${lbData.other_monthly_income},
-          other_income_source = ${lbData.other_income_source},
-          declarations = ${JSON.stringify(declarations)}::jsonb, updated_at = NOW()
-        WHERE loan_id = ${loan.id} AND contact_id = ${borrower.id}
-      `;
+    const existingLP = await sql`SELECT id FROM loan_participants WHERE loan_id = ${loan.id} AND contact_id = ${borrower.id} LIMIT 1`;
+    if (existingLP[0]) {
+      await sql`UPDATE loan_participants SET marital_status = ${lbData.marital_status}, updated_at = NOW() WHERE loan_id = ${loan.id} AND contact_id = ${borrower.id}`;
     } else {
-      await sql`
-        INSERT INTO loan_borrowers (
-          loan_id, contact_id, borrower_type, ordinal,
-          marital_status, current_address, address_years, address_months,
-          mailing_address, employment_status, employer_name, position_title,
-          years_in_position, monthly_base_income, other_monthly_income, other_income_source,
-          declarations, created_at, updated_at
-        ) VALUES (
-          ${loan.id}, ${borrower.id}, 'primary', 0,
-          ${lbData.marital_status}, ${lbData.current_address}::jsonb,
-          ${lbData.address_years}, ${lbData.address_months},
-          ${lbData.mailing_address}::jsonb,
-          ${lbData.employment_status}, ${lbData.employer_name}, ${lbData.position_title},
-          ${lbData.years_in_position}, ${lbData.monthly_base_income}, ${lbData.other_monthly_income},
-          ${lbData.other_income_source},
-          ${JSON.stringify(declarations)}::jsonb, NOW(), NOW()
-        )
-      `;
+      await sql`INSERT INTO loan_participants (loan_id, contact_id, role, ordinal, marital_status, organization_id, created_at, updated_at) VALUES (${loan.id}, ${borrower.id}, 'primary_borrower', 0, ${lbData.marital_status}, ${lpOrgId}, NOW(), NOW()) ON CONFLICT DO NOTHING`;
+    }
+    const existHHPrimary = await sql`SELECT id FROM loan_housing_history WHERE loan_id = ${loan.id} AND contact_id = ${borrower.id} AND housing_type = 'current' LIMIT 1`;
+    if (existHHPrimary[0]) {
+      await sql`UPDATE loan_housing_history SET address = ${lbData.current_address}::jsonb, years = ${lbData.address_years}, months = ${lbData.address_months}, updated_at = NOW() WHERE id = ${existHHPrimary[0].id}`;
+    } else if (lbData.current_address || lbData.address_years != null || lbData.address_months != null) {
+      await sql`INSERT INTO loan_housing_history (loan_id, contact_id, housing_type, address, years, months, ordinal) VALUES (${loan.id}, ${borrower.id}, 'current', ${lbData.current_address}::jsonb, ${lbData.address_years}, ${lbData.address_months}, 0)`;
+    }
+    if (lbData.monthly_base_income != null || lbData.other_monthly_income != null) {
+      const existInc = await sql`SELECT id FROM loan_incomes WHERE loan_id = ${loan.id} AND contact_id = ${borrower.id} LIMIT 1`;
+      if (existInc[0]) {
+        await sql`UPDATE loan_incomes SET base_monthly = ${lbData.monthly_base_income}, other_monthly = ${lbData.other_monthly_income}, other_income_source = ${lbData.other_income_source}, updated_at = NOW() WHERE id = ${existInc[0].id}`;
+      } else {
+        await sql`INSERT INTO loan_incomes (id, loan_id, contact_id, base_monthly, other_monthly, other_income_source, created_at, updated_at) VALUES (gen_random_uuid(), ${loan.id}, ${borrower.id}, ${lbData.monthly_base_income}, ${lbData.other_monthly_income}, ${lbData.other_income_source}, NOW(), NOW())`;
+      }
+    }
+    if (lbData.employer_name) {
+      const existEmp = await sql`SELECT id FROM loan_employments WHERE loan_id = ${loan.id} AND contact_id = ${borrower.id} AND is_primary = true LIMIT 1`;
+      if (existEmp[0]) {
+        await sql`UPDATE loan_employments SET employer_name = ${lbData.employer_name}, position = ${lbData.position_title}, years_on_job = ${lbData.years_in_position}, self_employed = ${lbData.self_employed}, updated_at = NOW() WHERE id = ${existEmp[0].id}`;
+      } else {
+        await sql`INSERT INTO loan_employments (id, loan_id, contact_id, is_primary, employer_name, position, years_on_job, self_employed, created_at, updated_at) VALUES (gen_random_uuid(), ${loan.id}, ${borrower.id}, true, ${lbData.employer_name}, ${lbData.position_title}, ${lbData.years_in_position}, ${lbData.self_employed}, NOW(), NOW())`;
+      }
+    }
+    {
+      const d = declarations;
+      const existDecl = await sql`SELECT id FROM loan_declarations WHERE loan_id = ${loan.id} AND contact_id = ${borrower.id} LIMIT 1`;
+      if (existDecl[0]) {
+        await sql`UPDATE loan_declarations SET intent_to_occupy = ${d.primaryResidence ?? null}, ownership_interest_last_three_years = ${d.priorOwnership3Years ?? null}, property_type_of_ownership = ${d.priorPropertyType || null}, prior_property_title_held = ${d.priorPropertyTitleHeld || null}, family_relationship_seller = ${d.familyRelationshipSeller ?? null}, undisclosed_borrowing = ${d.undisclosedBorrowing ?? null}, applying_for_other_mortgage = ${d.applyingForOtherMortgage ?? null}, applying_for_new_credit = ${d.applyingForNewCredit ?? null}, priority_lien = ${d.priorityLien ?? null}, co_signer_on_other_loan = ${d.coSignerOnDebt ?? null}, outstanding_judgments = ${d.outstandingJudgments ?? null}, delinquent_federal_debt = ${d.delinquentFederalDebt ?? null}, party_to_lawsuit = ${d.lawsuitParty ?? null}, deed_in_lieu = ${d.deedInLieu ?? null}, pre_foreclosure_sale = ${d.preForeclosureSale ?? null}, foreclosure = ${d.foreclosure ?? null}, bankruptcy = ${d.bankruptcy ?? null}, bankruptcy_type = ${d.bankruptcyChapter || null}, authorize_credit_pull = ${d.authorizeCreditPull ?? null}, authorize_verification = ${d.authorizeVerification ?? null}, updated_at = NOW() WHERE id = ${existDecl[0].id}`;
+      } else {
+        await sql`INSERT INTO loan_declarations (id, loan_id, contact_id, intent_to_occupy, ownership_interest_last_three_years, property_type_of_ownership, prior_property_title_held, family_relationship_seller, undisclosed_borrowing, applying_for_other_mortgage, applying_for_new_credit, priority_lien, co_signer_on_other_loan, outstanding_judgments, delinquent_federal_debt, party_to_lawsuit, deed_in_lieu, pre_foreclosure_sale, foreclosure, bankruptcy, bankruptcy_type, authorize_credit_pull, authorize_verification, created_at, updated_at) VALUES (gen_random_uuid(), ${loan.id}, ${borrower.id}, ${d.primaryResidence ?? null}, ${d.priorOwnership3Years ?? null}, ${d.priorPropertyType || null}, ${d.priorPropertyTitleHeld || null}, ${d.familyRelationshipSeller ?? null}, ${d.undisclosedBorrowing ?? null}, ${d.applyingForOtherMortgage ?? null}, ${d.applyingForNewCredit ?? null}, ${d.priorityLien ?? null}, ${d.coSignerOnDebt ?? null}, ${d.outstandingJudgments ?? null}, ${d.delinquentFederalDebt ?? null}, ${d.lawsuitParty ?? null}, ${d.deedInLieu ?? null}, ${d.preForeclosureSale ?? null}, ${d.foreclosure ?? null}, ${d.bankruptcy ?? null}, ${d.bankruptcyChapter || null}, ${d.authorizeCreditPull ?? null}, ${d.authorizeVerification ?? null}, NOW(), NOW())`;
+      }
     }
 
     // ─── Create Co-Borrower Records ──────────────────────────
@@ -297,61 +294,56 @@ export async function POST(request) {
         phone: cb.phone, ssn: cb.ssn, dob: cb.dob, role: 'co_borrower',
       });
 
-      const existingCBLB = await sql`
-        SELECT id FROM loan_borrowers WHERE loan_id = ${loan.id} AND contact_id = ${cbBorrower.id} LIMIT 1
-      `;
-
       const cbLbData = {
         marital_status: cb.maritalStatus || null,
         current_address: safeJson(cb.currentAddress) ? JSON.stringify(cb.currentAddress) : null,
         address_years: safeInt(cb.addressYears),
         address_months: safeInt(cb.addressMonths),
-        mailing_address: cb.mailingAddressSame ? null : (safeJson(cb.mailingAddress) ? JSON.stringify(cb.mailingAddress) : null),
-        employment_status: cb.employmentStatus || null,
         employer_name: cb.employerName || null,
         position_title: cb.positionTitle || null,
         years_in_position: safeInt(cb.yearsInPosition),
+        self_employed: cb.employmentStatus === 'self_employed',
         monthly_base_income: safeDecimal(cb.monthlyBaseIncome),
         other_monthly_income: safeDecimal(cb.otherMonthlyIncome),
         other_income_source: cb.otherIncomeSource || null,
-        declarations: cb.declarations ? JSON.stringify(cb.declarations) : null,
       };
 
-      if (existingCBLB[0]) {
-        await sql`
-          UPDATE loan_borrowers SET
-            borrower_type = 'co_borrower', ordinal = ${i + 1},
-            relationship = ${cb.relationship || null},
-            marital_status = ${cbLbData.marital_status},
-            current_address = ${cbLbData.current_address}::jsonb,
-            address_years = ${cbLbData.address_years}, address_months = ${cbLbData.address_months},
-            mailing_address = ${cbLbData.mailing_address}::jsonb,
-            employment_status = ${cbLbData.employment_status}, employer_name = ${cbLbData.employer_name},
-            position_title = ${cbLbData.position_title}, years_in_position = ${cbLbData.years_in_position},
-            monthly_base_income = ${cbLbData.monthly_base_income}, other_monthly_income = ${cbLbData.other_monthly_income},
-            other_income_source = ${cbLbData.other_income_source},
-            declarations = ${cbLbData.declarations}::jsonb, updated_at = NOW()
-          WHERE loan_id = ${loan.id} AND contact_id = ${cbBorrower.id}
-        `;
+      const existCBLP = await sql`SELECT id FROM loan_participants WHERE loan_id = ${loan.id} AND contact_id = ${cbBorrower.id} LIMIT 1`;
+      if (existCBLP[0]) {
+        await sql`UPDATE loan_participants SET role = 'co_borrower', ordinal = ${i + 1}, marital_status = ${cbLbData.marital_status}, updated_at = NOW() WHERE loan_id = ${loan.id} AND contact_id = ${cbBorrower.id}`;
       } else {
-        await sql`
-          INSERT INTO loan_borrowers (
-            loan_id, contact_id, borrower_type, ordinal, relationship,
-            marital_status, current_address, address_years, address_months,
-            mailing_address, employment_status, employer_name, position_title,
-            years_in_position, monthly_base_income, other_monthly_income, other_income_source,
-            declarations, created_at, updated_at
-          ) VALUES (
-            ${loan.id}, ${cbBorrower.id}, 'co_borrower', ${i + 1}, ${cb.relationship || null},
-            ${cbLbData.marital_status}, ${cbLbData.current_address}::jsonb,
-            ${cbLbData.address_years}, ${cbLbData.address_months},
-            ${cbLbData.mailing_address}::jsonb,
-            ${cbLbData.employment_status}, ${cbLbData.employer_name}, ${cbLbData.position_title},
-            ${cbLbData.years_in_position}, ${cbLbData.monthly_base_income}, ${cbLbData.other_monthly_income},
-            ${cbLbData.other_income_source},
-            ${cbLbData.declarations}::jsonb, NOW(), NOW()
-          )
-        `;
+        await sql`INSERT INTO loan_participants (loan_id, contact_id, role, ordinal, marital_status, organization_id, created_at, updated_at) VALUES (${loan.id}, ${cbBorrower.id}, 'co_borrower', ${i + 1}, ${cbLbData.marital_status}, ${lpOrgId}, NOW(), NOW()) ON CONFLICT DO NOTHING`;
+      }
+      const existHHCb = await sql`SELECT id FROM loan_housing_history WHERE loan_id = ${loan.id} AND contact_id = ${cbBorrower.id} AND housing_type = 'current' LIMIT 1`;
+      if (existHHCb[0]) {
+        await sql`UPDATE loan_housing_history SET address = ${cbLbData.current_address}::jsonb, years = ${cbLbData.address_years}, months = ${cbLbData.address_months}, updated_at = NOW() WHERE id = ${existHHCb[0].id}`;
+      } else if (cbLbData.current_address || cbLbData.address_years != null || cbLbData.address_months != null) {
+        await sql`INSERT INTO loan_housing_history (loan_id, contact_id, housing_type, address, years, months, ordinal) VALUES (${loan.id}, ${cbBorrower.id}, 'current', ${cbLbData.current_address}::jsonb, ${cbLbData.address_years}, ${cbLbData.address_months}, ${i + 1})`;
+      }
+      if (cbLbData.monthly_base_income != null || cbLbData.other_monthly_income != null) {
+        const existCBInc = await sql`SELECT id FROM loan_incomes WHERE loan_id = ${loan.id} AND contact_id = ${cbBorrower.id} LIMIT 1`;
+        if (existCBInc[0]) {
+          await sql`UPDATE loan_incomes SET base_monthly = ${cbLbData.monthly_base_income}, other_monthly = ${cbLbData.other_monthly_income}, other_income_source = ${cbLbData.other_income_source}, updated_at = NOW() WHERE id = ${existCBInc[0].id}`;
+        } else {
+          await sql`INSERT INTO loan_incomes (id, loan_id, contact_id, base_monthly, other_monthly, other_income_source, created_at, updated_at) VALUES (gen_random_uuid(), ${loan.id}, ${cbBorrower.id}, ${cbLbData.monthly_base_income}, ${cbLbData.other_monthly_income}, ${cbLbData.other_income_source}, NOW(), NOW())`;
+        }
+      }
+      if (cbLbData.employer_name) {
+        const existCBEmp = await sql`SELECT id FROM loan_employments WHERE loan_id = ${loan.id} AND contact_id = ${cbBorrower.id} AND is_primary = true LIMIT 1`;
+        if (existCBEmp[0]) {
+          await sql`UPDATE loan_employments SET employer_name = ${cbLbData.employer_name}, position = ${cbLbData.position_title}, years_on_job = ${cbLbData.years_in_position}, self_employed = ${cbLbData.self_employed}, updated_at = NOW() WHERE id = ${existCBEmp[0].id}`;
+        } else {
+          await sql`INSERT INTO loan_employments (id, loan_id, contact_id, is_primary, employer_name, position, years_on_job, self_employed, created_at, updated_at) VALUES (gen_random_uuid(), ${loan.id}, ${cbBorrower.id}, true, ${cbLbData.employer_name}, ${cbLbData.position_title}, ${cbLbData.years_in_position}, ${cbLbData.self_employed}, NOW(), NOW())`;
+        }
+      }
+      if (cb.declarations) {
+        const cd = cb.declarations;
+        const existCBDecl = await sql`SELECT id FROM loan_declarations WHERE loan_id = ${loan.id} AND contact_id = ${cbBorrower.id} LIMIT 1`;
+        if (existCBDecl[0]) {
+          await sql`UPDATE loan_declarations SET intent_to_occupy = ${cd.primaryResidence ?? null}, outstanding_judgments = ${cd.outstandingJudgments ?? null}, foreclosure = ${cd.foreclosure ?? null}, bankruptcy = ${cd.bankruptcy ?? null}, bankruptcy_type = ${cd.bankruptcyChapter || null}, party_to_lawsuit = ${cd.lawsuitParty ?? null}, delinquent_federal_debt = ${cd.delinquentFederalDebt ?? null}, co_signer_on_other_loan = ${cd.coSignerOnDebt ?? null}, updated_at = NOW() WHERE id = ${existCBDecl[0].id}`;
+        } else {
+          await sql`INSERT INTO loan_declarations (id, loan_id, contact_id, intent_to_occupy, outstanding_judgments, foreclosure, bankruptcy, bankruptcy_type, party_to_lawsuit, delinquent_federal_debt, co_signer_on_other_loan, created_at, updated_at) VALUES (gen_random_uuid(), ${loan.id}, ${cbBorrower.id}, ${cd.primaryResidence ?? null}, ${cd.outstandingJudgments ?? null}, ${cd.foreclosure ?? null}, ${cd.bankruptcy ?? null}, ${cd.bankruptcyChapter || null}, ${cd.lawsuitParty ?? null}, ${cd.delinquentFederalDebt ?? null}, ${cd.coSignerOnDebt ?? null}, NOW(), NOW())`;
+        }
       }
     }
 
@@ -386,40 +378,14 @@ export async function POST(request) {
       console.error('Initial doc list creation failed (non-fatal):', docListErr?.message);
     }
 
-    // ─── Loan Participants + Application Gate (non-blocking) ───
-    // Primary contact already exists (borrower variable). Add loan_participants
-    // rows for primary + co-borrowers. loan_borrowers already has per-borrower
-    // app-module rows written above.
+    // ─── Application Gate ──────────────────────────────────────
     try {
-      const orgId = loan.organization_id || '00000000-0000-4000-8000-000000000001';
-
-      // Primary borrower participant
-      await sql`
-        INSERT INTO loan_participants (loan_id, contact_id, role, ordinal, organization_id, created_at, updated_at)
-        VALUES (${loan.id}, ${borrower.id}, 'primary_borrower', 0, ${orgId}, NOW(), NOW())
-        ON CONFLICT DO NOTHING
-      `;
-
-      // Co-borrower participants (mirrors loan_borrowers ordinals above)
-      for (let i = 0; i < coBorrowers.length; i++) {
-        const cb = coBorrowers[i];
-        if (!cb.firstName || !cb.lastName || !cb.email || !cb.ssn || !cb.dob) continue;
-        const cbContactRows = await sql`SELECT id FROM contacts WHERE lower(email) = ${cb.email.toLowerCase().trim()} LIMIT 1`;
-        const cbContactId = cbContactRows[0]?.id;
-        if (!cbContactId) continue;
-        await sql`
-          INSERT INTO loan_participants (loan_id, contact_id, role, ordinal, organization_id, created_at, updated_at)
-          VALUES (${loan.id}, ${cbContactId}, 'co_borrower', ${i + 1}, ${orgId}, NOW(), NOW())
-          ON CONFLICT DO NOTHING
-        `;
-      }
-
       const gatePassed = checkApplicationGate(loan, borrower);
       if (gatePassed) {
         await sql`UPDATE loans SET is_application = true, application_date = NOW(), updated_at = NOW() WHERE id = ${loan.id}`;
       }
-    } catch (contactErr) {
-      console.error('Participant linking failed (non-fatal):', contactErr?.message);
+    } catch (gateErr) {
+      console.error('Application gate check failed (non-fatal):', gateErr?.message);
     }
 
     // ─── WorkDrive Folder Creation (non-blocking) ──────────

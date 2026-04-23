@@ -366,20 +366,21 @@ async function processLoan(loanData) {
     }
   }
 
-  // ── 6. Create LoanBorrower junction if new ───────────────
+  // ── 6. Create LoanParticipant junction if new ────────────
   if (isNew) {
     try {
       await sql`
-        INSERT INTO loan_borrowers (loan_id, contact_id, borrower_type, ordinal, current_address)
-        VALUES (
-          ${loan.id},
-          ${borrower.id},
-          'primary',
-          0,
-          ${currentAddress ? JSON.stringify(currentAddress) : null}::jsonb
-        )
+        INSERT INTO loan_participants (loan_id, contact_id, role, ordinal, created_at, updated_at)
+        VALUES (${loan.id}, ${borrower.id}, 'primary_borrower', 0, NOW(), NOW())
         ON CONFLICT DO NOTHING
       `;
+      if (currentAddress) {
+        await sql`
+          INSERT INTO loan_housing_history (loan_id, contact_id, housing_type, address, ordinal)
+          VALUES (${loan.id}, ${borrower.id}, 'current', ${JSON.stringify(currentAddress)}::jsonb, 0)
+          ON CONFLICT DO NOTHING
+        `;
+      }
     } catch {
       // Ignore if junction already exists
     }
@@ -418,18 +419,17 @@ async function processLoan(loanData) {
 
       const cbAddress = normalizeAddress(cb.currentAddress);
       await sql`
-        INSERT INTO loan_borrowers (loan_id, contact_id, borrower_type, ordinal, current_address)
-        VALUES (
-          ${loan.id},
-          ${coBorrower.id},
-          'co_borrower',
-          1,
-          ${cbAddress ? JSON.stringify(cbAddress) : null}::jsonb
-        )
-        ON CONFLICT (loan_id, contact_id) DO UPDATE SET
-          current_address = ${cbAddress ? JSON.stringify(cbAddress) : null}::jsonb,
-          updated_at = NOW()
+        INSERT INTO loan_participants (loan_id, contact_id, role, ordinal, created_at, updated_at)
+        VALUES (${loan.id}, ${coBorrower.id}, 'co_borrower', 1, NOW(), NOW())
+        ON CONFLICT DO NOTHING
       `;
+      if (cbAddress) {
+        await sql`
+          INSERT INTO loan_housing_history (loan_id, contact_id, housing_type, address, ordinal)
+          VALUES (${loan.id}, ${coBorrower.id}, 'current', ${JSON.stringify(cbAddress)}::jsonb, 1)
+          ON CONFLICT DO NOTHING
+        `;
+      }
 
       // Update co-borrower count
       await sql`

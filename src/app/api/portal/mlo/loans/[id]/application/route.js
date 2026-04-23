@@ -30,23 +30,37 @@ export async function GET(request, { params }) {
     }
     const loan = loans[0];
 
-    // LoanBorrowers with borrower info
-    const loanBorrowers = await sql`
-      SELECT lb.*, b.id AS b_id, b.first_name AS b_first_name, b.last_name AS b_last_name
-      FROM loan_borrowers lb
-      LEFT JOIN contacts b ON b.id = lb.contact_id
-      WHERE lb.loan_id = ${id}
-      ORDER BY lb.ordinal ASC
+    // Participants (borrowers) with sub-models
+    const participants = await sql`
+      SELECT lp.id, lp.loan_id, lp.contact_id, lp.ordinal, lp.marital_status,
+        CASE lp.role WHEN 'primary_borrower' THEN 'primary' ELSE lp.role END AS borrower_type,
+        c.first_name AS b_first_name, c.last_name AS b_last_name,
+        c.suffix, c.us_citizenship_indicator AS citizenship,
+        hh_cur.address AS current_address, hh_cur.years AS address_years,
+        hh_cur.months AS address_months, hh_cur.monthly_rent,
+        hh_cur.residency_type AS housing_type,
+        hh_prev.address AS previous_address, hh_prev.years AS previous_address_years,
+        hh_prev.months AS previous_address_months
+      FROM loan_participants lp
+      LEFT JOIN contacts c ON c.id = lp.contact_id
+      LEFT JOIN loan_housing_history hh_cur
+        ON hh_cur.loan_id = lp.loan_id AND hh_cur.contact_id = lp.contact_id AND hh_cur.housing_type = 'current'
+      LEFT JOIN loan_housing_history hh_prev
+        ON hh_prev.loan_id = lp.loan_id AND hh_prev.contact_id = lp.contact_id AND hh_prev.housing_type = 'previous'
+      WHERE lp.loan_id = ${id}
+        AND lp.role IN ('primary_borrower', 'co_borrower')
+        AND lp.deleted_at IS NULL
+      ORDER BY lp.ordinal ASC
     `;
 
-    const lbIds = loanBorrowers.map(lb => lb.id);
+    const contactIds = participants.map(p => p.contact_id);
     let employments = [];
     let incomes = [];
     let declarations = [];
-    if (lbIds.length > 0) {
-      employments = await sql`SELECT * FROM loan_employments WHERE loan_borrower_id = ANY(${lbIds}) ORDER BY is_primary DESC`;
-      incomes = await sql`SELECT * FROM loan_incomes WHERE loan_borrower_id = ANY(${lbIds})`;
-      declarations = await sql`SELECT * FROM loan_declarations WHERE loan_borrower_id = ANY(${lbIds})`;
+    if (contactIds.length > 0) {
+      employments = await sql`SELECT * FROM loan_employments WHERE loan_id = ${id} AND contact_id = ANY(${contactIds}) ORDER BY is_primary DESC`;
+      incomes = await sql`SELECT * FROM loan_incomes WHERE loan_id = ${id} AND contact_id = ANY(${contactIds})`;
+      declarations = await sql`SELECT * FROM loan_declarations WHERE loan_id = ${id} AND contact_id = ANY(${contactIds})`;
     }
 
     const assets = await sql`SELECT * FROM loan_assets WHERE loan_id = ${id} ORDER BY created_at ASC`;
@@ -60,13 +74,13 @@ export async function GET(request, { params }) {
       arm_initial_cap: loan.arm_initial_cap ? Number(loan.arm_initial_cap) : null,
       arm_periodic_cap: loan.arm_periodic_cap ? Number(loan.arm_periodic_cap) : null,
       arm_lifetime_cap: loan.arm_lifetime_cap ? Number(loan.arm_lifetime_cap) : null,
-      loan_borrowers: loanBorrowers.map((lb) => ({
-        ...lb,
-        monthly_rent: lb.monthly_rent ? Number(lb.monthly_rent) : null,
-        borrower: { id: lb.b_id, first_name: lb.b_first_name, last_name: lb.b_last_name },
-        employments: employments.filter(e => e.loan_borrower_id === lb.id),
-        income: incomes.find(i => i.loan_borrower_id === lb.id) || null,
-        declaration: declarations.find(d => d.loan_borrower_id === lb.id) || null,
+      loan_borrowers: participants.map((lp) => ({
+        ...lp,
+        monthly_rent: lp.monthly_rent ? Number(lp.monthly_rent) : null,
+        borrower: { id: lp.contact_id, first_name: lp.b_first_name, last_name: lp.b_last_name },
+        employments: employments.filter(e => e.contact_id === lp.contact_id),
+        income: incomes.find(i => i.contact_id === lp.contact_id) || null,
+        declaration: declarations.find(d => d.contact_id === lp.contact_id) || null,
       })),
       assets,
       liabilities,
@@ -108,34 +122,70 @@ export async function PUT(request, { params }) {
     switch (section) {
       case 'borrower': {
         if (!loanBorrowerId) return NextResponse.json({ error: 'loanBorrowerId required' }, { status: 400 });
-        const borrowerFields = {};
-        // Map camelCase input to snake_case
-        const camelToSnake = {
-          citizenship: 'citizenship', housingType: 'housing_type', monthlyRent: 'monthly_rent',
-          previousAddress: 'previous_address', previousAddressYears: 'previous_address_years',
-          previousAddressMonths: 'previous_address_months', cellPhone: 'cell_phone', suffix: 'suffix',
-          currentAddress: 'current_address', addressYears: 'address_years', addressMonths: 'address_months',
-          mailingAddress: 'mailing_address', maritalStatus: 'marital_status',
-        };
-        for (const [camel, snake] of Object.entries(camelToSnake)) {
+
+        // loanBorrowerId is now loan_participants.id
+        const lpLookup = await sql`SELECT contact_id FROM loan_participants WHERE id = ${loanBorrowerId} AND loan_id = ${id} LIMIT 1`;
+        if (!lpLookup[0]) return NextResponse.json({ error: 'Participant not found' }, { status: 404 });
+        const contactId = lpLookup[0].contact_id;
+
+        const lpFields = {};      // → loan_participants
+        const contactFields = {}; // → contacts
+        const curHousing = {};    // → loan_housing_history (current)
+        const prevHousing = {};   // → loan_housing_history (previous)
+
+        if (data.maritalStatus !== undefined) lpFields.marital_status = data.maritalStatus || null;
+        if (data.citizenship !== undefined) contactFields.us_citizenship_indicator = data.citizenship || null;
+        if (data.cellPhone !== undefined) contactFields.phone = data.cellPhone || null;
+        if (data.suffix !== undefined) contactFields.suffix = data.suffix || null;
+
+        const curHousingMap = { housingType: 'residency_type', monthlyRent: 'monthly_rent', currentAddress: 'address', addressYears: 'years', addressMonths: 'months' };
+        for (const [camel, col] of Object.entries(curHousingMap)) {
           if (data[camel] !== undefined) {
-            let val = data[camel];
-            if (val === '') val = null;
-            if (snake === 'monthly_rent' && val !== null) val = parseFloat(val) || null;
-            if (['previous_address_years', 'previous_address_months', 'address_years', 'address_months'].includes(snake) && val !== null) {
-              val = parseInt(val, 10) || null;
-            }
-            borrowerFields[snake] = val;
+            let v = data[camel] === '' ? null : data[camel];
+            if (col === 'monthly_rent' && v !== null) v = parseFloat(v) || null;
+            if (['years', 'months'].includes(col) && v !== null) v = parseInt(v, 10) || null;
+            curHousing[col] = v;
           }
         }
-        if (Object.keys(borrowerFields).length > 0) {
-          const cols = Object.keys(borrowerFields);
-          const vals = Object.values(borrowerFields);
-          const setFragments = cols.map((c, i) => `"${c}" = $${i + 1}`);
-          const q = `UPDATE loan_borrowers SET ${setFragments.join(', ')}, updated_at = NOW() WHERE id = $${cols.length + 1} RETURNING *`;
-          const rows = await sql(q, [...vals.map(v => typeof v === 'object' && v !== null ? JSON.stringify(v) : v), loanBorrowerId]);
-          result = rows[0];
+        const prevHousingMap = { previousAddress: 'address', previousAddressYears: 'years', previousAddressMonths: 'months' };
+        for (const [camel, col] of Object.entries(prevHousingMap)) {
+          if (data[camel] !== undefined) {
+            let v = data[camel] === '' ? null : data[camel];
+            if (['years', 'months'].includes(col) && v !== null) v = parseInt(v, 10) || null;
+            prevHousing[col] = v;
+          }
         }
+
+        if (Object.keys(lpFields).length > 0) {
+          const cols = Object.keys(lpFields);
+          const setFragments = cols.map((c, i) => `"${c}" = $${i + 1}`);
+          await sql(`UPDATE loan_participants SET ${setFragments.join(', ')}, updated_at = NOW() WHERE id = $${cols.length + 1}`, [...Object.values(lpFields), loanBorrowerId]);
+        }
+        if (Object.keys(contactFields).length > 0) {
+          const cols = Object.keys(contactFields);
+          const setFragments = cols.map((c, i) => `"${c}" = $${i + 1}`);
+          await sql(`UPDATE contacts SET ${setFragments.join(', ')}, updated_at = NOW() WHERE id = $${cols.length + 1}`, [...Object.values(contactFields), contactId]);
+        }
+
+        const upsertHousing = async (housingType, fields) => {
+          if (Object.keys(fields).length === 0) return;
+          const existRows = await sql`SELECT id FROM loan_housing_history WHERE loan_id = ${id} AND contact_id = ${contactId} AND housing_type = ${housingType} LIMIT 1`;
+          if (existRows[0]) {
+            const cols = Object.keys(fields);
+            const setFragments = cols.map((c, i) => `"${c}" = $${i + 1}`);
+            await sql(`UPDATE loan_housing_history SET ${setFragments.join(', ')}, updated_at = NOW() WHERE id = $${cols.length + 1}`, [...Object.values(fields), existRows[0].id]);
+          } else {
+            const cols = ['loan_id', 'contact_id', 'housing_type', 'ordinal', ...Object.keys(fields)];
+            const vals = [id, contactId, housingType, 0, ...Object.values(fields)];
+            const placeholders = cols.map((_, i) => `$${i + 1}`);
+            await sql(`INSERT INTO loan_housing_history (id, ${cols.map(c => `"${c}"`).join(', ')}) VALUES (gen_random_uuid(), ${placeholders.join(', ')})`, vals);
+          }
+        };
+        await upsertHousing('current', curHousing);
+        await upsertHousing('previous', prevHousing);
+
+        const updRows = await sql`SELECT * FROM loan_participants WHERE id = ${loanBorrowerId} LIMIT 1`;
+        result = updRows[0];
         break;
       }
 
@@ -161,9 +211,12 @@ export async function PUT(request, { params }) {
           const rows = await sql(q, [...vals, itemId]);
           result = rows[0];
         } else {
+          // loanBorrowerId is now loan_participants.id — resolve contact_id
+          const lpEmp = await sql`SELECT contact_id FROM loan_participants WHERE id = ${loanBorrowerId} AND loan_id = ${id} LIMIT 1`;
+          if (!lpEmp[0]) return NextResponse.json({ error: 'Participant not found' }, { status: 404 });
           const rows = await sql`
-            INSERT INTO loan_employments (id, loan_borrower_id, employer_name, employer_address, employer_phone, position, start_date, end_date, years_on_job, months_on_job, self_employed, is_primary, created_at, updated_at)
-            VALUES (gen_random_uuid(), ${loanBorrowerId}, ${empData.employer_name}, ${empData.employer_address}, ${empData.employer_phone}, ${empData.position}, ${empData.start_date}, ${empData.end_date}, ${empData.years_on_job}, ${empData.months_on_job}, ${empData.self_employed}, ${empData.is_primary}, NOW(), NOW())
+            INSERT INTO loan_employments (id, loan_id, contact_id, employer_name, employer_address, employer_phone, position, start_date, end_date, years_on_job, months_on_job, self_employed, is_primary, created_at, updated_at)
+            VALUES (gen_random_uuid(), ${id}, ${lpEmp[0].contact_id}, ${empData.employer_name}, ${empData.employer_address}, ${empData.employer_phone}, ${empData.position}, ${empData.start_date}, ${empData.end_date}, ${empData.years_on_job}, ${empData.months_on_job}, ${empData.self_employed}, ${empData.is_primary}, NOW(), NOW())
             RETURNING *
           `;
           result = rows[0];
@@ -186,17 +239,23 @@ export async function PUT(request, { params }) {
           }
         }
         if (Object.keys(incomeData).length > 0) {
+          // loanBorrowerId is now loan_participants.id — resolve contact_id
+          const lpInc = await sql`SELECT contact_id FROM loan_participants WHERE id = ${loanBorrowerId} AND loan_id = ${id} LIMIT 1`;
+          if (!lpInc[0]) return NextResponse.json({ error: 'Participant not found' }, { status: 404 });
+          const incContactId = lpInc[0].contact_id;
+          const existInc = await sql`SELECT id FROM loan_incomes WHERE loan_id = ${id} AND contact_id = ${incContactId} LIMIT 1`;
           const cols = Object.keys(incomeData);
           const vals = Object.values(incomeData);
-          const updateFragments = cols.map((c, i) => `"${c}" = $${i + 2}`);
-          const insertCols = ['loan_borrower_id', ...cols];
-          const insertPlaceholders = insertCols.map((_, i) => `$${i + 1}`);
-          const q = `INSERT INTO loan_incomes (id, ${insertCols.map(c => `"${c}"`).join(', ')}, created_at, updated_at)
-                     VALUES (gen_random_uuid(), ${insertPlaceholders.join(', ')}, NOW(), NOW())
-                     ON CONFLICT (loan_borrower_id) DO UPDATE SET ${updateFragments.join(', ')}, updated_at = NOW()
-                     RETURNING *`;
-          const rows = await sql(q, [loanBorrowerId, ...vals]);
-          result = rows[0];
+          if (existInc[0]) {
+            const setFragments = cols.map((c, i) => `"${c}" = $${i + 1}`);
+            const rows = await sql(`UPDATE loan_incomes SET ${setFragments.join(', ')}, updated_at = NOW() WHERE id = $${cols.length + 1} RETURNING *`, [...vals, existInc[0].id]);
+            result = rows[0];
+          } else {
+            const insertCols = ['loan_id', 'contact_id', ...cols];
+            const placeholders = insertCols.map((_, i) => `$${i + 1}`);
+            const rows = await sql(`INSERT INTO loan_incomes (id, ${insertCols.map(c => `"${c}"`).join(', ')}, created_at, updated_at) VALUES (gen_random_uuid(), ${placeholders.join(', ')}, NOW(), NOW()) RETURNING *`, [id, incContactId, ...vals]);
+            result = rows[0];
+          }
         }
         break;
       }
@@ -286,17 +345,23 @@ export async function PUT(request, { params }) {
           if (data[camel] !== undefined) declData[snake] = data[camel] ? new Date(data[camel]) : null;
         }
         if (Object.keys(declData).length > 0) {
+          // loanBorrowerId is now loan_participants.id — resolve contact_id
+          const lpDecl = await sql`SELECT contact_id FROM loan_participants WHERE id = ${loanBorrowerId} AND loan_id = ${id} LIMIT 1`;
+          if (!lpDecl[0]) return NextResponse.json({ error: 'Participant not found' }, { status: 404 });
+          const declContactId = lpDecl[0].contact_id;
+          const existDecl = await sql`SELECT id FROM loan_declarations WHERE loan_id = ${id} AND contact_id = ${declContactId} LIMIT 1`;
           const cols = Object.keys(declData);
           const vals = Object.values(declData);
-          const updateFragments = cols.map((c, i) => `"${c}" = $${i + 2}`);
-          const insertCols = ['loan_borrower_id', ...cols];
-          const insertPlaceholders = insertCols.map((_, i) => `$${i + 1}`);
-          const q = `INSERT INTO loan_declarations (id, ${insertCols.map(c => `"${c}"`).join(', ')}, created_at, updated_at)
-                     VALUES (gen_random_uuid(), ${insertPlaceholders.join(', ')}, NOW(), NOW())
-                     ON CONFLICT (loan_borrower_id) DO UPDATE SET ${updateFragments.join(', ')}, updated_at = NOW()
-                     RETURNING *`;
-          const rows = await sql(q, [loanBorrowerId, ...vals]);
-          result = rows[0];
+          if (existDecl[0]) {
+            const setFragments = cols.map((c, i) => `"${c}" = $${i + 1}`);
+            const rows = await sql(`UPDATE loan_declarations SET ${setFragments.join(', ')}, updated_at = NOW() WHERE id = $${cols.length + 1} RETURNING *`, [...vals, existDecl[0].id]);
+            result = rows[0];
+          } else {
+            const insertCols = ['loan_id', 'contact_id', ...cols];
+            const placeholders = insertCols.map((_, i) => `$${i + 1}`);
+            const rows = await sql(`INSERT INTO loan_declarations (id, ${insertCols.map(c => `"${c}"`).join(', ')}, created_at, updated_at) VALUES (gen_random_uuid(), ${placeholders.join(', ')}, NOW(), NOW()) RETURNING *`, [id, declContactId, ...vals]);
+            result = rows[0];
+          }
         }
         break;
       }
