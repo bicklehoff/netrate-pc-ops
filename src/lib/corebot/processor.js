@@ -234,14 +234,17 @@ export async function processLoanDocuments(loanId, mloId) {
   if (!loan) throw new Error('Loan not found');
   if (!loan.work_drive_folder_id) throw new Error('No WorkDrive folder for this loan');
 
-  // Load loan_borrowers with borrower names
+  // Load participants with borrower names (post-D9e: reads authoritative
+  // loan_participants instead of retiring loan_borrowers snapshot table).
+  // role is aliased back to borrower_type for downstream-caller compatibility.
   const loanBorrowers = await sql`
-    SELECT lb.borrower_type,
+    SELECT lp.role AS borrower_type,
            b.first_name AS b_first_name,
            b.last_name AS b_last_name
-    FROM loan_borrowers lb
-    JOIN contacts b ON lb.contact_id = b.id
-    WHERE lb.loan_id = ${loanId}
+    FROM loan_participants lp
+    JOIN contacts b ON lp.contact_id = b.id
+    WHERE lp.loan_id = ${loanId}
+      AND lp.role IN ('primary_borrower', 'co_borrower')
   `;
   loan._loanBorrowers = loanBorrowers;
 

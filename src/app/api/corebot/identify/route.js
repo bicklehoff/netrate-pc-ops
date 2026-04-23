@@ -44,13 +44,16 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
-    // Fetch loan borrowers for co-borrower context
+    // Fetch loan participants for co-borrower context (post-D9e, reads
+    // from the authoritative loan_participants junction instead of the
+    // retiring loan_borrowers snapshot table).
     const loanBorrowers = await sql`
-      SELECT lb.borrower_type,
+      SELECT lp.role AS borrower_type,
              b.first_name, b.last_name
-      FROM loan_borrowers lb
-      JOIN contacts b ON b.id = lb.contact_id
-      WHERE lb.loan_id = ${loanId}
+      FROM loan_participants lp
+      JOIN contacts b ON b.id = lp.contact_id
+      WHERE lp.loan_id = ${loanId}
+        AND lp.role IN ('primary_borrower', 'co_borrower')
     `;
 
     // Build context
