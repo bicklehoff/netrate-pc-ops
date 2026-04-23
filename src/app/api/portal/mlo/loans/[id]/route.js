@@ -137,24 +137,37 @@ export async function GET(request, { params }) {
       SELECT * FROM conditions WHERE loan_id = ${id} ORDER BY stage ASC, created_at ASC
     `;
 
-    // ─── LoanBorrowers with sub-models ───
-    const loanBorrowers = await sql`
-      SELECT lb.*, b.id AS b_id, b.first_name AS b_first_name, b.last_name AS b_last_name, b.email AS b_email, b.phone AS b_phone
-      FROM loan_borrowers lb
-      LEFT JOIN contacts b ON b.id = lb.contact_id
-      WHERE lb.loan_id = ${id}
-      ORDER BY lb.ordinal ASC
+    // ─── Participants (borrowers) with sub-models ───
+    const participants = await sql`
+      SELECT lp.id, lp.loan_id, lp.contact_id, lp.ordinal, lp.marital_status,
+        CASE lp.role WHEN 'primary_borrower' THEN 'primary' ELSE lp.role END AS borrower_type,
+        c.first_name AS b_first_name, c.last_name AS b_last_name,
+        c.email AS b_email, c.phone AS b_phone, c.suffix, c.us_citizenship_indicator AS citizenship,
+        hh_cur.address AS current_address, hh_cur.years AS address_years,
+        hh_cur.months AS address_months, hh_cur.monthly_rent,
+        hh_cur.residency_type AS housing_type,
+        hh_prev.address AS previous_address, hh_prev.years AS previous_address_years,
+        hh_prev.months AS previous_address_months
+      FROM loan_participants lp
+      LEFT JOIN contacts c ON c.id = lp.contact_id
+      LEFT JOIN loan_housing_history hh_cur
+        ON hh_cur.loan_id = lp.loan_id AND hh_cur.contact_id = lp.contact_id AND hh_cur.housing_type = 'current'
+      LEFT JOIN loan_housing_history hh_prev
+        ON hh_prev.loan_id = lp.loan_id AND hh_prev.contact_id = lp.contact_id AND hh_prev.housing_type = 'previous'
+      WHERE lp.loan_id = ${id}
+        AND lp.role IN ('primary_borrower', 'co_borrower')
+        AND lp.deleted_at IS NULL
+      ORDER BY lp.ordinal ASC
     `;
 
-    // Fetch sub-models per borrower
-    const lbIds = loanBorrowers.map(lb => lb.id);
+    const contactIds = participants.map(p => p.contact_id);
     let employments = [];
     let incomes = [];
     let declarations = [];
-    if (lbIds.length > 0) {
-      employments = await sql`SELECT * FROM loan_employments WHERE loan_borrower_id = ANY(${lbIds}) ORDER BY is_primary DESC`;
-      incomes = await sql`SELECT * FROM loan_incomes WHERE loan_borrower_id = ANY(${lbIds})`;
-      declarations = await sql`SELECT * FROM loan_declarations WHERE loan_borrower_id = ANY(${lbIds})`;
+    if (contactIds.length > 0) {
+      employments = await sql`SELECT * FROM loan_employments WHERE loan_id = ${id} AND contact_id = ANY(${contactIds}) ORDER BY is_primary DESC`;
+      incomes = await sql`SELECT * FROM loan_incomes WHERE loan_id = ${id} AND contact_id = ANY(${contactIds})`;
+      declarations = await sql`SELECT * FROM loan_declarations WHERE loan_id = ${id} AND contact_id = ANY(${contactIds})`;
     }
 
     // ─── Assets, Liabilities, REOs, Transaction ───
@@ -200,23 +213,23 @@ export async function GET(request, { params }) {
     serialized.conv = convRows[0] || null;
     serialized.conditions = conditions;
 
-    // Assemble loanBorrowers with nested sub-models
-    serialized.loan_borrowers = loanBorrowers.map(lb => {
-      const lbEmployments = employments.filter(e => e.loan_borrower_id === lb.id);
-      const lbIncome = incomes.find(i => i.loan_borrower_id === lb.id) || null;
-      const lbDeclaration = declarations.find(d => d.loan_borrower_id === lb.id) || null;
+    // Assemble loan_borrowers from loan_participants + satellites (key preserved for consumers)
+    serialized.loan_borrowers = participants.map(lp => {
+      const lpEmployments = employments.filter(e => e.contact_id === lp.contact_id);
+      const lpIncome = incomes.find(i => i.contact_id === lp.contact_id) || null;
+      const lpDeclaration = declarations.find(d => d.contact_id === lp.contact_id) || null;
       return {
-        ...lb,
-        monthly_base_income: lb.monthly_base_income ? Number(lb.monthly_base_income) : null,
-        other_monthly_income: lb.other_monthly_income ? Number(lb.other_monthly_income) : null,
-        monthly_rent: lb.monthly_rent ? Number(lb.monthly_rent) : null,
+        ...lp,
+        monthly_base_income: lpIncome?.base_monthly ? Number(lpIncome.base_monthly) : null,
+        other_monthly_income: lpIncome?.other_monthly ? Number(lpIncome.other_monthly) : null,
+        monthly_rent: lp.monthly_rent ? Number(lp.monthly_rent) : null,
         borrower: {
-          id: lb.b_id, first_name: lb.b_first_name, last_name: lb.b_last_name,
-          email: lb.b_email, phone: lb.b_phone,
+          id: lp.contact_id, first_name: lp.b_first_name, last_name: lp.b_last_name,
+          email: lp.b_email, phone: lp.b_phone,
         },
-        employments: lbEmployments,
-        income: lbIncome,
-        declaration: lbDeclaration,
+        employments: lpEmployments,
+        income: lpIncome,
+        declaration: lpDeclaration,
       };
     });
 

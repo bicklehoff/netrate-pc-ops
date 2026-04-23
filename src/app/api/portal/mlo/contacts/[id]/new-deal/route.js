@@ -18,14 +18,6 @@ const COPY_FIELDS = [
   'occupancy', 'lien_status',
 ];
 
-// Fields to copy from source LoanBorrower (primary)
-const COPY_BORROWER_FIELDS = [
-  'marital_status', 'current_address', 'address_years', 'address_months',
-  'mailing_address', 'employment_status', 'employer_name', 'position_title',
-  'years_in_position', 'monthly_base_income', 'other_monthly_income', 'other_income_source',
-  'dob_encrypted', 'housing_type', 'monthly_rent', 'cell_phone',
-  'declarations',
-];
 
 export async function POST(request, { params }) {
   try {
@@ -71,19 +63,15 @@ export async function POST(request, { params }) {
         }
       }
 
-      // Get primary LoanBorrower
-      const lbRows = await sql`
-        SELECT * FROM loan_borrowers
-        WHERE loan_id = ${sourceLoanId} AND borrower_type = 'primary'
-        LIMIT 1
-      `;
-      if (lbRows[0]) {
-        for (const field of COPY_BORROWER_FIELDS) {
-          if (lbRows[0][field] != null) {
-            sourceBorrowerData[field] = lbRows[0][field];
-          }
-        }
-      }
+      // Get source satellite data keyed on (sourceLoanId, contactId)
+      const [srcHH, srcEmp, srcInc, srcDecl, srcLP] = await Promise.all([
+        sql`SELECT * FROM loan_housing_history WHERE loan_id = ${sourceLoanId} AND contact_id = ${contactId} AND housing_type = 'current' LIMIT 1`,
+        sql`SELECT * FROM loan_employments WHERE loan_id = ${sourceLoanId} AND contact_id = ${contactId} AND is_primary = true LIMIT 1`,
+        sql`SELECT * FROM loan_incomes WHERE loan_id = ${sourceLoanId} AND contact_id = ${contactId} LIMIT 1`,
+        sql`SELECT * FROM loan_declarations WHERE loan_id = ${sourceLoanId} AND contact_id = ${contactId} LIMIT 1`,
+        sql`SELECT marital_status FROM loan_participants WHERE loan_id = ${sourceLoanId} AND contact_id = ${contactId} LIMIT 1`,
+      ]);
+      sourceBorrowerData = { srcHH: srcHH[0], srcEmp: srcEmp[0], srcInc: srcInc[0], srcDecl: srcDecl[0], srcLP: srcLP[0] };
     }
 
     const skipForNew = ['property_address', 'loan_amount', 'loan_type', 'loan_term', 'interest_rate', 'purpose', 'lender_name', 'loan_number', 'lender_loan_number'];
@@ -116,35 +104,31 @@ export async function POST(request, { params }) {
       }
     }
 
-    // Create primary LoanBorrower
+    // Create LoanParticipant (with optional marital_status from source)
+    const newDealMaritalStatus = sourceBorrowerData?.srcLP?.marital_status || null;
     await sql`
-      INSERT INTO loan_borrowers (loan_id, contact_id, borrower_type, ordinal, created_at, updated_at)
-      VALUES (${newLoan.id}, ${contact.id}, 'primary', 0, NOW(), NOW())
-    `;
-
-    // Apply source borrower data via parameterized UPDATE if we have any
-    if (Object.keys(sourceBorrowerData).length > 0) {
-      const setClauses = [];
-      const vals = [];
-      for (const [col, val] of Object.entries(sourceBorrowerData)) {
-        vals.push(typeof val === 'object' && val !== null ? JSON.stringify(val) : val);
-        const isJson = typeof val === 'object' && val !== null;
-        setClauses.push(`${col} = $${vals.length}${isJson ? '::jsonb' : ''}`);
-      }
-      if (setClauses.length > 0) {
-        setClauses.push('updated_at = NOW()');
-        vals.push(newLoan.id);
-        const q = `UPDATE loan_borrowers SET ${setClauses.join(', ')} WHERE loan_id = $${vals.length} AND borrower_type = 'primary'`;
-        await sql(q, vals);
-      }
-    }
-
-    // Create LoanParticipant bridge record (post-migration: replaces loan_contacts)
-    await sql`
-      INSERT INTO loan_participants (loan_id, contact_id, role, ordinal, organization_id, created_at, updated_at)
-      VALUES (${newLoan.id}, ${contact.id}, 'primary_borrower', 0, ${orgId}, NOW(), NOW())
+      INSERT INTO loan_participants (loan_id, contact_id, role, ordinal, marital_status, organization_id, created_at, updated_at)
+      VALUES (${newLoan.id}, ${contact.id}, 'primary_borrower', 0, ${newDealMaritalStatus}, ${orgId}, NOW(), NOW())
       ON CONFLICT DO NOTHING
     `;
+
+    // Copy satellite data from source loan if available
+    if (sourceBorrowerData?.srcHH) {
+      const h = sourceBorrowerData.srcHH;
+      await sql`INSERT INTO loan_housing_history (loan_id, contact_id, housing_type, address, residency_type, years, months, monthly_rent, ordinal) VALUES (${newLoan.id}, ${contact.id}, 'current', ${h.address}, ${h.residency_type}, ${h.years}, ${h.months}, ${h.monthly_rent}, 0)`;
+    }
+    if (sourceBorrowerData?.srcEmp) {
+      const e = sourceBorrowerData.srcEmp;
+      await sql`INSERT INTO loan_employments (id, loan_id, contact_id, is_primary, employer_name, position, years_on_job, months_on_job, self_employed, created_at, updated_at) VALUES (gen_random_uuid(), ${newLoan.id}, ${contact.id}, true, ${e.employer_name}, ${e.position}, ${e.years_on_job}, ${e.months_on_job}, ${e.self_employed ?? false}, NOW(), NOW())`;
+    }
+    if (sourceBorrowerData?.srcInc) {
+      const inc = sourceBorrowerData.srcInc;
+      await sql`INSERT INTO loan_incomes (id, loan_id, contact_id, base_monthly, overtime_monthly, bonus_monthly, commission_monthly, dividends_monthly, interest_monthly, rental_income_monthly, other_monthly, other_income_source, created_at, updated_at) VALUES (gen_random_uuid(), ${newLoan.id}, ${contact.id}, ${inc.base_monthly}, ${inc.overtime_monthly}, ${inc.bonus_monthly}, ${inc.commission_monthly}, ${inc.dividends_monthly}, ${inc.interest_monthly}, ${inc.rental_income_monthly}, ${inc.other_monthly}, ${inc.other_income_source}, NOW(), NOW())`;
+    }
+    if (sourceBorrowerData?.srcDecl) {
+      const dc = sourceBorrowerData.srcDecl;
+      await sql`INSERT INTO loan_declarations (id, loan_id, contact_id, outstanding_judgments, bankruptcy, bankruptcy_type, foreclosure, party_to_lawsuit, loan_default, alimony_obligation, delinquent_federal_debt, co_signer_on_other_loan, intent_to_occupy, ownership_interest_last_three_years, property_type_of_ownership, created_at, updated_at) VALUES (gen_random_uuid(), ${newLoan.id}, ${contact.id}, ${dc.outstanding_judgments}, ${dc.bankruptcy}, ${dc.bankruptcy_type}, ${dc.foreclosure}, ${dc.party_to_lawsuit}, ${dc.loan_default}, ${dc.alimony_obligation}, ${dc.delinquent_federal_debt}, ${dc.co_signer_on_other_loan}, ${dc.intent_to_occupy}, ${dc.ownership_interest_last_three_years}, ${dc.property_type_of_ownership}, NOW(), NOW())`;
+    }
 
     // Audit trail
     await sql`

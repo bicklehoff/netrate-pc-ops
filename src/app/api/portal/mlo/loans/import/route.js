@@ -116,31 +116,27 @@ export async function PUT(request) {
     `;
     const loan = loanRows[0];
 
-    // ─── Create LoanBorrower for Primary ──────────────────
-    const primaryLBRows = await sql`
-      INSERT INTO loan_borrowers (id, loan_id, contact_id, borrower_type, ordinal,
-        marital_status, citizenship, housing_type, monthly_rent,
-        current_address, address_years, address_months,
-        previous_address, previous_address_years, previous_address_months,
-        cell_phone, suffix, employment_status, employer_name, position_title,
-        years_in_position, monthly_base_income, other_monthly_income, other_income_source,
-        declarations, created_at, updated_at)
-      VALUES (gen_random_uuid(), ${loan.id}, ${borrower.id}, 'primary', 0,
-        ${primary.maritalStatus}, ${primary.citizenship}, ${primary.housingType}, ${primary.monthlyRent},
-        ${primary.currentAddress ? JSON.stringify(primary.currentAddress) : null},
-        ${primary.addressYears}, ${primary.addressMonths},
-        ${primary.previousAddress ? JSON.stringify(primary.previousAddress) : null},
-        ${primary.previousAddressYears}, ${primary.previousAddressMonths},
-        ${primary.cellPhone}, ${primary.suffix}, ${primary.employmentStatus},
-        ${primary.employerName}, ${primary.positionTitle}, ${primary.yearsInPosition},
-        ${primary.monthlyBaseIncome}, ${primary.otherMonthlyIncome}, ${primary.otherIncomeSource},
-        ${primary.declarations ? JSON.stringify(primary.declarations) : null}, NOW(), NOW())
-      RETURNING *
+    // ─── Create LoanParticipant for Primary ───────────────
+    await sql`
+      INSERT INTO loan_participants (id, loan_id, contact_id, role, ordinal, marital_status, organization_id, created_at, updated_at)
+      VALUES (gen_random_uuid(), ${loan.id}, ${borrower.id}, 'primary_borrower', 0, ${primary.maritalStatus || null}, ${orgId}, NOW(), NOW())
     `;
-    const primaryLB = primaryLBRows[0];
-
-    // Create 1003 sub-models for primary borrower
-    await create1003BorrowerModels(primaryLB.id, primary);
+    if (primary.currentAddress || primary.housingType || primary.monthlyRent || primary.addressYears != null || primary.addressMonths != null) {
+      await sql`
+        INSERT INTO loan_housing_history (loan_id, contact_id, housing_type, address, residency_type, years, months, monthly_rent, ordinal)
+        VALUES (${loan.id}, ${borrower.id}, 'current', ${primary.currentAddress ? JSON.stringify(primary.currentAddress) : null}, ${primary.housingType || null}, ${primary.addressYears || null}, ${primary.addressMonths || null}, ${primary.monthlyRent || null}, 0)
+      `;
+    }
+    if (primary.previousAddress) {
+      await sql`
+        INSERT INTO loan_housing_history (loan_id, contact_id, housing_type, address, years, months, ordinal)
+        VALUES (${loan.id}, ${borrower.id}, 'previous', ${primary.previousAddress ? JSON.stringify(primary.previousAddress) : null}, ${primary.previousAddressYears || null}, ${primary.previousAddressMonths || null}, 0)
+      `;
+    }
+    if (primary.citizenship) {
+      await sql`UPDATE contacts SET us_citizenship_indicator = ${primary.citizenship}, updated_at = NOW() WHERE id = ${borrower.id}`;
+    }
+    await create1003BorrowerModels(loan.id, borrower.id, primary);
 
     // ─── Create Co-Borrower Records ───────────────────────
     for (const cb of result.coBorrowers) {
@@ -148,28 +144,26 @@ export async function PUT(request) {
 
       const cbBorrower = await upsertBorrowerFromImport(cb, orgId);
 
-      const cbLBRows = await sql`
-        INSERT INTO loan_borrowers (id, loan_id, contact_id, borrower_type, ordinal,
-          marital_status, citizenship, housing_type, monthly_rent,
-          current_address, address_years, address_months,
-          previous_address, previous_address_years, previous_address_months,
-          cell_phone, suffix, employment_status, employer_name, position_title,
-          years_in_position, monthly_base_income, other_monthly_income, other_income_source,
-          declarations, created_at, updated_at)
-        VALUES (gen_random_uuid(), ${loan.id}, ${cbBorrower.id}, 'co_borrower', ${cb.ordinal},
-          ${cb.maritalStatus}, ${cb.citizenship}, ${cb.housingType}, ${cb.monthlyRent},
-          ${cb.currentAddress ? JSON.stringify(cb.currentAddress) : null},
-          ${cb.addressYears}, ${cb.addressMonths},
-          ${cb.previousAddress ? JSON.stringify(cb.previousAddress) : null},
-          ${cb.previousAddressYears}, ${cb.previousAddressMonths},
-          ${cb.cellPhone}, ${cb.suffix}, ${cb.employmentStatus},
-          ${cb.employerName}, ${cb.positionTitle}, ${cb.yearsInPosition},
-          ${cb.monthlyBaseIncome}, ${cb.otherMonthlyIncome}, ${cb.otherIncomeSource},
-          ${cb.declarations ? JSON.stringify(cb.declarations) : null}, NOW(), NOW())
-        RETURNING *
+      await sql`
+        INSERT INTO loan_participants (id, loan_id, contact_id, role, ordinal, marital_status, organization_id, created_at, updated_at)
+        VALUES (gen_random_uuid(), ${loan.id}, ${cbBorrower.id}, 'co_borrower', ${cb.ordinal}, ${cb.maritalStatus || null}, ${orgId}, NOW(), NOW())
       `;
-
-      await create1003BorrowerModels(cbLBRows[0].id, cb);
+      if (cb.currentAddress || cb.housingType || cb.monthlyRent || cb.addressYears != null || cb.addressMonths != null) {
+        await sql`
+          INSERT INTO loan_housing_history (loan_id, contact_id, housing_type, address, residency_type, years, months, monthly_rent, ordinal)
+          VALUES (${loan.id}, ${cbBorrower.id}, 'current', ${cb.currentAddress ? JSON.stringify(cb.currentAddress) : null}, ${cb.housingType || null}, ${cb.addressYears || null}, ${cb.addressMonths || null}, ${cb.monthlyRent || null}, ${cb.ordinal})
+        `;
+      }
+      if (cb.previousAddress) {
+        await sql`
+          INSERT INTO loan_housing_history (loan_id, contact_id, housing_type, address, years, months, ordinal)
+          VALUES (${loan.id}, ${cbBorrower.id}, 'previous', ${cb.previousAddress ? JSON.stringify(cb.previousAddress) : null}, ${cb.previousAddressYears || null}, ${cb.previousAddressMonths || null}, ${cb.ordinal})
+        `;
+      }
+      if (cb.citizenship) {
+        await sql`UPDATE contacts SET us_citizenship_indicator = ${cb.citizenship}, updated_at = NOW() WHERE id = ${cbBorrower.id}`;
+      }
+      await create1003BorrowerModels(loan.id, cbBorrower.id, cb);
     }
 
     // ─── Create Loan-Level 1003 Models ────────────────────
@@ -300,15 +294,15 @@ async function tagContactSource(contactId, source, orgId) {
   }
 }
 
-async function create1003BorrowerModels(loanBorrowerId, borrowerData) {
+async function create1003BorrowerModels(loanId, contactId, borrowerData) {
   try {
     // Employments
     if (borrowerData.employments?.length > 0) {
       for (const emp of borrowerData.employments) {
         if (!emp) continue;
         await sql`
-          INSERT INTO loan_employments (id, loan_borrower_id, is_primary, employer_name, employer_address, employer_phone, position, start_date, end_date, years_on_job, months_on_job, self_employed, created_at, updated_at)
-          VALUES (gen_random_uuid(), ${loanBorrowerId}, ${emp.isPrimary ?? true}, ${emp.employerName || null},
+          INSERT INTO loan_employments (id, loan_id, contact_id, is_primary, employer_name, employer_address, employer_phone, position, start_date, end_date, years_on_job, months_on_job, self_employed, created_at, updated_at)
+          VALUES (gen_random_uuid(), ${loanId}, ${contactId}, ${emp.isPrimary ?? true}, ${emp.employerName || null},
                   ${emp.employerAddress ? JSON.stringify(emp.employerAddress) : null}, ${emp.employerPhone || null},
                   ${emp.position || null}, ${emp.startDate ? new Date(emp.startDate) : null}, ${emp.endDate ? new Date(emp.endDate) : null},
                   ${emp.yearsOnJob || null}, ${emp.monthsOnJob || null}, ${emp.selfEmployed ?? false}, NOW(), NOW())
@@ -324,8 +318,8 @@ async function create1003BorrowerModels(loanBorrowerId, borrowerData) {
         || inc.rentalIncomeMonthly || inc.otherMonthly;
       if (hasAnyIncome) {
         await sql`
-          INSERT INTO loan_incomes (id, loan_borrower_id, base_monthly, overtime_monthly, bonus_monthly, commission_monthly, dividends_monthly, interest_monthly, rental_income_monthly, other_monthly, other_income_source, created_at, updated_at)
-          VALUES (gen_random_uuid(), ${loanBorrowerId}, ${inc.baseMonthly || null}, ${inc.overtimeMonthly || null},
+          INSERT INTO loan_incomes (id, loan_id, contact_id, base_monthly, overtime_monthly, bonus_monthly, commission_monthly, dividends_monthly, interest_monthly, rental_income_monthly, other_monthly, other_income_source, created_at, updated_at)
+          VALUES (gen_random_uuid(), ${loanId}, ${contactId}, ${inc.baseMonthly || null}, ${inc.overtimeMonthly || null},
                   ${inc.bonusMonthly || null}, ${inc.commissionMonthly || null}, ${inc.dividendsMonthly || null},
                   ${inc.interestMonthly || null}, ${inc.rentalIncomeMonthly || null}, ${inc.otherMonthly || null},
                   ${inc.otherIncomeSource || null}, NOW(), NOW())
@@ -337,8 +331,8 @@ async function create1003BorrowerModels(loanBorrowerId, borrowerData) {
     const decl = borrowerData.structuredDeclaration;
     if (decl) {
       await sql`
-        INSERT INTO loan_declarations (id, loan_borrower_id, outstanding_judgments, bankruptcy, bankruptcy_type, foreclosure, party_to_lawsuit, loan_default, alimony_obligation, delinquent_federal_debt, co_signer_on_other_loan, intent_to_occupy, ownership_interest_last_three_years, property_type_of_ownership, created_at, updated_at)
-        VALUES (gen_random_uuid(), ${loanBorrowerId}, ${decl.outstandingJudgments ?? null}, ${decl.bankruptcy ?? null},
+        INSERT INTO loan_declarations (id, loan_id, contact_id, outstanding_judgments, bankruptcy, bankruptcy_type, foreclosure, party_to_lawsuit, loan_default, alimony_obligation, delinquent_federal_debt, co_signer_on_other_loan, intent_to_occupy, ownership_interest_last_three_years, property_type_of_ownership, created_at, updated_at)
+        VALUES (gen_random_uuid(), ${loanId}, ${contactId}, ${decl.outstandingJudgments ?? null}, ${decl.bankruptcy ?? null},
                 ${decl.bankruptcyType || null}, ${decl.foreclosure ?? null}, ${decl.partyToLawsuit ?? null},
                 ${decl.loanDefault ?? null}, ${decl.alimonyObligation ?? null}, ${decl.delinquentFederalDebt ?? null},
                 ${decl.coSignerOnOtherLoan ?? null}, ${decl.intentToOccupy ?? null},
@@ -346,7 +340,7 @@ async function create1003BorrowerModels(loanBorrowerId, borrowerData) {
       `;
     }
   } catch (error) {
-    console.error('1003 borrower models creation failed (non-fatal):', error?.message);
+    console.error('1003 borrower satellite models creation failed (non-fatal):', error?.message);
   }
 }
 
