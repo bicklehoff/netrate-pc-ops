@@ -4,16 +4,15 @@
  * CRUD operations for the unified scenarios / scenario_rates / scenario_fee_items tables.
  * Used by MLO quote APIs, saved-scenario APIs, and rate alert cron.
  *
- * Post-Layer-1c (migration 009, PR ~92):
- *   - DAL no longer writes the denormalized `borrower_name/email/phone`
- *     columns. Identity on new rows comes from `contact_id` (known
- *     post-conversion) or `lead_id` (pre-conversion). Writers pass
- *     whichever they have; the DAL does NOT auto-create contacts.
+ * Post-D9a + migration 036:
+ *   - Identity lives on the Contact (post-conversion) or Lead
+ *     (pre-conversion). Writers pass `contact_id` and/or `lead_id` —
+ *     the DAL does NOT auto-create contacts.
  *   - Read paths LEFT JOIN both `contacts` and `leads`, exposing
  *     `_c_*` / `_l_*` alias sets. `transform.js::deriveIdentity`
- *     COALESCEs contact → lead → legacy denorm columns for display.
- *   - The legacy `borrower_name/email/phone` columns remain nullable
- *     for soak-period backward compat. PR 2 drops them.
+ *     COALESCEs contact → lead to produce the API-surface identity.
+ *   - Legacy denorm columns `scenarios.borrower_name/email/phone` were
+ *     dropped by migration 036 (2026-04-23).
  *
  * All functions accept orgId for multi-tenant scoping.
  */
@@ -26,16 +25,13 @@ import sql from '@/lib/db';
  * Create a new scenario with optional rates and fee items.
  *
  * @param {object} data - Scenario fields. `contact_id` and/or `lead_id`
- *   are the identity bridge. `borrower_name/email/phone` are ignored
- *   even if passed — the DAL no longer writes them.
+ *   are the identity bridge.
  * @param {object[]} [rates] - Array of rate objects to insert into scenario_rates.
  * @param {object} [feeBreakdown] - Fee breakdown object (sections A-I) to flatten into scenario_fee_items.
  * @returns {object} The created scenario with rates[], feeItems[], and
  *   JOIN-merged identity aliases (same shape as getScenarioById).
  */
 export async function createScenario(data, rates = [], feeBreakdown = null) {
-  // Allowed columns — borrower_name/email/phone intentionally omitted.
-  // DAL no longer writes to denormalized identity fields (Layer-1c).
   const allowedCols = new Set([
     'organization_id', 'owner_type', 'source', 'visibility', 'status',
     'mlo_id', 'contact_id', 'lead_id', 'loan_id',
@@ -188,7 +184,7 @@ export async function createScenarioFeeItems(scenarioId, feeBreakdown) {
 // ─── READ ──────────────────────────────────────────────────────────
 
 // Alias columns (_c_* / _l_*) feed transform.js::deriveIdentity, which
-// COALESCEs contact → lead → legacy borrower_name/email/phone.
+// COALESCEs contact → lead to produce the API-surface identity.
 
 /**
  * Get a scenario by ID with its rates and fee items.
@@ -278,8 +274,7 @@ export async function listScenarios({
            (c.first_name || ' ' || c.last_name) ILIKE ${searchPattern} OR
            c.email ILIKE ${searchPattern} OR
            l.name ILIKE ${searchPattern} OR
-           l.email ILIKE ${searchPattern} OR
-           s.borrower_name ILIKE ${searchPattern})
+           l.email ILIKE ${searchPattern})
     ORDER BY s.created_at DESC
     LIMIT ${limit} OFFSET ${offset}
   `;
@@ -299,8 +294,7 @@ export async function listScenarios({
            (c.first_name || ' ' || c.last_name) ILIKE ${searchPattern} OR
            c.email ILIKE ${searchPattern} OR
            l.name ILIKE ${searchPattern} OR
-           l.email ILIKE ${searchPattern} OR
-           s.borrower_name ILIKE ${searchPattern})
+           l.email ILIKE ${searchPattern})
   `;
 
   return { scenarios, total: countRows[0]?.total || 0 };
@@ -311,8 +305,8 @@ export async function listScenarios({
 /**
  * Update scenario fields by ID.
  *
- * `borrower_name/email/phone` are NOT in allowedCols — identity edits
- * happen on the Contact row (or the Lead row, pre-conversion).
+ * Identity edits happen on the Contact row (or the Lead row,
+ * pre-conversion) — not on the scenario itself.
  *
  * @param {string} id - Scenario UUID
  * @param {string} orgId - Organization UUID for scoping

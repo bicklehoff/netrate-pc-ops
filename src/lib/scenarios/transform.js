@@ -1,14 +1,13 @@
 /**
  * Transform functions for backward compatibility.
  *
- * Converts between the new normalized scenario tables and the old JSONB shapes
- * that existing UI consumers expect in API responses.
+ * Converts between the normalized scenario tables and the legacy JSONB
+ * shapes that existing UI consumers expect in API responses.
  *
- * Post-Layer-1c: `scenarios.borrower_name/email/phone` are deprecated.
- * Identity comes from the JOINed contact (scenario_id → contact_id →
- * contacts.first_name/last_name/email/phone). During the soak period we
- * fall back to the legacy denorm columns for scenarios whose contact_id
- * is NULL. PR 2 removes both the fallback and the columns.
+ * Post-D9a + migration 036: `scenarios.borrower_name/email/phone` columns
+ * have been dropped. Identity comes exclusively from the JOINed contact
+ * (scenario_id → contact_id → contacts) or the JOINed lead (scenario_id →
+ * lead_id → leads) when no contact has been attached yet.
  */
 
 /**
@@ -17,10 +16,8 @@
  *   - Contact:  `_c_first_name`, `_c_last_name`, `_c_email`, `_c_phone`
  *   - Lead:     `_l_first_name`, `_l_last_name`, `_l_name`, `_l_email`, `_l_phone`
  *
- * Priority: contact → lead → legacy denorm columns. The legacy fallback
- * (`scenarios.borrower_*`) is soak-period only; a follow-up PR removes it
- * along with the columns. Output keys are `contact_*` regardless of which
- * source wins — the API surface is unified post-UAD D9a.
+ * Priority: contact → lead. Output keys are `contact_*` regardless of
+ * which source wins — the API surface is unified post-UAD D9a.
  *
  * @param {object} scenario - Row from listScenarios / getScenarioById / createScenario.
  * @returns {{ contact_name: string|null, contact_email: string|null, contact_phone: string|null }}
@@ -30,7 +27,7 @@ export function deriveIdentity(scenario) {
     return { contact_name: null, contact_email: null, contact_phone: null };
   }
 
-  // Name: prefer contact (first+last), then lead structured, then lead full name, then legacy.
+  // Name: prefer contact (first+last), then lead structured, then lead full name.
   let contact_name = null;
 
   const cFn = scenario._c_first_name || null;
@@ -48,12 +45,9 @@ export function deriveIdentity(scenario) {
   }
 
   if (!contact_name) contact_name = scenario._l_name || null;
-  if (!contact_name) contact_name = scenario.borrower_name || null;
 
-  const contact_email =
-    scenario._c_email || scenario._l_email || scenario.borrower_email || null;
-  const contact_phone =
-    scenario._c_phone || scenario._l_phone || scenario.borrower_phone || null;
+  const contact_email = scenario._c_email || scenario._l_email || null;
+  const contact_phone = scenario._c_phone || scenario._l_phone || null;
 
   return { contact_name, contact_email, contact_phone };
 }

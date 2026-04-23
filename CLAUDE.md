@@ -93,7 +93,7 @@ All departments launch from the same place: **this repo root** (`netrate-pc-ops/
 All departments have full access to code and docs. Ownership rules apply to **docs folders** — don't write to another department's docs folder without asking David.
 
 **Ownership rules:**
-- All departments may freely edit code (`src/`, `prisma/`, `scripts/`, etc.)
+- All departments may freely edit code (`src/`, `migrations/`, `scripts/`, etc.)
 - Only modify files in YOUR department's **docs folder** (e.g. `Work/Dev/`, `Work/Admin/`)
 - You may READ other departments' docs but not edit them
 - If you need something from another department, note it as an "open item"
@@ -108,7 +108,7 @@ Ask: "Which department should I work as? (Dev, Admin, or Setup)"
 - **Branch naming:** `fix/` for bug fixes, `feature/` for new features, `docs/` for documentation.
 - **Commit often** with descriptive messages within your branch.
 - **No tracker writes.** All trackers live on Mac. Use relay to communicate completed work to Mac.
-- **Read DEV-PLAYBOOK.md** for hard-won patterns (Prisma, deployment, etc.)
+- **Read DEV-PLAYBOOK.md** for hard-won patterns (migrations, deployment, etc.)
 - **MANDATORY: Follow the Deploy Procedure below. Every step requires David's explicit go-ahead.**
 
 ### Deploy Procedure (MANDATORY — no exceptions, no skipping steps)
@@ -127,7 +127,7 @@ Ask: "Which department should I work as? (Dev, Admin, or Setup)"
    ```bash
    # Everything changed vs origin/main (staged, unstaged, untracked)
    CHANGED=$( ( git diff --name-only origin/main -- ; git ls-files --others --exclude-standard ) | sort -u )
-   BUILD_AFFECTING=$(echo "$CHANGED" | grep -E '^(src/|prisma/|public/|scripts/|package\.json$|package-lock\.json$|next\.config\.|tailwind\.config\.|postcss\.config\.|jsconfig\.json$|tsconfig\.json$|vercel\.json$|middleware\.|\.env($|\.))' || true)
+   BUILD_AFFECTING=$(echo "$CHANGED" | grep -E '^(src/|migrations/|public/|scripts/|package\.json$|package-lock\.json$|next\.config\.|tailwind\.config\.|postcss\.config\.|jsconfig\.json$|tsconfig\.json$|vercel\.json$|middleware\.|\.env($|\.))' || true)
    ```
 
    - **Build-affecting lane** (any match) → run `npm run build`. Zero ESLint **errors** (warnings OK). No TS/module errors. All pages compile.
@@ -222,7 +222,7 @@ Before entering Gate 1, check `.claude/deploy.lock`:
 
 - **Framework:** Next.js 14 (App Router), React 18
 - **Styling:** Tailwind CSS 3.4 — brand color `#0891b2` (cyan-600)
-- **Database:** Prisma 6 + Neon Postgres (serverless via `@neondatabase/serverless`)
+- **Database:** Neon Postgres — raw SQL via `@neondatabase/serverless`. Schema lives in prod + `migrations/*.sql`. Prisma was removed 2026-04-23 — it had been a runtime-unused design artifact that had drifted 22 tables behind reality.
 - **Auth:** NextAuth 4 (MLO: credentials/JWT), custom magic link + SMS (borrower)
 - **Hosting:** Vercel (auto-deploys from this repo's root directory)
 - **File Storage:** Vercel Blob (document uploads)
@@ -240,19 +240,13 @@ Before entering Gate 1, check `.claude/deploy.lock`:
 | GCS Rate Pipeline | `@google-cloud/storage` | `src/lib/gcs.js`, `scripts/upload-to-gcs.js` |
 | Google Maps | Places API | Address autocomplete in application form |
 
-## Database Models (Prisma)
+## Database
 
-**Original (9):** Borrower, Mlo, Loan, LoanEvent, Document, Contact, CallLog, CallNote, SmsMessage
+**79 tables in prod** across 8 domains (identity, deals/loans, scenarios/pricing, reference data, operational, marketing/content, config, archive). For a full structural audit, see [`Work/Dev/audits/DB-STRUCTURE-2026-04-23.md`](Work/Dev/audits/DB-STRUCTURE-2026-04-23.md).
 
-**Phase 1 — CORE Foundation (4 new, in schema but migration not yet run):**
-- `LoanDates` — 30+ milestone dates (1:1 with Loan)
-- `Condition` — loan conditions tracking (stage, status, blocking, borrower-facing)
-- `LoanNote` — operational notes (separate from LoanEvent audit trail)
-- `LoanTask` — per-loan task management (priority, assignment, due dates)
-
-**New Loan fields (Phase 1):** loanType, lenderName, loanNumber, loanAmount, interestRate, loanTerm
-
-Schema: `prisma/schema.prisma`
+- Source of truth: **the live Postgres schema** (not a Prisma file)
+- Schema evolution: hand-written SQL in `migrations/*.sql`, applied via per-migration runner scripts in `scripts/_run-migration-*.mjs`
+- Runtime: `@neondatabase/serverless` tagged templates (`sql\`SELECT ...\``) or `sql.query(text, params)` for dynamic SQL
 
 ## Picklist Constants
 
@@ -269,9 +263,8 @@ src/
 │   ├── services/      Service pages
 │   └── ...            Other public pages (about, contact, licensing, privacy, etc.)
 ├── components/Portal/ React components (Dialer, LoanDetail, Pipeline, Forms)
-├── lib/               Utilities (auth, encryption, prisma, twilio, loan-states)
-├── data/              Static data (rate JSON, marketing playbook)
-└── generated/prisma/  Auto-generated Prisma client
+├── lib/               Utilities (auth, encryption, db, twilio, loan-states)
+└── data/              Static data (rate JSON, marketing playbook)
 ```
 
 ## Patterns
@@ -279,7 +272,7 @@ src/
 - **Card style:** `bg-white rounded-xl border border-gray-200 p-6 shadow-sm`
 - **Button style:** `bg-brand text-white rounded-lg hover:bg-brand-dark`
 - **API auth guard:** Check NextAuth session + role in API routes
-- **Prisma client:** Singleton at `src/lib/prisma.js`
+- **DB client:** Singleton at `src/lib/db.js` (tagged-template + `.query(text, params)`)
 - **Loan states:** State machine at `src/lib/loan-states.js`
 - **Password wall:** Removed — site is public as of ~2026-03-24. `SITE_PASSWORD` env var is unset. Middleware still supports it if re-enabled but currently bypassed.
 
@@ -296,8 +289,12 @@ Must use `www.netratemortgage.com` (not bare domain — Vercel redirects bare �
 ```bash
 npm run dev          # Local dev server (port 3000)
 npm run build        # Production build
-npx prisma studio    # Database GUI
-npx prisma migrate dev --name <name>  # New migration
+
+# New migration:
+#   1. Write hand-written SQL at migrations/NNN_description.sql (idempotent)
+#   2. Add a runner at scripts/_run-migration-NNN.mjs (reads, splits, applies, verifies)
+#   3. Rehearse against a Neon branch (per DEV-PLAYBOOK) if it touches existing data
+#   4. Run against prod
 ```
 
 ---
@@ -413,13 +410,13 @@ netrate-pc-ops/
 ├── CLAUDE.md                ← This file (all rules, all departments)
 ├── .mcp.json                ← MCP server config (knowledge layer)
 ├── .claude/                 ← Claude Code config (hooks, launch, settings)
-├── DEV-PLAYBOOK.md          ← Hard-won dev patterns (Prisma, deployment, etc.)
+├── DEV-PLAYBOOK.md          ← Hard-won dev patterns (migrations, deployment, etc.)
 ├── REGISTRY.md              ← Feature inventory (what's been built)
 ├── package.json             ← Next.js project
 ├── src/                     ← Next.js app code
-├── prisma/                  ← Database schema
+├── migrations/              ← Hand-written SQL migrations (applied via scripts/_run-migration-*.mjs)
 ├── public/                  ← Static assets
-├── scripts/                 ← Utility scripts
+├── scripts/                 ← Utility scripts (including migration runners)
 ├── docs/                    ← Technical documentation
 ├── Work/
 │   ├── Dev/                 ← Docs: architecture plans, specs

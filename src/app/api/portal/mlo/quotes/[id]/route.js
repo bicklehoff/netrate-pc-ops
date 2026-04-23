@@ -58,14 +58,14 @@ export async function PATCH(request, { params }) {
     }
 
     // Map legacy camelCase body fields to scenarios snake_case columns.
-    // Note: DB columns are still borrower_name/email/phone (soak period).
-    // Post-UAD D9a, API surface uses contact_* naming but legacy denorm
-    // columns haven't been dropped yet — a follow-up PR removes them.
+    // Identity fields (contactName/Email/Phone) are NOT in this map — post
+    // migration 036 the scenario table no longer carries denormalized
+    // identity strings. Identity edits happen on the Contact row (PATCH
+    // /api/portal/mlo/contacts/[id]) or the Lead row (pre-conversion).
     const fields = {};
 
     // Scalar strings
     const scalarMap = {
-      contactName: 'borrower_name', contactEmail: 'borrower_email', contactPhone: 'borrower_phone',
       purpose: 'loan_purpose', propertyType: 'property_type', occupancy: 'occupancy', loanType: 'loan_type',
       state: 'state', county: 'county', currentLender: 'current_lender',
     };
