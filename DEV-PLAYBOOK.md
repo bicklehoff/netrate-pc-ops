@@ -4,16 +4,15 @@ Rules and patterns learned the hard way. Follow these to avoid production incide
 
 ---
 
-## Prisma / Database
+## Database / Migrations
 
-### Never use `db push` — migrations only
-Every schema change needs a migration file. `prisma db push` applies changes to the connected DB without creating a migration, which means production never gets those columns. The Prisma client will try to SELECT columns that don't exist and crash at runtime.
+Prisma was removed 2026-04-23. The runtime uses raw SQL via `@neondatabase/serverless`. Schema evolution lives in `migrations/NNN_description.sql` as hand-written SQL, applied by per-migration runner scripts in `scripts/_run-migration-NNN.mjs`.
 
-**Workflow for schema changes:**
-1. Edit `prisma/schema.prisma`
-2. Run `npx prisma migrate dev --name descriptive_name` to generate migration
-3. Review the generated SQL in `prisma/migrations/`
-4. Commit both the schema AND migration file together
+### Workflow for schema changes
+1. Write hand-written SQL at `migrations/NNN_description.sql` (idempotent — use `IF NOT EXISTS`, `DROP ... IF EXISTS`, or guarded `DO $$...$$` blocks)
+2. Add a runner at `scripts/_run-migration-NNN.mjs` — reads the file, splits statements, applies via `sql.query()`, runs verification queries at the end
+3. Rehearse against a Neon branch if the migration touches live rows (see table below)
+4. Apply to prod via the runner; commit both the SQL and runner together
 
 ### Data migrations: branch first, then apply to prod
 
@@ -27,8 +26,10 @@ Rehearsal is **optional** (skip allowed) when the migration is purely additive a
 | Multi-step data transform on existing rows | ✅ mandatory | Migration 017 class — ordering bugs |
 | New-column `ADD COLUMN` on existing table | ⏭ skip | Purely additive |
 | `CREATE INDEX` | ⏭ skip | Read-path only |
+| `ADD CONSTRAINT CHECK` with pre-verified values | ⏭ skip if pre-flighted | Fails atomically at apply-time if bad data exists; pre-flight catches it |
+| `DROP COLUMN` — destructive | ✅ mandatory if the column has data | Cannot undo without PITR restore |
 | New-table `CREATE TABLE IF NOT EXISTS` + seed rows with `ON CONFLICT DO NOTHING` | ⏭ skip | Cannot touch existing data; bad seed is visible immediately in the runner's verification output and trivial to fix on an otherwise-empty table |
-| Empty-schema-first table (D9d §8 Q2 style) | ⏭ skip | No data at all — nothing to verify |
+| Empty-schema-first table | ⏭ skip | No data at all — nothing to verify |
 
 The principle: **rehearse when the blast radius includes live rows.** Don't cargo-cult the protocol on migrations that are structurally incapable of destroying anything.
 
@@ -50,28 +51,25 @@ The runner already accepts any `DATABASE_URL`, so no special mode needed — jus
 
 **Why this matters:** Migration 017 (loan_term months→years) had a statement ordering bug — the `/12` pass ran before the outlier null, so `WHERE loan_term = 30` matched all 659 just-converted 30-year rows instead of the one Rocket Mortgage outlier. 659 rows were nulled and had to be restored manually from Neon PITR. A branch run would have shown the wrong post-run distribution immediately.
 
-### Hand-written migrations: always use IF NOT EXISTS
-Prisma's auto-generated migrations use bare `ALTER TABLE ADD COLUMN` which fails if the column exists. When writing manual SQL:
-```sql
--- Good
-ALTER TABLE "loans" ADD COLUMN IF NOT EXISTS "my_field" TEXT;
+### Idempotence discipline
 
--- Bad (fails if column exists)
-ALTER TABLE "loans" ADD COLUMN "my_field" TEXT;
-```
+Every migration must be safe to replay on any state. Patterns:
 
-### Build script includes migrate deploy
-The build script is: `prisma generate && (prisma migrate deploy || true) && next build`
+- `CREATE INDEX IF NOT EXISTS`, `CREATE TABLE IF NOT EXISTS`, `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`, `ALTER TABLE ... DROP COLUMN IF EXISTS`
+- For `ADD CONSTRAINT`, pair with a preceding `DROP CONSTRAINT IF EXISTS <name>` — constraints don't have an `ADD ... IF NOT EXISTS` form
+- For state-dependent operations (rename, conditional seed), wrap in a `DO $$ BEGIN IF ... THEN ... END IF; END $$` block
+- `INSERT ... SELECT ... WHERE NOT EXISTS (...)` for idempotent seeds
 
-- `prisma generate` — regenerates the client from schema (knows about new columns)
-- `prisma migrate deploy` — applies pending migrations to the DB (creates the columns)
-- `|| true` — non-blocking so build succeeds even if migrate can't connect during build
-- `next build` — compiles the app
+Re-running an applied migration must be a no-op, not a failure.
 
-If `migrate deploy` fails silently, run it manually: `npx prisma migrate deploy`
+### Statement splitting (for runner scripts)
 
-### Schema + migration must stay in sync
-Before pushing, verify: every field in `schema.prisma` has a corresponding column created by some migration in `prisma/migrations/`. If you're unsure, run `npx prisma migrate diff --from-migrations prisma/migrations --to-schema-datamodel prisma/schema.prisma` to see drift.
+Neon's `sql.query()` takes one statement at a time. The runner splits the SQL file into statements. Two gotchas:
+
+- **Dollar-quoted blocks** (`DO $tag$ ... $tag$;`) contain semicolons that must NOT split. Track tag depth.
+- **BEGIN / COMMIT** inside migration files should be filtered out — Neon handles per-statement transactions; an explicit `BEGIN;` at the top followed by `sql.query('BEGIN')` as a standalone call throws.
+
+See `scripts/_run-db-foundation-bundle.mjs` for a reference splitter that handles both.
 
 ---
 
@@ -84,7 +82,7 @@ Neon serverless billing includes **network transfer**. The free tier is 5 GB/mon
 - Pooled: `ep-plain-math-aixa3lmr-pooler.c-4.us-east-1.aws.neon.tech`
 - Direct (migrations only): `ep-plain-math-aixa3lmr.c-4.us-east-1.aws.neon.tech`
 
-Use `directUrl` in `schema.prisma` for Prisma migrations. Use pooled for everything else.
+Use the direct endpoint for migration runners (no pooling, straight connection). Use pooled for everything else — app routes, cron jobs, seed scripts.
 
 ### Seed scripts: run locally only, once per rate sheet day
 Never run seed scripts from a Vercel serverless function — every invocation opens a fresh HTTP connection to Neon. Run them from your local machine where the connection can be reused.
@@ -120,7 +118,7 @@ Vercel shows "Ready" when the build succeeds. Runtime errors (bad DB queries, mi
 **After deploying schema changes:**
 1. Go to Vercel > Project > Logs
 2. Filter by "Error" in Console Level
-3. Check for `PrismaClientKnownRequestError` or 500s on API routes
+3. Check for 500s on API routes or Postgres errors (`syntax error`, `column does not exist`)
 4. If clean, verify the affected page loads in browser
 
 ### Vercel project: netrate-mortgage-site (NEVER create a new project)

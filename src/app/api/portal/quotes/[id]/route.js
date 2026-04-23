@@ -44,9 +44,8 @@ export async function GET(request, { params }) {
     }
 
     // Verify the contact email matches the scenario. Use deriveIdentity so
-    // the check cascades through contact JOIN → lead JOIN → legacy denorm
-    // (the legacy `scenarios.borrower_email` column is no longer written
-    // post-Layer-1c; reading it raw here was a silent access-check bug).
+    // the check cascades through contact JOIN → lead JOIN (legacy denorm
+    // columns were dropped by migration 036 2026-04-23).
     const identity = deriveIdentity(scenario);
     if (identity.contact_email?.toLowerCase() !== borrower.email?.toLowerCase()) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
