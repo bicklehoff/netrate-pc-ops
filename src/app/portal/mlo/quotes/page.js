@@ -43,7 +43,7 @@ export default function QuotesListPage() {
           <select
             value={filter}
             onChange={e => setFilter(e.target.value)}
-            className="text-sm rounded-lg border-gray-300 focus:ring-cyan-500 focus:border-cyan-500"
+            className="text-sm rounded-lg border-gray-300 focus:ring-brand focus:border-brand"
           >
             <option value="">All</option>
             <option value="draft">Drafts</option>
@@ -52,7 +52,7 @@ export default function QuotesListPage() {
           </select>
           <Link
             href="/portal/mlo/tools/quote-generator"
-            className="px-4 py-2 bg-cyan-600 text-white rounded-lg text-sm font-medium hover:bg-cyan-700 transition-colors"
+            className="px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand-dark transition-colors"
           >
             New Quote
           </Link>
@@ -66,7 +66,7 @@ export default function QuotesListPage() {
           <p className="text-gray-500 mb-4">No quotes yet</p>
           <Link
             href="/portal/mlo/tools/quote-generator"
-            className="text-cyan-600 hover:underline text-sm font-medium"
+            className="text-brand hover:underline text-sm font-medium"
           >
             Create your first quote
           </Link>
@@ -87,7 +87,7 @@ export default function QuotesListPage() {
               {quotes.map(q => (
                 <tr key={q.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-4 py-3">
-                    <Link href={`/portal/mlo/quotes/${q.id}`} className="text-cyan-600 hover:underline font-medium">
+                    <Link href={`/portal/mlo/quotes/${q.id}`} className="text-brand hover:underline font-medium">
                       {q.contact_name || 'Unnamed'}
                     </Link>
                     {q.contact_email && <div className="text-xs text-gray-400">{q.contact_email}</div>}
