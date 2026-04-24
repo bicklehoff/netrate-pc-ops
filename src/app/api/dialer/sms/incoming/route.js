@@ -51,7 +51,7 @@ export async function POST(req) {
       await sendPushToStaff(staffRows[0].id, {
         title: senderName ? `SMS from ${senderName}` : 'New text message',
         body: (body || '').slice(0, 100),
-        url: contactId ? `/portal/mlo/contacts/${contactId}` : '/portal/mlo',
+        url: contactId ? `/portal/mlo/messages?contact=${contactId}` : '/portal/mlo/messages',
         tag: `sms-${normalizedFrom}`,
       });
     }
