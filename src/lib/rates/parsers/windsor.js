@@ -134,6 +134,7 @@ function parseProductHeader(header) {
   let isStreamline = false;
   let isHighBalance = false;
   let isHomeReady = false;
+  let isHomePossible = false;
   let variant = null;
   let productType = 'fixed';
   let armStructure = null;
@@ -161,6 +162,11 @@ function parseProductHeader(header) {
 
   if (/\bHigh\s*Bal(ance)?\b/i.test(s)) isHighBalance = true;
   if (/\bHomeReady\b/i.test(s)) { isHomeReady = true; variant = 'homeready'; }
+  // Home Possible is Freddie's affordable-LIP variant (Fannie's HomeReady
+  // equivalent). Distinct product with its own pricing — without this flag
+  // the parser would emit it as plain conventional and collide with the
+  // base product's id, causing the writer to dedupe + drop real rate data.
+  if (/\bHome\s*Possible\b/i.test(s)) { isHomePossible = true; variant = 'homepossible'; }
 
   const armMatch = s.match(/(\d+)\/(\d+)m?\s*(SOFR|CMT)?\s*(High\s*Balance\s*)?ARM/i);
   if (armMatch) {
@@ -193,7 +199,7 @@ function parseProductHeader(header) {
   if (/\bFlorida\b/i.test(s) || /\bFL\b/.test(s)) state = 'FL';
   // Add other states as Windsor adds them.
 
-  return { loanType, term, productType, armStructure, isHighBalance, isStreamline, isHomeReady, variant, occupancy, loanAmountLabel, state, isJumbo, jumboTier };
+  return { loanType, term, productType, armStructure, isHighBalance, isStreamline, isHomeReady, isHomePossible, variant, occupancy, loanAmountLabel, state, isJumbo, jumboTier };
 }
 
 /**
@@ -227,6 +233,7 @@ function makeId(parsed) {
   if (parsed.isHighBalance) parts.push('highbal');
   if (parsed.isStreamline) parts.push('streamline');
   if (parsed.isHomeReady) parts.push('homeready');
+  if (parsed.isHomePossible) parts.push('homepossible');
   if (parsed.occupancy === 'secondary') parts.push('2ndhome');
   if (parsed.occupancy === 'investment') parts.push('investment');
   if (parsed.state) parts.push(parsed.state.toLowerCase());
@@ -259,6 +266,7 @@ function makeProgramName(parsed) {
   }
   if (parsed.isHighBalance) parts.push('High Balance');
   if (parsed.isHomeReady) parts.push('HomeReady');
+  if (parsed.isHomePossible) parts.push('Home Possible');
   if (parsed.occupancy === 'secondary') parts.push('Second Home');
   if (parsed.occupancy === 'investment') parts.push('Investment');
   if (parsed.state) parts.push(parsed.state);
@@ -835,10 +843,20 @@ function parseRates(xlsxBuffer) {
   for (const name of jumboSheets) {
     const ws = wb.Sheets[name];
     if (ws) {
+      // AUS = automated underwriting (DU/LP path) vs manual. Distinct
+      // pricing path with its own underwriting requirements; without
+      // this marker the parser would emit "Prime Jumbo 1 30yr Fixed"
+      // identically from both `Jumbo 1` and `Jumbo 1 AUS` sheets.
+      const isAus = /\bAUS\b/.test(name);
       const jumboPrograms = parseSheet(ws, name);
       for (const p of jumboPrograms) {
         p.category = 'agency';
         p.subcategory = 'jumbo';
+        if (isAus) {
+          p.id = `${p.id}_aus`;
+          p.name = `${p.name} AUS`;
+          p.isAus = true;
+        }
       }
       programs.push(...jumboPrograms);
     }
