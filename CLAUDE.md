@@ -186,10 +186,15 @@ C:\Users\bickl\.claude\projects\D--PROJECTS-netrate-pc-ops\memory\MEMORY.md
 Then read each file it references. This gives you the same operational knowledge as main-directory sessions.
 
 #### Dev Server Ownership
-Only the main session runs `preview_start(name='dev')` on port 3000. Worktree sessions validate changes with `npm run build` only. If a worktree needs `node_modules` for build, create a junction from the worktree root:
+Only the main session runs `preview_start(name='dev')` on port 3000. Worktree sessions validate changes with `npm run build` only.
+
+#### Worktree node_modules
+Each worktree installs its own dependencies. From the worktree root:
 ```
-mklink /J node_modules D:\PROJECTS\netrate-pc-ops\node_modules
+cp /d/PROJECTS/netrate-pc-ops/.env .
+npm ci
 ```
+`npm ci` takes ~90 sec and installs ~500 MB. **Do NOT symlink/junction `node_modules` to the main checkout** (`mklink /J node_modules D:\PROJECTS\netrate-pc-ops\node_modules`). That pattern was retired 2026-04-24 because it silently couples every worktree's build to the main checkout's last-installed state. When `package.json` adds a dep (e.g. `@upstash/ratelimit` in PR #175), worktrees junctioned to a stale main checkout fail to build with "Cannot resolve" errors, even though the worktree's own lockfile is correct. Cost of the junction (shared state footgun) outweighs the 90 sec saved.
 
 #### Deploy from Worktrees
 Worktree sessions execute every deploy gate. The hazard being protected against is **touching the `main` branch locally from the worktree**, not API-based operations.
