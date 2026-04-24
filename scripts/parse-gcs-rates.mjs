@@ -83,13 +83,24 @@ async function getToken() {
 }
 
 async function listFiles(prefix) {
+  // GCS paginates at maxResults; must follow nextPageToken until exhausted.
+  // Without this, everything alphabetically past the first page (windsor,
+  // later-named swmc files, tls) was silently invisible to the parser.
   const token = await getToken();
-  const res = await fetch(
-    `https://storage.googleapis.com/storage/v1/b/${BUCKET}/o?prefix=${encodeURIComponent(prefix)}&maxResults=100`,
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-  const data = await res.json();
-  return data.items || [];
+  const items = [];
+  let pageToken = null;
+  do {
+    const url = new URL(`https://storage.googleapis.com/storage/v1/b/${BUCKET}/o`);
+    url.searchParams.set('prefix', prefix);
+    url.searchParams.set('maxResults', '1000');
+    if (pageToken) url.searchParams.set('pageToken', pageToken);
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) throw new Error(`List failed: ${prefix} (${res.status})`);
+    const data = await res.json();
+    if (data.items) items.push(...data.items);
+    pageToken = data.nextPageToken || null;
+  } while (pageToken);
+  return items;
 }
 
 async function downloadFile(path) {
