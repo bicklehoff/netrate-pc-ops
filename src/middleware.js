@@ -63,7 +63,9 @@ export async function middleware(request) {
     });
 
     if (!token || token.userType !== 'mlo') {
-      return NextResponse.redirect(new URL('/portal/mlo/login', request.url));
+      const loginUrl = new URL('/portal/mlo/login', request.url);
+      loginUrl.searchParams.set('callbackUrl', request.nextUrl.pathname + request.nextUrl.search);
+      return NextResponse.redirect(loginUrl);
     }
   }
 

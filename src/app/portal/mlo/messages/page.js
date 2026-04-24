@@ -48,6 +48,12 @@ function SmsInbox({ initialContactId }) {
   const [search, setSearch] = useState('');
   const [selectedThread, setSelectedThread] = useState(null);
   const [autoSelected, setAutoSelected] = useState(false);
+  const [mobileView, setMobileView] = useState('list'); // 'list' | 'thread'
+
+  const handleSelectThread = (thread) => {
+    setSelectedThread(thread);
+    setMobileView('thread');
+  };
 
   const fetchThreads = useCallback(async () => {
     try {
@@ -76,6 +82,7 @@ function SmsInbox({ initialContactId }) {
     const match = threads.find((t) => t.contact_id === initialContactId);
     if (match) {
       setSelectedThread(match);
+      setMobileView('thread');
       setAutoSelected(true);
     } else if (!loading) {
       // No prior thread — open a compose pane for this contact by fetching their phone
@@ -96,9 +103,11 @@ function SmsInbox({ initialContactId }) {
   }, [initialContactId, threads, loading, autoSelected]);
 
   return (
-    <div className="flex h-full">
-      {/* Thread list */}
-      <div className="w-80 flex-shrink-0 border-r border-gray-200 flex flex-col bg-white">
+    <div className="flex h-full overflow-hidden">
+      {/* Thread list — full screen on mobile, fixed sidebar on desktop */}
+      <div className={`flex-col bg-white border-r border-gray-200 flex-shrink-0 ${
+        mobileView === 'thread' ? 'hidden md:flex md:w-80' : 'flex w-full md:w-80'
+      }`}>
         {/* Search */}
         <div className="p-3 border-b border-gray-100">
           <div className="relative">
@@ -129,7 +138,7 @@ function SmsInbox({ initialContactId }) {
             threads.map((thread) => (
               <button
                 key={thread.contact_id || thread.phone}
-                onClick={() => setSelectedThread(thread)}
+                onClick={() => handleSelectThread(thread)}
                 className={`w-full text-left px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors ${
                   selectedThread?.contact_id === thread.contact_id &&
                   selectedThread?.phone === thread.phone
@@ -166,12 +175,24 @@ function SmsInbox({ initialContactId }) {
         </div>
       </div>
 
-      {/* Thread detail */}
-      <div className="flex-1 flex flex-col bg-white">
+      {/* Thread detail — hidden on mobile when showing list */}
+      <div className={`flex-col bg-white flex-1 min-w-0 ${
+        mobileView === 'list' ? 'hidden md:flex' : 'flex'
+      }`}>
         {selectedThread ? (
           <>
             {/* Thread header */}
             <div className="px-4 py-3 border-b border-gray-200 flex items-center gap-3">
+              {/* Back button — mobile only */}
+              <button
+                onClick={() => setMobileView('list')}
+                className="md:hidden flex-shrink-0 p-1 -ml-1 text-brand"
+                aria-label="Back to messages"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
               <div className="w-9 h-9 rounded-full bg-brand/10 flex items-center justify-center flex-shrink-0">
                 <span className="text-sm font-semibold text-brand">
                   {(selectedThread.contact_name || selectedThread.phone || '?')[0].toUpperCase()}
