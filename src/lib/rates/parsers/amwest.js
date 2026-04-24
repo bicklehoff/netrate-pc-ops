@@ -161,7 +161,6 @@ function parseConvSheet(ws) {
         isStreamline: parsed.isStreamline || false,
         isFastTrack: isFastTrack,
         variant: parsed.variant || null,
-        priceFormat: '100-based',
         rates,
         lockDays,
       });

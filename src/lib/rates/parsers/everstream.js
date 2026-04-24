@@ -367,7 +367,6 @@ function parseRates(csvContent) {
       ficoFilter: parsed.ficoFilter,
       isStreamline: parsed.isStreamline || false,
       stateFilter: parsed.stateFilter,
-      priceFormat: '100-based',
       rates,
       lockDays,
     });

@@ -4,7 +4,7 @@
  * Loads rate data from the database in the exact shape the pricing engine expects.
  * Replaces the old parsed-rates.json / GCS loading path.
  *
- * Returns: Array of { lenderId, programs, sheetDate, lenderFee, compCap, priceFormat }
+ * Returns: Array of { lenderId, programs, sheetDate, lenderFee, compCap }
  *
  * Each program has: { name, loanType, term, productType, occupancy, rates, loanAmountRange, ... }
  * Each rate has: { rate, price, lockDays }
@@ -23,7 +23,7 @@ export async function loadRateDataFromDB() {
       rs.id, rs.lender_id, rs.effective_date, rs.status,
       rl.id AS lender_db_id, rl.code AS lender_code, rl.name AS lender_name,
       rl.uw_fee, rl.max_comp_cap_purchase, rl.max_comp_cap_refi,
-      rl.comp_rate, rl.fha_ufmip, rl.price_format
+      rl.comp_rate, rl.fha_ufmip
     FROM rate_sheets rs
     JOIN rate_lenders rl ON rs.lender_id = rl.id
     WHERE rs.status = 'active'
@@ -84,7 +84,6 @@ export async function loadRateDataFromDB() {
             min: price.loan_amount_min || 0,
             max: price.loan_amount_max || null,
           },
-          priceFormat: sheet.price_format || '100-based',
           rates: [],
           lockDays: [],
         };
@@ -114,7 +113,6 @@ export async function loadRateDataFromDB() {
         },
         compRate: sheet.comp_rate != null ? Number(sheet.comp_rate) : null,
         fhaUfmip: sheet.fha_ufmip != null ? Number(sheet.fha_ufmip) : null,
-        priceFormat: sheet.price_format || '100-based',
         programs: [],
       };
     }
