@@ -5,7 +5,9 @@
  * AAA_AAI_AAQ_AAO, AIA_AIP, JUMBO, GOV, and Spring Special sheets.
  *
  * Layout: quad products side-by-side (cols B-D, E-G, H-J, K-M).
- * Prices are discount/rebate format (positive = cost, negative = rebate).
+ * Raw sheet uses discount convention (positive = cost borrower pays,
+ * negative = rebate). Parser normalizes to 100-based on output so the
+ * pricing engine and validator both work uniformly with other lenders.
  *
  * Also parses: LLPAs (Fast Track + Agency), Government FICO adjustments,
  *              Jumbo FICO/LTV + loan amount adjustments, State adjustments,
@@ -96,7 +98,9 @@ function extractRates(ws, startRow, rateCol, lockCols, maxRows = 25) {
       if (price === null || typeof price === 'string') continue;
       const priceNum = parseFloat(price);
       if (isNaN(priceNum) || priceNum < -10 || priceNum > 15) continue;
-      rates.push({ rate: rateNum, lockDays: lc.days, price: priceNum });
+      // Normalize to 100-based: sheet shows discount (positive = cost),
+      // engine works in absolute-price math (100 = par, >100 = rebate).
+      rates.push({ rate: rateNum, lockDays: lc.days, price: 100 - priceNum });
     }
   }
   return rates;
@@ -157,7 +161,7 @@ function parseConvSheet(ws) {
         isStreamline: parsed.isStreamline || false,
         isFastTrack: isFastTrack,
         variant: parsed.variant || null,
-        priceFormat: 'discount',
+        priceFormat: '100-based',
         rates,
         lockDays,
       });
