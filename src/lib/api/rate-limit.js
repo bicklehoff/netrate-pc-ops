@@ -1,7 +1,7 @@
 // Sliding-window rate limiter backed by Upstash Redis.
 //
 // Usage (at the top of a route handler):
-//   const limited = await rateLimit(request, { scope: 'strike-rate', limit: 5, window: '1 m' });
+//   const limited = await rateLimit(request, { scope: 'rate-alert', limit: 5, window: '1 m' });
 //   if (limited) return limited;
 //
 // Fails OPEN when Upstash env vars are missing (local dev, previews without

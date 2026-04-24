@@ -500,7 +500,7 @@ export default function ContactDetailPage() {
                   onChange={(e) => updateField('strikeRateOptIn', e.target.checked)}
                   className="rounded border-gray-300 text-brand focus:ring-brand"
                 />
-                <span>Strike Rate Alerts</span>
+                <span>Rate Alerts</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input

@@ -258,7 +258,7 @@ export default function SaveScenarioModal({ scenario, onClose, prefillName, pref
           ) : isUpdate ? (
             // Update mode — no contact info needed, just confirm
             <>
-              <div className="bg-cyan-50 rounded-lg p-4 mb-4 border border-cyan-100">
+              <div className="bg-brand-light rounded-lg p-4 mb-4 border border-brand-light">
                 <p className="text-sm text-gray-700">
                   Update your saved scenario with these new inputs? Your rate alerts will use this updated scenario going forward.
                 </p>
@@ -277,7 +277,7 @@ export default function SaveScenarioModal({ scenario, onClose, prefillName, pref
             // New save mode — full form
             <>
               {/* Value prop explainer */}
-              <div className="bg-cyan-50 rounded-lg p-4 mb-4 border border-cyan-100">
+              <div className="bg-brand-light rounded-lg p-4 mb-4 border border-brand-light">
                 <h3 className="text-sm font-semibold text-gray-900 mb-2">Why save this scenario?</h3>
                 <ul className="space-y-1.5 text-sm text-gray-600">
                   <li className="flex items-start gap-2">

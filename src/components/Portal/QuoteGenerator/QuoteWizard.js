@@ -244,9 +244,9 @@ export default function QuoteWizard({ prefill }) {
             onClick={() => { if (i <= step) { setStep(i); window.scrollTo(0, 0); } }}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               i === step
-                ? 'bg-cyan-600 text-white'
+                ? 'bg-brand text-white'
                 : i < step
-                  ? 'bg-cyan-50 text-cyan-700 hover:bg-cyan-100 cursor-pointer'
+                  ? 'bg-brand-light text-brand-dark hover:bg-brand-light cursor-pointer'
                   : 'bg-gray-100 text-gray-400 cursor-not-allowed'
             }`}
             disabled={i > step}
@@ -274,7 +274,7 @@ export default function QuoteWizard({ prefill }) {
           {sendResult.quoteLink && (
             <div className="mt-2 text-xs">
               <span className="text-gray-500">Quote link: </span>
-              <a href={sendResult.quoteLink} target="_blank" rel="noopener noreferrer" className="text-cyan-600 hover:underline break-all">
+              <a href={sendResult.quoteLink} target="_blank" rel="noopener noreferrer" className="text-brand hover:underline break-all">
                 {sendResult.quoteLink}
               </a>
             </div>

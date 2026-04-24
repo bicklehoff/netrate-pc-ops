@@ -7,7 +7,7 @@
 //
 // Usage:
 //   try { ... }
-//   catch (err) { return apiError(err, 'Save failed', 500, { scope: 'strike-rate' }); }
+//   catch (err) { return apiError(err, 'Save failed', 500, { scope: 'rate-alert' }); }
 
 import { NextResponse } from 'next/server';
 

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import RateTool from '@/components/RateTool';
-import StrikeRateForm from '@/components/RateTool/StrikeRateForm';
+import RateAlertForm from '@/components/RateTool/RateAlertForm';
 import TrustBar from '@/components/TrustBar';
 
 export const metadata = {
@@ -47,13 +47,13 @@ export default async function RatesPage({ searchParams }) {
       <div className="max-w-3xl mx-auto px-4 py-8">
       <RateTool defaultState={defaultState} prefill={Object.keys(prefill).length ? prefill : null} brpToken={brpToken} />
 
-      {/* Strike Rate / Rate Alert signup */}
+      {/* Rate Alert signup */}
       <div className="mt-10">
-        <h2 className="text-lg font-semibold text-gray-900 mb-3">Not ready yet? Set a Strike Rate.</h2>
+        <h2 className="text-lg font-semibold text-gray-900 mb-3">Not ready yet? Set a Rate Alert.</h2>
         <p className="text-sm text-gray-600 mb-4">
-          Tell us your target rate — we&apos;ll email you the moment it&apos;s available. No commitment, no credit pull.
+          Get rate updates delivered to your inbox. No commitment, no credit pull.
         </p>
-        <StrikeRateForm source="rate-tool" />
+        <RateAlertForm source="rate-tool" />
       </div>
 
       {/* Apply CTA */}
