@@ -1,8 +1,8 @@
 # Unified Architecture Directive (UAD)
 
-**Status:** Draft — architecture decisions captured, ready for review
+**Status:** Draft v1.1 — architecture decisions captured + 3 amendments 2026-04-24
 **Author:** PC Dev + David Burson
-**Date:** 2026-04-16
+**Date:** 2026-04-16 (initial) · 2026-04-24 (amendments to AD-10/11/12 — see §2 inline + §13 log)
 **Audit dimension:** D9 (Site Audit 2026)
 **Build target:** Layer 1 first (lead intake + pipeline), then stack
 
@@ -91,11 +91,47 @@ All surfaces (front site, MLO portal, quote composer, homepage) use the same pri
 ### AD-10: Scenarios link to Contact + Deal (both optional)
 A scenario can exist with neither (anonymous rate tool use), with just a Contact (lead's saved scenario), or with both (MLO quote for a deal). Scenarios never store borrower identity as denormalized strings — they reference the Contact by ID.
 
+**Amendment 2026-04-24 (AD-10a): Split `scenarios` into three tables.** The original AD-10 treats `scenarios` as a single table carrying four conceptually different things: anonymous pricing snapshots, rate alert subscriptions, MLO-built quotes, and deal pricing references. Each has a different lifecycle, required fields, and access patterns. The overloaded-table pattern forces nullable FKs, owner_type flags, and query-time filtering that will compound as D9c features land. Before building D9c Layer 2/3, split the concept:
+
+- **`scenarios`** — immutable pricing snapshots. A frozen rate ladder for a given input set at a moment in time. Can be anonymous. Never mutated post-insert; re-pricing produces a new row.
+- **`rate_alerts`** — borrower-initiated subscriptions. Has email/contact, cadence, days, status. References a scenario (the scenario the borrower wants updates on). Mutable (pause, resume, edit cadence).
+- **`quotes`** — MLO deliverables. Attached modules, version, engagement tracking, status. References a scenario. Snapshot-on-send semantics (see AD-12a).
+
+Each references `scenario_id`. Scenarios are the immutable pricing moments; `rate_alerts` and `quotes` *reference* scenarios without *being* them. This split is PR-1 of D9c — doing it first makes all subsequent D9c work cleaner; doing it later is a multi-PR refactor touching every reader/writer.
+
 ### AD-11: Calculator modules are composable
 MLO can attach selected calculator reports (Cost of Waiting, Rent vs Buy, amortization, etc.) to a quote. Front site renders calculators standalone. Same functions, two rendering contexts. The quote becomes a multi-page deliverable with rates + selected analysis modules.
 
+**Amendment 2026-04-24 (AD-11a): Concrete module contract with versioning and render variants.** The original AD-11 describes modules as pure functions with two rendering contexts but leaves the operational contract under-specified. Without a concrete contract, each module will be built differently and composability will break. Adopt the following registry pattern before extracting the first module:
+
+```js
+// src/lib/calc-modules/cost-of-waiting/index.js
+export const module = {
+  id: 'cost-of-waiting',
+  version: 1,                       // integer, bumped on logic changes
+  label: 'Cost of Waiting',
+  inputSchema: zodSchema,           // declares required scenario fields + MLO-tunable config
+  compute: pureFn,                  // (inputs) → result object — no side effects
+  renderStandalone: Component,      // full page layout for /tools/* routes
+  renderEmbedded: Component,        // compact layout for embedded in quote
+  renderPDF: Component,             // print-friendly for PDF generation
+};
+```
+
+All modules register in a central registry at `src/lib/calc-modules/registry.js`. Standalone pages at `/tools/<id>` import `renderStandalone`. Quote composer reads the registry, lets MLO pick from available modules, and attaches each as `{moduleId, version, config}` on the quote record. On quote render, the composer looks up the registered module by id + version and invokes the appropriate render variant. Version pinning means saved/sent quotes re-render with the exact logic they were built with, not current logic — no surprise changes to a borrower's saved quote. New logic ships as `version: 2` and older quotes keep rendering their pinned version (or explicitly migrate).
+
 ### AD-12: Shareable quote links (Layer 3 Lite)
 MLO-generated quotes produce an interactive link (not just PDF). Borrower opens the link, sees live quote with attached calc modules. Email capture on engagement creates or links a Lead. This IS the lead capture mechanism for MLO-sourced prospects.
+
+**Amendment 2026-04-24 (AD-12a): Snapshot-on-send immutability.** The original AD-12 says "borrower opens the link, sees live quote" — but scenarios are mutable (re-priced by MLO, rate sheets refresh nightly). Live-rendering a sent quote is a trust bug: a borrower who opens a quote link tomorrow sees different rates than yesterday, with no explanation. Quote systems we benchmarked (Lender Price, Banking Bridge, Optimal Blue) all treat sent quotes as immutable. Adopt the same semantics:
+
+- **On send:** MLO clicks "Send to Borrower" → quote composer freezes the current scenario + attached modules (including their pinned versions from AD-11a) + rate snapshot + fees + MLO branding into a `quotes` row. The row is immutable post-insert.
+- **On borrower open:** `/portal/quote/[id]` renders exactly what was sent, using the frozen snapshot. Timestamp displayed prominently ("Quote as of 2026-04-24 14:32 MT"). The underlying scenario may have moved on; the quote has not.
+- **Fresh rates CTA:** Each rendered quote includes a "Get fresh rates for this scenario" link that re-prices against current rate sheets and surfaces a new quote (new `quotes` row) if the borrower wants the update. The old quote stays accessible for reference.
+- **Versioning:** If MLO re-sends the same scenario with updates, create a new `quotes` row with a `parent_quote_id` pointer. Borrower dashboard shows the quote chain.
+- **Engagement tracking:** views, module clicks, fresh-rate requests, and application-start events tie to the specific `quotes.id` the borrower interacted with — attribution stays accurate.
+
+Immutability applies to the *quote* surface. The *scenario* the quote was built from may continue to evolve (re-priced daily by the Rate Alert cron if subscribed, re-used for a new quote if MLO decides). Quote and scenario have different immutability contracts: scenario is append-mostly (new row per re-price), quote is truly immutable.
 
 ### AD-13: Borrowers can save scenarios from the front site
 If a visitor wants to save a scenario from any calculator, email capture triggers, magic link auth, Lead created. They get a lightweight "My Scenarios" portal where saved scenarios persist. Rate alerts are one type of saved scenario, not a separate system.
@@ -790,7 +826,12 @@ The UAD becomes **Dimension 9** of the Site Audit 2026. It covers the full data 
 | AD-14 | 2026-04-16 | Service providers: accounts (company) + contacts (person), assigned to deals | david+pc-dev |
 | AD-15 | 2026-04-16 | Realtors are contacts with a role, own campaign lifecycle | david+pc-dev |
 | AD-16 | 2026-04-16 | 3rd party service providers are NOT contacts, no portal access or marketing | david+pc-dev |
+| AD-10a | 2026-04-24 | Split `scenarios` into three tables (scenarios / rate_alerts / quotes) as PR-1 of D9c — amends AD-10 | david+pc-dev |
+| AD-11a | 2026-04-24 | Concrete module contract: pure compute + render variants + version pinning + central registry — amends AD-11 | david+pc-dev |
+| AD-12a | 2026-04-24 | Snapshot-on-send immutability for quote links (scenario may evolve; quote does not) — amends AD-12 | david+pc-dev |
 
 ---
 
 *This spec captures the full UAD architecture as discussed 2026-04-16. It is the foundation for all front-of-house systems. Build order: Layer 1 (lead intake) first, then stack. Open items are captured in section 11 and will be resolved as each layer is built.*
+
+*Amendment note (2026-04-24): after D7 polish closure and before D9c build, David asked for an architecture evaluation of the scenario/quote model (the "crux of lead intake"). Three load-bearing concerns surfaced: scenarios table overloaded, calculator module contract under-specified, quote links lack immutability. All three amend D9c scope; none revise D9a/D9b/D9d/D9e. See AD-10a/AD-11a/AD-12a inline amendments in §2.*
