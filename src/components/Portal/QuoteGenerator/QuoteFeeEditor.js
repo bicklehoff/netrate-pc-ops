@@ -281,7 +281,7 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
           </div>
           {escrowsWaived
             ? <span className="px-2.5 py-1 bg-orange-100 text-orange-700 rounded-lg text-xs font-semibold border border-orange-200">Escrows Waived — Section G empty</span>
-            : <span className="px-2.5 py-1 bg-cyan-50 text-cyan-700 rounded-lg text-xs font-semibold border border-cyan-200">Escrowing</span>
+            : <span className="px-2.5 py-1 bg-brand-light text-brand-dark rounded-lg text-xs font-semibold border border-brand-light">Escrowing</span>
           }
         </div>
 
@@ -330,7 +330,7 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
             <label className="flex items-center gap-2 cursor-pointer shrink-0">
               <input type="checkbox" checked={hasFlood}
                 onChange={e => { const v = e.target.checked; setHasFlood(v); rebuildEscrow({ flood: v }); }}
-                className="rounded border-gray-300 text-cyan-600 focus:ring-cyan-500" />
+                className="rounded border-gray-300 text-brand focus:ring-brand" />
               <span className="text-xs font-medium text-gray-600 w-28">Flood Insurance</span>
             </label>
             {hasFlood
@@ -347,7 +347,7 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
                 <label className="flex items-center gap-2 cursor-pointer shrink-0">
                   <input type="checkbox" checked={hasMud}
                     onChange={e => { const v = e.target.checked; setHasMud(v); rebuildEscrow({ mud: v }); }}
-                    className="rounded border-gray-300 text-cyan-600 focus:ring-cyan-500" />
+                    className="rounded border-gray-300 text-brand focus:ring-brand" />
                   <span className="text-xs font-medium text-gray-600 w-28">MUD Tax</span>
                 </label>
                 {hasMud && <NumInput value={annualMud} onChange={v => { setAnnualMud(v); rebuildEscrow({ mudAmt: v }); }} placeholder="Annual MUD tax" className="flex-1" />}
@@ -356,7 +356,7 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
                 <label className="flex items-center gap-2 cursor-pointer shrink-0">
                   <input type="checkbox" checked={hasHailWind}
                     onChange={e => { const v = e.target.checked; setHasHailWind(v); rebuildEscrow({ hw: v }); }}
-                    className="rounded border-gray-300 text-cyan-600 focus:ring-cyan-500" />
+                    className="rounded border-gray-300 text-brand focus:ring-brand" />
                   <span className="text-xs font-medium text-gray-600 w-28">Hail/Wind</span>
                 </label>
                 {hasHailWind && <NumInput value={annualHailWind} onChange={v => { setAnnualHailWind(v); rebuildEscrow({ hwAmt: v }); }} placeholder="Annual hail/wind premium" className="flex-1" />}
@@ -456,7 +456,7 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
                           <input type="number" value={item.amount}
                             onFocus={e => e.target.select()}
                             onChange={e => updateItem(key, i, e.target.value)}
-                            className={`w-full pl-5 pr-2 py-1 text-xs text-right font-mono rounded border-gray-200 focus:ring-cyan-500 focus:border-cyan-500 ${item.amount < 0 ? 'text-green-600' : ''}`} />
+                            className={`w-full pl-5 pr-2 py-1 text-xs text-right font-mono rounded border-gray-200 focus:ring-brand focus:border-brand ${item.amount < 0 ? 'text-green-600' : ''}`} />
                         </div>
                         {canEdit && (
                           <button onClick={() => removeItem(key, i)}
@@ -470,19 +470,19 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
                         <div className="flex items-center gap-2 mt-2 pt-2 border-t border-gray-100">
                           <input type="text" value={newFeeLabel} onChange={e => setNewFeeLabel(e.target.value)}
                             placeholder="Fee description"
-                            className="flex-1 text-xs rounded border-gray-300 focus:ring-cyan-500 focus:border-cyan-500 py-1" />
+                            className="flex-1 text-xs rounded border-gray-300 focus:ring-brand focus:border-brand py-1" />
                           <div className="relative w-24">
                             <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">$</span>
                             <input type="number" value={newFeeAmount} onChange={e => setNewFeeAmount(e.target.value)}
                               onFocus={e => e.target.select()} placeholder="0"
-                              className="w-full pl-5 py-1 text-xs font-mono rounded border-gray-300 focus:ring-cyan-500 focus:border-cyan-500" />
+                              className="w-full pl-5 py-1 text-xs font-mono rounded border-gray-300 focus:ring-brand focus:border-brand" />
                           </div>
-                          <button onClick={() => addItem(key)} className="text-xs px-2 py-1 bg-cyan-600 text-white rounded hover:bg-cyan-700">Add</button>
+                          <button onClick={() => addItem(key)} className="text-xs px-2 py-1 bg-brand text-white rounded hover:bg-brand-dark">Add</button>
                           <button onClick={() => { setAddingToSection(null); setNewFeeLabel(''); setNewFeeAmount(''); }} className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
                         </div>
                       ) : (
                         <button onClick={() => setAddingToSection(key)}
-                          className="mt-2 text-xs text-cyan-600 hover:text-cyan-700 font-medium flex items-center gap-1">
+                          className="mt-2 text-xs text-brand hover:text-brand-dark font-medium flex items-center gap-1">
                           <span className="text-base leading-none">+</span> Add fee
                         </button>
                       )
@@ -603,12 +603,12 @@ export default function QuoteFeeEditor({ fees, onFeesChange, selectedRates, scen
             Save Draft
           </button>
           <button onClick={onPreviewPDF} disabled={loading || selectedRates.length === 0}
-            className="px-4 py-2 border border-cyan-300 text-cyan-700 bg-cyan-50 rounded-lg text-sm font-medium hover:bg-cyan-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+            className="px-4 py-2 border border-brand text-brand-dark bg-brand-light rounded-lg text-sm font-medium hover:bg-brand-light disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
             Preview PDF
           </button>
           <button onClick={onSendToBorrower}
             disabled={loading || !scenario.contact_email || selectedRates.length === 0}
-            className="px-5 py-2 bg-cyan-600 text-white rounded-lg text-sm font-bold hover:bg-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-5 py-2 bg-brand text-white rounded-lg text-sm font-bold hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             title={!scenario.contact_email ? 'Add contact email to send' : 'Send quote with PDF to borrower'}>
             {loading ? 'Sending...' : 'Send to Borrower'}
           </button>

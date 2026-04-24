@@ -225,7 +225,7 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
           <Field label="Credit Score" value={scenario.fico || ''} onChange={v => update('fico', v === '' ? '' : Number(v))} type="number" />
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">
-              Zip Code {zipLoading && <span className="text-cyan-500 ml-1">...</span>}
+              Zip Code {zipLoading && <span className="text-brand ml-1">...</span>}
             </label>
             <input
               type="text"
@@ -233,9 +233,9 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
               value={zipCode}
               onChange={e => handleZipLookup(e.target.value.replace(/\D/g, ''))}
               placeholder="80027"
-              className="w-full rounded border-gray-300 text-sm focus:ring-cyan-500 focus:border-cyan-500"
+              className="w-full rounded border-gray-300 text-sm focus:ring-brand focus:border-brand"
             />
-            {scenario.county && <div className="text-[10px] text-cyan-600 mt-0.5">{scenario.county} County, {scenario.state}</div>}
+            {scenario.county && <div className="text-[10px] text-brand mt-0.5">{scenario.county} County, {scenario.state}</div>}
           </div>
           <SelectField label="State" value={scenario.state} options={states} onChange={v => {
             onChange({ ...scenario, state: v, county: '', ...deriveFromClosing(scenario.closing_date, v, scenario.purpose) });
@@ -245,7 +245,7 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
             <select
               value={scenario.county}
               onChange={e => update('county', e.target.value)}
-              className="w-full rounded border-gray-300 text-sm focus:ring-cyan-500 focus:border-cyan-500"
+              className="w-full rounded border-gray-300 text-sm focus:ring-brand focus:border-brand"
             >
               <option value="">Select county...</option>
               {counties.map(c => <option key={c} value={c}>{c}</option>)}
@@ -325,7 +325,7 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
                 type="checkbox"
                 checked={scenario.borrowerPaid || false}
                 onChange={e => update('borrowerPaid', e.target.checked)}
-                className="w-3.5 h-3.5 rounded border-gray-600 bg-gray-800 text-cyan-500 focus:ring-cyan-500"
+                className="w-3.5 h-3.5 rounded border-gray-600 bg-gray-800 text-brand focus:ring-brand"
               />
               <span className="text-xs text-gray-300">Borrower-Paid</span>
             </label>
@@ -352,7 +352,7 @@ export default function QuoteScenarioForm({ scenario, onChange, onSubmit, loadin
         <button
           type="submit"
           disabled={loading || !effectiveLoan}
-          className="px-8 py-2.5 bg-cyan-500 text-white rounded-lg font-bold text-sm hover:bg-cyan-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors tracking-wide"
+          className="px-8 py-2.5 bg-brand text-white rounded-lg font-bold text-sm hover:bg-brand-dark disabled:opacity-40 disabled:cursor-not-allowed transition-colors tracking-wide"
         >
           {loading ? 'PRICING...' : 'GET RATES'}
         </button>
@@ -373,7 +373,7 @@ function Field({ label, value, onChange, type = 'text', placeholder, disabled, s
           placeholder={placeholder}
           disabled={disabled}
           step={step}
-          className="w-full rounded border-gray-300 text-sm focus:ring-cyan-500 focus:border-cyan-500 disabled:bg-gray-50 disabled:text-gray-400"
+          className="w-full rounded border-gray-300 text-sm focus:ring-brand focus:border-brand disabled:bg-gray-50 disabled:text-gray-400"
         />
         {suffix && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">{suffix}</span>}
       </div>
@@ -397,7 +397,7 @@ function DollarField({ label, value, onChange, disabled }) {
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           disabled={disabled}
-          className="w-full pl-7 rounded border-gray-300 text-sm font-mono focus:ring-cyan-500 focus:border-cyan-500 disabled:bg-gray-50 disabled:text-gray-400"
+          className="w-full pl-7 rounded border-gray-300 text-sm font-mono focus:ring-brand focus:border-brand disabled:bg-gray-50 disabled:text-gray-400"
         />
       </div>
     </div>
@@ -411,7 +411,7 @@ function SelectField({ label, value, options, onChange }) {
       <select
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="w-full rounded border-gray-300 text-sm focus:ring-cyan-500 focus:border-cyan-500"
+        className="w-full rounded border-gray-300 text-sm focus:ring-brand focus:border-brand"
       >
         {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>

@@ -4,7 +4,7 @@
  *
  * USE THIS MODULE instead of hardcoding these arrays per-form. Consolidates
  * Pass 6 MLO-2/MLO-3 findings where QuoteScenarioForm, leads/[id]/page,
- * StrikeRateForm, etc. each had their own slightly-divergent copies.
+ * RateAlertForm, etc. each had their own slightly-divergent copies.
  *
  * DB-driven picklists (STATES, LOAN_TYPES) live in ref_licensed_states +
  * ref_loan_types and are loaded via src/lib/picklists/db-loader.js.
