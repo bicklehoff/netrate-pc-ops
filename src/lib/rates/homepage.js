@@ -24,26 +24,36 @@ import { calculateMonthlyPI, calculateAPR } from '@/lib/mortgage-math';
 
 const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-// Module-level cache. Rate sheets update ~4x/day. Cache is keyed on
-// rate_sheets.effective_date so it auto-busts the moment a new sheet
-// activates — next visitor triggers a fresh compute. 30-min TTL is a
-// safety net for the unlikely case where effective_date hasn't moved
-// but the underlying data did (shouldn't happen, but cheap insurance).
-let cache = { data: null, sheetDate: null, fetchedAt: 0 };
+// Module-level cache. Rate sheets update ~4x/day.
+//
+// Cache is keyed on MAX(rate_sheets.created_at) across active sheets
+// rather than effective_date. When a lender re-uploads a sheet dated
+// for the same effective_date (common — e.g. multi-sheet rate day or
+// a mid-day refresh that re-parses), effective_date wouldn't move but
+// created_at does, so the cache correctly busts. 30-min TTL is a
+// safety net.
+let cache = { data: null, version: null, fetchedAt: 0 };
 const CACHE_TTL_MS = 30 * 60 * 1000;
 
-async function getLatestSheetDate() {
+async function getActiveSheetsInfo() {
   try {
     const rows = await sql`
-      SELECT effective_date FROM rate_sheets
+      SELECT
+        MAX(effective_date) AS latest_effective,
+        MAX(created_at)     AS latest_created
+      FROM rate_sheets
       WHERE status = 'active'
-      ORDER BY effective_date DESC
-      LIMIT 1
     `;
-    return rows[0]?.effective_date || null;
+    const row = rows[0] || {};
+    return {
+      latestEffective: row.latest_effective || null,
+      // Serialized to ISO for comparison; `max(created_at)` bumps every
+      // time any lender's sheet is freshly inserted.
+      version: row.latest_created ? new Date(row.latest_created).toISOString() : null,
+    };
   } catch (err) {
-    console.error('[homepage] latest sheet date query failed:', err.message);
-    return null;
+    console.error('[homepage] active sheets query failed:', err.message);
+    return { latestEffective: null, version: null };
   }
 }
 
@@ -133,13 +143,12 @@ async function priceOne(scenario, config, loanType, termYears) {
  */
 export async function getHomepageLiveRates() {
   try {
-    const latestSheetDate = await getLatestSheetDate();
-    const sheetDateKey = latestSheetDate ? new Date(latestSheetDate).toISOString() : null;
+    const { latestEffective: latestSheetDate, version } = await getActiveSheetsInfo();
     const now = Date.now();
 
     if (
       cache.data &&
-      cache.sheetDate === sheetDateKey &&
+      cache.version === version &&
       now - cache.fetchedAt < CACHE_TTL_MS
     ) {
       return cache.data;
@@ -176,7 +185,7 @@ export async function getHomepageLiveRates() {
       va30,
     };
 
-    cache = { data: result, sheetDate: sheetDateKey, fetchedAt: now };
+    cache = { data: result, version, fetchedAt: now };
 
     // Persist to last-known-good cache (best-effort, non-blocking for
     // the return value — if the cache write fails we still serve live).
