@@ -451,7 +451,11 @@ function parseRates(csvContent) {
       tier: decoded.tier || null,
       variant: decoded.variant || null,
       loanPurpose: decoded.loanPurpose || null,
-      priceFormat: 'discount',  // TLS uses discount/rebate, not 100-based
+      // NOTE: TLS sheets use discount convention (positive = cost,
+      // negative = rebate). This parser has not been updated to
+      // normalize to 100-based yet — if TLS is re-enabled (currently
+      // excluded in parse-gcs-rates.mjs), normalize rates on push via
+      // `price: 100 - priceNum`, matching the swmc/amwest pattern.
       rates: entries,
       lockDays,
     });

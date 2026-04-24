@@ -320,7 +320,6 @@ function parseSheet(ws, sheetLabel) {
         isHighBalance: parsed.isHighBalance,
         isStreamline: parsed.isStreamline,
         variant: parsed.variant || null,
-        priceFormat: '100-based',
         rates,
         lockDays,
         loanAmountRange,

@@ -617,7 +617,6 @@ function parseRates(xlsxBuffer) {
         isStreamline: match.isStreamline || false,
         variant: match.variant || null,
         docType: match.docType || null,
-        priceFormat: '100-based',
         rates: block.rates,
         lockDays,
       });

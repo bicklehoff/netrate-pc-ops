@@ -608,7 +608,6 @@ function parseRates(xlsxBuffer) {
         isHighBalance: def.isHighBalance || false,
         isStreamline: def.isStreamline || false,
         variant: def.variant || null,
-        priceFormat: '100-based',
         rates: leftRates,
         lockDays,
       });
@@ -631,7 +630,6 @@ function parseRates(xlsxBuffer) {
         isHighBalance: def.isHighBalance || false,
         isStreamline: def.isStreamline || false,
         variant: def.variant || null,
-        priceFormat: '100-based',
         rates: rightRates,
         lockDays,
       });

@@ -13,15 +13,11 @@
 // ─── Step 1: Get base price from rate_prices ────────────────────────
 
 /**
- * Get the base price for a product at a given rate.
- * This is the FinalBasePrice from the CSV — 100-based.
- * e.g., 98.6732
+ * Get the base price for a product at a given rate. All parsers
+ * normalize to 100-based on output, so this is just a passthrough.
+ * 100-based: 100 = par, >100 = credit (rebate), <100 = cost.
  */
-function getBasePrice(rateEntry, priceFormat) {
-  // Convert to 100-based if needed.
-  // Discount format: 0 = par, positive = cost (points), negative = credit (rebate)
-  // 100-based: 100 = par, >100 = credit, <100 = cost
-  if (priceFormat === 'discount') return 100 - rateEntry.price;
+function getBasePrice(rateEntry) {
   return rateEntry.price;
 }
 
@@ -394,8 +390,8 @@ export function priceRate(rateEntry, product, scenario, lenderAdj, brokerConfig,
 
   const breakdown = [];
 
-  // Step 1: Base price (convert discount→100-based if needed)
-  let price = getBasePrice(rateEntry, product.priceFormat);
+  // Step 1: Base price — parsers emit 100-based already
+  let price = getBasePrice(rateEntry);
   breakdown.push({ label: 'Base price', value: price });
 
   // Step 2: FICO/LTV adjustment — resolve tier/agency/term-specific grids
