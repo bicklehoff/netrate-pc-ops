@@ -5,7 +5,8 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import SmsThread from '@/components/Portal/Dialer/SmsThread';
 
 function formatRelativeTime(dateStr) {
@@ -41,11 +42,12 @@ function formatDateTime(dateStr) {
 }
 
 // ─── SMS Inbox Tab ─────────────────────────────────────────
-function SmsInbox() {
+function SmsInbox({ initialContactId }) {
   const [threads, setThreads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedThread, setSelectedThread] = useState(null);
+  const [autoSelected, setAutoSelected] = useState(false);
 
   const fetchThreads = useCallback(async () => {
     try {
@@ -67,6 +69,31 @@ function SmsInbox() {
     const interval = setInterval(fetchThreads, 15000);
     return () => clearInterval(interval);
   }, [fetchThreads]);
+
+  // Auto-select thread when navigated from a contact or notification
+  useEffect(() => {
+    if (!initialContactId || autoSelected || loading) return;
+    const match = threads.find((t) => t.contact_id === initialContactId);
+    if (match) {
+      setSelectedThread(match);
+      setAutoSelected(true);
+    } else if (!loading) {
+      // No prior thread — open a compose pane for this contact by fetching their phone
+      fetch(`/api/dialer/contacts/${initialContactId}`)
+        .then((r) => r.ok ? r.json() : null)
+        .then((data) => {
+          if (data?.contact) {
+            setSelectedThread({
+              contact_id: initialContactId,
+              phone: data.contact.phone,
+              contact_name: `${data.contact.first_name || ''} ${data.contact.last_name || ''}`.trim(),
+            });
+          }
+        })
+        .catch(() => {});
+      setAutoSelected(true);
+    }
+  }, [initialContactId, threads, loading, autoSelected]);
 
   return (
     <div className="flex h-full">
@@ -351,8 +378,10 @@ function CallHistory() {
 }
 
 // ─── Main Page ─────────────────────────────────────────────
-export default function MessagesPage() {
+function MessagesPageInner() {
   const [tab, setTab] = useState('sms');
+  const searchParams = useSearchParams();
+  const initialContactId = searchParams.get('contact') || null;
 
   return (
     <div className="flex flex-col h-full bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
@@ -387,8 +416,16 @@ export default function MessagesPage() {
 
       {/* Tab content */}
       <div className="flex-1 min-h-0">
-        {tab === 'sms' ? <SmsInbox /> : <CallHistory />}
+        {tab === 'sms' ? <SmsInbox initialContactId={initialContactId} /> : <CallHistory />}
       </div>
     </div>
+  );
+}
+
+export default function MessagesPage() {
+  return (
+    <Suspense>
+      <MessagesPageInner />
+    </Suspense>
   );
 }

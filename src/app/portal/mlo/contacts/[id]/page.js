@@ -274,31 +274,41 @@ export default function ContactDetailPage() {
       </div>
 
       {/* Actions Bar */}
-      {contact.email && (
+      {(contact.email || contact.phone) && (
         <div className="flex items-center gap-2 mb-4 pb-4 border-b border-gray-100">
-          <button
-            onClick={() => runAction('send_portal_invite')}
-            disabled={actionLoading}
-            className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 px-3 py-1.5 rounded-lg text-sm hover:bg-gray-50 transition-colors disabled:opacity-50"
-          >
-            <span>🔗</span> Send Portal Invite
-          </button>
-          <button
-            onClick={() => setShowNeedsModal(true)}
-            disabled={actionLoading}
-            className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 px-3 py-1.5 rounded-lg text-sm hover:bg-gray-50 transition-colors disabled:opacity-50"
-          >
-            <span>📋</span> Send Needs List
-          </button>
-          <button
-            onClick={() => setShowEmailModal(true)}
-            disabled={actionLoading}
-            className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 px-3 py-1.5 rounded-lg text-sm hover:bg-gray-50 transition-colors disabled:opacity-50"
-          >
-            <span>✉️</span> Send Email
-          </button>
-          {actionLoading && <span className="text-xs text-gray-400 ml-2">Sending...</span>}
-          {actionSuccess && <span className="text-xs text-green-600 ml-2">{actionSuccess}</span>}
+          {contact.phone && (
+            <Link
+              href={`/portal/mlo/messages?contact=${id}`}
+              className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 px-3 py-1.5 rounded-lg text-sm hover:bg-gray-50 transition-colors"
+            >
+              <span>💬</span> Send SMS
+            </Link>
+          )}
+          {contact.email && (<>
+            <button
+              onClick={() => runAction('send_portal_invite')}
+              disabled={actionLoading}
+              className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 px-3 py-1.5 rounded-lg text-sm hover:bg-gray-50 transition-colors disabled:opacity-50"
+            >
+              <span>🔗</span> Send Portal Invite
+            </button>
+            <button
+              onClick={() => setShowNeedsModal(true)}
+              disabled={actionLoading}
+              className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 px-3 py-1.5 rounded-lg text-sm hover:bg-gray-50 transition-colors disabled:opacity-50"
+            >
+              <span>📋</span> Send Needs List
+            </button>
+            <button
+              onClick={() => setShowEmailModal(true)}
+              disabled={actionLoading}
+              className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 px-3 py-1.5 rounded-lg text-sm hover:bg-gray-50 transition-colors disabled:opacity-50"
+            >
+              <span>✉️</span> Send Email
+            </button>
+            {actionLoading && <span className="text-xs text-gray-400 ml-2">Sending...</span>}
+            {actionSuccess && <span className="text-xs text-green-600 ml-2">{actionSuccess}</span>}
+          </>)}
         </div>
       )}
 
