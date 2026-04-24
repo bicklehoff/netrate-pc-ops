@@ -3,12 +3,17 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 
-export default function MloLoginPage() {
+function MloLoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const rawCallback = searchParams.get('callbackUrl') || '';
+  const callbackUrl = rawCallback.startsWith('/') ? rawCallback : '/portal/mlo';
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -32,7 +37,7 @@ export default function MloLoginPage() {
         return;
       }
 
-      router.push('/portal/mlo');
+      router.push(callbackUrl);
     } catch {
       setError('Something went wrong. Please try again.');
     } finally {
@@ -110,5 +115,13 @@ export default function MloLoginPage() {
         </button>
       </form>
     </div>
+  );
+}
+
+export default function MloLoginPage() {
+  return (
+    <Suspense>
+      <MloLoginForm />
+    </Suspense>
   );
 }

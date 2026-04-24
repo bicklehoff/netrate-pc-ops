@@ -43,8 +43,12 @@ export default function SmsThread({ contactId, contactPhone, messages: initialMe
         const res = await fetch(`/api/dialer/contacts/${contactId}`);
         if (!res.ok) return;
         const data = await res.json();
-        if (active && data.contact?.smsMessages) {
-          setMessages(data.contact.smsMessages.reverse());
+        if (active && data.contact?.sms_messages) {
+          setMessages(
+            data.contact.sms_messages
+              .map((m) => ({ ...m, sentAt: m.sent_at }))
+              .reverse()
+          );
         }
       } catch {} // eslint-disable-line no-empty
     }
