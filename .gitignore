@@ -56,3 +56,4 @@ src/data/fhfa-loan-limits-raw.csv
 
 .vercel
 .claude/scheduled_tasks.lock
+.claude/session-end-dirty.log
