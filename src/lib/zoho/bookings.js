@@ -6,8 +6,12 @@
 // multipart/form-data for appointment creation per Zoho's API requirements.
 //
 // Env vars required:
-//   ZOHO_CLIENT_ID, ZOHO_CLIENT_SECRET — shared across all Zoho integrations
-//   ZOHO_REFRESH_TOKEN — Mail+Bookings-scoped refresh token (re-consented Phase 0)
+//   ZOHO_CLIENT_ID, ZOHO_CLIENT_SECRET — shared Self Client credentials
+//   ZOHO_BOOKINGS_REFRESH_TOKEN — Bookings-scoped refresh token (least-privilege:
+//     a separate token per Zoho integration, matching the existing pattern for
+//     WorkDrive/Sign. Avoids blast radius on token leak + avoids the re-consent
+//     fragility that broke us 2026-04-26 when Phase 0 added CREATE to the Mail
+//     token but dropped READ).
 //   ZOHO_BOOKINGS_WORKSPACE_ID, ZOHO_BOOKINGS_SERVICE_ID, ZOHO_BOOKINGS_STAFF_ID
 //   ZOHO_BOOKINGS_TIMEZONE — e.g. "America/Denver"
 //
@@ -21,7 +25,7 @@
 import { getZohoToken, ZohoOAuthError } from './oauth';
 
 const BOOKINGS_BASE = 'https://www.zohoapis.com/bookings/v1/json';
-const REFRESH_TOKEN_ENV = 'ZOHO_REFRESH_TOKEN';
+const REFRESH_TOKEN_ENV = 'ZOHO_BOOKINGS_REFRESH_TOKEN';
 
 // ─── Errors ───────────────────────────────────────────────────
 
