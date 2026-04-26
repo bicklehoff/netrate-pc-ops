@@ -54,7 +54,7 @@ export default function BookPage() {
     setError(null);
 
     const zohoDate = formatZohoDate(selectedDate);
-    fetch(`/api/bookings/slots?date=${zohoDate}`)
+    fetch(`/api/book/slots?date=${zohoDate}`)
       .then(r => r.json())
       .then(data => {
         if (data.error) throw new Error(data.error);
@@ -80,7 +80,7 @@ export default function BookPage() {
     setError(null);
 
     try {
-      const res = await fetch('/api/bookings/book', {
+      const res = await fetch('/api/book/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
