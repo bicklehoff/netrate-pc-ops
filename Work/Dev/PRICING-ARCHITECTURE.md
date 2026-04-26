@@ -4,7 +4,10 @@ author: pc-dev
 doc: Pricing Architecture — target state + migration plan
 source_commit: d6cfb4d5715e3a8ee1c3a6de01a087263c0338d7
 companion_doc: Work/Dev/audits/D9b-PRICING-AUDIT.md (current-state inventory)
-status: spec — pending David's review of Open Questions (§8)
+status: spec — pending David's review of Open Questions (§8); §10 decisions locked 2026-04-26
+amendments:
+  - 2026-04-26 pc-dev — added §10 Multi-Lender DSCR Integration (D9c.x phase). Surfaces the architecture decisions required before resuming ResiCentral parser rebuild (lost from a pruned worktree on this date).
+  - 2026-04-26 pc-dev — §10 review pass. AD-4 reshaped (borrower-facing simplification). Added AD-9 (borrower vs MLO surface split — two URLs, two products, one pricer). Open questions §10.4 resolved with David. MLO DSCR calc deferred to a new D9d phase.
 ---
 
 # NetRate Mortgage — Pricing Architecture
@@ -531,3 +534,206 @@ Any future edit to this doc must either:
 2. Mark the claim with ⚠️ in-line and add a row to §9.⚠️.
 
 Claims removed or revised belong in §9.❌ so the audit trail is complete.
+
+---
+
+## 10. Multi-Lender DSCR Integration
+
+> *Authored 2026-04-26 by pc-dev. Status: spec — pending David's review (see §10.4). Implementation begins at D9c.1 only after David signs off.*
+
+### 10.1 Why this section exists
+
+Today's DSCR pricer hardcodes a single lender — `const LENDER_CODE = 'everstream'` at [`price-dscr.js:21`](src/lib/pricing-nonqm/price-dscr.js:21) — even though the data model already keys per-lender (`nonqm_rate_sheets.lender_code`). The live calc + API + LLPAs work for Everstream's three Elite tiers (verified end-to-end 2026-04-26: GET `/api/pricing/dscr` returned `lender_code=everstream, product_count=3255, llpa_count=12582`; POST returned 22 priced rates for a CO investor scenario).
+
+Adding ResiCentral as a second DSCR lender ([D6 pivot, PR #199](https://github.com/bicklehoff/netrate-pc-ops/pull/199)) is more than parsing a sheet — it's an integration architecture decision. Parsed rows must reach the calc, which means loader, pricer, API, and UI all need to be lender-aware.
+
+The original "rebuild ResiCentral parser" plan (5–7 sessions) under-scoped this. This section locks the integration shape **before** parser work resumes, so the parser writes into a known-good integration target instead of an empty hole.
+
+### 10.2 Architecture decisions
+
+#### AD-1 — Lender-aware loader: multi-result single call
+
+`loadActiveDscrSheets(sql)` returns an array `[{ sheet, products, rules }]`, one entry per lender with an active DSCR sheet. Replaces the singleton at [`price-dscr.js:30-60`](src/lib/pricing-nonqm/price-dscr.js:30).
+
+```js
+export async function loadActiveDscrSheets(sql) {
+  const sheets = await sql`
+    SELECT id, lender_code, effective_at, product_count, llpa_count
+      FROM nonqm_rate_sheets
+     WHERE is_active = TRUE AND has_dscr = TRUE
+  `;
+  return Promise.all(sheets.map(async (sheet) => ({
+    sheet,
+    products: await loadProducts(sql, sheet.id),
+    rules:    await loadRules(sql, sheet.id),
+  })));
+}
+```
+
+**Why:** clean API, parallelizes per-lender DB fetches. Existing `loadActiveDscrSheet(sql, lender_code)` kept as deprecated alias for any direct callers (tests, scripts) until they're migrated.
+
+**Pre-req:** add `nonqm_rate_sheets.has_dscr BOOLEAN` (cheap filter — avoids loading non-DSCR sheets into the DSCR pricer when Core Non-QM is eventually ingested as its own sheet).
+
+#### AD-2 — Unified pricing strategy: single ladder, lender-labeled rows
+
+`priceDscrScenario({ sheetsArray }, scenario)` calls the existing `priceOne` per lender, then merges all priced rows into one ladder sorted by `final_price` desc (best-for-borrower first). Each row already carries `lender_code` from `buildRow` at [`price-dscr.js:344-363`](src/lib/pricing-nonqm/price-dscr.js:344) — the merge is mostly bookkeeping.
+
+**Rejected alternatives:**
+- *Per-lender ladders side-by-side:* doubles UI complexity; borrower has to compare manually.
+- *Best-lender-wins per rate band:* loses information (Elite 1 at 6.5% from Everstream is not interchangeable with whatever ResiCentral's analogous tier is at 6.5%).
+
+**Why unified:** matches the borrower mental model ("show me my best price"). LO drill-down is post-hoc via the new `lender_filter` body field (see AD-6).
+
+#### AD-3 — Tier scope: lender-scoped, no global tier model
+
+Tier names (`'elite_1'`, `'core'`, etc.) are intrinsically lender-specific. Do not introduce a translation table or unified tier abstraction. Each priced row carries `{ lender_code, tier }` together; UI labels accordingly ("Everstream Elite 1", "ResiCentral A", or whatever ResiCentral calls them).
+
+**Why:** tiers are lender-internal pricing-tier concepts. Forcing a global mapping creates lossy abstractions and brittle joins, and would couple to vendor naming.
+
+#### AD-4 — Borrower-facing calc UI: auto-pick + slider, drop loan-officer controls
+
+[`/tools/dscr-calculator/page.js`](src/app/tools/dscr-calculator/page.js) is currently structured as a loan-officer pricer on a public URL — it exposes tier selector, ARM-period selector, full 22-row ladder, raw adjustments, and pricing math. The borrower can't decide between Elite 1 and Elite 2 because they don't know what those mean. Reshape the public calc into a borrower-guided product. The full-ladder MLO experience moves to its own URL (see AD-9).
+
+**Inputs kept** (all things a borrower understands):
+- Purchase price, down payment slider, FICO
+- Units / property type, state, purpose
+- Monthly rent, taxes, insurance, HOA
+
+**Inputs dropped** (loan-officer concepts the calc auto-picks):
+- Tier selector → auto-pick the best tier the scenario qualifies for (typically Elite 1; falls back through tiers as FICO/CLTV constrain)
+- ARM Fixed Period selector → default 7/6 (most-common DSCR program); revisit when borrower research suggests otherwise
+- Lock days → default 30
+- Prepay structure → default `fixed_5`
+- Features → default none
+- Lender → pricer returns best across all eligible lenders; surface lender in fine print on the result card, not as a control
+
+**Output reshape:**
+- **Headline result:** one rate at par (closest to `final_price = 100`) with monthly payment, DSCR result, qualify/not-qualify badge.
+- **Single trade-point control:** **a slider over the eligible ladder.** Slider position maps to a row in the priced ladder (sorted by net price). One end = lowest rate (most points paid), other end = highest rate (most rebate to closing). Center detent = par. Live updates rate / payment / DSCR / net cost as borrower drags. This is the only mechanism the borrower has to walk the ladder.
+- **Auto-pick fallback surfacing:** when the scenario forces the pricer off Elite 1 (e.g., FICO 660 falls into a different tier band), surface the chosen tier explicitly on the result card: *"Your scenario qualifies for {Lender} {Tier} pricing"*. Don't quietly downgrade — surface so the borrower understands why their rate looks like it does.
+- **Drop:** the 22-row table, the "Pricing Math" card with raw LLPAs, the "Price Adjustments Applied" grid, the tier badge in the header. These are MLO-grade detail.
+- **Keep simplified:** payment breakdown chart, DSCR gauge, eligibility checks (rephrased in plain English), scenario chips on the right rail.
+- **CTA:** "Talk to an MLO to lock this in" — drives to lead form.
+
+**Empty-state behavior:** if no lender returns a priced row for the scenario, show a clear "Doesn't qualify with our DSCR programs today" message with the specific reason (LTV too high, FICO too low, state not covered) rather than an empty table.
+
+#### AD-5 — Data model: minimal, use what exists
+
+`nonqm_rate_sheets.lender_code` already supports multi-lender. Two minor additions:
+
+1. `nonqm_rate_sheets.has_dscr BOOLEAN` (per AD-1) — filter avoids loading non-DSCR sheets into the DSCR pricer.
+2. Static lender lookup in code: `src/lib/pricing-nonqm/lender-display.js` mapping `{ everstream: 'EverStream', resicentral: 'ResiCentral' }`. Source of truth for UI labels. Keeps display strings out of the DB.
+
+#### AD-6 — API backwards compat: multi-lender by default, optional filter
+
+`POST /api/pricing/dscr` returns multi-lender results by default. `meta.lender_code` becomes `meta.lenders` (array of `{ lender_code, effective_at }`). New optional body field `lender_filter: string[]` mirrors the existing `tier_filter` at [`route.js:124-128`](src/app/api/pricing/dscr/route.js:124).
+
+The `meta` shape change is technically breaking, but the only documented caller is [`page.js:137`](src/app/tools/dscr-calculator/page.js:137), which gets updated in the same PR (D9c.4). No external API consumers exist (verified — no references to `/api/pricing/dscr` in `Work/Dev/Integrations/` directory tree).
+
+#### AD-7 — Lender eligibility gate: early state filter
+
+Each lender lends in a different state list. The pricer must skip a lender entirely when `scenario.state` isn't covered, before doing any LLPA work. Implementation: per-lender `licensed_states` static const in `lender-display.js` (CA/CO/OR/TX for both today; verify per ResiCentral inventory before D9c.6). Filter at the loader — skip the entire `loadProducts/loadRules` round trip for an ineligible lender.
+
+#### AD-8 — Cache strategy: per-lender, shared TTL
+
+The existing `getSheet()` at [`route.js:54-65`](src/app/api/pricing/dscr/route.js:54) caches one sheet for 60s. Extend to a `Map<lender_code, { data, at }>` with the same TTL. Invalidation remains time-based — rate sheets change at most daily; staleness ≤60s is acceptable in exchange for avoiding a DB round trip per keystroke in the calc.
+
+```js
+const sheetCache = new Map();
+const SHEET_TTL_MS = 60_000;
+```
+
+#### AD-9 — Surface split: borrower vs MLO, two URLs, two products, one pricer
+
+The borrower-facing calc and the MLO-facing pricer have fundamentally different goals. Same data source (the unified pricer ladder), different presentations.
+
+| Surface | URL | Audience | UX |
+|---|---|---|---|
+| Borrower DSCR calc | `/tools/dscr-calculator` | Public | Auto-picked answer + slider over ladder. Inputs limited to things a borrower understands. (Per AD-4.) |
+| MLO DSCR pricer | `/portal/mlo/dscr` | Auth-gated (NextAuth, MLO role) | Full ladder visible, lender comparison side-by-side, all selectors (tier / ARM period / lock / prepay / features), raw adjustments + pricing math, manual product selection. (Defers detail patterns currently on `/tools/dscr-calculator`.) |
+
+**Why two URLs (not one role-aware page):** auth detection on a public route is coupling that doesn't pay back. A logged-in MLO browsing the public site should still see the public product. Cleaner: separate concerns at the URL. This also matches the existing portal pattern (`/portal/mlo/*` for MLO tools).
+
+**Sequencing:** D9c.5 simplifies the existing public calc per AD-4 **first**. The detail-rich MLO calc gets built later as D9d.1 (new phase). MLOs lose in-house detail tooling during the gap; this is acceptable per David — LoanSifter and other vendor tools cover the MLO use case today, and `/portal/mlo/dscr` is a future build, not a regression.
+
+**Pricer changes per AD-1 through AD-8 are surface-agnostic.** Both surfaces consume the same `/api/pricing/dscr` POST and present the same merged ladder differently. No fork of the pricer.
+
+### 10.3 Phased migration
+
+Numbered against D9c.x (D9c = "DSCR multi-lender" — continuation of UAD AD-10/11/12 amendments per the briefing). Each PR shippable alone, parity-tested vs Everstream-only baseline.
+
+| # | PR | Scope | Risk | Pre-req |
+|---|---|---|---|---|
+| **D9c.1** | **`has_dscr` column + backfill** — migration adds `nonqm_rate_sheets.has_dscr BOOLEAN`, backfills TRUE for any sheet with at least one DSCR product, default TRUE for new inserts. | Low | — |
+| **D9c.2** | **`loadActiveDscrSheets` + display lookup** — new multi-lender loader, deprecated singleton kept. New `lender-display.js` constant + per-lender `licensed_states`. Pricer not yet using multi-result. | Low | D9c.1 |
+| **D9c.3** | **Pricer accepts sheetsArray** — `priceDscrScenario` switches to multi-sheet input, merges results. Single-Everstream behavior preserved (one sheet in the array). Backwards compat verified via parity test against today's API output. | Medium | D9c.2 |
+| **D9c.4** | **API multi-lender by default + `lender_filter`** — `/api/pricing/dscr` calls `loadActiveDscrSheets`, returns merged ladder. `meta.lender_code` → `meta.lenders[]`. Calc page updated to consume new shape in same PR. | Medium | D9c.3 |
+| **D9c.5** | **Borrower calc UX simplification (per AD-4)** — auto-pick best tier + lender, replace 22-row table with a single-row headline + slider over the ladder, drop tier/ARM/lock/prepay selectors, surface auto-pick fallback (e.g. "qualifies for ResiCentral B-tier pricing"), drop Pricing Math + Adjustments Applied detail cards. Empty-state messaging for no-quote scenarios. | Medium | D9c.4 |
+| **D9c.6** | **ResiCentral parser rebuild** — Tier 3 work per the original plan. Inventory-first (`Work/Dev/RESICENTRAL-LLPA-INVENTORY-{date}.md`), shared utilities, parser, refactor `everstream-llpas.js` onto shared utilities, parity script. Multi sub-PRs. | High | D9c.5 |
+| **D9c.7** | **Ingest ResiCentral + production validation** — first run of new parser against a real sheet, verify rows land, calc shows ResiCentral products live, 50+ scenario parity check vs hand-calc. | Medium | D9c.6 |
+
+**Why this order:** D9c.1–D9c.5 ship a multi-lender-ready pipeline carrying ONLY Everstream — no functional change to users beyond the borrower UX simplification at D9c.5. D9c.6–D9c.7 add the second lender into a known-good integration target. Decouples architecture risk from parser risk.
+
+**D9d phase (deferred — not required for D9c success):**
+
+| # | PR | Scope | Risk | Pre-req |
+|---|---|---|---|---|
+| **D9d.1** | **MLO DSCR calc at `/portal/mlo/dscr`** — full-ladder pricer for loan officers per AD-9. Auth-gated via NextAuth MLO role. Surfaces all tier/ARM/lock/prepay/feature selectors, side-by-side lender comparison, raw LLPA adjustments, pricing math card, manual product selection. Reuses `/api/pricing/dscr` (no `lender_filter` / `tier_filter` defaults) and the existing pricer output. | Medium | D9c.7 |
+
+D9d.1 is intentionally not blocking D9c. MLOs lose in-house detail tooling during the D9c.5 → D9d.1 gap; LoanSifter and other vendor tools cover the use case in the interim.
+
+### 10.4 Resolved decisions (locked 2026-04-26 with David)
+
+The following were open questions during initial drafting; all resolved in the same review pass that produced AD-9.
+
+1. **Lender display order when prices tie:** **freshest sheet wins** (effective_at desc). Tie-break on stale-sheet age — if a lender's sheet is older, its rows render below the fresher lender at the same price.
+
+2. **Sheet age cap:** **filter out lenders whose `effective_at` is more than 7 days old.** Surface a `stale_lenders: [{ lender_code, effective_at, age_days }]` array in `meta` for UI to mention. Forces ingest health — under this rule today's 11-day-old Everstream sheet would be filtered (which is the right outcome). Implication: D9c.4 must coordinate with the Everstream ingest cron health before shipping, or the calc empties.
+
+3. **`tier_filter` semantics with multi-lender:** **silently skip lenders with no matching tier.** Aggregate across the rest. (Pre-D9c.5 only — the borrower calc no longer sends `tier_filter` after AD-4.)
+
+4. **Cross-lender comp:** **lender-agnostic, no change.** Broker comp at [`page.js:6-8`](src/app/tools/dscr-calculator/page.js:6) is NetRate's revenue, applied client-side after the API returns lender prices. Multi-lender doesn't affect this.
+
+5. **MLO calc sequencing:** **borrower simplification ships first (D9c.5), MLO calc deferred to D9d.1.** MLOs lose in-house detail tooling during the gap; LoanSifter covers the MLO use case in the interim.
+
+6. **Borrower trade-points control UX:** **slider over the full eligible ladder.** Slider position maps to a specific row in the priced ladder; live updates rate / payment / DSCR / net cost on drag. Center detent at par.
+
+7. **Auto-pick tier fallback surfacing:** **explicit on the result card.** When the scenario forces a tier downgrade (e.g., FICO 660 falls out of Elite 1 band), surface as *"Your scenario qualifies for {Lender} {Tier} pricing"*. Don't quietly downgrade.
+
+### 10.5 Out of scope for §10
+
+- Forward (conv/FHA/VA) multi-lender — already handled by `priceScenario()` iterating over `rate_lenders`. §10 is DSCR-only.
+- HECM multi-lender — only one HECM lender today; revisit when a second one signs.
+- Core Non-QM tier ingestion — orthogonal. The current Core-base-price-only behavior with `core_llpas_missing` warning at [`price-dscr.js:191-200`](src/lib/pricing-nonqm/price-dscr.js:191) is preserved through this work.
+- ResiCentral-specific parser internals — owned by D9c.6 sub-PRs, follows the original `RESICENTRAL-LLPA-INVENTORY` recipe.
+- MLO DSCR calc UI — referenced by AD-9 as a destination for the detail-rich UX dropped from `/tools/dscr-calculator`, but the actual build is D9d.1, **not** part of D9c.
+
+### 10.6 Risks
+
+1. **Performance cliff at N=5+ lenders.** Today: ~12K LLPAs Everstream, debounced 300ms keystroke at [`page.js:130`](src/app/tools/dscr-calculator/page.js:130). With 5 lenders: ~60K LLPAs in memory per request, still tractable (in-memory filter, no DB join). Mitigation: monitor `priceDscrScenario` p95 latency post-D9c.4.
+
+2. **Sheet effective-date drift across lenders.** Resolved by AD-7 + open question #2 (sheet age cap).
+
+3. **Parser format brittleness compounds.** Adding a second parser doubles the surface area exposed to vendor format changes. Mitigation: shared utilities (D9c.6 sub-PRs) reduce duplication. Schema-validate parser output (existing §8 question #8) becomes more important.
+
+4. **Calc UX with five+ tiers visible per lender.** If both lenders return ~25 priced rows each, the table grows. Mitigation: existing `displayRows.filter(r => Math.abs(r.netPrice - 100) < 3.0)` at [`page.js:206`](src/app/tools/dscr-calculator/page.js:206) already trims to ~20 rows; verify that bound holds with two lenders' bands overlapping (re-check post-D9c.7 ingest).
+
+### 10.7 Verification log for §10 claims
+
+| Claim | Evidence |
+|---|---|
+| `LENDER_CODE = 'everstream'` hardcoded | [`price-dscr.js:21`](src/lib/pricing-nonqm/price-dscr.js:21) — read 2026-04-26 |
+| `loadActiveDscrSheet` filters by single `lender_code` | [`price-dscr.js:30-39`](src/lib/pricing-nonqm/price-dscr.js:30) — read 2026-04-26 |
+| `nonqm_rate_sheets.lender_code` already exists | [`price-dscr.js:32`](src/lib/pricing-nonqm/price-dscr.js:32) — column referenced in production query |
+| API caches one sheet via `getSheet()` | [`route.js:54-65`](src/app/api/pricing/dscr/route.js:54) — read 2026-04-26 |
+| Calc has `tier` state + selector | [`page.js:106,352`](src/app/tools/dscr-calculator/page.js:106) — read 2026-04-26 |
+| Calc passes `tier_filter` on API call | [`page.js:161`](src/app/tools/dscr-calculator/page.js:161) — read 2026-04-26 |
+| Pricer sorts by `final_price` desc | [`price-dscr.js:155`](src/lib/pricing-nonqm/price-dscr.js:155) — read 2026-04-26 |
+| Live API returns 3255 products + 12582 LLPAs, effective 2026-04-15 | `curl https://www.netratemortgage.com/api/pricing/dscr` 2026-04-26 |
+| Live POST priced 22 rates for sample CO investor scenario | `curl -X POST .../api/pricing/dscr` 2026-04-26 |
+| Calc page renders HTTP 200 | `curl -I https://www.netratemortgage.com/tools/dscr-calculator` 2026-04-26 |
+| Core tier returns base-price-only with warning | [`price-dscr.js:191-200`](src/lib/pricing-nonqm/price-dscr.js:191) — read 2026-04-26 |
+
+⚠️ *Inferred (not directly verified):*
+- "No external API consumers of `/api/pricing/dscr`" — based on absence of references in `Work/Dev/Integrations/`. A grep across all repos in the device network was not done. If Claw or Mac scripts call the endpoint, AD-6's "no external consumer" claim breaks.
+- "ResiCentral has CA/CO/OR/TX coverage" — pre-D9c.6 inventory work will confirm. Fallback to Everstream's coverage list if not stated.
