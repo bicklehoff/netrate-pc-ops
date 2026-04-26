@@ -6,48 +6,15 @@
 //   ZOHO_CLIENT_ID, ZOHO_CLIENT_SECRET — shared across all Zoho integrations
 //   ZOHO_SIGN_REFRESH_TOKEN — Sign-scoped refresh token (scope: ZohoSign.documents.ALL)
 
-const ZOHO_ACCOUNTS_URL = 'https://accounts.zoho.com/oauth/v2/token';
+import { getZohoToken } from './zoho/oauth';
+
 const SIGN_BASE = 'https://sign.zoho.com/api/v1';
 
 // ─── Token Management ─────────────────────────────────────────
+// Delegates to shared lib/zoho/oauth — see Work/Dev/ZOHO-OAUTH-SUBSTRATE-DESIGN.md.
 
-let cachedToken = null;
-let tokenExpiry = 0;
-
-async function getAccessToken() {
-  if (cachedToken && Date.now() < tokenExpiry) {
-    return cachedToken;
-  }
-
-  const refreshToken = process.env.ZOHO_SIGN_REFRESH_TOKEN;
-  if (!refreshToken) {
-    throw new Error('ZOHO_SIGN_REFRESH_TOKEN not configured');
-  }
-
-  const params = new URLSearchParams({
-    grant_type: 'refresh_token',
-    client_id: process.env.ZOHO_CLIENT_ID,
-    client_secret: process.env.ZOHO_CLIENT_SECRET,
-    refresh_token: refreshToken,
-  });
-
-  const res = await fetch(ZOHO_ACCOUNTS_URL, {
-    method: 'POST',
-    body: params,
-  });
-
-  if (!res.ok) {
-    throw new Error(`Zoho Sign token refresh failed: ${res.status}`);
-  }
-
-  const data = await res.json();
-  if (data.error) {
-    throw new Error(`Zoho Sign token error: ${data.error}`);
-  }
-
-  cachedToken = data.access_token;
-  tokenExpiry = Date.now() + 50 * 60 * 1000; // Cache for 50 min (expires in 60)
-  return cachedToken;
+function getAccessToken() {
+  return getZohoToken({ refreshTokenEnv: 'ZOHO_SIGN_REFRESH_TOKEN' });
 }
 
 // ─── API Methods ──────────────────────────────────────────────

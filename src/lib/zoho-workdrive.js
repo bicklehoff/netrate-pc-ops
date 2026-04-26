@@ -7,7 +7,8 @@
 //   ZOHO_WORKDRIVE_REFRESH_TOKEN — WorkDrive-scoped refresh token
 //   ZOHO_WORKDRIVE_TEAM_FOLDER_ID — ID of the "NetRate Loans" team folder
 
-const ZOHO_ACCOUNTS_URL = 'https://accounts.zoho.com/oauth/v2/token';
+import { getZohoToken } from './zoho/oauth';
+
 const WORKDRIVE_BASE = 'https://www.zohoapis.com/workdrive/api/v1';
 
 // Team folder where all loan folders are created
@@ -22,49 +23,10 @@ const LOAN_SUBFOLDERS = [
 ];
 
 // ─── Token Management ─────────────────────────────────────────
+// Delegates to shared lib/zoho/oauth — see Work/Dev/ZOHO-OAUTH-SUBSTRATE-DESIGN.md.
 
-// In-memory token cache (serverless = short-lived, but avoids redundant refreshes within a request)
-let cachedToken = null;
-let tokenExpiry = 0;
-
-/**
- * Get a fresh Zoho access token for WorkDrive API.
- * Caches token for ~50 minutes (Zoho tokens last 60 min).
- */
-async function getAccessToken() {
-  if (cachedToken && Date.now() < tokenExpiry) {
-    return cachedToken;
-  }
-
-  const refreshToken = process.env.ZOHO_WORKDRIVE_REFRESH_TOKEN;
-  if (!refreshToken) {
-    throw new Error('ZOHO_WORKDRIVE_REFRESH_TOKEN not configured');
-  }
-
-  const res = await fetch(ZOHO_ACCOUNTS_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      refresh_token: refreshToken,
-      client_id: process.env.ZOHO_CLIENT_ID,
-      client_secret: process.env.ZOHO_CLIENT_SECRET,
-      grant_type: 'refresh_token',
-    }),
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`WorkDrive token refresh failed: ${res.status} ${text}`);
-  }
-
-  const data = await res.json();
-  if (!data.access_token) {
-    throw new Error('No access token in WorkDrive token response');
-  }
-
-  cachedToken = data.access_token;
-  tokenExpiry = Date.now() + 50 * 60 * 1000; // Cache for 50 min
-  return cachedToken;
+function getAccessToken() {
+  return getZohoToken({ refreshTokenEnv: 'ZOHO_WORKDRIVE_REFRESH_TOKEN' });
 }
 
 // ─── API Helpers ──────────────────────────────────────────────
