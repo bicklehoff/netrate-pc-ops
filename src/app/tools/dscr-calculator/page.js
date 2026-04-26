@@ -217,8 +217,12 @@ export default function DSCRCalculator() {
   const dpMax = Math.round(purchasePrice * 0.50 / 1000) * 1000;
   const dpPct = dpMax > dpMin ? ((downPayment - dpMin) / (dpMax - dpMin) * 100).toFixed(1) : 0;
 
-  const sheetDate = data?.meta?.effective_at
-    ? new Date(data.meta.effective_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+  // meta.lenders[] arrived in D9c.4 (replaces meta.effective_at). Today there
+  // is one lender (Everstream); use its effective date for the "as of …" label.
+  // D9c.5 reshapes this whole header per AD-4.
+  const firstLenderEffectiveAt = data?.meta?.lenders?.[0]?.effective_at;
+  const sheetDate = firstLenderEffectiveAt
+    ? new Date(firstLenderEffectiveAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
     : '—';
 
   // Guidelines

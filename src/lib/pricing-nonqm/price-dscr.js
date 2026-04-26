@@ -210,16 +210,18 @@ export function priceDscrScenario(sheetsArray, scenario) {
   // sheet is AD-1 §10.4 future work tied to D9c.4.
   priced.sort((a, b) => b.final_price - a.final_price);
 
-  // Meta carries singleton-shape lender_code/effective_at for D9c.3 backwards
-  // compat. D9c.4 swaps to meta.lenders[]; until then we emit the first sheet's
-  // lender_code so the existing API + calc consumers keep working unchanged.
-  const firstSheet = sheetsArray[0]?.sheet;
+  // Meta exposes one entry per lender priced. Per AD-6, the singleton
+  // `lender_code` + `effective_at` fields were retired in D9c.4 in favor of
+  // this multi-lender `lenders[]` shape. Calc page + any other consumer
+  // reads `meta.lenders[0].effective_at` for the "as of {date}" UI label.
   return {
     priced,
     skipped,
     meta: {
-      lender_code: firstSheet?.lender_code ?? LENDER_CODE,
-      effective_at: firstSheet?.effective_at ?? null,
+      lenders: sheetsArray.map(({ sheet }) => ({
+        lender_code: sheet.lender_code,
+        effective_at: sheet.effective_at,
+      })),
       scenario,
     },
   };
