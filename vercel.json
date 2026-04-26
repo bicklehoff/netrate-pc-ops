@@ -24,5 +24,13 @@
       "path": "/api/cron/scenario-alerts",
       "schedule": "0 13 * * 1-5"
     }
+  ],
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "book.netratemortgage.com" }],
+      "destination": "https://www.netratemortgage.com/book",
+      "permanent": true
+    }
   ]
 }
