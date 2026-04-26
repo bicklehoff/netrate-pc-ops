@@ -118,7 +118,10 @@ export async function POST(request) {
     };
 
     const sheet = await getSheet();
-    const result = priceDscrScenario(sheet, scenario);
+    // Pricer takes Array<{sheet,products,rules}> as of D9c.3. The API still
+    // loads a single sheet via the deprecated singleton (D9c.4 swaps in
+    // loadActiveDscrSheets); wrap to satisfy the new signature.
+    const result = priceDscrScenario([sheet], scenario);
 
     // Optional tier filter (post-pricing — keeps pricer pure)
     if (Array.isArray(body.tier_filter) && body.tier_filter.length) {

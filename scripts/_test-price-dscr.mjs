@@ -39,7 +39,7 @@ console.log(`  rules: ${sheet.rules.length}`);
 
 console.log('\nScenario:', scenario);
 
-const { priced, skipped, meta } = priceDscrScenario(sheet, scenario);
+const { priced, skipped, meta } = priceDscrScenario([sheet], scenario);
 
 console.log(`\nPriced options: ${priced.length}`);
 console.log(`Skipped: ${skipped.length}`);
@@ -93,7 +93,7 @@ const armScenario = {
 
 console.log('\n─── ARM scenario ───');
 console.log(armScenario);
-const arm = priceDscrScenario(sheet, armScenario);
+const arm = priceDscrScenario([sheet], armScenario);
 console.log(`Priced: ${arm.priced.length}  Skipped: ${arm.skipped.length}`);
 for (const row of arm.priced.slice(0, 3)) {
   console.log(`  ${row.tier.padEnd(8)} ${row.note_rate}%  final ${row.final_price.toFixed(4)}`);
