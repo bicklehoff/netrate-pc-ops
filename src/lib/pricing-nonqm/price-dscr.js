@@ -7,8 +7,9 @@
  * adjustments, and price caps.
  *
  * Separation of concerns:
- *   loadActiveDscrSheet(sql, lender_code) → { sheet, products, rules }
- *   priceDscrScenario(sheet, scenario)    → { priced[], skipped, meta }
+ *   loadActiveDscrSheets(sql)                  → Array<{ sheet, products, rules }>
+ *   loadActiveDscrSheet(sql, lender_code)      → { sheet, products, rules } (deprecated)
+ *   priceDscrScenario(sheetsArray, scenario)   → { priced[], skipped, meta }
  *
  * The DB fetch is split from the pure pricing logic so the pricer can be unit
  * tested without a live database and the fetch cached by API routes.
@@ -101,12 +102,16 @@ export async function loadActiveDscrSheets(sql) {
 }
 
 /**
- * Price a scenario across all available DSCR tiers.
+ * Price a scenario across all available DSCR tiers, across every lender's
+ * active DSCR sheet. Iterates each entry in `sheetsArray`, accumulates
+ * priced + skipped rows, then sorts the priced ladder by `final_price`
+ * desc (best for borrower first) across all lenders. Each row carries
+ * its `lender_code` from `buildRow`, so the caller can label sources.
  *
- * @param {object} arg
- * @param {object[]} arg.products  rows from nonqm_rate_products (DSCR only)
- * @param {object[]} arg.rules     rows from nonqm_adjustment_rules
- * @param {object}   arg.sheet     rate sheet header
+ * Per Work/Dev/PRICING-ARCHITECTURE.md §10 AD-1 + AD-2.
+ *
+ * @param {Array<{ sheet, products, rules }>} sheetsArray  Output of
+ *   loadActiveDscrSheets(). Empty array is valid and yields zero priced rows.
  * @param {object}   scenario
  * @param {'fixed'|'arm'} scenario.product_type
  * @param {number}   scenario.term              e.g. 30
@@ -133,74 +138,88 @@ export async function loadActiveDscrSheets(sql) {
  *                                              Each priced row gets pi/pitia/dscr attached.
  * @returns {{ priced: object[], skipped: object[], meta: object }}
  */
-export function priceDscrScenario({ products, rules, sheet }, scenario) {
+export function priceDscrScenario(sheetsArray, scenario) {
   const priced = [];
   const skipped = [];
 
   const tiersToPrice = [...ELITE_TIERS, ...CORE_TIERS];
   const dscrInputs = scenario.dscr_inputs || null;
 
-  for (const tier of tiersToPrice) {
-    const isCore = CORE_TIERS.includes(tier);
+  for (const { sheet, products, rules } of sheetsArray) {
+    for (const tier of tiersToPrice) {
+      const isCore = CORE_TIERS.includes(tier);
 
-    // 1. Filter candidate products for this tier / product_type / term / lock / arm period
-    const candidates = products.filter(p =>
-      p.tier === tier &&
-      p.product_type === scenario.product_type &&
-      Number(p.term) === Number(scenario.term) &&
-      Number(p.lock_days) === Number(scenario.lock_days) &&
-      (scenario.product_type === 'fixed'
-        ? p.arm_fixed_period === null
-        : Number(p.arm_fixed_period) === Number(scenario.arm_fixed_period))
-    );
+      // 1. Filter candidate products for this tier / product_type / term / lock / arm period
+      const candidates = products.filter(p =>
+        p.tier === tier &&
+        p.product_type === scenario.product_type &&
+        Number(p.term) === Number(scenario.term) &&
+        Number(p.lock_days) === Number(scenario.lock_days) &&
+        (scenario.product_type === 'fixed'
+          ? p.arm_fixed_period === null
+          : Number(p.arm_fixed_period) === Number(scenario.arm_fixed_period))
+      );
 
-    if (!candidates.length) continue;
+      if (!candidates.length) continue;
 
-    // 2. Partition rules for this tier
-    const tierRules = rules.filter(r => r.tier === tier);
+      // 2. Partition rules for this tier
+      const tierRules = rules.filter(r => r.tier === tier);
 
-    // 3. Price each rate in the ladder
-    for (const product of candidates) {
-      // Compute DSCR per-rate if rent/escrow inputs were supplied. DSCR depends on
-      // rate (via P&I), so every rung of the ladder can land in a different ratio band.
-      let effectiveScenario = scenario;
-      let paymentAttr = null;
-      if (dscrInputs) {
-        const pi = calcMonthlyPI(dscrInputs.loan_amount, Number(product.note_rate), Number(scenario.term));
-        const pitia = pi + (dscrInputs.monthly_escrow || 0) + (dscrInputs.monthly_hoa || 0);
-        const dscr = pitia > 0 ? (dscrInputs.monthly_rent || 0) / pitia : 0;
-        const dscrRounded = Math.round(dscr * 100) / 100;
-        effectiveScenario = { ...scenario, dscr_ratio: dscrRounded };
-        paymentAttr = { pi, pitia, dscr: dscrRounded };
+      // 3. Price each rate in the ladder
+      for (const product of candidates) {
+        // Compute DSCR per-rate if rent/escrow inputs were supplied. DSCR depends on
+        // rate (via P&I), so every rung of the ladder can land in a different ratio band.
+        let effectiveScenario = scenario;
+        let paymentAttr = null;
+        if (dscrInputs) {
+          const pi = calcMonthlyPI(dscrInputs.loan_amount, Number(product.note_rate), Number(scenario.term));
+          const pitia = pi + (dscrInputs.monthly_escrow || 0) + (dscrInputs.monthly_hoa || 0);
+          const dscr = pitia > 0 ? (dscrInputs.monthly_rent || 0) / pitia : 0;
+          const dscrRounded = Math.round(dscr * 100) / 100;
+          effectiveScenario = { ...scenario, dscr_ratio: dscrRounded };
+          paymentAttr = { pi, pitia, dscr: dscrRounded };
+        }
+
+        const result = priceOne(product, tierRules, effectiveScenario, { isCore });
+        if (result.gated) {
+          skipped.push({
+            lender_code: sheet?.lender_code ?? LENDER_CODE,
+            tier, note_rate: Number(product.note_rate),
+            reason: result.gate_reason, raw_product_name: product.raw_product_name,
+            ...(paymentAttr && { dscr: paymentAttr.dscr, pitia: paymentAttr.pitia }),
+          });
+          continue;
+        }
+        if (paymentAttr) {
+          result.row.pi = Math.round(paymentAttr.pi * 100) / 100;
+          result.row.pitia = Math.round(paymentAttr.pitia * 100) / 100;
+          result.row.dscr = paymentAttr.dscr;
+        }
+        // The row already carries lender_code (set by buildRow from LENDER_CODE
+        // module constant). Override here with the actual sheet's lender_code so
+        // multi-lender output is correctly labeled.
+        result.row.lender_code = sheet?.lender_code ?? LENDER_CODE;
+        priced.push(result.row);
       }
-
-      const result = priceOne(product, tierRules, effectiveScenario, { isCore });
-      if (result.gated) {
-        skipped.push({
-          tier, note_rate: Number(product.note_rate),
-          reason: result.gate_reason, raw_product_name: product.raw_product_name,
-          ...(paymentAttr && { dscr: paymentAttr.dscr, pitia: paymentAttr.pitia }),
-        });
-        continue;
-      }
-      if (paymentAttr) {
-        result.row.pi = Math.round(paymentAttr.pi * 100) / 100;
-        result.row.pitia = Math.round(paymentAttr.pitia * 100) / 100;
-        result.row.dscr = paymentAttr.dscr;
-      }
-      priced.push(result.row);
     }
   }
 
-  // Sort by final_price desc (best price first — higher = more credit to borrower)
+  // Sort by final_price desc (best price first — higher = more credit to borrower).
+  // Cross-lender: ties resolve in input order (which today is DB row order from
+  // loadActiveDscrSheets — fine for the single-lender case). Tie-break on freshest
+  // sheet is AD-1 §10.4 future work tied to D9c.4.
   priced.sort((a, b) => b.final_price - a.final_price);
 
+  // Meta carries singleton-shape lender_code/effective_at for D9c.3 backwards
+  // compat. D9c.4 swaps to meta.lenders[]; until then we emit the first sheet's
+  // lender_code so the existing API + calc consumers keep working unchanged.
+  const firstSheet = sheetsArray[0]?.sheet;
   return {
     priced,
     skipped,
     meta: {
-      lender_code: sheet?.lender_code ?? LENDER_CODE,
-      effective_at: sheet?.effective_at ?? null,
+      lender_code: firstSheet?.lender_code ?? LENDER_CODE,
+      effective_at: firstSheet?.effective_at ?? null,
       scenario,
     },
   };
