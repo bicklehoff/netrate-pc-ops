@@ -24,8 +24,36 @@ const LENDER_CODE = 'everstream';
 const ELITE_TIERS = ['elite_1', 'elite_2', 'elite_5'];
 const CORE_TIERS  = ['core'];
 
+// ── Internal loaders (shared by single- and multi-lender entry points) ───
+
+async function loadDscrProducts(sql, sheetId) {
+  return sql`
+    SELECT id, loan_type, tier, product_type, term, arm_fixed_period,
+           arm_adj_period, lock_days, note_rate, final_base_price, raw_product_name
+      FROM nonqm_rate_products
+     WHERE rate_sheet_id = ${sheetId} AND loan_type = 'dscr'
+  `;
+}
+
+async function loadDscrRules(sql, sheetId) {
+  return sql`
+    SELECT tier, product_type, rule_type,
+           occupancy, loan_purpose, fico_min, fico_max, cltv_min, cltv_max,
+           property_type, loan_size_min, loan_size_max,
+           dscr_ratio_min, dscr_ratio_max, prepay_years, state, doc_type, feature,
+           llpa_points, price_cap, not_offered
+      FROM nonqm_adjustment_rules
+     WHERE rate_sheet_id = ${sheetId}
+  `;
+}
+
 /**
- * Load the currently-active DSCR rate sheet + all its products and rules.
+ * Load the currently-active DSCR rate sheet + all its products and rules
+ * for a single lender.
+ *
+ * @deprecated Use loadActiveDscrSheets() for multi-lender support
+ *   (Work/Dev/PRICING-ARCHITECTURE.md §10 AD-1). Kept while the API route,
+ *   scripts, and tests migrate to the multi-result shape.
  */
 export async function loadActiveDscrSheet(sql, lender_code = LENDER_CODE) {
   const sheets = await sql`
@@ -38,25 +66,38 @@ export async function loadActiveDscrSheet(sql, lender_code = LENDER_CODE) {
     throw new Error(`No active rate sheet for lender "${lender_code}"`);
   }
   const sheet = sheets[0];
-
-  const products = await sql`
-    SELECT id, loan_type, tier, product_type, term, arm_fixed_period,
-           arm_adj_period, lock_days, note_rate, final_base_price, raw_product_name
-      FROM nonqm_rate_products
-     WHERE rate_sheet_id = ${sheet.id} AND loan_type = 'dscr'
-  `;
-
-  const rules = await sql`
-    SELECT tier, product_type, rule_type,
-           occupancy, loan_purpose, fico_min, fico_max, cltv_min, cltv_max,
-           property_type, loan_size_min, loan_size_max,
-           dscr_ratio_min, dscr_ratio_max, prepay_years, state, doc_type, feature,
-           llpa_points, price_cap, not_offered
-      FROM nonqm_adjustment_rules
-     WHERE rate_sheet_id = ${sheet.id}
-  `;
-
+  const [products, rules] = await Promise.all([
+    loadDscrProducts(sql, sheet.id),
+    loadDscrRules(sql, sheet.id),
+  ]);
   return { sheet, products, rules };
+}
+
+/**
+ * Load all currently-active DSCR rate sheets across every lender, with
+ * their products and rules. Filters on nonqm_rate_sheets.has_dscr = TRUE
+ * (added in migration 050) so non-DSCR sheets (e.g. a future Core Non-QM-
+ * only sheet) are skipped without paying for product/rule fetches.
+ *
+ * Returns an array of `{ sheet, products, rules }`, one per active DSCR
+ * sheet. Today's distribution: 1 entry (Everstream). Future state: one
+ * entry per active lender (Everstream + ResiCentral when D9c.7 lands).
+ *
+ * Per Work/Dev/PRICING-ARCHITECTURE.md §10 AD-1.
+ */
+export async function loadActiveDscrSheets(sql) {
+  const sheets = await sql`
+    SELECT id, lender_code, effective_at, product_count, llpa_count
+      FROM nonqm_rate_sheets
+     WHERE is_active = TRUE AND has_dscr = TRUE
+  `;
+  return Promise.all(sheets.map(async (sheet) => {
+    const [products, rules] = await Promise.all([
+      loadDscrProducts(sql, sheet.id),
+      loadDscrRules(sql, sheet.id),
+    ]);
+    return { sheet, products, rules };
+  }));
 }
 
 /**
