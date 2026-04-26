@@ -1,9 +1,10 @@
 /**
  * DSCR Pricing API
  *
- * POST /api/pricing/dscr — Price a DSCR scenario against the active Everstream
- * rate sheet. Returns the full ladder across Elite tiers (and Core, base-only
- * until Core LLPAs are ingested — see price-dscr.js).
+ * POST /api/pricing/dscr — Price a DSCR scenario against every active DSCR
+ * rate sheet across all lenders. Returns one merged ladder sorted by
+ * `final_price` desc with each row labeled by `lender_code`. Today's
+ * production state: 1 lender (Everstream); D9c.7 adds ResiCentral.
  *
  * Body:
  * {
@@ -37,31 +38,37 @@
  *   prepay_structure:  "fixed_5",
  *   features:          ["io"],
  *   tier_filter:       ["elite_1", "elite_2"],  // subset of returned tiers
+ *   lender_filter:     ["everstream"],          // subset of returned lenders
  * }
  *
- * Returns: { priced, skipped, meta } — same shape as priceDscrScenario.
+ * Returns: { priced, skipped, meta } where meta = {
+ *   lenders: Array<{ lender_code, effective_at }>,
+ *   scenario,
+ * }
  */
 
 import { NextResponse } from 'next/server';
 import { neon } from '@neondatabase/serverless';
-import { loadActiveDscrSheet, priceDscrScenario } from '@/lib/pricing-nonqm/price-dscr';
+import { loadActiveDscrSheets, priceDscrScenario } from '@/lib/pricing-nonqm/price-dscr';
 import { apiError } from '@/lib/api/safe-error';
 import { rateLimit } from '@/lib/api/rate-limit';
 
-// Cache the sheet in memory per serverless instance. Rate sheets change at most
+// Cache the sheets in memory per serverless instance. Rate sheets change at most
 // daily; we tolerate a minute of staleness in exchange for avoiding a DB round
-// trip on every keystroke in the DSCR calculator.
-let sheetCache = null;
-let sheetCacheAt = 0;
+// trip on every keystroke in the DSCR calculator. Cached as an array — one
+// entry per active DSCR-bearing lender — to match the multi-lender loader's
+// return shape (D9c.4 / AD-1).
+let sheetsCache = null;
+let sheetsCacheAt = 0;
 const SHEET_TTL_MS = 60_000;
 
-async function getSheet() {
+async function getSheets() {
   const now = Date.now();
-  if (sheetCache && now - sheetCacheAt < SHEET_TTL_MS) return sheetCache;
+  if (sheetsCache && now - sheetsCacheAt < SHEET_TTL_MS) return sheetsCache;
   const sql = neon(process.env.PC_DATABASE_URL || process.env.DATABASE_URL);
-  sheetCache = await loadActiveDscrSheet(sql);
-  sheetCacheAt = now;
-  return sheetCache;
+  sheetsCache = await loadActiveDscrSheets(sql);
+  sheetsCacheAt = now;
+  return sheetsCache;
 }
 
 function validate(body) {
@@ -117,17 +124,23 @@ export async function POST(request) {
       features: Array.isArray(body.features) ? body.features : [],
     };
 
-    const sheet = await getSheet();
-    // Pricer takes Array<{sheet,products,rules}> as of D9c.3. The API still
-    // loads a single sheet via the deprecated singleton (D9c.4 swaps in
-    // loadActiveDscrSheets); wrap to satisfy the new signature.
-    const result = priceDscrScenario([sheet], scenario);
+    const sheets = await getSheets();
+    const result = priceDscrScenario(sheets, scenario);
 
     // Optional tier filter (post-pricing — keeps pricer pure)
     if (Array.isArray(body.tier_filter) && body.tier_filter.length) {
       const allowed = new Set(body.tier_filter);
       result.priced = result.priced.filter(r => allowed.has(r.tier));
       result.skipped = result.skipped.filter(r => allowed.has(r.tier));
+    }
+
+    // Optional lender filter — symmetric to tier_filter. Skipped rows include
+    // lender_code so callers can attribute "skipped because state not
+    // licensed" to the right lender (set in pricer's skipped push).
+    if (Array.isArray(body.lender_filter) && body.lender_filter.length) {
+      const allowed = new Set(body.lender_filter);
+      result.priced = result.priced.filter(r => allowed.has(r.lender_code));
+      result.skipped = result.skipped.filter(r => allowed.has(r.lender_code));
     }
 
     return NextResponse.json(result, {
@@ -142,14 +155,16 @@ export async function POST(request) {
 
 export async function GET() {
   try {
-    const { sheet } = await getSheet();
+    const sheets = await getSheets();
     return NextResponse.json({
       engine: 'NetRate DSCR Pricer',
       endpoint: 'POST /api/pricing/dscr',
-      lender_code: sheet.lender_code,
-      effective_at: sheet.effective_at,
-      product_count: sheet.product_count,
-      llpa_count: sheet.llpa_count,
+      lenders: sheets.map(({ sheet }) => ({
+        lender_code: sheet.lender_code,
+        effective_at: sheet.effective_at,
+        product_count: sheet.product_count,
+        llpa_count: sheet.llpa_count,
+      })),
     });
   } catch (err) {
     return apiError(err, 'DSCR sheet unavailable', 500, { scope: 'pricing-dscr-meta' });
