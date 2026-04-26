@@ -61,9 +61,7 @@ export default function ContactBar() {
 
           {/* Schedule */}
           <a
-            href="https://book.netratemortgage.com"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="/book"
             onClick={() => trackClick('click_schedule')}
             className="flex items-center gap-2 text-white hover:text-white/80 transition-colors px-2 py-0.5 font-medium"
           >

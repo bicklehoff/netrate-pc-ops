@@ -303,7 +303,7 @@ export default function HelocVsCashout() {
               Or{' '}
               <Link href="/contact" className="text-brand hover:underline">reach out directly</Link>
               {' '}to talk through your situation. You can also{' '}
-              <a href="https://book.netratemortgage.com" className="text-brand hover:underline" target="_blank" rel="noopener noreferrer">book a call</a>
+              <a href="/book" className="text-brand hover:underline">book a call</a>
               {' '}at a time that works for you.
             </p>
           </section>

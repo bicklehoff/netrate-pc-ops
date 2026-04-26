@@ -285,7 +285,7 @@ export default function AirbnbFinancingPage() {
             <p className="mt-4">
               Ready to talk specifics?{' '}
               <Link href="/contact" className="text-brand hover:underline">Contact us</Link> or{' '}
-              <a href="https://book.netratemortgage.com" className="text-brand hover:underline" target="_blank" rel="noopener noreferrer">book a call</a> to run the numbers on a property you&apos;re considering.
+              <a href="/book" className="text-brand hover:underline">book a call</a> to run the numbers on a property you&apos;re considering.
             </p>
           </section>
 
