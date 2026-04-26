@@ -214,7 +214,7 @@ export default function CryptoMortgagePage() {
             </p>
             <p className="mt-4">
               <Link href="/contact" className="text-brand hover:underline">Reach out to us</Link> or{' '}
-              <a href="https://book.netratemortgage.com" className="text-brand hover:underline" target="_blank" rel="noopener noreferrer">book a call</a> to walk through your options.
+              <a href="/book" className="text-brand hover:underline">book a call</a> to walk through your options.
             </p>
           </section>
 
