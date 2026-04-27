@@ -43,6 +43,10 @@ import { parseCell, isNa } from './cells.js';
  * @param {'cltv'|'ltv'} [opts.ltvKey='cltv'] - controls min/max key prefix on output
  * @param {Object} [opts.baseFields] - merged into every emitted rule
  *   (e.g. lender_code, tier, product_type, occupancy, loan_purpose)
+ * @param {(fico: Band, ltv: Band) => string} [opts.rawLabelFn] - callback
+ *   that builds a human raw_label for each cell. Useful when the label
+ *   needs section/payload context the utility doesn't have (Everstream
+ *   builds `${section} / FICO ${fico.label} / CLTV ... / ${payload}`).
  * @returns {Array<Object>} rules ready for nonqm_adjustment_rules
  */
 export function extractFicoLtvGrid(data, anchorRow, bands, opts = {}) {
@@ -51,6 +55,7 @@ export function extractFicoLtvGrid(data, anchorRow, bands, opts = {}) {
   const ruleType = opts.ruleType ?? 'fico_cltv_grid';
   const ltvKey = opts.ltvKey ?? 'cltv';
   const baseFields = opts.baseFields ?? {};
+  const rawLabelFn = opts.rawLabelFn;
   const minKey = `${ltvKey}_min`;
   const maxKey = `${ltvKey}_max`;
 
@@ -77,6 +82,7 @@ export function extractFicoLtvGrid(data, anchorRow, bands, opts = {}) {
         not_offered: isNa(rawVal),
       };
       if (!isNa(rawVal)) rule[payloadField] = num;
+      if (rawLabelFn) rule.raw_label = rawLabelFn(fico, ltv);
       rules.push(rule);
     }
   }

@@ -108,6 +108,26 @@ test('skips FICO bands beyond data.length silently', () => {
   assert.equal(rules[0].fico_min, 780);
 });
 
+test('honors rawLabelFn — receives fico and ltv bands per cell', () => {
+  const data = [[null, 0.000, 'NA', 0.250]];
+  const rules = extractFicoLtvGrid(
+    data, 0,
+    { fico: fico.slice(0, 1), ltv },
+    { rawLabelFn: (f, l) => `Sec / FICO ${f.label} / CLTV ${l.min}-${l.max}` }
+  );
+  assert.equal(rules.length, 3);
+  assert.equal(rules[0].raw_label, 'Sec / FICO 780+ / CLTV 0-50');
+  assert.equal(rules[1].raw_label, 'Sec / FICO 780+ / CLTV 50.01-60');
+  assert.equal(rules[1].not_offered, true);            // NA cell still gets a raw_label
+  assert.equal(rules[2].raw_label, 'Sec / FICO 780+ / CLTV 60.01-70');
+});
+
+test('omits raw_label when rawLabelFn is not supplied', () => {
+  const data = [[null, 0.000]];
+  const rules = extractFicoLtvGrid(data, 0, { fico: fico.slice(0, 1), ltv: ltv.slice(0, 1) });
+  assert.equal(Object.prototype.hasOwnProperty.call(rules[0], 'raw_label'), false);
+});
+
 test('respects anchorRow > 0', () => {
   const data = [
     ['header', null, null, null],
