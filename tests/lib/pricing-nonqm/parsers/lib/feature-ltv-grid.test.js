@@ -129,3 +129,110 @@ test('startRow / endRow define the inclusive-exclusive scan window', () => {
   assert.equal(rules.length, 2);
   assert.equal(rules[0].raw_label, 'Cash Out');
 });
+
+// ─── 2-col category + sub-label mode (Elite/Select layout, inventory §10.6) ───
+
+const elite_classify = (subLabel, ctx = {}) => {
+  const cat = ctx.category;
+  if (cat === 'DSCR Additional Adjust') {
+    if (/^>=?\s*1\.25$/.test(subLabel))
+      return { rule_type: 'dscr_ratio', dscr_ratio_min: 1.25 };
+    if (/^1\.00\s*-\s*1\.24$/.test(subLabel))
+      return { rule_type: 'dscr_ratio', dscr_ratio_min: 1.0, dscr_ratio_max: 1.24 };
+  }
+  if (cat === 'Housing History') {
+    if (subLabel === '1x30x12')
+      return { rule_type: 'feature', feature: 'mortgage_lates_1x30' };
+  }
+  if (cat === 'State') return null;       // out-of-license drop
+  return null;
+};
+
+test('categoryCol forward-fills the active category across blank rows', () => {
+  const data = [
+    [null, null, null, 'DSCR Additional Adjust', '>= 1.25',     0.005, 0.005],
+    [null, null, null, null,                     '1.00 - 1.24', 0,     0],
+    [null, null, null, 'Housing History',        '1x30x12',    -0.0025, -0.0025],
+  ];
+  const rules = extractFeatureLtvGrid(
+    data, 0, 3, ltv, elite_classify,
+    { categoryCol: 3, labelCol: 4, startCol: 5 }
+  );
+  assert.equal(rules.length, 6);
+  assert.equal(rules[0].rule_type, 'dscr_ratio');
+  assert.equal(rules[0].dscr_ratio_min, 1.25);
+  assert.equal(rules[2].rule_type, 'dscr_ratio');
+  assert.equal(rules[2].dscr_ratio_min, 1.0);
+  assert.equal(rules[2].dscr_ratio_max, 1.24);
+  assert.equal(rules[4].rule_type, 'feature');
+  assert.equal(rules[4].feature, 'mortgage_lates_1x30');
+});
+
+test('categoryCol mode uses combined "category / subLabel" raw_label', () => {
+  const data = [
+    [null, null, null, 'DSCR Additional Adjust', '>= 1.25', 0.005, 0.005],
+    [null, null, null, null,                     '1.00 - 1.24', 0, 0],
+  ];
+  const rules = extractFeatureLtvGrid(
+    data, 0, 2, ltv, elite_classify,
+    { categoryCol: 3, labelCol: 4, startCol: 5 }
+  );
+  assert.equal(rules[0].raw_label, 'DSCR Additional Adjust / >= 1.25');
+  assert.equal(rules[2].raw_label, 'DSCR Additional Adjust / 1.00 - 1.24');
+});
+
+test('categoryCol mode passes category context to classify', () => {
+  const seen = [];
+  const probe = (subLabel, ctx) => {
+    seen.push({ subLabel, category: ctx?.category });
+    return null;
+  };
+  const data = [
+    [null, null, null, 'CatA', 'sub1', 0.1, 0.2],
+    [null, null, null, null,   'sub2', 0.1, 0.2],
+    [null, null, null, 'CatB', 'sub3', 0.1, 0.2],
+  ];
+  extractFeatureLtvGrid(data, 0, 3, ltv, probe, { categoryCol: 3, labelCol: 4, startCol: 5 });
+  assert.deepEqual(seen, [
+    { subLabel: 'sub1', category: 'CatA' },
+    { subLabel: 'sub2', category: 'CatA' },     // forward-filled
+    { subLabel: 'sub3', category: 'CatB' },
+  ]);
+});
+
+test('categoryCol mode lets classifier drop rows by returning null (e.g. out-of-license State row)', () => {
+  const data = [
+    [null, null, null, 'State', 'CT, IL, NJ, NY', 0, 0],     // out-of-license — dropped
+    [null, null, null, 'Housing History', '1x30x12', -0.0025, -0.0025],
+  ];
+  const rules = extractFeatureLtvGrid(
+    data, 0, 2, ltv, elite_classify,
+    { categoryCol: 3, labelCol: 4, startCol: 5 }
+  );
+  assert.equal(rules.length, 2);
+  assert.equal(rules.every(r => r.rule_type === 'feature'), true);
+});
+
+test('categoryCol mode + valueScale composes correctly', () => {
+  const data = [
+    [null, null, null, 'DSCR Additional Adjust', '>= 1.25', 0.005, 0.0063],
+  ];
+  const rules = extractFeatureLtvGrid(
+    data, 0, 1, ltv, elite_classify,
+    { categoryCol: 3, labelCol: 4, startCol: 5, valueScale: 100 }
+  );
+  assert.equal(rules[0].llpa_points, 0.5);
+  assert.equal(rules[1].llpa_points, 0.63);
+});
+
+test('categoryCol omitted = backward-compatible single-col behavior', () => {
+  // Same fixture as the very first test should still pass when categoryCol not supplied.
+  const data = [
+    ['Cash Out / Debt Consolidation',           0.250, 0.375],
+    ['Some unrecognized label',                 0.100, 0.200],
+    ['DSCR >= 1.50',                           -0.125, -0.250],
+  ];
+  const rules = extractFeatureLtvGrid(data, 0, 3, ltv, classify);
+  assert.equal(rules.length, 4);
+  assert.equal(rules[0].raw_label, 'Cash Out / Debt Consolidation');     // no category prefix
+});

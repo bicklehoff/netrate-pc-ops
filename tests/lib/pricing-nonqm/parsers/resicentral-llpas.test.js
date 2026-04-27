@@ -174,16 +174,17 @@ test('smoke: parses Premier + InvPremier when both tabs present', () => {
   assert.ok(r.rules.length > 0);
 });
 
-test('Elite + Select tabs in workbook → recorded in skipped[] as deferred', () => {
+test('Select tab in workbook → recorded in skipped[] as deferred', () => {
+  // Elite is in scope as of D9c.6.5b (this PR). Select still deferred to
+  // D9c.6.5c (cols 2+3 layout). Premier+InvPremier tabs are required to
+  // satisfy the in-scope tier check; the Select tab is what we're testing.
   const buf = buildBook({
     'DSCR Premier LLPAs': buildPremierTab({
       ficoCells: makeFicoGrid({ value: 0.01 }),
     }),
-    'DSCR Elite LLPAs':  buildPremierTab({ ficoCells: makeFicoGrid({ value: 0.005 }) }),
-    'DSCR Select LLPA':  buildPremierTab({ ficoCells: makeFicoGrid({ value: 0.005 }) }),
+    'DSCR Select LLPA':   buildPremierTab({ ficoCells: makeFicoGrid({ value: 0.005 }) }),
   });
   const r = parseResicentralLlpasXlsx(buf);
-  assert.ok(r.skipped.some(s => s.includes('elite') && s.includes('deferred')));
   assert.ok(r.skipped.some(s => s.includes('select') && s.includes('deferred')));
 });
 

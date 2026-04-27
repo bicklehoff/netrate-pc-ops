@@ -50,9 +50,9 @@ test('orchestrator works with no filename (rates.effective_at = null)', () => {
   assert.equal(out.rates.effective_at, null);
 });
 
-test('LLPAs side surfaces deferred Elite + Select tabs in skipped[]', () => {
+test('LLPAs side surfaces deferred Select tab in skipped[]', () => {
+  // Elite shipped in D9c.6.5b. Select still deferred to D9c.6.5c.
   const buf = buildBareWorkbook();
   const out = parseResicentralXlsx(buf, '67370_04242026_xyz.xlsx');
-  assert.ok(out.llpas.skipped.some(s => s.includes('elite') && s.includes('deferred')));
   assert.ok(out.llpas.skipped.some(s => s.includes('select') && s.includes('deferred')));
 });

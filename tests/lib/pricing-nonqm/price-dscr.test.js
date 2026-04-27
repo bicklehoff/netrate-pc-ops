@@ -461,28 +461,30 @@ test('prepay_term + prepay_structure: both fire and sum into llpa_total', () => 
   assert.equal(row.final_price, 100.015);
 });
 
-// ─── Backward compat: existing `prepay` rule_type still works ──────
+// ─── Joint prepay model (Everstream + Elite — `prepay_joint`) ──────
 
-test('Existing prepay rule_type (Everstream) still applies LLPAs', () => {
-  // Everstream-shape: rule_type='prepay' carrying both prepay_years AND feature.
+test('prepay_joint rule_type (Everstream/Elite) applies LLPA on (years, structure) match', () => {
+  // Joint-shape: rule_type='prepay_joint' carrying both prepay_years AND feature
+  // for a single LLPA covering the (term × structure) cell.
   const sheets = buildSheet({
     extraRules: [{
-      tier: TIER, product_type: null, rule_type: 'prepay',
+      tier: TIER, product_type: null, rule_type: 'prepay_joint',
       prepay_years: 5, feature: 'fixed_5',
       llpa_points: 0.01, not_offered: false,
     }],
   });
   const result = priceDscrScenario(sheets, scenario);
   const row = pricedRow(result);
-  assert.equal(row.adjustments.find(a => a.rule_type === 'prepay').points, 0.01);
+  assert.equal(row.adjustments.find(a => a.rule_type === 'prepay_joint').points, 0.01);
 });
 
-test('Existing prepay coexists with new prepay_term/_structure (both fire)', () => {
-  // Defensive: if both shapes show up in the DB simultaneously
-  // (transition state), all three rules apply additively.
+test('prepay_joint coexists with prepay_term/_structure (both models fire additively)', () => {
+  // Two ResiCentral programs use different prepay models (Premier additive
+  // vs Elite joint). When a scenario carries rules of both shapes, all
+  // matching rules sum.
   const sheets = buildSheet({
     extraRules: [
-      { tier: TIER, product_type: null, rule_type: 'prepay',
+      { tier: TIER, product_type: null, rule_type: 'prepay_joint',
         prepay_years: 5, feature: 'fixed_5',
         llpa_points: 0.01, not_offered: false },
       { tier: TIER, product_type: null, rule_type: 'prepay_term',

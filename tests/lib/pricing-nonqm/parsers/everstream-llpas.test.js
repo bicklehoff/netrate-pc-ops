@@ -172,7 +172,9 @@ test('Global LLPA classifies SFR row to property_type', () => {
 test('Prepay row produces 5 rules (one per year-term)', () => {
   const buf = buildSyntheticWorkbook();
   const { rules } = parseEverstreamLlpasXlsx(buf);
-  const prepay = rules.filter(r => r.rule_type === 'prepay');
+  // Migration 051 (PR #237) renamed Everstream's `prepay` → `prepay_joint`
+  // to distinguish it from ResiCentral's additive prepay_term/prepay_structure.
+  const prepay = rules.filter(r => r.rule_type === 'prepay_joint');
   assert.equal(prepay.length, 5);
   for (const r of prepay) {
     assert.equal(r.feature, 'fixed_5');
