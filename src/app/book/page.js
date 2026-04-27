@@ -40,7 +40,7 @@ export default function BookPage() {
   const [slots, setSlots] = useState([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [selectedTime, setSelectedTime] = useState(null);
-  const [form, setForm] = useState({ name: '', email: '', phone: '', notes: '' });
+  const [form, setForm] = useState({ name: '', email: '', phone: '', loanPurpose: '', notes: '' });
   const [submitting, setSubmitting] = useState(false);
   const [booking, setBooking] = useState(null);
   const [error, setError] = useState(null);
@@ -89,6 +89,7 @@ export default function BookPage() {
           name: form.name,
           email: form.email,
           phone: form.phone,
+          loanPurpose: form.loanPurpose,
           notes: form.notes || undefined,
         }),
       });
@@ -254,8 +255,24 @@ export default function BookPage() {
                 />
               </div>
               <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">What's this about?</label>
+                <select
+                  required
+                  value={form.loanPurpose}
+                  onChange={(e) => setForm(f => ({ ...f, loanPurpose: e.target.value }))}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none bg-white"
+                >
+                  <option value="" disabled>Select one...</option>
+                  <option value="purchase">Purchasing a home</option>
+                  <option value="refinance">Refinancing (lower rate / shorter term)</option>
+                  <option value="cashout">Cash-out refinance</option>
+                  <option value="heloc">HELOC / second lien</option>
+                  <option value="other">Something else</option>
+                </select>
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  What can we help with? <span className="text-gray-400 font-normal">(optional)</span>
+                  Anything else? <span className="text-gray-400 font-normal">(optional)</span>
                 </label>
                 <textarea
                   value={form.notes}

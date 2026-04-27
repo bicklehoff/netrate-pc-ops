@@ -8,7 +8,12 @@
 // Acceptance criteria source: Claw relay relay_mod5wravdehcpl2l (Phase 1 brief).
 //
 // Body (JSON):
-//   { date: "dd-MMM-yyyy", time: "h:mm AM/PM", name, email, phone, notes? }
+//   { date: "dd-MMM-yyyy", time: "h:mm AM/PM", name, email, phone, loanPurpose, notes? }
+//
+// loanPurpose is REQUIRED — Zoho admin custom field "Loan Purpose" is mandatory.
+// Internal values map to Zoho display strings: purchase->"Purchase", refinance->"Refinance",
+// cashout->"Cash-Out Refinance", heloc->"HELOC", other->"Other". If the mapping doesn't match
+// what Zoho admin has configured, the booking will fail loudly via ZohoBookingsError.
 //
 // Returns:
 //   { booking: { bookingId, when }, contactId, leadId, isNew, emailStatus }
@@ -27,6 +32,16 @@ import { rateLimit } from '@/lib/api/rate-limit';
 
 const DATE_RE = /^[0-3]\d-[A-Z][a-z]{2}-\d{4}$/;
 const TIME_RE = /^\d{1,2}:\d{2}\s*(AM|PM)$/i;
+
+// Internal loan-purpose key → Zoho admin custom-field display value.
+// Keep in sync with the Zoho Bookings admin "Loan Purpose" dropdown options.
+const LOAN_PURPOSE_TO_ZOHO = {
+  purchase: 'Purchase',
+  refinance: 'Refinance',
+  cashout: 'Cash-Out Refinance',
+  heloc: 'HELOC',
+  other: 'Other',
+};
 
 function isValidEmail(s) {
   return typeof s === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
@@ -51,7 +66,7 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { date, time, name, email, phone, notes } = body || {};
+  const { date, time, name, email, phone, loanPurpose, notes } = body || {};
 
   // ── Validation ─────────────────────────────────────────────
   if (!date || !DATE_RE.test(date)) {
@@ -69,6 +84,13 @@ export async function POST(request) {
   if (!phone || typeof phone !== 'string') {
     return NextResponse.json({ error: 'Phone is required' }, { status: 400 });
   }
+  const zohoLoanPurpose = LOAN_PURPOSE_TO_ZOHO[loanPurpose];
+  if (!zohoLoanPurpose) {
+    return NextResponse.json(
+      { error: 'Loan purpose is required (purchase / refinance / cashout / heloc / other)' },
+      { status: 400 }
+    );
+  }
 
   const normalizedPhone = normalizePhone(phone) || phone;
   const trimmedName = name.trim();
@@ -84,6 +106,7 @@ export async function POST(request) {
       email: lowerEmail,
       phone: normalizedPhone,
       notes: notes || undefined,
+      additionalFields: { 'Loan Purpose': zohoLoanPurpose },
     });
   } catch (err) {
     if (err instanceof ZohoBookingsError) {
@@ -108,11 +131,12 @@ export async function POST(request) {
       firstName,
       lastName,
       phone: normalizedPhone,
+      loanPurpose,
       source: 'booking-widget',
       sourceDetail: `appointment_${date}_${time.replace(/\s+/g, '')}`,
       applicationChannel: 'booking_widget',
       message: notes || null,
-      rawPayload: { date, time, name: trimmedName, email: lowerEmail, phone, notes, bookingId: booking.bookingId },
+      rawPayload: { date, time, name: trimmedName, email: lowerEmail, phone, loanPurpose, notes, bookingId: booking.bookingId },
     });
   } catch (err) {
     // Don't fail the user-visible request just because CRM write hiccupped —
