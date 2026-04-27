@@ -34,6 +34,29 @@ import { extractFeatureLtvGrid } from './lib/feature-ltv-grid.js';
 
 const LENDER_CODE = 'resicentral';
 
+// ResiCentral expresses LLPAs as decimal fractions of par (e.g.
+// `0.01125` = 1.125 points), while the rest of the pricer stack and
+// Everstream's data use points directly. Confirmed 2026-04-27 by
+// comparing a known DSCR Select 30Yr Fixed scenario in LoanSifter:
+//   - Workbook value `0.005` (Pricing Special) → LS shows `+0.500` pts
+//   - Workbook value `-0.01125` (No PPP)        → LS shows `-1.125` pts
+// Multiplying by 100 brings LLPAs into points so they sum correctly
+// with `final_base_price` (which IS in points natively).
+//
+// Does NOT apply to: note_rate (in percent), final_base_price (points),
+// price_cap (points). Those pass through unchanged.
+const LLPA_SCALE = 100;
+
+/**
+ * Apply LLPA_SCALE and round to 6 decimals to clean up float artifacts
+ * (e.g. 0.00875 * 100 = 0.8750000000000001 → 0.875). Used by the inline
+ * block extractors (Loan Amount Adj, Misc Adjustments) which don't go
+ * through the shared utilities' valueScale path.
+ */
+function scaleLlpa(rawValue) {
+  return Math.round(rawValue * LLPA_SCALE * 1_000_000) / 1_000_000;
+}
+
 const TIER_TAB_MAP_IN_SCOPE = {
   'DSCR Premier LLPAs':           'premier',
   'DSCR Investor Premier LLPAs':  'investor_premier',
@@ -150,6 +173,7 @@ function parseTab(data, tier, rules, skipped) {
       ltvKey: 'cltv',
       baseFields: { ...baseFields, loan_purpose: null },     // ResiCentral doesn't split FICO grid by purpose
       rawLabelFn: (fico, ltv) => `${tier}/FICO ${fico.label}/CLTV ${ltv.min}-${ltv.max}`,
+      valueScale: LLPA_SCALE,
     }
   ));
 
@@ -188,6 +212,7 @@ function parseTab(data, tier, rules, skipped) {
       startCol: FEATURE_GRID_DATA_START_COL,
       ltvKey: 'cltv',
       baseFields,
+      valueScale: LLPA_SCALE,
     }
   ));
 
@@ -359,7 +384,7 @@ function parseLoanAmountAdjBlock(data, startRow, baseFields, rules) {
       rule_type: 'loan_size_secondary',
       loan_size_min: range.min,
       loan_size_max: range.max,
-      llpa_points: value,
+      llpa_points: scaleLlpa(value),
       not_offered: false,
       raw_label: `Loan Amount Adj / ${label}`,
     });
@@ -406,7 +431,7 @@ function parseMiscAdjustments(data, startRow, baseFields, rules) {
         ...baseFields,
         rule_type: 'feature',
         feature: 'guideline_exception',
-        llpa_points: value,
+        llpa_points: scaleLlpa(value),
         not_offered: false,
         raw_label: `Misc / ${label}`,
       });
@@ -417,7 +442,7 @@ function parseMiscAdjustments(data, startRow, baseFields, rules) {
         fico_min: 700,
         cltv_min: 0,
         cltv_max: 80,
-        llpa_points: value,
+        llpa_points: scaleLlpa(value),
         not_offered: false,
         raw_label: `Misc / ${label}`,
       });

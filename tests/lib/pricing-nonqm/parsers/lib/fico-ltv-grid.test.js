@@ -128,6 +128,26 @@ test('omits raw_label when rawLabelFn is not supplied', () => {
   assert.equal(Object.prototype.hasOwnProperty.call(rules[0], 'raw_label'), false);
 });
 
+test('honors valueScale option (×100 for ResiCentral-shape inputs)', () => {
+  const data = [[null, 0.01125, 0.00875, -0.00125]];
+  const rules = extractFicoLtvGrid(
+    data, 0,
+    { fico: fico.slice(0, 1), ltv },
+    { valueScale: 100 }
+  );
+  // Source 0.01125 → stored 1.125 (rounded clean of float artifacts)
+  assert.equal(rules[0].llpa_points, 1.125);
+  assert.equal(rules[1].llpa_points, 0.875);
+  assert.equal(rules[2].llpa_points, -0.125);
+});
+
+test('valueScale defaults to 1 (Everstream behavior unchanged)', () => {
+  const data = [[null, 0.5, -1.125]];
+  const rules = extractFicoLtvGrid(data, 0, { fico: fico.slice(0, 1), ltv: ltv.slice(0, 2) });
+  assert.equal(rules[0].llpa_points, 0.5);
+  assert.equal(rules[1].llpa_points, -1.125);
+});
+
 test('respects anchorRow > 0', () => {
   const data = [
     ['header', null, null, null],
