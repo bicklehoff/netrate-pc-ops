@@ -174,18 +174,17 @@ test('smoke: parses Premier + InvPremier when both tabs present', () => {
   assert.ok(r.rules.length > 0);
 });
 
-test('Select tab in workbook → recorded in skipped[] as deferred', () => {
-  // Elite is in scope as of D9c.6.5b (this PR). Select still deferred to
-  // D9c.6.5c (cols 2+3 layout). Premier+InvPremier tabs are required to
-  // satisfy the in-scope tier check; the Select tab is what we're testing.
+test('All four DSCR tiers in scope → no deferred entries in skipped[]', () => {
+  // As of D9c.6.5c all four DSCR programs (Premier, InvPremier, Elite,
+  // Select) are parsed. Foreign National (DSCR Elite FN) remains out of
+  // scope at the orchestrator level, not surfaced via parser skipped[].
   const buf = buildBook({
     'DSCR Premier LLPAs': buildPremierTab({
       ficoCells: makeFicoGrid({ value: 0.01 }),
     }),
-    'DSCR Select LLPA':   buildPremierTab({ ficoCells: makeFicoGrid({ value: 0.005 }) }),
   });
   const r = parseResicentralLlpasXlsx(buf);
-  assert.ok(r.skipped.some(s => s.includes('select') && s.includes('deferred')));
+  assert.equal(r.skipped.filter(s => s.includes('deferred')).length, 0);
 });
 
 // ─── FICO grid ───────────────────────────────────────────────────────
