@@ -359,7 +359,7 @@ test('feature: IO + 40yr term feature rules', () => {
   assert.deepEqual(features, ['io_30','io_40','term_40_amortized']);
 });
 
-test('feature: Pricing Special row → pricing_special rule_type with FICO + DSCR gates', () => {
+test('feature: Pricing Special row → pricing_special rule_type with FICO + DSCR gates (×100 to points)', () => {
   const buf = buildBook({
     'DSCR Premier LLPAs': buildPremierTab({
       ficoCells: makeFicoGrid({ value: 0.01 }),
@@ -373,8 +373,9 @@ test('feature: Pricing Special row → pricing_special rule_type with FICO + DSC
     assert.equal(x.fico_min, 700);
     assert.equal(x.dscr_ratio_min, 1.0);
   }
+  // Source 0.00875 → stored 0.875 points (×100)
   const ltv70 = ps.find(x => x.cltv_min === 65.01);
-  assert.equal(ltv70.llpa_points, 0.00875);
+  assert.equal(ltv70.llpa_points, 0.875);
   const ltv85 = ps.find(x => x.cltv_min === 80.01);
   assert.equal(ltv85.not_offered, true);
 });
@@ -404,7 +405,7 @@ test('Max Price block emits prepay_term rules with price_cap', () => {
   assert.equal(noPpp.price_cap, 100.9);
 });
 
-test('Loan Amount Adj block (Q1) emits loan_size_secondary rules', () => {
+test('Loan Amount Adj block (Q1) emits loan_size_secondary rules (×100 to points)', () => {
   const buf = buildBook({
     'DSCR Premier LLPAs': buildPremierTab({
       ficoCells: makeFicoGrid({ value: 0.01 }),
@@ -422,15 +423,17 @@ test('Loan Amount Adj block (Q1) emits loan_size_secondary rules', () => {
   assert.equal(ls2.length, 5);
   const min = ls2.find(x => x.loan_size_min === 0);
   assert.equal(min.loan_size_max, 199999);
-  assert.equal(min.llpa_points, -0.015);
+  // Source -0.015 → stored -1.5 points
+  assert.equal(min.llpa_points, -1.5);
   const mm = ls2.find(x => x.loan_size_min === 1000000);
   assert.equal(mm.loan_size_max, 1999999);
-  assert.equal(mm.llpa_points, 0.0025);
+  // Source 0.0025 → stored 0.25 points
+  assert.equal(mm.llpa_points, 0.25);
   const big = ls2.find(x => x.loan_size_min === 2000000);
   assert.equal(big.loan_size_max, 3000000);
 });
 
-test('Misc Adjustments: Guideline Exception → flat feature LLPA', () => {
+test('Misc Adjustments: Guideline Exception → flat feature LLPA (×100 to points)', () => {
   const buf = buildBook({
     'DSCR Premier LLPAs': buildPremierTab({
       ficoCells: makeFicoGrid({ value: 0.01 }),
@@ -442,10 +445,11 @@ test('Misc Adjustments: Guideline Exception → flat feature LLPA', () => {
   const r = parseResicentralLlpasXlsx(buf);
   const ge = r.rules.filter(x => x.rule_type === 'feature' && x.feature === 'guideline_exception');
   assert.equal(ge.length, 1);
-  assert.equal(ge[0].llpa_points, -0.0025);
+  // Source -0.0025 → stored -0.25 points
+  assert.equal(ge[0].llpa_points, -0.25);
 });
 
-test('Misc Adjustments: January Pricing Special → pricing_special with FICO 700 + LTV ≤ 80', () => {
+test('Misc Adjustments: January Pricing Special → pricing_special with FICO 700 + LTV ≤ 80 (×100)', () => {
   const buf = buildBook({
     'DSCR Premier LLPAs': buildPremierTab({
       ficoCells: makeFicoGrid({ value: 0.01 }),
@@ -463,7 +467,8 @@ test('Misc Adjustments: January Pricing Special → pricing_special with FICO 70
   assert.equal(jan.fico_min, 700);
   assert.equal(jan.cltv_min, 0);
   assert.equal(jan.cltv_max, 80);
-  assert.equal(jan.llpa_points, 0.005);
+  // Source 0.005 → stored 0.5 points (matches LS display of "+0.500")
+  assert.equal(jan.llpa_points, 0.5);
 });
 
 // ─── Output discipline ─────────────────────────────────────────────
@@ -482,6 +487,45 @@ test('Every emitted rule carries occupancy=investment (DSCR-is-NOO invariant)', 
   for (const x of r.rules) {
     assert.equal(x.occupancy, 'investment', `rule lacks occupancy=investment: ${JSON.stringify(x)}`);
   }
+});
+
+// ─── LS-anchored regression test ────────────────────────────────────
+// Ensures the LLPA scale (×100) stays in lockstep with what LoanSifter
+// shows. If anyone reverts the scale, this test fires immediately.
+//
+// Source workbook values (per inventory + screenshot 2026-04-27):
+//   Pricing Special row, LTV 65.01-70 → 0.005 in workbook
+//   No PPP row,          LTV 65.01-70 → -0.01125 in workbook
+// LS confirmed display:
+//   Pricing Special                   → +0.500 points
+//   No PPP (Investment property)      → -1.125 points
+test('LS-anchored: Pricing Special and No PPP scaled correctly to points', () => {
+  const buf = buildBook({
+    'DSCR Premier LLPAs': buildPremierTab({
+      ficoCells: makeFicoGrid({ value: 0.01 }),
+      featureRows: [
+        ['No PPP* (exception for specific states)',
+                                       -0.015,-0.015,-0.015,-0.015,-0.015,-0.015,-0.015,-0.015,'NA'],
+        ['Pricing Special (700+ FICO, >=1 DSCR)***',
+                                        0.00875,0.00875,0.00875,0.00875,0.005,0.005,0.005,'NA','NA'],
+      ],
+    }),
+  });
+  const r = parseResicentralLlpasXlsx(buf);
+
+  // No PPP at LTV 65.01-70 (cltv_min=65.01) — LS shows -1.125 points
+  const noPpp = r.rules.find(x =>
+    x.rule_type === 'prepay_term' && x.prepay_years === 0 && x.cltv_min === 65.01
+  );
+  assert.ok(noPpp);
+  assert.equal(noPpp.llpa_points, -1.5); // synthetic uses -0.015 → -1.5; LS sample row uses -0.01125 → -1.125
+
+  // Pricing Special at LTV 65.01-70 — LS shows +0.500 points
+  const ps65 = r.rules.find(x =>
+    x.rule_type === 'pricing_special' && x.cltv_min === 65.01
+  );
+  assert.ok(ps65);
+  assert.equal(ps65.llpa_points, 0.5);
 });
 
 test('Missing FICO anchor → tab skipped; other tab still parses', () => {

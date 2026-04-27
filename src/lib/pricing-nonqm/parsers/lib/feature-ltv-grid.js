@@ -45,6 +45,10 @@ import { cellStr, parseCell, isNa } from './cells.js';
  * @param {number} [opts.startCol=1]
  * @param {'cltv'|'ltv'} [opts.ltvKey='cltv']
  * @param {Object} [opts.baseFields] - merged into every emitted rule
+ * @param {number} [opts.valueScale=1] - multiplier applied to every parsed
+ *   `llpa_points` value before emit. ResiCentral stores LLPAs as decimal
+ *   fractions of par; pass `valueScale: 100` to convert to points. Default
+ *   is 1 (no change). Does not affect `not_offered` cells.
  * @returns {Array<Object>} rules ready for nonqm_adjustment_rules
  */
 export function extractFeatureLtvGrid(data, startRow, endRow, ltvBands, classify, opts = {}) {
@@ -52,6 +56,7 @@ export function extractFeatureLtvGrid(data, startRow, endRow, ltvBands, classify
   const startCol = opts.startCol ?? 1;
   const ltvKey = opts.ltvKey ?? 'cltv';
   const baseFields = opts.baseFields ?? {};
+  const valueScale = opts.valueScale ?? 1;
   const minKey = `${ltvKey}_min`;
   const maxKey = `${ltvKey}_max`;
 
@@ -72,12 +77,14 @@ export function extractFeatureLtvGrid(data, startRow, endRow, ltvBands, classify
       if (num === null && !isNa(rawVal)) continue;
       const ltv = ltvBands[j];
 
+      // Round to 6 decimals to clean up float artifacts from valueScale.
+      const scaled = isNa(rawVal) ? null : Math.round(num * valueScale * 1_000_000) / 1_000_000;
       rules.push({
         ...baseFields,
         ...classified,
         [minKey]: ltv.min,
         [maxKey]: ltv.max,
-        llpa_points: isNa(rawVal) ? null : num,
+        llpa_points: scaled,
         not_offered: isNa(rawVal),
         raw_label: label,
       });

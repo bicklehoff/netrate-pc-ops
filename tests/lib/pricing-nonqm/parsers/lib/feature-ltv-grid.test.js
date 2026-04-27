@@ -104,6 +104,21 @@ test('honors ltvKey="ltv"', () => {
   assert.equal(Object.prototype.hasOwnProperty.call(rules[0], 'cltv_min'), false);
 });
 
+test('honors valueScale option (×100 for ResiCentral-shape inputs)', () => {
+  const data = [['Cash Out', 0.005, -0.00875]];
+  const rules = extractFeatureLtvGrid(data, 0, 1, ltv, classify, { valueScale: 100 });
+  // Source 0.005 → 0.5; source -0.00875 → -0.875 (rounded)
+  assert.equal(rules[0].llpa_points, 0.5);
+  assert.equal(rules[1].llpa_points, -0.875);
+});
+
+test('valueScale=1 (default) preserves Everstream behavior', () => {
+  const data = [['Cash Out', -0.5, 0.25]];
+  const rules = extractFeatureLtvGrid(data, 0, 1, ltv, classify);
+  assert.equal(rules[0].llpa_points, -0.5);
+  assert.equal(rules[1].llpa_points, 0.25);
+});
+
 test('startRow / endRow define the inclusive-exclusive scan window', () => {
   const data = [
     ['skip-pre', 0.1, 0.2],
