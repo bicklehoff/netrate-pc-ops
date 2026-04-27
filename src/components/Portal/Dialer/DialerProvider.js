@@ -73,22 +73,43 @@ export default function DialerProvider({ children }) {
         identityRef.current = identity;
 
         // Create and register the Device
+        // - allowIncomingWhileBusy: critical for the parallel-dial pattern. The
+        //   SDK's default rejects new incoming calls with "600 Busy Everywhere"
+        //   if it thinks the Device has any active call (including phantom calls
+        //   from previously-orphaned outbound attempts). Setting true tells the
+        //   SDK to deliver incoming events even when busy, so the IncomingCallPopup
+        //   can decide what to do. Was the root cause of the never-rings bug.
+        // - logLevel: 'debug' temporarily so the SDK exposes registration / call
+        //   delivery details in the browser console while we shake out remaining
+        //   edge cases. Revert to 'warn' once incoming is solid.
         const device = new Device(token, {
           edge: 'ashburn',    // US East — closest to Neon DB
-          logLevel: 'warn',
+          logLevel: 'debug',
+          allowIncomingWhileBusy: true,
         });
 
         device.on('registered', () => {
           if (mounted) {
             setDeviceReady(true);
             setError(null);
-            console.log('Twilio Device registered');
+            console.log('[Dialer] Twilio Device registered, identity:', identityRef.current);
           }
         });
 
+        device.on('unregistered', () => {
+          // Fires when the WSS drops or registration is invalidated. Without
+          // this, the UI shows "Online" forever even after the Device goes deaf.
+          console.warn('[Dialer] Twilio Device UNREGISTERED — incoming calls will fail until re-registered');
+          if (mounted) setDeviceReady(false);
+        });
+
         device.on('error', (err) => {
-          console.error('Twilio Device error:', err);
+          console.error('[Dialer] Twilio Device error:', err);
           if (mounted) setError(err.message);
+        });
+
+        device.on('incoming', (call) => {
+          console.log('[Dialer] Incoming call received from SDK:', call?.parameters?.From, 'CallSid:', call?.parameters?.CallSid);
         });
 
         // Handle incoming calls
