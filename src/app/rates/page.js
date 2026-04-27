@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import RateTool from '@/components/RateTool';
-import RateAlertForm from '@/components/RateTool/RateAlertForm';
 import TrustBar from '@/components/TrustBar';
 
 export const metadata = {
@@ -46,15 +45,6 @@ export default async function RatesPage({ searchParams }) {
       <div className="bg-[#F5F7FA] min-h-screen">
       <div className="max-w-3xl mx-auto px-4 py-8">
       <RateTool defaultState={defaultState} prefill={Object.keys(prefill).length ? prefill : null} brpToken={brpToken} />
-
-      {/* Rate Alert signup */}
-      <div className="mt-10">
-        <h2 className="text-lg font-semibold text-gray-900 mb-3">Not ready yet? Set a Rate Alert.</h2>
-        <p className="text-sm text-gray-600 mb-4">
-          Get rate updates delivered to your inbox. No commitment, no credit pull.
-        </p>
-        <RateAlertForm source="rate-tool" />
-      </div>
 
       {/* Apply CTA */}
       <div className="mt-10 bg-white rounded-2xl border border-gray-100 shadow-[0_4px_24px_rgba(2,76,79,0.06)] p-6 text-center">
