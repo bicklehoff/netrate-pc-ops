@@ -89,6 +89,57 @@ function pricedRow(result) {
   return result.priced.find(r => r.tier === TIER);
 }
 
+// ─── FICO×CLTV grid: null occupancy/loan_purpose as wildcard ────────
+
+test('FICO×CLTV grid: null loan_purpose acts as wildcard', () => {
+  // Mimics ResiCentral's single grid (one rule for all purposes).
+  const sheets = [{
+    sheet: { lender_code: 'resicentral', effective_at: '2026-04-24' },
+    products: [{
+      id: 1, loan_type: 'dscr', tier: TIER, product_type: 'fixed', term: 30,
+      arm_fixed_period: null, arm_adj_period: null, lock_days: 30,
+      note_rate: 6.5, final_base_price: 100, raw_product_name: 'X',
+    }],
+    rules: [{
+      tier: TIER, product_type: null, rule_type: 'fico_cltv_grid',
+      occupancy: 'investment', loan_purpose: null,        // wildcard
+      fico_min: 600, fico_max: 999,
+      cltv_min: 60.01, cltv_max: 70,
+      llpa_points: 0.5, not_offered: false,
+    }],
+  }];
+  for (const purpose of ['purchase', 'rate_term', 'cashout']) {
+    const r = priceDscrScenario(sheets, { ...scenario, loan_purpose: purpose });
+    const row = r.priced.find(p => p.tier === TIER);
+    assert.ok(row, `expected priced row for purpose=${purpose}`);
+    assert.equal(row.adjustments.find(a => a.rule_type === 'fico_cltv_grid').points, 0.5);
+  }
+});
+
+test('FICO×CLTV grid: explicit loan_purpose still requires exact match (Everstream behavior)', () => {
+  const sheets = [{
+    sheet: { lender_code: 'everstream', effective_at: '2026-04-15' },
+    products: [{
+      id: 1, loan_type: 'dscr', tier: TIER, product_type: 'fixed', term: 30,
+      arm_fixed_period: null, arm_adj_period: null, lock_days: 30,
+      note_rate: 6.5, final_base_price: 100, raw_product_name: 'X',
+    }],
+    rules: [{
+      tier: TIER, product_type: null, rule_type: 'fico_cltv_grid',
+      occupancy: 'investment', loan_purpose: 'purchase',
+      fico_min: 600, fico_max: 999, cltv_min: 60.01, cltv_max: 70,
+      llpa_points: 0.5, not_offered: false,
+    }],
+  }];
+  // Matching purpose → priced
+  const ok = priceDscrScenario(sheets, { ...scenario, loan_purpose: 'purchase' });
+  assert.equal(ok.priced.length, 1);
+  // Wrong purpose → gated
+  const bad = priceDscrScenario(sheets, { ...scenario, loan_purpose: 'cashout' });
+  assert.equal(bad.priced.length, 0);
+  assert.equal(bad.skipped[0].reason, 'no_fico_cltv_grid_match');
+});
+
 // ─── loan_size_secondary ─────────────────────────────────────────────
 
 test('loan_size_secondary: matches by loan_size range and sums with loan_size', () => {
