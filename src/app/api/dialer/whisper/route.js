@@ -37,12 +37,24 @@ export async function POST(req) {
   }
 
   const announcement = callerName
-    ? `NetRate Mortgage call from ${callerName}.`
-    : 'NetRate Mortgage call from an unknown number.';
+    ? `NetRate Mortgage call from ${callerName}. Press 1 to accept, or hang up to send to voicemail.`
+    : 'NetRate Mortgage call from an unknown number. Press 1 to accept, or hang up to send to voicemail.';
 
+  // <Gather> waits up to 10s for a digit. If 1 is pressed, /whisper-confirm
+  // returns empty TwiML which ends the whisper and triggers Twilio to bridge
+  // the legs. If no input, the TwiML falls through to <Hangup/> which kills
+  // this leg — the parent <Dial> then completes and the parent TwiML's
+  // voicemail fallback (<Say>+<Record/>) handles the caller. This gate also
+  // prevents the self-call collision: when Twilio dials your cell back during
+  // a call you're already on, T-Mobile voicemail picks up and "answers" the
+  // leg, but voicemail can't press 1, so this leg disconnects cleanly and
+  // the caller lands in our portal voicemail instead of your cell voicemail.
   const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say>${escapeXml(announcement)}</Say>
+  <Gather numDigits="1" timeout="10" action="/api/dialer/whisper-confirm">
+    <Say>${escapeXml(announcement)}</Say>
+  </Gather>
+  <Hangup />
 </Response>`;
 
   return new Response(twiml, { headers: { 'Content-Type': 'text/xml' } });
