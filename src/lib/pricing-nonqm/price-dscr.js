@@ -304,10 +304,15 @@ function priceOne(product, tierRules, scenario, { isCore }) {
   );
 
   // ── FICO×CLTV grid (one match) ───────────────────────────────────
+  // `null` rule.occupancy or rule.loan_purpose acts as a wildcard so
+  // lenders that don't split the grid by those dimensions (e.g.
+  // ResiCentral, which has a single grid for all DSCR purposes) match
+  // against any scenario value. Everstream emits explicit values for
+  // both, so the wildcard fallback never engages for its rules.
   const grid = applicable.find(r =>
     r.rule_type === 'fico_cltv_grid' &&
-    r.occupancy === scenario.occupancy &&
-    r.loan_purpose === scenario.loan_purpose &&
+    (r.occupancy === null || r.occupancy === scenario.occupancy) &&
+    (r.loan_purpose === null || r.loan_purpose === scenario.loan_purpose) &&
     inRange(scenario.fico, r.fico_min, r.fico_max) &&
     inCltvRange(scenario.cltv, r.cltv_min, r.cltv_max)
   );
@@ -324,10 +329,11 @@ function priceOne(product, tierRules, scenario, { isCore }) {
 
   // Price cap is stored as its own rule row (same grid position, populated via
   // the parallel Price Cap block of the sheet). Find the matching cap row.
+  // Same null-as-wildcard semantics for occupancy/loan_purpose.
   const capRule = applicable.find(r =>
     r.rule_type === 'fico_cltv_grid' &&
-    r.occupancy === scenario.occupancy &&
-    r.loan_purpose === scenario.loan_purpose &&
+    (r.occupancy === null || r.occupancy === scenario.occupancy) &&
+    (r.loan_purpose === null || r.loan_purpose === scenario.loan_purpose) &&
     inRange(scenario.fico, r.fico_min, r.fico_max) &&
     inCltvRange(scenario.cltv, r.cltv_min, r.cltv_max) &&
     r.price_cap != null
