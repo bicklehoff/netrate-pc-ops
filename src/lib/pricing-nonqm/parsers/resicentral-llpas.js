@@ -67,17 +67,18 @@ function scaleLlpa(rawValue) {
 
 // Map of tab name → { tier, shape }. `shape` selects the parser variant:
 //   'premier_shaped' — single-col labels, 9 LTV bands, 10 FICO bands.
-//   'elite_shaped'   — 2-col category+sub-label, 7 LTV bands, 9 FICO bands.
+//   'elite_shaped'   — 2-col category+sub-label (cols 3+4), 7 LTV bands, 9 FICO bands.
+//   'select_shaped'  — 2-col category+sub-label (cols 2+3), 7 LTV bands, 8 FICO bands,
+//                      flat term-only prepay block, "2-4yr PPP" range max-price.
 const TIER_TAB_MAP_IN_SCOPE = {
   'DSCR Premier LLPAs':           { tier: 'premier',          shape: 'premier_shaped' },
   'DSCR Investor Premier LLPAs':  { tier: 'investor_premier', shape: 'premier_shaped' },
   'DSCR Elite LLPAs':             { tier: 'elite',            shape: 'elite_shaped'   },
+  'DSCR Select LLPA':             { tier: 'select',           shape: 'select_shaped'  },     // singular tab name per inventory
 };
 
-// Tabs known to exist but deferred per inventory §10.6.
-const TIER_TAB_MAP_DEFERRED = {
-  'DSCR Select LLPA': 'select',     // singular per inventory
-};
+// All four DSCR programs are now in scope (D9c.6.5c, this PR).
+const TIER_TAB_MAP_DEFERRED = {};
 
 // 10 FICO bands top-to-bottom, matching Premier + InvPremier sheet order.
 const FICO_BANDS = [
@@ -107,6 +108,19 @@ const FICO_BANDS_ELITE = [
   { min: 600, max: 619, label: '600-619' },
 ];
 
+// Select uses ">= 780" (no 760-779 split) and stops at 640-659 (with all
+// values NA, indicating not offered).
+const FICO_BANDS_SELECT = [
+  { min: 780, max: 999, label: '>=780' },
+  { min: 760, max: 779, label: '760-779' },
+  { min: 740, max: 759, label: '740-759' },
+  { min: 720, max: 739, label: '720-739' },
+  { min: 700, max: 719, label: '700-719' },
+  { min: 680, max: 699, label: '680-699' },
+  { min: 660, max: 679, label: '660-679' },
+  { min: 640, max: 659, label: '640-659' },     // all NA in workbook → not_offered=true rules
+];
+
 // 9 LTV bands left-to-right, matching cols 4-12 of the LLPA tabs.
 const LTV_BANDS = [
   { min: 0,     max: 50 },
@@ -133,13 +147,29 @@ const ELITE_FICO_GRID_DATA_START_COL = 5;
 const ELITE_FEATURE_CATEGORY_COL = 3;
 const ELITE_FEATURE_SUBLABEL_COL = 4;
 const ELITE_FEATURE_DATA_START_COL = 5;
-// Side blocks (same column positions across all programs in this sheet):
+// Select shape (per §10.6 — cols shifted left one position from Elite):
+const SELECT_FICO_LABEL_COL = 3;
+const SELECT_FICO_GRID_DATA_START_COL = 4;
+const SELECT_FEATURE_CATEGORY_COL = 2;
+const SELECT_FEATURE_SUBLABEL_COL = 3;
+const SELECT_FEATURE_DATA_START_COL = 4;
+// Side blocks for Premier/InvPremier/Elite (default positions):
 const MAX_PRICE_LABEL_COL = 6;
 const MAX_PRICE_VALUE_COL = 7;
 const LOAN_AMOUNT_LABEL_COL = 9;
 const LOAN_AMOUNT_VALUE_COL = 11;
 const MISC_LABEL_COL = 3;
 const MISC_VALUE_COL = 4;
+// Select side blocks (different positions — Loan Amount Adj at col 2/3,
+// Prepay LLPAs at col 6/7, Max Price at col 9/10, Misc at col 9/10):
+const SELECT_MAX_PRICE_LABEL_COL = 9;
+const SELECT_MAX_PRICE_VALUE_COL = 10;
+const SELECT_LOAN_AMOUNT_LABEL_COL = 2;
+const SELECT_LOAN_AMOUNT_VALUE_COL = 3;
+const SELECT_MISC_LABEL_COL = 9;
+const SELECT_MISC_VALUE_COL = 10;
+const SELECT_PREPAY_LABEL_COL = 6;
+const SELECT_PREPAY_VALUE_COL = 7;
 
 /**
  * Parse a ResiCentral DSCR LLPA workbook buffer.
@@ -161,17 +191,19 @@ export function parseResicentralLlpasXlsx(buf) {
     const before = rules.length;
     if (shape === 'elite_shaped') {
       parseEliteTab(data, tier, rules, skipped);
+    } else if (shape === 'select_shaped') {
+      parseSelectTab(data, tier, rules, skipped);
     } else {
       parseTab(data, tier, rules, skipped);
     }
     if (rules.length > before) tiers_seen.push(tier);
   }
 
-  // Note deferred tabs in skipped[] for visibility.
+  // No deferred DSCR tabs as of D9c.6.5c — all four programs now in scope.
+  // Foreign National Elite (DSCR Elite FN) remains explicitly out of scope
+  // per inventory §3 (skipped at top-level orchestrator, not surfaced here).
   for (const [tabName, tier] of Object.entries(TIER_TAB_MAP_DEFERRED)) {
-    if (wb.Sheets[tabName]) {
-      skipped.push(`${tier}: deferred to D9c.6.5c (cols 2+3 layout — see inventory §10.6)`);
-    }
+    if (wb.Sheets[tabName]) skipped.push(`${tier}: deferred (see inventory)`);
   }
 
   return { lender_code: LENDER_CODE, rules, tiers_seen, skipped };
@@ -370,50 +402,85 @@ function scaleAmount(numStr, unit) {
 }
 
 /**
- * Max Price block (per §5.4): col 6 = PPP term label, col 7 = price cap.
+ * Max Price block (per §5.4): label column = PPP term, value column = cap.
  * Maps to `rule_type='prepay_term'` rules with `price_cap` populated.
  *
- * Matches the existing pricer model where prepay_term rules carry the
- * cap (see `price-dscr.js` cap-application logic).
+ * Default column positions match Premier/InvPremier/Elite (col 6 / col 7).
+ * Select uses col 9 / col 10 — pass overrides via opts.
+ *
+ * Handles three label patterns:
+ *   "5yr PPP"      → years=5
+ *   "No PPP"       → years=0
+ *   "2-4yr PPP"    → expanded to years=2, 3, 4 (Select only)
  */
-function parseMaxPriceBlock(data, startRow, baseFields, rules) {
-  for (let r = startRow; r < startRow + 10; r++) {
+function parseMaxPriceBlock(data, startRow, baseFields, rules, opts = {}) {
+  const labelCol = opts.labelCol ?? MAX_PRICE_LABEL_COL;
+  const valueCol = opts.valueCol ?? MAX_PRICE_VALUE_COL;
+  const rowSpan  = opts.rowSpan  ?? 10;
+
+  for (let r = startRow; r < startRow + rowSpan; r++) {
     const row = data[r];
     if (!row) continue;
-    const label = cellStr(row[MAX_PRICE_LABEL_COL]);
+    const label = cellStr(row[labelCol]);
     if (!label) continue;
-    const value = parseCell(row[MAX_PRICE_VALUE_COL]);
+    const value = parseCell(row[valueCol]);
     if (value === null) continue;
 
-    let prepayYears = null;
-    const m = label.match(/^(\d+)\s*yr\s*PPP/i);
-    if (m) prepayYears = Number(m[1]);
-    else if (/^No\s*PPP/i.test(label)) prepayYears = 0;
-    else continue;
+    let years = null;          // single-year match
+    let yearRange = null;      // [min, max] for "2-4yr PPP" form
+    const range = label.match(/^(\d+)\s*-\s*(\d+)\s*yr\s*PPP/i);
+    if (range) {
+      yearRange = [Number(range[1]), Number(range[2])];
+    } else {
+      const single = label.match(/^(\d+)\s*yr\s*PPP/i);
+      if (single) years = Number(single[1]);
+      else if (/^No\s*PPP/i.test(label)) years = 0;
+      else continue;
+    }
 
-    rules.push({
-      ...baseFields,
-      rule_type: 'prepay_term',
-      prepay_years: prepayYears,
-      price_cap: value,
-      not_offered: false,
-      raw_label: `Max Price / ${label}`,
-    });
+    if (yearRange) {
+      for (let y = yearRange[0]; y <= yearRange[1]; y++) {
+        rules.push({
+          ...baseFields,
+          rule_type: 'prepay_term',
+          prepay_years: y,
+          price_cap: value,
+          not_offered: false,
+          raw_label: `Max Price / ${label} (expanded yr=${y})`,
+        });
+      }
+    } else {
+      rules.push({
+        ...baseFields,
+        rule_type: 'prepay_term',
+        prepay_years: years,
+        price_cap: value,
+        not_offered: false,
+        raw_label: `Max Price / ${label}`,
+      });
+    }
   }
 }
 
 /**
- * Loan Amount Adj block (per §5.3): col 9 = label, col 11 = LLPA.
+ * Loan Amount Adj block (per §5.3): label column = UPB band, value column = LLPA.
  * Maps to `rule_type='loan_size_secondary'` per Q1 — distinct from the
  * LTV-banded `loan_size` rules emitted by the feature grid.
+ *
+ * Default column positions match Premier/InvPremier/Elite (col 9 / col 11).
+ * Select uses col 2 / col 3 — pass overrides via opts.
  */
-function parseLoanAmountAdjBlock(data, startRow, baseFields, rules) {
-  for (let r = startRow; r < startRow + 12; r++) {
+function parseLoanAmountAdjBlock(data, startRow, baseFields, rules, opts = {}) {
+  const labelCol = opts.labelCol ?? LOAN_AMOUNT_LABEL_COL;
+  const valueCol = opts.valueCol ?? LOAN_AMOUNT_VALUE_COL;
+  const rowSpan  = opts.rowSpan  ?? 12;
+
+  for (let r = startRow; r < startRow + rowSpan; r++) {
     const row = data[r];
     if (!row) continue;
-    const label = cellStr(row[LOAN_AMOUNT_LABEL_COL]);
+    const label = cellStr(row[labelCol]);
     if (!label || label.startsWith('*')) continue;
-    const value = parseCell(row[LOAN_AMOUNT_VALUE_COL]);
+    const value = parseCell(row[valueCol]);
     if (value === null) continue;
 
     const range = parseLoanAmountLabel(label);
@@ -431,8 +498,9 @@ function parseLoanAmountAdjBlock(data, startRow, baseFields, rules) {
 }
 
 function parseLoanAmountLabel(label) {
-  // "Min Loan Amount-$199,999"
-  const minMatch = label.match(/^Min\s+Loan\s+Amount\s*-\s*\$?([\d,]+)$/i);
+  // "Min Loan Amount-$199,999" (Premier/InvPremier/Elite) /
+  // "Min Loan Amt-$199,999"    (Select)
+  const minMatch = label.match(/^Min\s+Loan\s+(?:Amount|Amt)\s*-\s*\$?([\d,]+)$/i);
   if (minMatch) {
     return { min: 0, max: Number(minMatch[1].replace(/,/g, '')) };
   }
@@ -450,19 +518,27 @@ function parseLoanAmountLabel(label) {
 }
 
 /**
- * Misc Adjustments block (per §5.5): col 3 = label, col 4 = flat LLPA.
+ * Misc Adjustments block (per §5.5): label column = name, value column = flat LLPA.
+ *
+ * Default column positions match Premier/InvPremier/Elite (col 3 / col 4).
+ * Select uses col 9 / col 10 — pass overrides via opts.
  *
  * - "Guideline Exception" → flat `feature` rule with `feature='guideline_exception'`
  * - "January Pricing Special (700+ FICO & LTV ≤ 80)" → `pricing_special`
  *   with FICO/LTV gates encoded in fico_min / cltv_min / cltv_max
+ * - "Select Pricing Special" → flat `pricing_special` (no gates, always fires)
  */
-function parseMiscAdjustments(data, startRow, baseFields, rules) {
-  for (let r = startRow; r < startRow + 8; r++) {
+function parseMiscAdjustments(data, startRow, baseFields, rules, opts = {}) {
+  const labelCol = opts.labelCol ?? MISC_LABEL_COL;
+  const valueCol = opts.valueCol ?? MISC_VALUE_COL;
+  const rowSpan  = opts.rowSpan  ?? 8;
+
+  for (let r = startRow; r < startRow + rowSpan; r++) {
     const row = data[r];
     if (!row) continue;
-    const label = cellStr(row[MISC_LABEL_COL]);
+    const label = cellStr(row[labelCol]);
     if (!label) continue;
-    const value = parseCell(row[MISC_VALUE_COL]);
+    const value = parseCell(row[valueCol]);
     if (value === null) continue;
 
     if (/^Guideline\s+Exception$/i.test(label)) {
@@ -481,6 +557,15 @@ function parseMiscAdjustments(data, startRow, baseFields, rules) {
         fico_min: 700,
         cltv_min: 0,
         cltv_max: 80,
+        llpa_points: scaleLlpa(value),
+        not_offered: false,
+        raw_label: `Misc / ${label}`,
+      });
+    } else if (/^Select\s+Pricing\s+Special$/i.test(label)) {
+      // Always-on Select-only special. No gates — auto-fires on every Select scenario.
+      rules.push({
+        ...baseFields,
+        rule_type: 'pricing_special',
         llpa_points: scaleLlpa(value),
         not_offered: false,
         raw_label: `Misc / ${label}`,
@@ -728,5 +813,253 @@ function parsePrepayTermLabel(label) {
     const months = Number(m[1]);
     if (months % 12 === 0) return months / 12;
   }
+  return null;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// Select shape (D9c.6.5c) — 2-col category+sub-label at cols 2+3, 7 LTV
+// bands, 8 FICO bands, in-license rows only (drop FL + Tier 1 states).
+// Side blocks at different columns from Premier/Elite.
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * Parse one DSCR Select LLPA tab. Layout described at the top of this
+ * file + inventory §10.6.
+ *
+ * Out-of-license drops:
+ *   - "Florida Condo" property row (Property LLPAs / Florida Condo)
+ *   - "Florida" standalone state row (Property LLPAs / Florida)
+ *   The workbook also describes "Tier 1 states (Nevada, Louisiana,
+ *   Georgia, …)" via a footnote, but those states have no explicit row in
+ *   the data — Tier 1 LLPAs only apply if a borrower is in those states,
+ *   which we never are.
+ *
+ * Prepay model: Select uses a flat term-only LLPA block ("Investor Only"
+ * header at r56 col 6) with no structure dimension and no LTV banding.
+ * Each row emits a single `prepay_term` rule with `llpa_points`.
+ *
+ * Max Price: workbook combines 2/3/4-year PPP into a single "2-4yr PPP"
+ * row. The shared `parseMaxPriceBlock` expands the range into three
+ * separate `prepay_term` rules with the same `price_cap`.
+ */
+function parseSelectTab(data, tier, rules, skipped) {
+  const baseFields = {
+    lender_code: LENDER_CODE,
+    tier,
+    product_type: null,
+    occupancy: 'investment',
+  };
+
+  // ── 1. FICO×LTV grid ───────────────────────────────────────────
+  const ficoAnchor = findCellByText(data, /^FICO\s+Score\s*\/\s*LTV/i);
+  if (!ficoAnchor) {
+    skipped.push(`${tier}: no "FICO Score/LTV Ratio" anchor`);
+    return;
+  }
+  // First FICO band row — Select's top tier is ">= 780" (no \d{3}-\d{3,4}
+  // pattern) so the existing regex would skip it. Match either form.
+  const ficoStartRow = findRowByTextInCol(
+    data, SELECT_FICO_LABEL_COL,
+    /^(>=?\s*\d{3}|\d{3}\s*-\s*\d{3,4})$/,
+    { startRow: ficoAnchor.row }
+  );
+  if (ficoStartRow < 0) {
+    skipped.push(`${tier}: couldn't locate first FICO band row after FICO anchor`);
+    return;
+  }
+  rules.push(...extractFicoLtvGrid(
+    data, ficoStartRow,
+    { fico: FICO_BANDS_SELECT, ltv: LTV_BANDS_ELITE },     // same 7 LTV bands as Elite
+    {
+      startCol: SELECT_FICO_GRID_DATA_START_COL,
+      payloadField: 'llpa_points',
+      ruleType: 'fico_cltv_grid',
+      ltvKey: 'cltv',
+      baseFields: { ...baseFields, loan_purpose: null },
+      rawLabelFn: (fico, ltv) => `${tier}/FICO ${fico.label}/CLTV ${ltv.min}-${ltv.max}`,
+      valueScale: LLPA_SCALE,
+    }
+  ));
+
+  // ── 2. Feature×LTV grid (cols 2+3 forward-fill) ────────────────
+  const featureAnchor = findCellByText(
+    data, /^Product\s+Feature\s*\/\s*LTV/i,
+    { startRow: ficoStartRow + FICO_BANDS_SELECT.length }
+  );
+  if (!featureAnchor) {
+    skipped.push(`${tier}: no "Product Feature/LTV Ratio" anchor`);
+    return;
+  }
+  // Find LTV-band header row (col 4 starts with "00.01-50" or "0-50").
+  const featureAxisRow = findRowByTextInCol(
+    data, SELECT_FEATURE_DATA_START_COL, /^0+\.?\d*\s*-\s*50/i,
+    { startRow: featureAnchor.row }
+  );
+  if (featureAxisRow < 0) {
+    skipped.push(`${tier}: no LTV-band header row after feature anchor`);
+    return;
+  }
+
+  // Feature grid ends at the "Fees" header (col 2 — Select uses col 2 for
+  // category, so its Fees header is also at col 2).
+  const feesRow = findRowByTextInCol(
+    data, SELECT_FEATURE_CATEGORY_COL, /^Fees$/i,
+    { startRow: featureAxisRow }
+  );
+  const featureEnd = feesRow > 0 ? feesRow : data.length;
+
+  rules.push(...extractFeatureLtvGrid(
+    data, featureAxisRow + 1, featureEnd, LTV_BANDS_ELITE,
+    classifySelectFeatureLabel,
+    {
+      categoryCol: SELECT_FEATURE_CATEGORY_COL,
+      labelCol: SELECT_FEATURE_SUBLABEL_COL,
+      startCol: SELECT_FEATURE_DATA_START_COL,
+      ltvKey: 'cltv',
+      baseFields,
+      valueScale: LLPA_SCALE,
+    }
+  ));
+
+  if (feesRow < 0) return;
+
+  // ── 3. Prepay Penalty LLPAs (col 6/7) — flat term-only block ──
+  parseSelectPrepayLlpaBlock(data, feesRow + 1, baseFields, rules);
+
+  // ── 4. Max Price (col 9/10) — handles "2-4yr PPP" range expansion ──
+  parseMaxPriceBlock(data, feesRow + 1, baseFields, rules, {
+    labelCol: SELECT_MAX_PRICE_LABEL_COL,
+    valueCol: SELECT_MAX_PRICE_VALUE_COL,
+    rowSpan: 8,
+  });
+
+  // ── 5. Loan Amount Adj (col 2/3) ───────────────────────────────
+  const loanAmtRow = findRowByTextInCol(
+    data, SELECT_FEATURE_CATEGORY_COL, /^Loan\s+Amount\s+Adj$/i,
+    { startRow: feesRow }
+  );
+  if (loanAmtRow >= 0) {
+    parseLoanAmountAdjBlock(data, loanAmtRow + 1, baseFields, rules, {
+      labelCol: SELECT_LOAN_AMOUNT_LABEL_COL,
+      valueCol: SELECT_LOAN_AMOUNT_VALUE_COL,
+      rowSpan: 8,
+    });
+  }
+
+  // ── 6. Misc Adjustments (col 9/10) ─────────────────────────────
+  const miscRow = findRowByTextInCol(
+    data, SELECT_MISC_LABEL_COL, /^Misc\s+Adjustments$/i,
+    { startRow: feesRow }
+  );
+  if (miscRow >= 0) {
+    parseMiscAdjustments(data, miscRow + 1, baseFields, rules, {
+      labelCol: SELECT_MISC_LABEL_COL,
+      valueCol: SELECT_MISC_VALUE_COL,
+      rowSpan: 6,
+    });
+  }
+}
+
+/**
+ * Select-only Prepay Penalty block (col 6/7). Header is "Investor Only"
+ * (col 6) at startRow. Rows below carry term labels in col 6 and a single
+ * flat LLPA in col 7. No LTV banding, no structure dimension.
+ *
+ * Rows: "5 year", "4 year", "3 year", "2 year", "1 year", "No PPP".
+ */
+function parseSelectPrepayLlpaBlock(data, startRow, baseFields, rules) {
+  // Skip the "Investor Only" header row if present.
+  for (let r = startRow; r < startRow + 10; r++) {
+    const row = data[r];
+    if (!row) continue;
+    const label = cellStr(row[SELECT_PREPAY_LABEL_COL]);
+    if (!label) continue;
+    const value = parseCell(row[SELECT_PREPAY_VALUE_COL]);
+    if (value === null) continue;
+
+    let years = null;
+    const m = label.match(/^(\d+)\s*year$/i);
+    if (m) years = Number(m[1]);
+    else if (/^No\s*PPP$/i.test(label)) years = 0;
+    else continue;
+
+    rules.push({
+      ...baseFields,
+      rule_type: 'prepay_term',
+      prepay_years: years,
+      llpa_points: scaleLlpa(value),
+      not_offered: false,
+      raw_label: `Prepay LLPA / ${label}`,
+    });
+  }
+}
+
+/**
+ * Classify a Select feature-grid (category, sub-label) pair into rule fields.
+ * Returns null to drop unrecognized rows AND out-of-license Florida rows.
+ */
+function classifySelectFeatureLabel(subLabel, ctx) {
+  const cat = (ctx?.category || '').trim();
+  const l = subLabel.trim();
+
+  // ─── Loan Size Credit LLPA (UPB bands) ───
+  if (/^Loan\s+Size\s+Credit\s+LLPA/i.test(cat)) {
+    if (/^UPB\s*<=?\s*\$?(\d+(?:\.\d+)?)\s*([KkMm]+)?$/i.test(l)) {
+      const m = l.match(/^UPB\s*<=?\s*\$?(\d+(?:\.\d+)?)\s*([KkMm]+)?$/i);
+      return { rule_type: 'loan_size', loan_size_min: 0, loan_size_max: scaleAmount(m[1], m[2]) };
+    }
+    // ">$2.0mm, <=$2.5mm" / ">$2.5mm, <=$3.0mm"
+    const range = l.match(/^>\s*\$?(\d+(?:\.\d+)?)\s*([KkMm]+)?\s*,\s*<=?\s*\$?(\d+(?:\.\d+)?)\s*([KkMm]+)?$/i);
+    if (range) {
+      return {
+        rule_type: 'loan_size',
+        loan_size_min: scaleAmount(range[1], range[2]) + 1,
+        loan_size_max: scaleAmount(range[3], range[4]),
+      };
+    }
+  }
+
+  // ─── DSCR ratio bands ───
+  if (/^DSCR$/i.test(cat)) {
+    if (/^No\s+Ratio$/i.test(l))                return { rule_type: 'dscr_ratio', dscr_ratio_min: null, dscr_ratio_max: 0, feature: 'no_ratio' };
+    const r = l.match(/^DSCR\s+(\d+\.?\d*)\s*-\s*(\d+\.?\d*)$/i);
+    if (r) return { rule_type: 'dscr_ratio', dscr_ratio_min: Number(r[1]), dscr_ratio_max: Number(r[2]) };
+    const single = l.match(/^DSCR\s+(\d+\.?\d*)$/i);
+    if (single) return { rule_type: 'dscr_ratio', dscr_ratio_min: Number(single[1]) };
+  }
+
+  // ─── Credit Event seasoning ───
+  if (/^Credit\s+Event/i.test(cat)) {
+    if (/^FC\/SS\/DIL\/BK\s+36\s*-\s*47\s*mo/i.test(l)) {
+      return { rule_type: 'feature', feature: 'event_seasoning_36_47' };
+    }
+  }
+
+  // ─── Loan Type LLPAs (mix of purpose, IO, escrow, term) ───
+  if (/^Loan\s+Type\s+LLPAs/i.test(cat)) {
+    if (/^Purchase$/i.test(l))                              return { rule_type: 'loan_purpose', loan_purpose: 'purchase' };
+    if (/^Rate\s+Refi$/i.test(l))                           return { rule_type: 'loan_purpose', loan_purpose: 'refinance' };
+    if (/^Cashout\s*\/\s*Debt\s+Consolidation$/i.test(l))   return { rule_type: 'loan_purpose', loan_purpose: 'cashout' };
+    if (/^Interest\s+Only$/i.test(l))                       return { rule_type: 'feature', feature: 'io_30' };
+    if (/^Escrow\s+Waiver/i.test(l))                        return { rule_type: 'feature', feature: 'escrow_waiver' };
+    if (/^40\s+Year\s+Maturity$/i.test(l))                  return { rule_type: 'feature', feature: 'term_40_amortized' };
+  }
+
+  // ─── Property LLPAs (with FL-specific drops) ───
+  if (/^Property\s+LLPAs/i.test(cat)) {
+    // Drop Florida-specific rows — out-of-license.
+    if (/Florida\s+Condo/i.test(l)) return null;
+    if (/^Florida$/i.test(l))       return null;
+    // Drop Tier 2 States — replace with auto-firing pricing_special so
+    // the LTV-banded LLPA always applies for our license (CA/CO/OR/TX
+    // all fall in Tier 2).
+    if (/^Tier\s*2\s+States/i.test(l)) {
+      return { rule_type: 'pricing_special' };
+    }
+    if (/^Condo$/i.test(l))                       return { rule_type: 'property_type', property_type: 'condo' };
+    if (/Non\s*-?\s*Warrantable\s+Condo/i.test(l)) return { rule_type: 'property_type', property_type: 'nonwarr_condo' };
+    if (/^Multi\s+Unit$/i.test(l))                return { rule_type: 'property_type', property_type: '2_4unit' };
+  }
+
   return null;
 }
