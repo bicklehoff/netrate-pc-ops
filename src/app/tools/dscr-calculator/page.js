@@ -186,24 +186,33 @@ export default function DSCRCalculator() {
 
   // Apply broker comp + compute display-ready rows. Carry through lender_code
   // and tier from the pricer so the headline can label the active program.
+  //
+  // Core tier filter: the pricer flags Core-tier rows with a `core_llpas_missing`
+  // warning (price-dscr.js:191-200) because Core LLPAs haven't been ingested
+  // yet — the row carries base price only. Surfacing those to a borrower would
+  // be misleading (price could be 0.5+ pts off once LLPAs land), so drop them
+  // here. When Core LLPAs land in a future ingest, this filter becomes a no-op
+  // automatically (no rows will carry the warning).
   const rows = useMemo(() => {
     if (!data?.priced) return [];
-    return data.priced.map(r => {
-      const lenderPrice = r.final_price;
-      const netPrice = lenderPrice - compPts;
-      const netDollar = (netPrice - 100) / 100 * loanAmount;
-      return {
-        rate: r.note_rate,
-        pi: r.pi,
-        pitia: r.pitia,
-        dscr: r.dscr,
-        lender_code: r.lender_code,
-        tier: r.tier,
-        netPrice,
-        netDollar,
-        warnings: r.warnings || [],
-      };
-    });
+    return data.priced
+      .filter(r => !(r.warnings || []).some(w => w.code === 'core_llpas_missing'))
+      .map(r => {
+        const lenderPrice = r.final_price;
+        const netPrice = lenderPrice - compPts;
+        const netDollar = (netPrice - 100) / 100 * loanAmount;
+        return {
+          rate: r.note_rate,
+          pi: r.pi,
+          pitia: r.pitia,
+          dscr: r.dscr,
+          lender_code: r.lender_code,
+          tier: r.tier,
+          netPrice,
+          netDollar,
+          warnings: r.warnings || [],
+        };
+      });
   }, [data, compPts, loanAmount]);
 
   // Trade-points slider walks displayRows (sorted highest→lowest rate, since
