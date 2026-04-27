@@ -1,0 +1,88 @@
+/**
+ * Generic feature × LTV grid extractor.
+ *
+ * Reads a block where each row is a feature/category label (loan_size,
+ * dscr_ratio, property_type, prepay term, etc.) and the columns are
+ * LTV bands. The caller supplies a `classify` function that turns a row's
+ * label into structured rule fields (rule_type + dimension keys), or
+ * returns null/undefined to skip the row.
+ *
+ * Used by:
+ *   - ResiCentral's "Product Feature × LTV" block (§5.2 of inventory),
+ *     which mixes DSCR ratio / UPB band / property type / prepay /
+ *     misc features under one anchor.
+ *   - Everstream's "Global LLPAs" block (after the D9c.6.3 refactor).
+ */
+
+import { cellStr, parseCell, isNa } from './cells.js';
+
+/**
+ * @callback ClassifyLabel
+ * @param {string} label - the trimmed label string from `labelCol`
+ * @returns {Object|null|undefined}
+ *   Structured rule fields including `rule_type`. May include any of:
+ *   property_type, loan_size_min/max, dscr_ratio_min/max, feature,
+ *   doc_type, prepay_years, loan_purpose, occupancy. Return null to skip.
+ */
+
+/**
+ * @typedef {Object} Band
+ * @property {number} min
+ * @property {number} max
+ * @property {string} [label]
+ */
+
+/**
+ * Extract a feature × LTV grid into rule rows.
+ *
+ * @param {Array<Array>} data
+ * @param {number} startRow - first feature row (inclusive)
+ * @param {number} endRow - one past the last row (exclusive)
+ * @param {Band[]} ltvBands - column bands ordered left-to-right
+ * @param {ClassifyLabel} classify
+ * @param {Object} [opts]
+ * @param {number} [opts.labelCol=0]
+ * @param {number} [opts.startCol=1]
+ * @param {'cltv'|'ltv'} [opts.ltvKey='cltv']
+ * @param {Object} [opts.baseFields] - merged into every emitted rule
+ * @returns {Array<Object>} rules ready for nonqm_adjustment_rules
+ */
+export function extractFeatureLtvGrid(data, startRow, endRow, ltvBands, classify, opts = {}) {
+  const labelCol = opts.labelCol ?? 0;
+  const startCol = opts.startCol ?? 1;
+  const ltvKey = opts.ltvKey ?? 'cltv';
+  const baseFields = opts.baseFields ?? {};
+  const minKey = `${ltvKey}_min`;
+  const maxKey = `${ltvKey}_max`;
+
+  const rules = [];
+
+  for (let r = startRow; r < endRow; r++) {
+    const row = data[r];
+    if (!row) continue;
+    const label = cellStr(row[labelCol]);
+    if (!label) continue;
+
+    const classified = classify(label);
+    if (!classified) continue;
+
+    for (let j = 0; j < ltvBands.length; j++) {
+      const rawVal = row[startCol + j];
+      const num = parseCell(rawVal);
+      if (num === null && !isNa(rawVal)) continue;
+      const ltv = ltvBands[j];
+
+      rules.push({
+        ...baseFields,
+        ...classified,
+        [minKey]: ltv.min,
+        [maxKey]: ltv.max,
+        llpa_points: isNa(rawVal) ? null : num,
+        not_offered: isNa(rawVal),
+        raw_label: label,
+      });
+    }
+  }
+
+  return rules;
+}
