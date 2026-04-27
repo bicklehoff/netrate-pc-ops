@@ -255,7 +255,7 @@ export default function BookPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">What's this about?</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">What&apos;s this about?</label>
                 <select
                   required
                   value={form.loanPurpose}
