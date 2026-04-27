@@ -1,16 +1,24 @@
 'use client';
 
 import { useEffect, useState, useMemo, useRef } from 'react';
+import { getLenderDisplay } from '@/lib/pricing-nonqm/lender-display';
 
 // ── Broker comp (not lender pricing — applied client-side after API) ──
 const COMP_RATE = 0.02;
 const COMP_CAP_PURCHASE = 4595;
 const COMP_CAP_REFI = 3595;
 
+// Defaults the borrower never picks (per AD-4 — drop loan-officer controls).
+// 7/6 ARM is the most-common DSCR program; 30-day lock is the standard. MLO calc
+// at /portal/mlo/dscr (D9d.1, future) will expose these as selectors.
+const DEFAULT_ARM_FIXED_PERIOD = 7;
+const DEFAULT_LOCK_DAYS = 30;
+
 const TIER_LABELS = {
   elite_1: 'Elite 1',
   elite_2: 'Elite 2',
   elite_5: 'Elite 5',
+  core:    'Core',
 };
 
 const UNITS_TO_PROPERTY = {
@@ -27,13 +35,11 @@ const PURPOSE_TO_API = {
 };
 
 function fmtD(n) { return '$' + Math.round(n).toLocaleString(); }
-function fmtPts(n) { return (n >= 0 ? '+' : '') + n.toFixed(3) + ' pts'; }
 
 // ── Design system classes ──
 const labelCls = 'block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1';
 const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:border-brand focus:ring-2 focus:ring-brand/10 outline-none transition-colors tabular-nums';
 const cardCls = 'bg-white rounded-2xl border border-gray-100 shadow-[0_4px_24px_rgba(2,76,79,0.06)] p-5';
-const tightCardCls = 'bg-white rounded-xl border border-gray-100 shadow-[0_2px_12px_rgba(2,76,79,0.05)] p-4';
 
 function SectionLabel({ children }) {
   return (
@@ -103,9 +109,9 @@ export default function DSCRCalculator() {
   const [monthlyTaxes, setMonthlyTaxes] = useState(350);
   const [monthlyInsurance, setMonthlyInsurance] = useState(150);
   const [monthlyHoa, setMonthlyHoa] = useState(0);
-  const [tier, setTier] = useState('elite_1');
-  const [armFixedPeriod, setArmFixedPeriod] = useState(7);
-  const [selectedRate, setSelectedRate] = useState(null);
+  // Slider index walks the eligible ladder; auto-defaults to par when scenario
+  // changes (see effect below). Replaces the old per-rate click selector.
+  const [sliderIndex, setSliderIndex] = useState(0);
 
   // API state
   const [data, setData] = useState(null);
@@ -139,10 +145,13 @@ export default function DSCRCalculator() {
           headers: { 'Content-Type': 'application/json' },
           signal: ctrl.signal,
           body: JSON.stringify({
+            // Per AD-4: borrower calc auto-picks tier and ARM period. Pricer
+            // returns the full ladder across all tiers and lenders; calc picks
+            // par and lets the borrower walk via the slider.
             product_type: 'arm',
             term: 30,
-            arm_fixed_period: armFixedPeriod,
-            lock_days: 30,
+            arm_fixed_period: DEFAULT_ARM_FIXED_PERIOD,
+            lock_days: DEFAULT_LOCK_DAYS,
             fico,
             cltv: Math.round(ltv * 100) / 100,
             state,
@@ -158,7 +167,6 @@ export default function DSCRCalculator() {
               monthly_hoa: monthlyHoa,
               loan_amount: loanAmount,
             },
-            tier_filter: [tier],
           }),
         });
         if (!res.ok) {
@@ -174,9 +182,10 @@ export default function DSCRCalculator() {
       }
     }, 300);
     return () => clearTimeout(timer);
-  }, [loanAmount, ltv, fico, state, purpose, units, monthlyRent, monthlyEscrow, monthlyHoa, tier, armFixedPeriod]);
+  }, [loanAmount, ltv, fico, state, purpose, units, monthlyRent, monthlyEscrow, monthlyHoa]);
 
-  // Apply broker comp + compute display-ready rows
+  // Apply broker comp + compute display-ready rows. Carry through lender_code
+  // and tier from the pricer so the headline can label the active program.
   const rows = useMemo(() => {
     if (!data?.priced) return [];
     return data.priced.map(r => {
@@ -188,10 +197,8 @@ export default function DSCRCalculator() {
         pi: r.pi,
         pitia: r.pitia,
         dscr: r.dscr,
-        adjustments: r.adjustments || [],
-        base: r.base_price,
-        adjPrice: lenderPrice,
-        lenderPrice,
+        lender_code: r.lender_code,
+        tier: r.tier,
         netPrice,
         netDollar,
         warnings: r.warnings || [],
@@ -199,18 +206,27 @@ export default function DSCRCalculator() {
     });
   }, [data, compPts, loanAmount]);
 
-  // Par = closest net price to 100
-  const parRow = rows.length
-    ? rows.reduce((best, r) => Math.abs(r.netPrice - 100) < Math.abs(best.netPrice - 100) ? r : best, rows[0])
-    : null;
+  // Trade-points slider walks displayRows (sorted highest→lowest rate, since
+  // pricer returns final_price desc and final_price tracks note_rate). Index 0
+  // is left thumb (highest rate, most rebate). Last index is right thumb
+  // (lowest rate, most points paid). Par is in between.
   const displayRows = rows.filter(r => Math.abs(r.netPrice - 100) < 3.0);
 
-  // Auto-select par when scenario changes
-  useEffect(() => {
-    if (parRow) setSelectedRate(parRow.rate);
-  }, [parRow?.rate]);
+  // Par index = closest net price to 100
+  const parIndex = displayRows.length
+    ? displayRows.reduce(
+        (bestIdx, r, idx) =>
+          Math.abs(r.netPrice - 100) < Math.abs(displayRows[bestIdx].netPrice - 100) ? idx : bestIdx,
+        0
+      )
+    : 0;
 
-  const activeRow = rows.find(r => r.rate === selectedRate) || parRow;
+  // Auto-recenter to par whenever the ladder shape changes (new scenario)
+  useEffect(() => {
+    setSliderIndex(parIndex);
+  }, [parIndex, displayRows.length]);
+
+  const activeRow = displayRows[Math.min(sliderIndex, displayRows.length - 1)] || null;
 
   // Slider bounds
   const dpMin = Math.round(purchasePrice * 0.20 / 1000) * 1000;
@@ -243,7 +259,7 @@ export default function DSCRCalculator() {
           <span className="text-white font-bold text-base">DSCR Loan Calculator</span>
           <span className="bg-accent text-ink text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Investor</span>
           <span className="ml-auto text-white/60 text-xs hidden sm:block">
-            Everstream · {TIER_LABELS[tier]} · {armFixedPeriod}/6 ARM · {sheetDate}
+            Live wholesale pricing · as of {sheetDate}
           </span>
         </div>
       </div>
@@ -349,25 +365,6 @@ export default function DSCRCalculator() {
               </div>
             </div>
 
-            {/* Tier + ARM period */}
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className={labelCls}>Tier</label>
-                <select value={tier} onChange={e => setTier(e.target.value)} className={inputCls}>
-                  <option value="elite_1">Elite 1</option>
-                  <option value="elite_2">Elite 2</option>
-                  <option value="elite_5">Elite 5</option>
-                </select>
-              </div>
-              <div>
-                <label className={labelCls}>ARM Fixed Period</label>
-                <select value={armFixedPeriod} onChange={e => setArmFixedPeriod(+e.target.value)} className={inputCls}>
-                  <option value={5}>5/6 ARM</option>
-                  <option value={7}>7/6 ARM</option>
-                  <option value={10}>10/6 ARM</option>
-                </select>
-              </div>
-            </div>
           </div>
 
           {/* Income & Expenses */}
@@ -433,7 +430,7 @@ export default function DSCRCalculator() {
           {!error && !loading && !activeRow && ltv <= 80 && (
             <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-600">
               {data && data.priced?.length === 0
-                ? 'No rates available for this scenario in this tier. Try a different tier or adjust inputs.'
+                ? "This scenario doesn't qualify with our DSCR programs today. Try increasing down payment, lowering loan size, or adjusting the rent assumption."
                 : 'Enter a scenario to see live pricing.'}
             </div>
           )}
@@ -442,7 +439,12 @@ export default function DSCRCalculator() {
             <>
               {/* Payment breakdown */}
               <div className={cardCls}>
-                <SectionLabel>Monthly Payment — {activeRow.rate.toFixed(3)}%</SectionLabel>
+                <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+                  <SectionLabel>Your Rate — {activeRow.rate.toFixed(3)}%</SectionLabel>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 bg-gray-100 rounded-full px-2 py-0.5">
+                    {getLenderDisplay(activeRow.lender_code)} · {TIER_LABELS[activeRow.tier] || activeRow.tier}
+                  </span>
+                </div>
 
                 <div className="flex h-2.5 rounded-full overflow-hidden gap-0.5 mb-2">
                   {[
@@ -511,155 +513,71 @@ export default function DSCRCalculator() {
                 </div>
               </div>
 
-              {/* Rate table */}
-              <div className={cardCls}>
-                <SectionLabel>Rate Options · {TIER_LABELS[tier]} · {armFixedPeriod}/6 ARM · 30-Day Lock</SectionLabel>
-                <p className="text-[11px] text-gray-400 mb-3">
-                  Click any row to update the payment breakdown and DSCR gauge.
-                  {loading && <span className="ml-2 text-brand">· updating…</span>}
-                </p>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b-2 border-gray-100">
-                        {['Rate', 'Monthly P&I', 'PITIA', 'DSCR', 'Points / Credit', 'Net Cost'].map(h => (
-                          <th key={h} className="text-left text-[11px] font-semibold text-gray-400 uppercase tracking-wider py-2 px-2 first:pl-0">{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(() => {
-                        let shown125 = false, shown100 = false;
-                        return displayRows.map((row) => {
-                          const markers = [];
-
-                          if (!shown125 && row.dscr < 1.25) {
-                            shown125 = true;
-                            markers.push(
-                              <tr key="dscr125-marker">
-                                <td colSpan={6} className="bg-amber-50 text-amber-700 text-[11px] font-semibold px-2 py-1.5 border-y border-amber-200">
-                                  ▲ DSCR 1.25 — rates above qualify for most programs
-                                </td>
-                              </tr>
-                            );
-                          }
-                          if (!shown100 && row.dscr < 1.00) {
-                            shown100 = true;
-                            markers.push(
-                              <tr key="dscr100-marker">
-                                <td colSpan={6} className="bg-red-50 text-red-600 text-[11px] font-semibold px-2 py-1.5 border-y border-red-200">
-                                  ▲ DSCR 1.00 minimum — rates above this line are ineligible
-                                </td>
-                              </tr>
-                            );
-                          }
-
-                          const isPar = parRow && row.rate === parRow.rate;
-                          const isSelected = row.rate === selectedRate;
-                          const ptsDiff = row.netPrice - 100;
-                          const isCredit = ptsDiff >= 0;
-
-                          return [
-                            ...markers,
-                            <tr key={row.rate}
-                              onClick={() => setSelectedRate(row.rate)}
-                              className={`cursor-pointer transition-colors border-b border-gray-50 ${
-                                isSelected ? 'bg-brand/5' : isPar ? 'bg-green-50/50' : 'hover:bg-gray-50'
-                              }`}>
-                              <td className="py-2.5 px-2 pl-0">
-                                <span className="font-bold text-gray-900 tabular-nums">{row.rate.toFixed(3)}%</span>
-                                {isPar && <span className="ml-1 text-green-600 text-[10px] font-bold">★ par</span>}
-                              </td>
-                              <td className="py-2.5 px-2 tabular-nums text-gray-700">{fmtD(row.pi)}/mo</td>
-                              <td className="py-2.5 px-2 tabular-nums text-gray-700">{fmtD(row.pitia)}/mo</td>
-                              <td className="py-2.5 px-2">
-                                <span className={`font-bold tabular-nums ${row.dscr >= 1.30 ? 'text-green-600' : row.dscr >= 1.00 ? 'text-amber-500' : 'text-red-500'}`}>
-                                  {row.dscr.toFixed(2)}
-                                </span>
-                              </td>
-                              <td className="py-2.5 px-2">
-                                <span className={`text-xs font-semibold px-2 py-0.5 rounded-md tabular-nums ${
-                                  isCredit ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'
-                                }`}>
-                                  {fmtPts(ptsDiff)}
-                                </span>
-                              </td>
-                              <td className="py-2.5 px-2">
-                                <span className={`font-semibold tabular-nums text-sm ${isCredit ? 'text-green-600' : 'text-red-600'}`}>
-                                  {isCredit ? fmtD(row.netDollar) + ' rebate' : fmtD(Math.abs(row.netDollar)) + ' cost'}
-                                </span>
-                              </td>
-                            </tr>
-                          ];
-                        });
-                      })()}
-                    </tbody>
-                  </table>
-                </div>
-                <p className="text-[11px] text-gray-400 mt-3">★ = closest to par after comp and adjustments. Click any row to update payment breakdown. Rebate = credit toward closing costs.</p>
-              </div>
-
-              {/* Pricing math — dynamic from API adjustments */}
-              <div className={cardCls}>
-                <SectionLabel>Pricing Math — {activeRow.rate.toFixed(3)}%</SectionLabel>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between items-center py-2 border-b border-gray-50">
-                    <span className="text-gray-500">Base price (rate sheet)</span>
-                    <span className="tabular-nums font-medium text-gray-700">{activeRow.base.toFixed(4)}</span>
-                  </div>
-                  {activeRow.adjustments.map((a, i) => (
-                    <div key={i} className="flex justify-between items-center py-2 border-b border-gray-50">
-                      <span className="text-gray-500">{a.label}</span>
-                      <span className={`tabular-nums font-medium ${a.points >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                        {fmtPts(a.points)}
+              {/* Trade-points slider — walk the eligible ladder */}
+              {displayRows.length > 1 && (() => {
+                const isCredit = activeRow.netDollar >= 0;
+                const sliderPct = ((sliderIndex / (displayRows.length - 1)) * 100).toFixed(1);
+                return (
+                  <div className={cardCls}>
+                    <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+                      <SectionLabel>Adjust Your Rate</SectionLabel>
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-md tabular-nums ${isCredit ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
+                        {isCredit
+                          ? fmtD(activeRow.netDollar) + ' rebate at closing'
+                          : fmtD(Math.abs(activeRow.netDollar)) + ' to buy down'}
                       </span>
                     </div>
-                  ))}
-                  <div className="flex justify-between items-center py-2 border-b border-gray-50">
-                    <span className="text-gray-500">Lender price</span>
-                    <span className="tabular-nums font-semibold text-gray-900">{activeRow.lenderPrice.toFixed(4)}</span>
-                  </div>
-                  <div className="flex justify-between items-center py-2 border-b border-gray-50">
-                    <span className="text-gray-500">Broker comp ({fmtD(compDollar)} / {fmtD(loanAmount)} loan)</span>
-                    <span className="tabular-nums font-medium text-red-500">−{compPts.toFixed(3)} pts</span>
-                  </div>
-                  <div className="flex justify-between items-center pt-2">
-                    <span className="font-bold text-gray-900">Net price → {activeRow.netDollar >= 0 ? 'Rebate to borrower' : 'Discount (borrower pays)'}</span>
-                    <span className={`font-bold tabular-nums text-base ${activeRow.netDollar >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {activeRow.netPrice.toFixed(4)} → {activeRow.netDollar >= 0 ? fmtD(activeRow.netDollar) : fmtD(Math.abs(activeRow.netDollar))}
-                    </span>
-                  </div>
-                </div>
-                <p className="text-[11px] text-gray-400 mt-3">
-                  Comp: 2% capped at {fmtD(compCap)} ({purpose}). Net price = lender price − broker comp.
-                </p>
-              </div>
-
-              {/* Adjustments card — grid view */}
-              {activeRow.adjustments.length > 0 && (
-                <div className={tightCardCls}>
-                  <SectionLabel>Price Adjustments Applied</SectionLabel>
-                  <div className="grid grid-cols-2 gap-2">
-                    {activeRow.adjustments.map((a, i) => (
-                      <div key={i} className="bg-gray-50 rounded-lg p-3">
-                        <div className="text-[11px] text-gray-500 font-medium">{a.label}</div>
-                        <div className={`text-sm font-bold mt-0.5 tabular-nums ${a.points < 0 ? 'text-red-500' : 'text-green-600'}`}>
-                          {fmtPts(a.points)}
-                        </div>
-                      </div>
-                    ))}
-                    <div className="bg-gray-50 rounded-lg p-3">
-                      <div className="text-[11px] text-gray-500 font-medium">Broker Comp ({purpose} cap)</div>
-                      <div className="text-sm font-bold mt-0.5 tabular-nums text-red-500">
-                        −{compPts.toFixed(3)} pts ({fmtD(compDollar)})
-                      </div>
+                    <p className="text-[11px] text-gray-400 mb-3">
+                      Slide left for a higher rate with rebate at closing. Slide right to pay points up front for a lower rate.
+                      {loading && <span className="ml-2 text-brand">· updating…</span>}
+                    </p>
+                    <input
+                      type="range"
+                      min={0}
+                      max={displayRows.length - 1}
+                      step={1}
+                      value={sliderIndex}
+                      onChange={e => setSliderIndex(+e.target.value)}
+                      className="w-full h-1.5 rounded-full outline-none cursor-pointer appearance-none
+                        [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5
+                        [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white
+                        [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-brand
+                        [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:cursor-pointer"
+                      style={{ background: `linear-gradient(to right, #2E6BA8 0%, #2E6BA8 ${sliderPct}%, #e5e7eb ${sliderPct}%, #e5e7eb 100%)` }}
+                    />
+                    <div className="flex justify-between text-[11px] text-gray-400 mt-1">
+                      <span>Higher rate · rebate</span>
+                      {sliderIndex !== parIndex && (
+                        <button
+                          type="button"
+                          onClick={() => setSliderIndex(parIndex)}
+                          className="text-brand font-semibold hover:underline"
+                        >
+                          ★ Reset to par
+                        </button>
+                      )}
+                      {sliderIndex === parIndex && <span className="text-green-600 font-semibold">★ At par</span>}
+                      <span>Lower rate · pay points</span>
                     </div>
                   </div>
-                  <p className="text-[11px] text-gray-400 mt-3">
-                    Everstream {TIER_LABELS[tier]} LLPA sheet · {sheetDate}
-                  </p>
+                );
+              })()}
+
+              {/* Talk to an MLO CTA */}
+              <div className="bg-brand text-white rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-[0_4px_24px_rgba(46,107,168,0.18)]">
+                <div>
+                  <div className="text-base font-bold">Ready to lock this in?</div>
+                  <div className="text-white/80 text-xs mt-1">
+                    Talk to a NetRate Mortgage MLO — wholesale pricing, no retail markup, fast prequals.
+                  </div>
                 </div>
-              )}
+                <a
+                  href="/contact"
+                  className="bg-accent text-ink rounded-lg px-4 py-2 text-sm font-bold hover:opacity-90 transition-opacity whitespace-nowrap"
+                >
+                  Get a personalized quote
+                </a>
+              </div>
             </>
           )}
         </div>
