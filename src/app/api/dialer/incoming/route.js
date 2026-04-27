@@ -49,6 +49,17 @@ export async function POST(req) {
       targetIdentity = `mlo-${mloId}`;
       fallbackNumber = mlos[0].phone || null;
 
+      // Self-call optimization: when an MLO calls their own Twilio number from
+      // their own cell (e.g. test calls), the parallel-dial cell leg can't
+      // ring because the line is busy with the outbound call. T-Mobile sends
+      // it straight to voicemail in ~1s, which Twilio considers an "answer"
+      // and uses to cancel the parallel browser leg before the MLO can click
+      // Accept. Skipping the cell leg in that case lets the browser leg ring
+      // unimpeded for self-tests. No effect on real customer calls.
+      if (fallbackNumber && normalizedFrom === fallbackNumber) {
+        fallbackNumber = null;
+      }
+
       await sql`
         INSERT INTO call_logs (organization_id, mlo_id, contact_id, direction, from_number, to_number, status, twilio_call_sid)
         VALUES (${DEFAULT_ORG_ID}, ${mloId}, ${contactId}, 'inbound', ${normalizedFrom || from || ''}, ${normalizedTo || to || ''}, 'ringing', ${callSid})
