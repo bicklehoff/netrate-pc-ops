@@ -1,10 +1,19 @@
 /**
- * DSCR Pricing API
+ * DSCR Pricing API — public projection.
  *
  * POST /api/pricing/dscr — Price a DSCR scenario against every active DSCR
  * rate sheet across all lenders. Returns one merged ladder sorted by
- * `final_price` desc with each row labeled by `lender_code`. Today's
- * production state: 1 lender (Everstream); D9c.7 adds ResiCentral.
+ * `final_price` desc.
+ *
+ * **Lender confidentiality boundary** (since 2026-04-27): wholesale lender
+ * names + lender-coined tier names are NOT public information. Our wholesale
+ * pricing relationships are confidential to the channel and disclosing them
+ * publicly is both a wholesale-channel rule violation and a competitive
+ * giveaway. The pricer carries `lender_code`, `tier`, and `raw_product_name`
+ * internally; the public projection at this route boundary strips them.
+ *
+ * The MLO calc at `/portal/mlo/dscr` (D9d.1, future) is the only surface
+ * that ever sees lender attribution — and it lives behind authentication.
  *
  * Body:
  * {
@@ -37,14 +46,13 @@
  *   prepay_years:      5,
  *   prepay_structure:  "fixed_5",
  *   features:          ["io"],
- *   tier_filter:       ["elite_1", "elite_2"],  // subset of returned tiers
- *   lender_filter:     ["everstream"],          // subset of returned lenders
  * }
  *
- * Returns: { priced, skipped, meta } where meta = {
- *   lenders: Array<{ lender_code, effective_at }>,
- *   scenario,
- * }
+ * Returns: { priced, skipped, meta } where:
+ *   priced[]  = product-shape rows (no lender_code, no tier, no raw_product_name)
+ *               with rate, prices, payment, dscr, adjustments, warnings
+ *   skipped[] = sanitized {note_rate, reason} entries
+ *   meta      = { as_of: <max effective_at>, scenario }
  */
 
 import { NextResponse } from 'next/server';
@@ -94,6 +102,51 @@ function validate(body) {
   return errors;
 }
 
+/**
+ * Strip lender-attributed fields from a single priced row.
+ * Removes: lender_code, tier, raw_product_name.
+ * Adjustments lose their `label` (some labels embed lender-coined feature
+ * names); rule_type + points are preserved so the calc can still display
+ * a high-level breakdown if it wants to.
+ */
+function publicPriced(r) {
+  return {
+    loan_type: r.loan_type,
+    product_type: r.product_type,
+    term: r.term,
+    arm_fixed_period: r.arm_fixed_period,
+    arm_adj_period: r.arm_adj_period,
+    lock_days: r.lock_days,
+    note_rate: r.note_rate,
+    base_price: r.base_price,
+    final_price: r.final_price,
+    llpa_total: r.llpa_total,
+    price_cap: r.price_cap,
+    adjustments: (r.adjustments || []).map(a => ({
+      rule_type: a.rule_type,
+      points: a.points,
+    })),
+    warnings: r.warnings || [],
+    pi: r.pi,
+    pitia: r.pitia,
+    dscr: r.dscr,
+  };
+}
+
+/**
+ * Strip lender-attributed fields from a skipped row. We don't expose the
+ * raw_product_name or lender_code; just enough for the calc to surface
+ * "this scenario doesn't qualify" diagnostics.
+ */
+function publicSkipped(s) {
+  return {
+    note_rate: s.note_rate,
+    reason: s.reason,
+    ...(s.dscr !== undefined && { dscr: s.dscr }),
+    ...(s.pitia !== undefined && { pitia: s.pitia }),
+  };
+}
+
 export async function POST(request) {
   const limited = await rateLimit(request, { scope: 'pricing-dscr', limit: 60, window: '1 m' });
   if (limited) return limited;
@@ -127,23 +180,25 @@ export async function POST(request) {
     const sheets = await getSheets();
     const result = priceDscrScenario(sheets, scenario);
 
-    // Optional tier filter (post-pricing — keeps pricer pure)
-    if (Array.isArray(body.tier_filter) && body.tier_filter.length) {
-      const allowed = new Set(body.tier_filter);
-      result.priced = result.priced.filter(r => allowed.has(r.tier));
-      result.skipped = result.skipped.filter(r => allowed.has(r.tier));
-    }
+    // Project to the public shape — drop lender_code, tier, raw_product_name,
+    // and adjustments[].label. `meta.lenders[]` collapses to a single
+    // `as_of` (max effective_at across all active sheets).
+    const asOf = sheets
+      .map(({ sheet }) => sheet?.effective_at)
+      .filter(Boolean)
+      .sort()
+      .pop() ?? null;
 
-    // Optional lender filter — symmetric to tier_filter. Skipped rows include
-    // lender_code so callers can attribute "skipped because state not
-    // licensed" to the right lender (set in pricer's skipped push).
-    if (Array.isArray(body.lender_filter) && body.lender_filter.length) {
-      const allowed = new Set(body.lender_filter);
-      result.priced = result.priced.filter(r => allowed.has(r.lender_code));
-      result.skipped = result.skipped.filter(r => allowed.has(r.lender_code));
-    }
+    const publicResult = {
+      priced: result.priced.map(publicPriced),
+      skipped: result.skipped.map(publicSkipped),
+      meta: {
+        as_of: asOf,
+        scenario,
+      },
+    };
 
-    return NextResponse.json(result, {
+    return NextResponse.json(publicResult, {
       headers: {
         'Cache-Control': 'public, s-maxage=60, max-age=30, stale-while-revalidate=120',
       },
@@ -156,15 +211,24 @@ export async function POST(request) {
 export async function GET() {
   try {
     const sheets = await getSheets();
+    const asOf = sheets
+      .map(({ sheet }) => sheet?.effective_at)
+      .filter(Boolean)
+      .sort()
+      .pop() ?? null;
+    // Aggregate counts across active sheets without naming the underlying
+    // sources. Borrower-trust signal ("we shop multiple wholesale lenders")
+    // without identifying them.
+    const programCount = sheets.length;
+    const productCount = sheets.reduce((s, { sheet }) => s + (sheet?.product_count || 0), 0);
+    const llpaCount    = sheets.reduce((s, { sheet }) => s + (sheet?.llpa_count    || 0), 0);
     return NextResponse.json({
       engine: 'NetRate DSCR Pricer',
       endpoint: 'POST /api/pricing/dscr',
-      lenders: sheets.map(({ sheet }) => ({
-        lender_code: sheet.lender_code,
-        effective_at: sheet.effective_at,
-        product_count: sheet.product_count,
-        llpa_count: sheet.llpa_count,
-      })),
+      as_of: asOf,
+      program_count: programCount,
+      product_count: productCount,
+      llpa_count: llpaCount,
     });
   } catch (err) {
     return apiError(err, 'DSCR sheet unavailable', 500, { scope: 'pricing-dscr-meta' });

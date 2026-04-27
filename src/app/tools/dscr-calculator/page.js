@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState, useMemo, useRef } from 'react';
-import { getLenderDisplay } from '@/lib/pricing-nonqm/lender-display';
 
 // ── Broker comp (not lender pricing — applied client-side after API) ──
 const COMP_RATE = 0.02;
@@ -14,12 +13,9 @@ const COMP_CAP_REFI = 3595;
 const DEFAULT_ARM_FIXED_PERIOD = 7;
 const DEFAULT_LOCK_DAYS = 30;
 
-const TIER_LABELS = {
-  elite_1: 'Elite 1',
-  elite_2: 'Elite 2',
-  elite_5: 'Elite 5',
-  core:    'Core',
-};
+// Wholesale lender names + lender-coined tier names are confidential and not
+// shown on the public calc (per 2026-04-27 product call). The badge is gone;
+// the "Your Rate" card displays only product shape + lock days.
 
 const UNITS_TO_PROPERTY = {
   1: 'sfr',
@@ -184,15 +180,17 @@ export default function DSCRCalculator() {
     return () => clearTimeout(timer);
   }, [loanAmount, ltv, fico, state, purpose, units, monthlyRent, monthlyEscrow, monthlyHoa]);
 
-  // Apply broker comp + compute display-ready rows. Carry through lender_code
-  // and tier from the pricer so the headline can label the active program.
+  // Apply broker comp + compute display-ready rows.
   //
-  // Core tier filter: the pricer flags Core-tier rows with a `core_llpas_missing`
-  // warning (price-dscr.js:191-200) because Core LLPAs haven't been ingested
-  // yet — the row carries base price only. Surfacing those to a borrower would
-  // be misleading (price could be 0.5+ pts off once LLPAs land), so drop them
-  // here. When Core LLPAs land in a future ingest, this filter becomes a no-op
-  // automatically (no rows will carry the warning).
+  // The public API projection (`/api/pricing/dscr` POST) deliberately strips
+  // lender_code / tier / raw_product_name — wholesale lender names + lender-
+  // coined tier names are confidential. The calc renders product shape only.
+  //
+  // Core-tier filter (Everstream's Core DSCR products): the pricer flags
+  // those rows with a `core_llpas_missing` warning because LLPAs haven't been
+  // ingested for that tier — the row carries base price only. Surfacing
+  // would be misleading; drop here. When Core LLPAs land in a future ingest,
+  // this filter becomes a no-op (no rows will carry the warning).
   const rows = useMemo(() => {
     if (!data?.priced) return [];
     return data.priced
@@ -206,8 +204,6 @@ export default function DSCRCalculator() {
           pi: r.pi,
           pitia: r.pitia,
           dscr: r.dscr,
-          lender_code: r.lender_code,
-          tier: r.tier,
           netPrice,
           netDollar,
           warnings: r.warnings || [],
@@ -242,12 +238,12 @@ export default function DSCRCalculator() {
   const dpMax = Math.round(purchasePrice * 0.50 / 1000) * 1000;
   const dpPct = dpMax > dpMin ? ((downPayment - dpMin) / (dpMax - dpMin) * 100).toFixed(1) : 0;
 
-  // meta.lenders[] arrived in D9c.4 (replaces meta.effective_at). Today there
-  // is one lender (Everstream); use its effective date for the "as of …" label.
-  // D9c.5 reshapes this whole header per AD-4.
-  const firstLenderEffectiveAt = data?.meta?.lenders?.[0]?.effective_at;
-  const sheetDate = firstLenderEffectiveAt
-    ? new Date(firstLenderEffectiveAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+  // The public API meta returns `as_of` (max effective date across all
+  // active wholesale sheets, name-stripped per the lender-confidentiality
+  // boundary). The calc surfaces it as the "live wholesale pricing as of
+  // <date>" trust signal in the header.
+  const sheetDate = data?.meta?.as_of
+    ? new Date(data.meta.as_of).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
     : '—';
 
   // Guidelines
@@ -451,7 +447,7 @@ export default function DSCRCalculator() {
                 <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
                   <SectionLabel>Your Rate — {activeRow.rate.toFixed(3)}%</SectionLabel>
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 bg-gray-100 rounded-full px-2 py-0.5">
-                    {getLenderDisplay(activeRow.lender_code)} · {TIER_LABELS[activeRow.tier] || activeRow.tier}
+                    Investor DSCR · {DEFAULT_ARM_FIXED_PERIOD}/6 ARM · {DEFAULT_LOCK_DAYS}-day lock
                   </span>
                 </div>
 
