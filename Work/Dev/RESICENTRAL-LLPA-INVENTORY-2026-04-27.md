@@ -328,19 +328,34 @@ ResiCentral's actual licensed states aren't enumerated in the workbook. The pars
 
 ## 11. Estimated parser sub-PRs (D9c.6.x)
 
-| # | Scope | Estimated lines | Risk |
-|---|-------|-----------------|------|
-| **D9c.6.1** | **This inventory document** | ~330 lines doc | Low (docs-only) |
-| **D9c.6.2** | Shared utilities — `fico-ltv-grid.js`, `feature-ltv-grid.js`, `effective-date.js`, anchor-by-text helper. Unit tests. | ~400 + 200 tests | Medium |
-| **D9c.6.3** | Refactor `everstream-llpas.js` to use shared utilities (parity zero-change). | ~150 net | Medium |
-| **D9c.6.4** | ResiCentral rates parser (`resicentral-rates.js`) — extracts the 6 in-scope (program, term) ladders × 3 lock days. | ~250 | Medium |
-| **D9c.6.5** | ResiCentral LLPAs parser **(Premier + Investor Premier only)** — extracts §5.1 FICO×LTV + §5.2 Feature×LTV (single-label) + §5.3 Loan Amount Adj + §5.4 Max Prices + §5.5 Misc + Pricing Special. Elite + Select deferred (see §10.6). | ~400 | High |
-| **D9c.6.5b** | ResiCentral Elite LLPAs parser — 2-col category+sub-label layout, NJ Prepay overrides, state-specific max prices. | ~250 | High |
-| **D9c.6.5c** | ResiCentral Select LLPAs parser — 2-col layout (col 2 + col 3), Tier 1/Tier 2 state rules, Florida LLPA. | ~200 | Medium |
-| **D9c.6.6** | Top-level orchestrator + ingest function rename + CLI runner. | ~150 | Low |
-| **D9c.6.7** | 50+ scenario parity check — hand-calculate 50 representative scenarios from the spreadsheet, compare against parser output. | ~200 tests | Medium |
+| # | Scope | Status | PR(s) | Notes |
+|---|-------|--------|-------|-------|
+| **D9c.6.1** | This inventory document | ✅ Shipped | [#217](https://github.com/bicklehoff/netrate-pc-ops/pull/217), [#218](https://github.com/bicklehoff/netrate-pc-ops/pull/218) | Amendment in #218 closed open Q1–Q4 with David |
+| **D9c.6.2** | Shared utilities (`fico-ltv-grid.js`, `feature-ltv-grid.js`, `effective-date.js`, `anchor-by-text.js`, `cells.js`) + unit tests | ✅ Shipped | [#219](https://github.com/bicklehoff/netrate-pc-ops/pull/219) | 48 unit tests; per-folder `package.json` with `type:module` scopes ESM |
+| **D9c.6.3** | Refactor `everstream-llpas.js` to use shared utilities | ✅ Shipped | [#220](https://github.com/bicklehoff/netrate-pc-ops/pull/220) | Parity zero-change verified by integration test |
+| **D9c.6.4** | ResiCentral rates parser (`resicentral-rates.js`) | ✅ Shipped | [#221](https://github.com/bicklehoff/netrate-pc-ops/pull/221) | 588 products against 2026-04-24 sheet; 6 in-scope ladders, 0 unintended skips. **Fixed-only scope** — ARM expansion deferred (see follow-ups) |
+| **D9c.6a** | Pricer wiring for new rule_types (`prepay_term`, `prepay_structure`, `pricing_special`, `loan_size_secondary`) + tier auto-discovery | ✅ Shipped | [#224](https://github.com/bicklehoff/netrate-pc-ops/pull/224) | Backward-compat with Everstream's `prepay`; null-purpose fix in [#230](https://github.com/bicklehoff/netrate-pc-ops/pull/230); pricing-special stacking in [#231](https://github.com/bicklehoff/netrate-pc-ops/pull/231); deterministic tier order in [#226](https://github.com/bicklehoff/netrate-pc-ops/pull/226) |
+| **D9c.6.5** | ResiCentral LLPAs parser (Premier + Investor Premier only) | ✅ Shipped | [#223](https://github.com/bicklehoff/netrate-pc-ops/pull/223) | 769 rules; locked-decision implementation Q1–Q4. Elite + Select deferred per §10.6. Units fix [#229](https://github.com/bicklehoff/netrate-pc-ops/pull/229) (×100 to convert workbook decimal-fraction → points) |
+| **D9c.6.5b** | ResiCentral Elite LLPAs parser | ⏭ Deferred | — | 2-col category+sub-label layout, state-specific overrides. NJ Prepay overrides + CT/IL/NJ/NY state row are out-of-license (NetRate not in those states) → drop entirely; remaining categories (DSCR Additional, Housing History, Loan Balance, Property Type, Amortization, Prepayment Penalty) need the 2-col forward-fill extractor |
+| **D9c.6.5c** | ResiCentral Select LLPAs parser | ⏭ Deferred | — | Cols 2+3 layout. Florida + Tier 1 (NV/LA/GA) rows out-of-license → drop. Tier 2 ("Other") covers CA/CO/OR/TX → keep |
+| **D9c.6.6** | Top-level orchestrator + ingest function rename + CLI runner | ✅ Shipped | [#225](https://github.com/bicklehoff/netrate-pc-ops/pull/225) | `parseResicentralXlsx`, `ingestNonqmSheet`, `scripts/ingest-resicentral.mjs` |
+| **D9c.7** | Production ingest + activation | ✅ Shipped | (operational, not a PR) | 588 products + 769 rules ingested, sheet activated 2026-04-27. LS-confirmed parity to the thousandth on canonical Premier scenario |
+| **D9c.6.7** | 50+ scenario regression suite | ⏭ Deferred | — | Hand-calculate 50 representative scenarios, compare against parser output. Single-scenario LS validation (D9c.7) confirmed parser+pricer correctness end-to-end; broader regression deferred until Elite + Select parsers land |
+| **D9c.X-public** | Public-projection layer — strip lender attribution from `/api/pricing/dscr` | ✅ Shipped | [#232](https://github.com/bicklehoff/netrate-pc-ops/pull/232) | IP firewall at API boundary; no `lender_code`/`tier`/`raw_product_name` exposed to public callers; `meta.lenders[]` → `meta.as_of`; calc + widget badges neutralized |
 
-Total estimated effort: **5–7 sessions** (matches the original PR-1 estimate).
+### Phase summary (as of 2026-04-27 close)
+
+ResiCentral DSCR live in production for Premier + Investor Premier programs alongside Everstream. Visitor-facing surfaces compliant (no lender attribution). Pricer correctly applies all 4 ResiCentral-introduced rule_types. End-to-end LS parity validated.
+
+### Open follow-ups (queued, not blocking borrower value)
+
+1. **ResiCentral ARM rates expansion** (parser scope grow) — workbook has 7/6 + 5/6 + 10/6 ARM ladders per program; current parser stops at the ARM section header. Borrower calc + widget default to ARM, so until this lands ResiCentral only contributes when borrowers explicitly switch to fixed (no toggle yet).
+2. **Borrower-facing fixed/ARM toggle** (alt path) — surface ResiCentral fixed without parser expansion.
+3. **D9c.6.5b** Elite LLPAs parser (2-col layout, in-license categories only).
+4. **D9c.6.5c** Select LLPAs parser (cols 2+3 layout, Tier 2 LLPAs only — drop FL + NV/LA/GA per license).
+5. **D9c.6.7** 50+ scenario regression suite.
+6. **AD-7 license filter wiring** — `isLicensedInState()` defined but unused. Wire in pricer when 3rd lender lands.
+7. **`prepay` rule_type cleanup** — migrate Everstream's existing `prepay` rules to `prepay_term` + `prepay_structure` so the dual-handling code in the pricer can be retired.
 
 ## 12. Verification log
 
