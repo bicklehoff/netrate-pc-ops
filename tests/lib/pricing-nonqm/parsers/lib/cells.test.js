@@ -26,14 +26,21 @@ test('isNa detects "NA" case-insensitively, with surrounding whitespace', () => 
   assert.equal(isNa('  NA  '), true);
 });
 
-test('isNa rejects everything else (including N/A)', () => {
+test('isNa detects "N/A" (Investor Premier convention) case-insensitively', () => {
+  assert.equal(isNa('N/A'), true);
+  assert.equal(isNa('n/a'), true);
+  assert.equal(isNa('  N/A  '), true);
+});
+
+test('isNa rejects everything else', () => {
   assert.equal(isNa(''), false);
   assert.equal(isNa(null), false);
   assert.equal(isNa(undefined), false);
   assert.equal(isNa('0.5'), false);
   assert.equal(isNa(0), false);
-  assert.equal(isNa('N/A'), false);   // explicit: only bare "NA" matches
   assert.equal(isNa('not available'), false);
+  assert.equal(isNa('n.a.'), false);   // dots are not slashes
+  assert.equal(isNa('n a'), false);    // space-separated not allowed
 });
 
 test('parseCell returns finite numbers as-is', () => {

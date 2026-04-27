@@ -16,13 +16,15 @@ export function cellStr(v) {
 }
 
 /**
- * True iff the cell text is exactly "NA" (case-insensitive, trimmed).
- * "N/A", "n.a.", "" all return false — only the bare "NA" marker
- * used by Everstream + ResiCentral grids.
+ * True iff the cell text is "NA" or "N/A" (case-insensitive, trimmed).
+ * Lenders are inconsistent: Everstream + ResiCentral Premier/Elite/Select
+ * use bare "NA"; ResiCentral Investor Premier uses "N/A". Both encode the
+ * same "not offered" semantic, so we accept either form. "n.a.", "n a",
+ * etc. still return false.
  */
 export function isNa(v) {
   if (v === null || v === undefined) return false;
-  return /^na$/i.test(String(v).trim());
+  return /^n\/?a$/i.test(String(v).trim());
 }
 
 /**
