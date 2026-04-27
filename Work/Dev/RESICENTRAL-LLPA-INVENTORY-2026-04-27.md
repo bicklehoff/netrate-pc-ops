@@ -3,8 +3,10 @@ date: 2026-04-27
 author: pc-dev
 doc: ResiCentral LLPA inventory — D9c.6 parser pre-build
 companion_doc: Work/Dev/PRICING-ARCHITECTURE.md (§10 multi-lender DSCR integration)
-status: inventory — pending David's review of decisions before D9c.6.2 starts
+status: inventory — open questions resolved 2026-04-27, ready for D9c.6.2
 source_xlsx: 67370_04242026_1128199760.xlsx (effective 2026-04-24)
+amendments:
+  - 2026-04-27 pc-dev — §10 open questions resolved with David. Q1 confirmed (new `loan_size_secondary` rule_type). Q2 confirmed (Select combined column treated as 30-yr fixed; IO skipped). Q3 confirmed (new `pricing_special` rule_type with FICO/DSCR/LTV gates). Q4 confirmed (split prepay into `prepay_term` + `prepay_structure` rule_types). Borrower-vs-MLO surface split clarified — parser captures all variants; UI layer chooses what to expose. Memory rule "skip IO products" updated: skip means don't extract 30-yr IO rate-sheet column as separate product (variant cols share base prices); IO LLPAs still captured as feature rows so MLO calc (D9d.1) can apply them.
 ---
 
 # ResiCentral DSCR — LLPA Inventory
@@ -268,12 +270,23 @@ ResiCentral data lands in the existing `nonqm_*` tables — no schema changes ne
 7. **`tier` values in nonqm_rate_products:** `premier`, `investor_premier`, `elite`, `select`. Snake-case lower per Everstream pattern. No mapping to Everstream tier names (per AD-3 lender-scoped tiers).
 8. **New `rule_type = 'loan_size_secondary'`** for the standalone Loan Amount Adj table (separate from §5.2 UPB rows). Avoids conflict with the LTV-banded UPB LLPAs that share `rule_type = 'loan_size'`.
 
-## 10. Open questions
+## 10. Resolved decisions (locked 2026-04-27 with David)
 
-1. **Loan Amount Adj rule_type naming** (per §5.3) — `loan_size_secondary` vs collapse into `loan_size` with a discriminator? Lean: new rule_type. Confirm.
-2. **Combined Select 30-yr column** — "30 Year Fixed & 30 Year IO" shares one rate ladder. Parser treats as 30-yr fixed; IO variant differentiated by LLPA. Confirm this matches intent.
-3. **Pricing Special with two conditions** — "700+ FICO, ≥1 DSCR, max LTV ≤ 80%". Single LLPA value `+0.00875` per row 67. Pricer applies as a `feature` rule; conditions enforced via FICO/DSCR/LTV gates on the rule. Confirm this fits the existing pricer's match model.
-4. **Prepay TERM + Prepay STRUCTURE additivity** — sheet note says "Prepay structure LLPAs additive to PPP Term LLPA (i.e. 5% Flat Prepay would be added to 5yr PPP LLPA)". Existing `priceOne` applies one match per `rule_type`; need to either (a) emit both as `prepay` rule_type and ensure additivity logic in pricer, or (b) split into `prepay_term` + `prepay_structure` rule_types. Lean: split.
+1. **Loan Amount Adj rule_type naming** — **new `rule_type = 'loan_size_secondary'`** (separate from §5.2 UPB rows which keep `rule_type = 'loan_size'`). Pricer adds one extra `.find()` block; both LLPAs sum into `llpa_total`. Schema columns unchanged.
+2. **Combined Select 30-yr column** — treated as the 30-yr fixed price ladder. The IO half of the column header is irrelevant because IO products are filtered out at the parser entry (§4.4). The IO LLPA in the LLPAs tab handles the IO variant for downstream consumers (MLO calc in D9d.1) — borrower calc never opts in.
+3. **Pricing Special** — **new `rule_type = 'pricing_special'`**. Stores FICO/DSCR/LTV conditions in the existing `fico_min`, `dscr_ratio_min`, `cltv_max` columns. Pricer adds one auto-applied `.find()` block (not gated by `scenario.features` — fires when conditions match). Same shape applies to "January Pricing Special" and any future date- or scenario-bounded specials. Graceful no-op when row is absent.
+4. **Prepay TERM + Prepay STRUCTURE additivity** — **split into `prepay_term` + `prepay_structure` rule_types**. Term rows use `rule_type='prepay_term'` (matches by `prepay_years`). Structure rows use `rule_type='prepay_structure'` (matches by `feature`, e.g. `'fixed_5'`, `'declining'`, `'six_month_interest'`). Pricer adds two `.find()` blocks; both LLPAs sum. Existing Everstream `prepay` rule_type left untouched for now; cleanup migration scheduled separately as a small follow-up PR after ResiCentral lands.
+
+### 10.5 Borrower-vs-MLO surface split (clarified in Q4 review)
+
+The parser data model is **the same** for borrower calc and the future MLO calc (D9d.1) — parser captures every prepay term, every prepay structure, every IO LLPA, every feature LLPA. The decision about what to expose lives at the API/calc layer, not the parser layer.
+
+| Layer | Borrower calc | MLO calc (D9d.1, future) |
+|---|---|---|
+| API request | Hardcoded defaults: `prepay_years=5, prepay_structure='fixed_5', features=[]` | All toggles exposed: prepay term + structure + IO + ARM period + tier + lock days |
+| Pricer behavior | Applies matching `prepay_term` + `prepay_structure` rules; IO LLPA never matches because `features=[]` | Applies whatever rules match MLO's selected scenario |
+
+This validates AD-9. One parser feeds both surfaces; UIs filter independently.
 
 ## 11. Estimated parser sub-PRs (D9c.6.x)
 
