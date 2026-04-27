@@ -144,24 +144,28 @@ export async function getAvailableSlots(date, { halfHourOnly = true } = {}) {
  * @param {string} params.email
  * @param {string} params.phone
  * @param {string} [params.notes] — optional, sent as Zoho notes field
- * @param {object} [params.customFields] — optional intake field map (loan_purpose, etc.)
+ * @param {object} [params.additionalFields] — Zoho admin custom-field map keyed by exact display name,
+ *   e.g. `{ "Loan Purpose": "Purchase" }`. Sent as the `additional_fields` JSON form param per Zoho
+ *   convention. Required fields configured in Zoho admin must be present or the appointment will fail.
  * @returns {Promise<{bookingId: string, status: string, summary: object}>}
  * @throws {ZohoBookingsError}
  */
-export async function bookAppointment({ date, time, name, email, phone, notes, customFields }) {
+export async function bookAppointment({ date, time, name, email, phone, notes, additionalFields }) {
   const cfg = getConfig();
   const fromTime = `${date} ${to24h(time)}`; // dd-MMM-yyyy HH:mm:ss
 
-  // multipart/form-data with customer_details as JSON STRING (not nested form fields)
+  // multipart/form-data with customer_details and additional_fields as JSON STRING form params.
+  // Custom fields go in `additional_fields` (NOT inside customer_details — that path silently
+  // ignores them and Zoho returns 200 + outer success + inner failure "field is mandatory").
   const form = new FormData();
   form.append('service_id', cfg.serviceId);
   form.append('staff_id', cfg.staffId);
   form.append('from_time', fromTime);
   form.append('timezone', cfg.timezone);
-  form.append(
-    'customer_details',
-    JSON.stringify({ name, email, phone_number: phone, ...(customFields || {}) })
-  );
+  form.append('customer_details', JSON.stringify({ name, email, phone_number: phone }));
+  if (additionalFields && Object.keys(additionalFields).length > 0) {
+    form.append('additional_fields', JSON.stringify(additionalFields));
+  }
   if (notes) form.append('notes', notes);
 
   const auth = await authHeader();
@@ -190,9 +194,20 @@ export async function bookAppointment({ date, time, name, email, phone, notes, c
 
   const json = await res.json();
   const resp = json?.response;
+
+  // Outer status is HTTP-level success (Zoho-side gateway). Always check inner status too —
+  // Zoho returns HTTP 200 + outer status:'success' even when the appointment write failed
+  // (e.g. missing required custom field, slot taken, validation error). The actual result
+  // lives in `response.returnvalue.status`. This was the silent-failure bug from 2026-04-27.
   if (!resp || resp.status !== 'success') {
-    const msg = resp?.returnvalue?.message || 'Booking failed';
-    throw new ZohoBookingsError(msg, {
+    const msg = resp?.returnvalue?.message || resp?.message || 'Zoho HTTP-level failure';
+    throw new ZohoBookingsError(msg, { httpStatus: 200, code: 'api', details: json });
+  }
+
+  const rv = resp.returnvalue;
+  if (rv?.status && rv.status !== 'success') {
+    // Zoho's "slot not available" / "Custom field [...] mandatory" / etc. surface here.
+    throw new ZohoBookingsError(rv.message || `Zoho inner status: ${rv.status}`, {
       httpStatus: 200,
       code: 'api',
       details: json,
@@ -200,11 +215,21 @@ export async function bookAppointment({ date, time, name, email, phone, notes, c
   }
 
   // Response shape: response.returnvalue.data (double-nested per Claw spec)
-  const rv = resp.returnvalue;
   const data = rv?.data || rv;
+  const bookingId = data?.booking_id || data?.id;
+
+  // Booking_id MUST exist on success — its absence means Zoho accepted the request but
+  // didn't actually create an appointment. Treat as failure to avoid lying to the user.
+  if (!bookingId) {
+    throw new ZohoBookingsError('Zoho returned success but no booking_id', {
+      httpStatus: 200,
+      code: 'api',
+      details: json,
+    });
+  }
 
   return {
-    bookingId: data?.booking_id || data?.id || null, // Includes "#" prefix per Zoho convention
+    bookingId, // Includes "#" prefix per Zoho convention
     status: data?.status || 'success',
     summary: data,
   };
