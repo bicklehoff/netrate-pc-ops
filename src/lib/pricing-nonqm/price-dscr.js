@@ -36,9 +36,17 @@ const LENDER_CODE = 'everstream';
 // `investor_premier`) the iteration must derive tier names from the
 // products themselves.
 //
+// TIER_ORDER fixes the iteration order so output ties resolve
+// deterministically (the priced array is sorted by final_price desc;
+// ties fall through to insertion order, which is tier order). Without
+// this, DB row order leaks into the hash of the API response, breaking
+// byte-parity checks across deploys. New tiers (not in this list) sort
+// after the known ones, in alphabetical order.
+//
 // CORE_TIERS remains hardcoded — it's a flag for "no LLPAs ingested,
 // emit base price with warning". Specific to Everstream's Core Non-QM
 // sheet, which still hasn't been ingested.
+const TIER_ORDER  = ['elite_1', 'elite_2', 'elite_5', 'core', 'premier', 'investor_premier', 'elite', 'select'];
 const CORE_TIERS  = ['core'];
 
 // ── Internal loaders (shared by single- and multi-lender entry points) ───
@@ -162,9 +170,18 @@ export function priceDscrScenario(sheetsArray, scenario) {
 
   for (const { sheet, products, rules } of sheetsArray) {
     // Discover tiers from products in this sheet rather than hardcoding.
-    // Preserves first-seen ordering; the priced array is re-sorted by
-    // price below, so tier order only affects tie-break.
-    const tiers = [...new Set(products.map(p => p.tier))];
+    // Sort by TIER_ORDER (known tiers first, in canonical order) with
+    // unknown tiers falling through alphabetically. Determinism here
+    // keeps the API response byte-stable across deploys when no rule
+    // changes are intended.
+    const tiers = [...new Set(products.map(p => p.tier))].sort((a, b) => {
+      const ai = TIER_ORDER.indexOf(a);
+      const bi = TIER_ORDER.indexOf(b);
+      if (ai === -1 && bi === -1) return a < b ? -1 : a > b ? 1 : 0;
+      if (ai === -1) return 1;
+      if (bi === -1) return -1;
+      return ai - bi;
+    });
     for (const tier of tiers) {
       const isCore = CORE_TIERS.includes(tier);
 
