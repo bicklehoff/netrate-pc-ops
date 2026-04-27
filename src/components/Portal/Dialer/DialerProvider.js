@@ -131,6 +131,39 @@ export default function DialerProvider({ children }) {
             // Populate sticky record immediately — persists through 'cancel'
             // (cell answered or caller hung up) so the MLO still has context
             setRecentInboundCall({ ...info, at: Date.now() });
+
+            // CRITICAL: wire lifecycle listeners on the Call NOW, not on accept.
+            // If the user doesn't accept, the Call still emits cancel/reject when
+            // the caller hangs up or times out. Without these listeners, our React
+            // state never clears AND the SDK keeps the Call in its internal busy
+            // state, causing the next incoming to be rejected with "600 Busy
+            // Everywhere". This was the secondary cause of the never-rings bug —
+            // first call worked after refresh, all subsequent calls busy.
+            call.on('cancel', () => {
+              console.log('[Dialer] Incoming call cancelled (caller hung up or timed out)');
+              if (mounted) {
+                setIncomingCall(null);
+                setCallState(IDLE);
+                setCallerInfo(null);
+              }
+            });
+            call.on('reject', () => {
+              console.log('[Dialer] Incoming call rejected');
+              if (mounted) {
+                setIncomingCall(null);
+                setCallState(IDLE);
+                setCallerInfo(null);
+              }
+            });
+            call.on('disconnect', () => {
+              console.log('[Dialer] Incoming call disconnected');
+              if (mounted) {
+                setIncomingCall(null);
+                setActiveCall(null);
+                setCallState(IDLE);
+                setCallerInfo(null);
+              }
+            });
           }
         });
 

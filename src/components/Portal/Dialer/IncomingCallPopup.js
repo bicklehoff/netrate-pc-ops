@@ -31,7 +31,7 @@ export default function IncomingCallPopup() {
   const contactId = info?.contactId || null;
 
   return (
-    <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-2 duration-300">
+    <div className="fixed top-4 right-4 z-[100] animate-in slide-in-from-top-2 duration-300">
       <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 p-5 w-80">
         <div className="flex items-center gap-3 mb-4">
           <div className="relative">
