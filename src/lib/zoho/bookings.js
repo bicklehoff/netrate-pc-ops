@@ -205,23 +205,31 @@ export async function bookAppointment({ date, time, name, email, phone, notes, a
   }
 
   const rv = resp.returnvalue;
-  if (rv?.status && rv.status !== 'success') {
-    // Zoho's "slot not available" / "Custom field [...] mandatory" / etc. surface here.
-    throw new ZohoBookingsError(rv.message || `Zoho inner status: ${rv.status}`, {
+
+  // Inner-status validation: only treat 'failure' as failure. Zoho uses domain values
+  // for successful appointments — 'upcoming' for future-scheduled, 'completed' for past,
+  // etc. — NOT a literal 'success' string. Earlier strict check `!== 'success'` rejected
+  // real bookings (e.g. #NE-00011 came back with status 'upcoming' and was incorrectly
+  // surfaced as a 502 to the widget while the appointment had landed in the calendar).
+  // Real success signal is booking_id presence, validated below.
+  if (rv?.status === 'failure') {
+    throw new ZohoBookingsError(rv.message || 'Booking failed', {
       httpStatus: 200,
       code: 'api',
       details: json,
     });
   }
 
-  // Response shape: response.returnvalue.data (double-nested per Claw spec)
+  // Response shape note: `data` is rv itself for /appointment (Zoho returns booking
+  // fields at the rv level, not nested in rv.data). Older endpoints nest inside rv.data;
+  // fallback handles both.
   const data = rv?.data || rv;
   const bookingId = data?.booking_id || data?.id;
 
   // Booking_id MUST exist on success — its absence means Zoho accepted the request but
   // didn't actually create an appointment. Treat as failure to avoid lying to the user.
   if (!bookingId) {
-    throw new ZohoBookingsError('Zoho returned success but no booking_id', {
+    throw new ZohoBookingsError('Zoho returned no booking_id', {
       httpStatus: 200,
       code: 'api',
       details: json,
@@ -230,7 +238,7 @@ export async function bookAppointment({ date, time, name, email, phone, notes, a
 
   return {
     bookingId, // Includes "#" prefix per Zoho convention
-    status: data?.status || 'success',
+    status: data?.status || 'upcoming',
     summary: data,
   };
 }
