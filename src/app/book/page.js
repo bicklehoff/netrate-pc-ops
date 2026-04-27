@@ -44,8 +44,14 @@ export default function BookPage() {
   const [submitting, setSubmitting] = useState(false);
   const [booking, setBooking] = useState(null);
   const [error, setError] = useState(null);
+  // slotRefreshKey forces a slot re-fetch even when the date hasn't changed —
+  // used after a 409 slot-taken to pull fresh availability for the same day.
+  const [slotRefreshKey, setSlotRefreshKey] = useState(0);
+  // Banner shown above the slot grid when a slot was just taken — clears when
+  // the user picks a new time or jumps to a new date.
+  const [slotTakenMsg, setSlotTakenMsg] = useState('');
 
-  // Fetch slots when date is selected
+  // Fetch slots when date is selected (or when slotRefreshKey bumps after a 409)
   useEffect(() => {
     if (!selectedDate) return;
     setLoadingSlots(true);
@@ -62,15 +68,17 @@ export default function BookPage() {
       })
       .catch(err => setError(err.message))
       .finally(() => setLoadingSlots(false));
-  }, [selectedDate]);
+  }, [selectedDate, slotRefreshKey]);
 
   const handleDateSelect = (date) => {
     setSelectedDate(date);
+    setSlotTakenMsg('');
     setStep(2);
   };
 
   const handleTimeSelect = (time) => {
     setSelectedTime(time);
+    setSlotTakenMsg('');
     setStep(3);
   };
 
@@ -95,6 +103,19 @@ export default function BookPage() {
       });
 
       const data = await res.json();
+
+      // 409 = slot taken (someone else booked it between slot-fetch and submit, or
+      // a duplicate submit on our own. Bounce back to time selection, refresh
+      // availability, preserve form state, surface a non-scary amber banner.
+      if (res.status === 409) {
+        setSlotTakenMsg(data.error || 'That time was just taken — pick another.');
+        setSelectedTime(null);
+        setStep(2);
+        setSlotRefreshKey(k => k + 1);
+        setError(null);
+        return;
+      }
+
       if (!res.ok) throw new Error(data.error || 'Booking failed');
 
       setBooking(data.booking);
@@ -178,6 +199,12 @@ export default function BookPage() {
               {formatDisplayDate(selectedDate)}
             </h2>
             <p className="text-sm text-gray-500 mb-4">Mountain Time (Denver)</p>
+
+            {slotTakenMsg && (
+              <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-900">
+                {slotTakenMsg}
+              </div>
+            )}
 
             {loadingSlots && (
               <div className="flex items-center justify-center py-12">
