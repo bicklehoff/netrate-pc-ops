@@ -10,7 +10,7 @@
     "test:pricing": "node scripts/pricing-baseline.mjs --check",
     "test:pricing:record": "node scripts/pricing-baseline.mjs --record",
     "test:pricing:compare": "node scripts/pricing-baseline.mjs --compare",
-    "test:parsers": "node --test tests/lib/pricing-nonqm/parsers/"
+    "test:parsers": "node --test tests/lib/pricing-nonqm/"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",

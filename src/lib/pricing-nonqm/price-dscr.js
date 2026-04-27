@@ -6,6 +6,15 @@
  * LLPAs, property-type / loan-size / DSCR-ratio / feature / prepay / state SRP
  * adjustments, and price caps.
  *
+ * D9c.6a (2026-04-27): added support for the four ResiCentral rule_types
+ * landed by D9c.6.5 — `prepay_term` (alias for Everstream's `prepay`,
+ * carries `price_cap` for Premier-style max-price blocks),
+ * `prepay_structure` (split from term per inventory Q4),
+ * `pricing_special` (auto-fires on FICO/DSCR/CLTV gates per inventory Q3),
+ * `loan_size_secondary` (sums with `loan_size` per inventory Q1). Existing
+ * Everstream `prepay` rule_type kept unchanged — both code paths run in
+ * parallel until the cleanup migration retires `prepay`.
+ *
  * Separation of concerns:
  *   loadActiveDscrSheets(sql)                  → Array<{ sheet, products, rules }>
  *   loadActiveDscrSheet(sql, lender_code)      → { sheet, products, rules } (deprecated)
@@ -21,8 +30,15 @@
 
 const LENDER_CODE = 'everstream';
 
-// Order matters: UIs typically want Elite tiers listed tightest → loosest.
-const ELITE_TIERS = ['elite_1', 'elite_2', 'elite_5'];
+// Tiers are discovered from product rows at pricing time (D9c.6a). The
+// previous hardcoded ELITE_TIERS list (`elite_1`, `elite_2`, `elite_5`)
+// only covered Everstream; with ResiCentral on board (`premier`,
+// `investor_premier`) the iteration must derive tier names from the
+// products themselves.
+//
+// CORE_TIERS remains hardcoded — it's a flag for "no LLPAs ingested,
+// emit base price with warning". Specific to Everstream's Core Non-QM
+// sheet, which still hasn't been ingested.
 const CORE_TIERS  = ['core'];
 
 // ── Internal loaders (shared by single- and multi-lender entry points) ───
@@ -142,11 +158,14 @@ export function priceDscrScenario(sheetsArray, scenario) {
   const priced = [];
   const skipped = [];
 
-  const tiersToPrice = [...ELITE_TIERS, ...CORE_TIERS];
   const dscrInputs = scenario.dscr_inputs || null;
 
   for (const { sheet, products, rules } of sheetsArray) {
-    for (const tier of tiersToPrice) {
+    // Discover tiers from products in this sheet rather than hardcoding.
+    // Preserves first-seen ordering; the priced array is re-sorted by
+    // price below, so tier order only affects tie-break.
+    const tiers = [...new Set(products.map(p => p.tier))];
+    for (const tier of tiers) {
       const isCore = CORE_TIERS.includes(tier);
 
       // 1. Filter candidate products for this tier / product_type / term / lock / arm period
@@ -294,7 +313,7 @@ function priceOne(product, tierRules, scenario, { isCore }) {
     r.loan_purpose === scenario.loan_purpose &&
     inRange(scenario.fico, r.fico_min, r.fico_max) &&
     inCltvRange(scenario.cltv, r.cltv_min, r.cltv_max) &&
-    r.price_cap !== null
+    r.price_cap != null
   );
   if (capRule) priceCap = Number(capRule.price_cap);
 
@@ -323,6 +342,25 @@ function priceOne(product, tierRules, scenario, { isCore }) {
   }
   if (sizeRule?.llpa_points !== null && sizeRule?.llpa_points !== undefined) {
     adjustments.push({ rule_type: 'loan_size', points: Number(sizeRule.llpa_points), label: `Loan size: $${scenario.loan_size}` });
+  }
+
+  // ── Loan size secondary (D9c.6a, inventory Q1) ───────────────────
+  // ResiCentral's standalone "Loan Amount Adj" table — sums with the
+  // LTV-banded loan_size LLPA above. No CLTV banding for these rows.
+  const sizeRule2 = applicable.find(r =>
+    r.rule_type === 'loan_size_secondary' &&
+    (r.loan_size_min === null || Number(scenario.loan_size) >= Number(r.loan_size_min)) &&
+    (r.loan_size_max === null || Number(scenario.loan_size) <= Number(r.loan_size_max))
+  );
+  if (sizeRule2?.not_offered) {
+    return { gated: true, gate_reason: 'loan_size_secondary:not_offered' };
+  }
+  if (sizeRule2?.llpa_points !== null && sizeRule2?.llpa_points !== undefined) {
+    adjustments.push({
+      rule_type: 'loan_size_secondary',
+      points: Number(sizeRule2.llpa_points),
+      label: `Loan size (secondary): $${scenario.loan_size}`,
+    });
   }
 
   // ── DSCR ratio ───────────────────────────────────────────────────
@@ -356,7 +394,7 @@ function priceOne(product, tierRules, scenario, { isCore }) {
     }
   }
 
-  // ── Prepay ───────────────────────────────────────────────────────
+  // ── Prepay (Everstream — combined term + structure) ──────────────
   if (scenario.prepay_years !== undefined && scenario.prepay_years !== null) {
     const prepayRule = applicable.find(r =>
       r.rule_type === 'prepay' &&
@@ -373,6 +411,88 @@ function priceOne(product, tierRules, scenario, { isCore }) {
         label: `Prepay: ${scenario.prepay_structure || scenario.prepay_years + 'yr'}`,
       });
     }
+  }
+
+  // ── Prepay TERM (D9c.6a, inventory Q4 — ResiCentral split) ──────
+  // Match by prepay_years only. The structure half lives in a separate
+  // rule_type below. ResiCentral emits prepay_term rules in two flavors:
+  //   1. Feature-grid LLPA rule:  llpa_points = num, price_cap = null
+  //   2. Max-Price cap rule:      llpa_points = null, price_cap = num
+  // Both are looked up independently so a single tier can carry both.
+  if (scenario.prepay_years !== undefined && scenario.prepay_years !== null) {
+    // LLPA rule (matches when llpa_points is set OR the row is not_offered).
+    const prepayTermLlpaRule = applicable.find(r =>
+      r.rule_type === 'prepay_term' &&
+      Number(r.prepay_years) === Number(scenario.prepay_years) &&
+      (r.llpa_points != null || r.not_offered === true)
+    );
+    if (prepayTermLlpaRule?.not_offered) {
+      return { gated: true, gate_reason: `prepay_term:${scenario.prepay_years}yr:not_offered` };
+    }
+    if (prepayTermLlpaRule?.llpa_points != null) {
+      adjustments.push({
+        rule_type: 'prepay_term',
+        points: Number(prepayTermLlpaRule.llpa_points),
+        label: `Prepay term: ${scenario.prepay_years}yr`,
+      });
+    }
+    // Cap rule (only fills priceCap if the FICO×CLTV cap didn't already).
+    if (priceCap === null) {
+      const ptCapRule = applicable.find(r =>
+        r.rule_type === 'prepay_term' &&
+        Number(r.prepay_years) === Number(scenario.prepay_years) &&
+        r.price_cap != null
+      );
+      if (ptCapRule) priceCap = Number(ptCapRule.price_cap);
+    }
+  }
+
+  // ── Prepay STRUCTURE (D9c.6a, inventory Q4 — ResiCentral split) ─
+  // Match by feature key (e.g. 'declining', 'fixed_5', 'six_months_interest').
+  // Independent of term; pricer adds both LLPAs.
+  if (scenario.prepay_structure) {
+    const prepayStructRule = applicable.find(r =>
+      r.rule_type === 'prepay_structure' &&
+      r.feature === scenario.prepay_structure
+    );
+    if (prepayStructRule?.not_offered) {
+      return { gated: true, gate_reason: `prepay_structure:${scenario.prepay_structure}:not_offered` };
+    }
+    if (prepayStructRule?.llpa_points !== null && prepayStructRule?.llpa_points !== undefined) {
+      adjustments.push({
+        rule_type: 'prepay_structure',
+        points: Number(prepayStructRule.llpa_points),
+        label: `Prepay structure: ${scenario.prepay_structure}`,
+      });
+    }
+  }
+
+  // ── Pricing special (D9c.6a, inventory Q3 — auto-fire) ──────────
+  // Not gated by scenario.features. Fires when the scenario satisfies
+  // FICO/DSCR/CLTV constraints stored in the rule. `not_offered=true`
+  // for a pricing_special row means "the special isn't available at
+  // this combination" — that's a no-op (don't apply special, don't
+  // gate the product). Specials are additive opportunities, not
+  // requirements.
+  //
+  // `== null` (loose) treats null and undefined identically as "no
+  // constraint", so synthetic test rules and DB-loaded rules behave
+  // the same regardless of which form is used for missing bounds.
+  const psRule = applicable.find(r =>
+    r.rule_type === 'pricing_special' &&
+    inRange(scenario.fico, r.fico_min, r.fico_max) &&
+    (r.dscr_ratio_min == null ||
+      (scenario.dscr_ratio != null && Number(scenario.dscr_ratio) >= Number(r.dscr_ratio_min))) &&
+    (r.dscr_ratio_max == null ||
+      (scenario.dscr_ratio != null && Number(scenario.dscr_ratio) <= Number(r.dscr_ratio_max))) &&
+    inCltvRange(scenario.cltv, r.cltv_min, r.cltv_max)
+  );
+  if (psRule && !psRule.not_offered && psRule.llpa_points != null) {
+    adjustments.push({
+      rule_type: 'pricing_special',
+      points: Number(psRule.llpa_points),
+      label: 'Pricing special',
+    });
   }
 
   // ── Features (multiple matches possible) ─────────────────────────
@@ -427,10 +547,10 @@ function buildRow(product, basePrice, finalPrice, adjustments, warnings, priceCa
 // ── Range helpers ─────────────────────────────────────────────────────
 
 function inRange(value, min, max) {
-  if (value === undefined || value === null) return false;
+  if (value == null) return false;                  // null OR undefined
   const v = Number(value);
-  if (min !== null && v < Number(min)) return false;
-  if (max !== null && v > Number(max)) return false;
+  if (min != null && v < Number(min)) return false; // null OR undefined → no lower bound
+  if (max != null && v > Number(max)) return false; // null OR undefined → no upper bound
   return true;
 }
 
