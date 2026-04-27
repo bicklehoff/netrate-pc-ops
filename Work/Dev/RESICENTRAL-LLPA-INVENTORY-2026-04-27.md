@@ -7,6 +7,7 @@ status: inventory — open questions resolved 2026-04-27, ready for D9c.6.2
 source_xlsx: 67370_04242026_1128199760.xlsx (effective 2026-04-24)
 amendments:
   - 2026-04-27 pc-dev — §10 open questions resolved with David. Q1 confirmed (new `loan_size_secondary` rule_type). Q2 confirmed (Select combined column treated as 30-yr fixed; IO skipped). Q3 confirmed (new `pricing_special` rule_type with FICO/DSCR/LTV gates). Q4 confirmed (split prepay into `prepay_term` + `prepay_structure` rule_types). Borrower-vs-MLO surface split clarified — parser captures all variants; UI layer chooses what to expose. Memory rule "skip IO products" updated: skip means don't extract 30-yr IO rate-sheet column as separate product (variant cols share base prices); IO LLPAs still captured as feature rows so MLO calc (D9d.1) can apply them.
+  - 2026-04-27 pc-dev — §6 inventory gap discovered during D9c.6.5 implementation. Premier and Investor Premier share an identical Feature×LTV layout (single label in col 3, 9 LTV bands in cols 4-12, 10 FICO bands). Elite uses a 2-column label scheme (category in col 3, sub-label in col 4) with 7 LTV bands in cols 5-11 — fundamentally different. Select uses col 2 for category labels, col 3 for sub-labels, 7 LTV bands in cols 4-10 — also distinct. Inventory §6 noted "different shape" but didn't capture that the difference precludes shared extraction. Per AD: D9c.6.5 ships Premier + Investor Premier (structurally compatible); Elite parser deferred to D9c.6.5b; Select parser deferred to D9c.6.5c. ResiCentral DSCR coverage in production until 6.5b/c land = 2 of 4 tiers (premier, investor_premier). Investor Premier uses "N/A" cell marker (not "NA"); `isNa()` extended to match both.
 ---
 
 # ResiCentral DSCR — LLPA Inventory
@@ -288,6 +289,43 @@ The parser data model is **the same** for borrower calc and the future MLO calc 
 
 This validates AD-9. One parser feeds both surfaces; UIs filter independently.
 
+## 10.6 Per-program layout addendum (2026-04-27, post-implementation)
+
+The inventory's §6 high-level note about Elite + Select having "different shape" turned out to understate the difference. Direct inspection during D9c.6.5 shows three distinct Feature×LTV layouts:
+
+| Program | Label cols | Data start col | LTV band count | Cell marker |
+|---------|------------|----------------|----------------|-------------|
+| Premier | col 3 (single) | col 4 | 9 (`0-50%` … `85.01-90%`) | `NA` |
+| Investor Premier | col 3 (single) | col 4 | 9 (same as Premier) | `N/A` |
+| Elite | col 3 (category) + col 4 (sub-label) | col 5 | 7 (`0-50%` … `75.01-80%`) | `NA` |
+| Select | col 2 (category) + col 3 (sub-label) | col 4 | 7 (same as Elite) | `NA` |
+
+Premier + Investor Premier are flat-label tables — every row's `col 3` is a self-contained category like "DSCR 1.25 - 1.49" or "5yr PPP". The shared `extractFeatureLtvGrid` works directly with `classifyResicentralLabel(label)`.
+
+Elite + Select are 2-col label tables where `col 3` (Elite) or `col 2` (Select) carries a category header that **forward-fills** for the rows below it, and the sub-label varies per row:
+
+```
+[col 3]              [col 4]
+DSCR Additional      >=1.25     0.005   0.005   ...
+                     1.00-1.24  0       0       ...
+                     0.75-0.99 -0.005  -0.00625 ...
+Housing History      1x30x12   -0.0025 -0.0025  ...
+                     0x60x12   -0.01   -0.01    ...
+```
+
+This pattern doesn't match the shared util's single-label model. Two paths forward (decided when 6.5b/c are scheduled):
+1. Extend `extractFeatureLtvGrid` with optional `categoryCol` + forward-fill behavior — generalize the shared util.
+2. Write program-specific extractors that walk the rows themselves and only delegate cell parsing to `parseCell`/`isNa`.
+
+Path 1 keeps consistency with Premier's wiring; path 2 isolates per-program quirks (NJ Prepay overrides in Elite, Florida tier in Select). To be decided at D9c.6.5b kickoff with the Elite workbook in hand.
+
+### State-specific rules confirmed
+
+- **Elite** has rows like `State / CT, IL, NJ, NY` (r59 in 2026-04-24 sheet) and a separate "Other Price Adjustments" block with NJ Prepay Penalty overrides + state-specific max prices.
+- **Select** has `Tier 2 States: Other**` (Tier 1 = NV/LA/GA/...; Tier 2 = everything else minus FL) and a standalone "Florida" LLPA that's additive to all others.
+
+ResiCentral's actual licensed states aren't enumerated in the workbook. The parser should still apply the LICENSED_STATES filter (CA/CO/OR/TX) at parse time when these blocks land in 6.5b/c.
+
 ## 11. Estimated parser sub-PRs (D9c.6.x)
 
 | # | Scope | Estimated lines | Risk |
@@ -296,7 +334,9 @@ This validates AD-9. One parser feeds both surfaces; UIs filter independently.
 | **D9c.6.2** | Shared utilities — `fico-ltv-grid.js`, `feature-ltv-grid.js`, `effective-date.js`, anchor-by-text helper. Unit tests. | ~400 + 200 tests | Medium |
 | **D9c.6.3** | Refactor `everstream-llpas.js` to use shared utilities (parity zero-change). | ~150 net | Medium |
 | **D9c.6.4** | ResiCentral rates parser (`resicentral-rates.js`) — extracts the 6 in-scope (program, term) ladders × 3 lock days. | ~250 | Medium |
-| **D9c.6.5** | ResiCentral LLPAs parser (`resicentral-llpas.js`) — extracts §5.1 FICO×LTV + §5.2 Feature×LTV + §5.3 Loan Amount Adj + §5.4 Max Prices + §5.5 Misc per program. | ~500 | High |
+| **D9c.6.5** | ResiCentral LLPAs parser **(Premier + Investor Premier only)** — extracts §5.1 FICO×LTV + §5.2 Feature×LTV (single-label) + §5.3 Loan Amount Adj + §5.4 Max Prices + §5.5 Misc + Pricing Special. Elite + Select deferred (see §10.6). | ~400 | High |
+| **D9c.6.5b** | ResiCentral Elite LLPAs parser — 2-col category+sub-label layout, NJ Prepay overrides, state-specific max prices. | ~250 | High |
+| **D9c.6.5c** | ResiCentral Select LLPAs parser — 2-col layout (col 2 + col 3), Tier 1/Tier 2 state rules, Florida LLPA. | ~200 | Medium |
 | **D9c.6.6** | Top-level orchestrator + ingest function rename + CLI runner. | ~150 | Low |
 | **D9c.6.7** | 50+ scenario parity check — hand-calculate 50 representative scenarios from the spreadsheet, compare against parser output. | ~200 tests | Medium |
 
