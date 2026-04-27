@@ -294,6 +294,40 @@ test('pricing_special: undefined dscr_ratio doesn\'t crash (skips the rule)', ()
   assert.equal(row.adjustments.find(a => a.rule_type === 'pricing_special'), undefined);
 });
 
+test('pricing_special: STACKS — multiple matching rules all fire (LS-confirmed for ResiCentral)', () => {
+  // ResiCentral Premier emits two pricing_special rules per LTV band:
+  //   1. "Pricing Special (700+ FICO, ≥1 DSCR)" — LTV-banded, 0.875 pts at 65.01-70
+  //   2. "January Pricing Special (700+ FICO & LTV ≤80)" — flat, 0.500 pts
+  // LS confirmed 2026-04-27 that both fire and stack additively for a
+  // qualifying scenario (FICO 770, LTV 67, DSCR 1.30, purchase, NOO).
+  const sheets = buildSheet({
+    extraRules: [
+      // Rule 1: LTV-banded "Pricing Special"
+      { tier: TIER, product_type: null, rule_type: 'pricing_special',
+        fico_min: 700, dscr_ratio_min: 1.0,
+        cltv_min: 60.01, cltv_max: 70,
+        llpa_points: 0.875, not_offered: false,
+        raw_label: 'Pricing Special (700+ FICO, >=1 DSCR)' },
+      // Rule 2: flat "January Pricing Special"
+      { tier: TIER, product_type: null, rule_type: 'pricing_special',
+        fico_min: 700,
+        cltv_min: 0, cltv_max: 80,
+        llpa_points: 0.500, not_offered: false,
+        raw_label: 'January Pricing Special (700+ FICO & LTV <=80)' },
+    ],
+  });
+  const result = priceDscrScenario(sheets, scenario);
+  const row = pricedRow(result);
+  const ps = row.adjustments.filter(a => a.rule_type === 'pricing_special');
+  // Both rules fired
+  assert.equal(ps.length, 2);
+  // Total contribution: 0.875 + 0.500 = 1.375
+  assert.equal(ps.reduce((s, a) => s + a.points, 0), 1.375);
+  // Labels reference the source rules
+  assert.ok(ps.some(a => /Pricing Special \(700\+/.test(a.label)));
+  assert.ok(ps.some(a => /January Pricing Special/.test(a.label)));
+});
+
 test('pricing_special: flat misc form (no LTV bands, single CLTV range)', () => {
   // Mimics "January Pricing Special (700+ FICO & LTV ≤ 80)" from the parser.
   const sheets = buildSheet({

@@ -66,7 +66,7 @@ async function loadDscrRules(sql, sheetId) {
            occupancy, loan_purpose, fico_min, fico_max, cltv_min, cltv_max,
            property_type, loan_size_min, loan_size_max,
            dscr_ratio_min, dscr_ratio_max, prepay_years, state, doc_type, feature,
-           llpa_points, price_cap, not_offered
+           llpa_points, price_cap, not_offered, raw_label
       FROM nonqm_adjustment_rules
      WHERE rate_sheet_id = ${sheetId}
   `;
@@ -490,7 +490,7 @@ function priceOne(product, tierRules, scenario, { isCore }) {
     }
   }
 
-  // ── Pricing special (D9c.6a, inventory Q3 — auto-fire) ──────────
+  // ── Pricing special (D9c.6a, inventory Q3 — auto-fire, multi-match) ──
   // Not gated by scenario.features. Fires when the scenario satisfies
   // FICO/DSCR/CLTV constraints stored in the rule. `not_offered=true`
   // for a pricing_special row means "the special isn't available at
@@ -498,10 +498,16 @@ function priceOne(product, tierRules, scenario, { isCore }) {
   // gate the product). Specials are additive opportunities, not
   // requirements.
   //
+  // **Multiple specials can stack**: the LTV-banded "Pricing Special"
+  // (700+ FICO, ≥1 DSCR) and the flat "January Pricing Special"
+  // (700+ FICO & LTV ≤ 80) both apply simultaneously when conditions
+  // match — confirmed in LoanSifter for ResiCentral DSCR Premier
+  // 2026-04-27. Hence `.filter()` + loop, not `.find()` + single emit.
+  //
   // `== null` (loose) treats null and undefined identically as "no
   // constraint", so synthetic test rules and DB-loaded rules behave
   // the same regardless of which form is used for missing bounds.
-  const psRule = applicable.find(r =>
+  const psRules = applicable.filter(r =>
     r.rule_type === 'pricing_special' &&
     inRange(scenario.fico, r.fico_min, r.fico_max) &&
     (r.dscr_ratio_min == null ||
@@ -510,11 +516,12 @@ function priceOne(product, tierRules, scenario, { isCore }) {
       (scenario.dscr_ratio != null && Number(scenario.dscr_ratio) <= Number(r.dscr_ratio_max))) &&
     inCltvRange(scenario.cltv, r.cltv_min, r.cltv_max)
   );
-  if (psRule && !psRule.not_offered && psRule.llpa_points != null) {
+  for (const psRule of psRules) {
+    if (psRule.not_offered || psRule.llpa_points == null) continue;
     adjustments.push({
       rule_type: 'pricing_special',
       points: Number(psRule.llpa_points),
-      label: 'Pricing special',
+      label: psRule.raw_label ? `Pricing special: ${psRule.raw_label}` : 'Pricing special',
     });
   }
 
