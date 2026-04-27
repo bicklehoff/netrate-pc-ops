@@ -28,6 +28,8 @@
  * on each Core result flags this, so UIs can hide them or show a caveat.
  */
 
+import { LENDER_INFO } from './lender-display.js';
+
 const LENDER_CODE = 'everstream';
 
 // Tiers are discovered from product rows at pricing time (D9c.6a). The
@@ -169,6 +171,25 @@ export function priceDscrScenario(sheetsArray, scenario) {
   const dscrInputs = scenario.dscr_inputs || null;
 
   for (const { sheet, products, rules } of sheetsArray) {
+    // ── AD-7 license filter ──────────────────────────────────────
+    // Skip the entire lender when scenario.state isn't in their licensed
+    // states. Only enforces when the lender_code is registered in
+    // LENDER_INFO; unknown lender_codes pass through (forward-compat with
+    // new sheets ingested before LENDER_INFO is updated).
+    const lenderCode = sheet?.lender_code;
+    const lenderInfo = LENDER_INFO[lenderCode];
+    if (
+      scenario.state &&
+      lenderInfo &&
+      !lenderInfo.licensedStates.includes(String(scenario.state).toUpperCase())
+    ) {
+      skipped.push({
+        lender_code: lenderCode,
+        reason: `lender_not_licensed_in_state:${scenario.state}`,
+      });
+      continue;
+    }
+
     // Discover tiers from products in this sheet rather than hardcoding.
     // Sort by TIER_ORDER (known tiers first, in canonical order) with
     // unknown tiers falling through alphabetically. Determinism here

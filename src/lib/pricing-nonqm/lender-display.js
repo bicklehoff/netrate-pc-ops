@@ -22,6 +22,10 @@ export const LENDER_INFO = {
     displayName: 'EverStream',
     licensedStates: ['CA', 'CO', 'OR', 'TX'],
   },
+  resicentral: {
+    displayName: 'ResiCentral',
+    licensedStates: ['CA', 'CO', 'OR', 'TX'],
+  },
 };
 
 export function getLenderDisplay(lender_code) {

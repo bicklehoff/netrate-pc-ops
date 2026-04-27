@@ -498,3 +498,50 @@ test('prepay_joint coexists with prepay_term/_structure (both models fire additi
   assert.equal(row.adjustments.length, 4);            // grid (0) + 3 prepay
   assert.equal(row.final_price, 100 + 0 + 0.01 + 0.005 + 0.0025);
 });
+
+// ─── AD-7 license filter (PR — this branch) ─────────────────────────
+
+test('AD-7: known lender + state in license → priced', () => {
+  // ResiCentral licenses CA/CO/OR/TX. Scenario state=CO → not filtered.
+  const sheets = buildSheet();     // sheet.lender_code='resicentral', state='CO'
+  const result = priceDscrScenario(sheets, scenario);
+  assert.ok(pricedRow(result), 'expected priced row when state in license');
+  assert.equal(result.skipped.filter(s => /not_licensed/.test(s.reason)).length, 0);
+});
+
+test('AD-7: known lender + state NOT in license → entire lender skipped', () => {
+  // FL is not in ResiCentral's licensed states. Whole sheet should be filtered
+  // BEFORE any rule-matching work happens. No priced row, one entry in skipped[].
+  const sheets = buildSheet();
+  const result = priceDscrScenario(sheets, { ...scenario, state: 'FL' });
+  assert.equal(result.priced.length, 0);
+  const filtered = result.skipped.find(s => /not_licensed/.test(s.reason));
+  assert.ok(filtered, 'expected a license-filter skipped entry');
+  assert.equal(filtered.lender_code, 'resicentral');
+  assert.equal(filtered.reason, 'lender_not_licensed_in_state:FL');
+});
+
+test('AD-7: unknown lender_code → not filtered (forward-compat fail-open)', () => {
+  // A lender ingested before being registered in LENDER_INFO must still
+  // produce priced rows. Skipping unknown lenders silently would hide
+  // active sheets from the API after a deploy-order glitch.
+  const sheets = buildSheet();
+  sheets[0].sheet.lender_code = 'unregistered_lender_code';
+  const result = priceDscrScenario(sheets, { ...scenario, state: 'FL' });
+  assert.ok(pricedRow(result), 'expected priced row for unregistered lender');
+});
+
+test('AD-7: scenario without state → not filtered (cannot enforce)', () => {
+  // If state is missing, the filter is a no-op. Other code paths require
+  // state for state_srp; AD-7 chooses to defer rather than fail-closed.
+  const sheets = buildSheet();
+  const result = priceDscrScenario(sheets, { ...scenario, state: undefined });
+  assert.ok(pricedRow(result), 'expected priced row when state is unset');
+});
+
+test('AD-7: case-insensitive state match', () => {
+  // scenario.state='co' (lowercase) should still match licensed 'CO'.
+  const sheets = buildSheet();
+  const result = priceDscrScenario(sheets, { ...scenario, state: 'co' });
+  assert.ok(pricedRow(result), 'expected case-insensitive match');
+});
