@@ -1,29 +1,37 @@
 /**
  * Non-QM rate sheet ingestion.
  *
- * Takes parsed output from the Everstream parsers and writes it to the
+ * Takes parsed output from any NonQM parser (Everstream rates+llpas,
+ * ResiCentral rates+llpas, future lenders) and writes it to the
  * nonqm_rate_sheets / nonqm_rate_products / nonqm_adjustment_rules tables.
  *
  * Safe to re-run: if a rate sheet with the same (lender_code, effective_at)
  * already exists, we update it in place (delete children, reinsert).
  *
- * This is the DB-writer half of PR 15b — the parsers produce plain JS objects,
- * this module is the only piece that touches Postgres. Keeps parsers testable
+ * This is the DB-writer half — parsers produce plain JS objects, this
+ * module is the only piece that touches Postgres. Keeps parsers testable
  * without a live database.
+ *
+ * D9c.6.6 (2026-04-27): renamed `ingestEverstreamSheet` → `ingestNonqmSheet`.
+ * The function body was already lender-agnostic (lender_code is read from
+ * `rates.lender_code`, all SQL operates on generic columns). The old name
+ * is re-exported as a deprecated alias to keep the existing
+ * `scripts/ingest-everstream.mjs` working while migrations roll out.
  */
 
 /**
- * Ingest a parsed Everstream rate sheet into the DB.
+ * Ingest a parsed NonQM rate sheet into the DB.
  *
  * @param {object} sql       neon tagged-template sql client
  * @param {object} args
- * @param {object} args.rates  output of parseEverstreamRatesCsv()
- * @param {object} args.llpas  output of parseEverstreamLlpasXlsx()
+ * @param {object} args.rates  parser output: { lender_code, effective_at, products[], ... }
+ * @param {object} args.llpas  parser output: { rules[], ... } (or { rules: [], skipped: [] })
  * @param {string[]} args.sourceFiles filenames (for audit)
- * @param {boolean} [args.activate=true]  mark this sheet active (deactivates prior)
+ * @param {boolean} [args.activate=true]  mark this sheet active (deactivates prior
+ *   sheets for the SAME lender — ingest never touches other lenders' sheets)
  * @returns {Promise<{ rateSheetId, productCount, llpaCount, replaced }>}
  */
-export async function ingestEverstreamSheet(sql, { rates, llpas, sourceFiles, activate = true }) {
+export async function ingestNonqmSheet(sql, { rates, llpas, sourceFiles, activate = true }) {
   if (!rates || !rates.products?.length) {
     throw new Error('No rate products to ingest');
   }
@@ -111,6 +119,12 @@ export async function ingestEverstreamSheet(sql, { rates, llpas, sourceFiles, ac
     replaced,
   };
 }
+
+/**
+ * @deprecated Use `ingestNonqmSheet` instead. Renamed in D9c.6.6 — the
+ * function was always lender-agnostic; the old name was a misnomer.
+ */
+export const ingestEverstreamSheet = ingestNonqmSheet;
 
 /**
  * Chunked INSERT with parameterized multi-row VALUES.
