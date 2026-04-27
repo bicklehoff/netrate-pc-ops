@@ -102,12 +102,25 @@ function validate(body) {
   return errors;
 }
 
+// Warning codes that leak lender-coined tier vocabulary in their text.
+// These warnings mark rows the calc should hide anyway (Core-tier rows with
+// no LLPAs ingested → base price only, misleading to a borrower). The
+// public projection drops the rows entirely; the calc's existing client
+// filter becomes a defense-in-depth no-op. Keep this list aligned with
+// the warnings emitted by `priceDscrScenario`.
+const LENDER_VOCAB_WARNINGS = new Set(['core_llpas_missing']);
+
 /**
  * Strip lender-attributed fields from a single priced row.
  * Removes: lender_code, tier, raw_product_name.
  * Adjustments lose their `label` (some labels embed lender-coined feature
  * names); rule_type + points are preserved so the calc can still display
  * a high-level breakdown if it wants to.
+ *
+ * Warnings are sanitized: any warning whose `code` lives in
+ * LENDER_VOCAB_WARNINGS is filtered out, since the codes/messages embed
+ * tier names ("core_llpas_missing", "Core tier LLPAs not yet ingested…").
+ * Other warnings (price_cap_applied, etc.) pass through.
  */
 function publicPriced(r) {
   return {
@@ -126,11 +139,22 @@ function publicPriced(r) {
       rule_type: a.rule_type,
       points: a.points,
     })),
-    warnings: r.warnings || [],
+    warnings: (r.warnings || []).filter(w => !LENDER_VOCAB_WARNINGS.has(w.code)),
     pi: r.pi,
     pitia: r.pitia,
     dscr: r.dscr,
   };
+}
+
+/**
+ * True if a row should be dropped from the public projection — currently
+ * because it carries a lender-vocabulary warning (Core-tier rows with no
+ * LLPAs). These rows aren't useful to a borrower (price would shift once
+ * LLPAs land); the calc's own filter already hides them, but the public
+ * API is also a curl-able surface, so we filter at the edge too.
+ */
+function shouldHideFromPublic(r) {
+  return (r.warnings || []).some(w => LENDER_VOCAB_WARNINGS.has(w.code));
 }
 
 /**
@@ -190,7 +214,7 @@ export async function POST(request) {
       .pop() ?? null;
 
     const publicResult = {
-      priced: result.priced.map(publicPriced),
+      priced: result.priced.filter(r => !shouldHideFromPublic(r)).map(publicPriced),
       skipped: result.skipped.map(publicSkipped),
       meta: {
         as_of: asOf,
