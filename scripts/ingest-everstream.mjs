@@ -14,7 +14,7 @@ import path from 'node:path';
 import { neon } from '@neondatabase/serverless';
 import { parseEverstreamRatesCsv } from '../src/lib/pricing-nonqm/parsers/everstream-rates.js';
 import { parseEverstreamLlpasXlsx } from '../src/lib/pricing-nonqm/parsers/everstream-llpas.js';
-import { ingestEverstreamSheet } from '../src/lib/pricing-nonqm/ingest.js';
+import { ingestNonqmSheet } from '../src/lib/pricing-nonqm/ingest.js';
 
 const [csvPath, xlsxPath] = process.argv.slice(2);
 if (!csvPath || !xlsxPath) {
@@ -71,7 +71,7 @@ console.log(`  by rule_type:`, byRuleType);
 const sql = neon(DATABASE_URL);
 
 const sourceFiles = [path.basename(csvPath), path.basename(xlsxPath)];
-const result = await ingestEverstreamSheet(sql, {
+const result = await ingestNonqmSheet(sql, {
   rates,
   llpas,
   sourceFiles,
