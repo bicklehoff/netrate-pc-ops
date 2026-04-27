@@ -6,7 +6,7 @@
  *   "Elite DSCR 2 LLPAs"  → tier 'elite_2'
  *   "Elite DSCR 5 LLPAs"  → tier 'elite_5'
  *
- * Each sheet has five logical blocks we care about:
+ * Each sheet has the following logical blocks we care about:
  *   1. Fixed-rate FICO×CLTV grid (9 occupancy×purpose sections)
  *   2. Fixed-rate Price Caps (parallel grid, cols 13+)
  *   3. ARM FICO×CLTV grid (same 9 sections, starting ~row 110)
@@ -19,9 +19,18 @@
  * different layout and are NOT handled here — follow-up PR.
  *
  * Returns a flat array of DB-ready rows for nonqm_adjustment_rules.
+ *
+ * D9c.6.3 (2026-04-27): refactored to use shared parser utilities under
+ * `./lib/`. Behavior unchanged — every emitted rule has the same shape
+ * and ordering as the prior in-file implementation. The shared utilities
+ * are unit-tested in `tests/lib/pricing-nonqm/parsers/lib/`.
  */
 
 import * as XLSX from 'xlsx';
+import { cellStr, isNa, parseCell } from './lib/cells.js';
+import { findRowByTextInCol } from './lib/anchor-by-text.js';
+import { extractFicoLtvGrid } from './lib/fico-ltv-grid.js';
+import { extractFeatureLtvGrid } from './lib/feature-ltv-grid.js';
 
 const LENDER_CODE = 'everstream';
 
@@ -117,23 +126,23 @@ function parseSheet(data, tier, rules, skipped) {
 
   // ── 2. Parse fixed-rate LLPA grid (cols 1-10) + price cap (cols 14-23) ──
   for (const s of fixedSections) {
-    extractFicoCltvGrid(data, s.row, s.label, tier, 'fixed', 1,  'llpa_points', rules);
-    extractFicoCltvGrid(data, s.row, s.label, tier, 'fixed', 14, 'price_cap',   rules);
+    pushFicoCltvGrid(data, s.row, s.label, tier, 'fixed', 1,  'llpa_points', rules);
+    pushFicoCltvGrid(data, s.row, s.label, tier, 'fixed', 14, 'price_cap',   rules);
   }
   // ── 3. Parse ARM grid + price cap ──
   for (const s of armSections) {
-    extractFicoCltvGrid(data, s.row, s.label, tier, 'arm', 1,  'llpa_points', rules);
-    extractFicoCltvGrid(data, s.row, s.label, tier, 'arm', 14, 'price_cap',   rules);
+    pushFicoCltvGrid(data, s.row, s.label, tier, 'arm', 1,  'llpa_points', rules);
+    pushFicoCltvGrid(data, s.row, s.label, tier, 'arm', 14, 'price_cap',   rules);
   }
 
   // ── 4. Global LLPAs, Prepay, SRP ──
-  const globalRow = findRow(data, 0, /^Global LLPAs$/i);
+  const globalRow = findRowByTextInCol(data, 0, /^Global LLPAs$/i);
   if (globalRow >= 0) {
-    const prepayHeaderRow = findRow(data, 1, /^Prepayment Penalty Term/i, globalRow);
-    const srpHeaderRow    = findRow(data, 0, /^STATE$/, prepayHeaderRow || globalRow);
+    const prepayHeaderRow = findRowByTextInCol(data, 1, /^Prepayment Penalty Term/i, { startRow: globalRow });
+    const srpHeaderRow    = findRowByTextInCol(data, 0, /^STATE$/, { startRow: prepayHeaderRow > 0 ? prepayHeaderRow : globalRow });
 
     const globalEnd = prepayHeaderRow > 0 ? prepayHeaderRow - 1 : data.length;
-    extractGlobalLlpas(data, globalRow + 1, globalEnd, tier, rules);
+    pushGlobalLlpas(data, globalRow + 1, globalEnd, tier, rules);
 
     if (prepayHeaderRow >= 0) {
       const prepayEnd = srpHeaderRow > 0 ? srpHeaderRow - 1 : data.length;
@@ -151,83 +160,57 @@ function parseSheet(data, tier, rules, skipped) {
  * Read a 10×10 FICO×CLTV block starting just below the section label row.
  * startCol is the first CLTV data column (1 for LLPA grid, 14 for price cap).
  * payload is either 'llpa_points' or 'price_cap' — which rule column to populate.
+ *
+ * Thin wrapper around `extractFicoLtvGrid` that wires Everstream's
+ * section/payload-aware raw_label format.
  */
-function extractFicoCltvGrid(data, sectionRow, sectionLabel, tier, productType, startCol, payload, rules) {
+function pushFicoCltvGrid(data, sectionRow, sectionLabel, tier, productType, startCol, payload, rules) {
   const match = SECTION_MAP[sectionLabel];
   if (!match) return;
 
-  // The 10 FICO rows sit immediately below the section label row.
-  for (let i = 0; i < FICO_BANDS.length; i++) {
-    const row = data[sectionRow + 1 + i];
-    if (!row) continue;
-    const fico = FICO_BANDS[i];
-
-    for (let j = 0; j < CLTV_BANDS.length; j++) {
-      const rawVal = row[startCol + j];
-      const num = parseCell(rawVal);
-      if (num === null && !isNa(rawVal)) continue;
-      const cltv = CLTV_BANDS[j];
-
-      const rule = {
+  const gridRules = extractFicoLtvGrid(
+    data,
+    sectionRow + 1,
+    { fico: FICO_BANDS, ltv: CLTV_BANDS },
+    {
+      startCol,
+      payloadField: payload,
+      ruleType: 'fico_cltv_grid',
+      ltvKey: 'cltv',
+      baseFields: {
         lender_code: LENDER_CODE,
         tier,
         product_type: productType,
-        rule_type: 'fico_cltv_grid',
         occupancy: match.occupancy,
         loan_purpose: match.loan_purpose,
-        fico_min: fico.min,
-        fico_max: fico.max,
-        cltv_min: cltv.min,
-        cltv_max: cltv.max,
-        not_offered: isNa(rawVal),
-        raw_label: `${sectionLabel} / FICO ${fico.label} / CLTV ${cltv.min}-${cltv.max} / ${payload}`,
-      };
-      if (!isNa(rawVal)) rule[payload] = num;
-      rules.push(rule);
+      },
+      rawLabelFn: (fico, cltv) =>
+        `${sectionLabel} / FICO ${fico.label} / CLTV ${cltv.min}-${cltv.max} / ${payload}`,
     }
-  }
+  );
+
+  for (const r of gridRules) rules.push(r);
 }
 
 /**
  * Parse Global LLPA rows. Each row = one label + 10 CLTV values.
  * Each (label × CLTV) becomes a rule. Labels map to property_type / loan_size / dscr / feature.
+ *
+ * Thin wrapper around `extractFeatureLtvGrid` with Everstream's classifier.
  */
-function extractGlobalLlpas(data, startRow, endRow, tier, rules) {
-  for (let r = startRow; r < endRow; r++) {
-    const row = data[r];
-    if (!row) continue;
-    const label = cellStr(row[0]);
-    if (!label) continue;
-
-    const classified = classifyGlobalLabel(label);
-    if (!classified) continue;
-
-    for (let j = 0; j < CLTV_BANDS.length; j++) {
-      const rawVal = row[1 + j];
-      const num = parseCell(rawVal);
-      if (num === null && !isNa(rawVal)) continue;
-      const cltv = CLTV_BANDS[j];
-
-      rules.push({
+function pushGlobalLlpas(data, startRow, endRow, tier, rules) {
+  const baseRules = extractFeatureLtvGrid(
+    data, startRow, endRow, CLTV_BANDS, classifyGlobalLabel,
+    {
+      ltvKey: 'cltv',
+      baseFields: {
         lender_code: LENDER_CODE,
         tier,
         product_type: null,
-        rule_type: classified.rule_type,
-        cltv_min: cltv.min,
-        cltv_max: cltv.max,
-        property_type:  classified.property_type  ?? null,
-        loan_size_min:  classified.loan_size_min  ?? null,
-        loan_size_max:  classified.loan_size_max  ?? null,
-        dscr_ratio_min: classified.dscr_ratio_min ?? null,
-        dscr_ratio_max: classified.dscr_ratio_max ?? null,
-        feature:        classified.feature        ?? null,
-        doc_type:       classified.doc_type       ?? null,
-        llpa_points:    isNa(rawVal) ? null : num,
-        not_offered:    isNa(rawVal),
-        raw_label:      label,
-      });
+      },
     }
-  }
+  );
+  for (const r of baseRules) rules.push(r);
 }
 
 /**
@@ -295,6 +278,10 @@ function parseSize(numStr, unit) {
 
 /**
  * Prepay rows: col A = structure, cols 1..5 = year terms (1-5 years).
+ *
+ * Kept inline (not refactored to a shared util) — Everstream's prepay
+ * matrix is a one-off shape; ResiCentral has a different layout per the
+ * D9c.6.1 inventory (prepay term + structure split into separate rules).
  */
 function extractPrepay(data, startRow, endRow, tier, rules) {
   const structures = {
@@ -347,6 +334,10 @@ function extractPrepay(data, startRow, endRow, tier, rules) {
 
 /**
  * SRP rows: col A = 2-letter state, cols 1-10 = CLTV values.
+ *
+ * Kept inline — state-keyed shape doesn't fit `extractFeatureLtvGrid`'s
+ * label-classifier model (every state row is "valid"; no classify-or-skip
+ * decision). Refactor candidate if we add a second state-keyed lender.
  */
 function extractSrp(data, startRow, endRow, tier, rules) {
   for (let r = startRow; r < endRow; r++) {
@@ -374,36 +365,4 @@ function extractSrp(data, startRow, endRow, tier, rules) {
       });
     }
   }
-}
-
-// ── Cell helpers ────────────────────────────────────────────────────
-
-function cellStr(v) {
-  if (v === null || v === undefined) return '';
-  return String(v).trim();
-}
-
-function isNa(v) {
-  if (v === null || v === undefined) return false;
-  return /^na$/i.test(String(v).trim());
-}
-
-/**
- * Parse a cell value as a number. Returns null for non-numeric / na / empty.
- */
-function parseCell(v) {
-  if (v === null || v === undefined || v === '') return null;
-  if (typeof v === 'number') return Number.isFinite(v) ? v : null;
-  const s = String(v).trim();
-  if (!s || isNa(s)) return null;
-  const n = Number(s);
-  return Number.isFinite(n) ? n : null;
-}
-
-function findRow(data, col, regex, startRow = 0) {
-  for (let i = startRow; i < data.length; i++) {
-    const v = cellStr(data[i]?.[col]);
-    if (v && regex.test(v)) return i;
-  }
-  return -1;
 }
