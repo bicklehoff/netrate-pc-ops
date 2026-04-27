@@ -3,19 +3,20 @@
 /**
  * Compact DSCR rate widget for /rates/dscr.
  *
- * Shows a live rate ladder (Elite 1) for a quick scenario. Deep customization
- * lives in /tools/dscr-calculator — this is the "give me a number fast" view.
+ * Live rate ladder for a quick scenario. Deep customization lives in
+ * /tools/dscr-calculator — this is the "give me a number fast" view.
+ *
+ * Lender-confidentiality boundary (2026-04-27): wholesale lender names +
+ * lender-coined tier names are not exposed on this widget. The public API
+ * projection at `/api/pricing/dscr` strips them; this widget renders only
+ * product-shape information ("Investor DSCR · 7/6 ARM · 30-day lock") and
+ * the rate/price/payment data.
  */
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
 const STATES = ['CO', 'CA', 'TX', 'OR'];
-const TIERS = [
-  { value: 'elite_1', label: 'Elite 1' },
-  { value: 'elite_2', label: 'Elite 2' },
-  { value: 'elite_5', label: 'Elite 5' },
-];
 
 const fmtUsd = (n) => '$' + Math.round(n).toLocaleString();
 const fmtPts = (n) => (n >= 0 ? '+' : '') + n.toFixed(3);
@@ -30,7 +31,6 @@ export default function DscrRateWidget() {
   const [state, setState] = useState('CO');
   const [purpose, setPurpose] = useState('purchase');
   const [propertyType, setPropertyType] = useState('sfr');
-  const [tier, setTier] = useState('elite_1');
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -69,7 +69,6 @@ export default function DscrRateWidget() {
               monthly_hoa: Number(monthlyHoa),
               loan_amount: Number(loanSize),
             },
-            tier_filter: [tier],
           }),
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -82,7 +81,7 @@ export default function DscrRateWidget() {
       }
     }, 250);
     return () => { clearTimeout(timer); ctrl.abort(); };
-  }, [loanSize, propertyValue, fico, monthlyRent, monthlyEscrow, monthlyHoa, state, purpose, propertyType, tier, cltv]);
+  }, [loanSize, propertyValue, fico, monthlyRent, monthlyEscrow, monthlyHoa, state, purpose, propertyType, cltv]);
 
   const priced = data?.priced || [];
   // Show a narrow band around par
@@ -92,15 +91,15 @@ export default function DscrRateWidget() {
   const parRow = band.reduce((best, r) =>
     !best || Math.abs(r.ptsDiff) < Math.abs(best.ptsDiff) ? r : best, null);
 
+  const asOfLabel = data?.meta?.as_of
+    ? `Live wholesale pricing · as of ${new Date(data.meta.as_of).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
+    : 'Investor DSCR · 7/6 ARM · 30-day lock';
+
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-8">
       <div className="flex items-baseline justify-between mb-4 flex-wrap gap-2">
         <h2 className="text-xl font-bold text-gray-900">Live DSCR rates</h2>
-        <span className="text-xs text-gray-500">
-          {data?.meta?.effective_at
-            ? `Everstream · ${new Date(data.meta.effective_at).toLocaleDateString()}`
-            : 'Everstream · 7/6 ARM · 30-day lock'}
-        </span>
+        <span className="text-xs text-gray-500">{asOfLabel}</span>
       </div>
 
       {/* Inputs */}
@@ -153,11 +152,6 @@ export default function DscrRateWidget() {
             <option value="4unit">4-unit</option>
           </select>
         </Field>
-        <Field label="Elite Tier">
-          <select value={tier} onChange={e => setTier(e.target.value)} className={selectCls}>
-            {TIERS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-          </select>
-        </Field>
       </div>
 
       {/* Results */}
@@ -186,7 +180,7 @@ export default function DscrRateWidget() {
             <tbody>
               {band.length === 0 && !loading && (
                 <tr><td colSpan={6} className="py-6 text-center text-gray-400 text-sm">
-                  No rates available for this scenario. Try a different tier or adjust inputs.
+                  No rates available for this scenario. Try adjusting inputs.
                 </td></tr>
               )}
               {band.map(r => {
@@ -221,7 +215,7 @@ export default function DscrRateWidget() {
 
       <div className="mt-4 flex items-center justify-between flex-wrap gap-2">
         <p className="text-[11px] text-gray-400">
-          Price is lender price before broker compensation. Deal-specific pricing lives in the full calculator.
+          Price is wholesale price before broker compensation. Deal-specific pricing lives in the full calculator.
         </p>
         <Link href="/tools/dscr-calculator" className="text-sm text-brand hover:underline font-medium">
           Full DSCR calculator →
