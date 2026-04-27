@@ -7,11 +7,11 @@
  *
  * Per `Work/Dev/RESICENTRAL-LLPA-INVENTORY-2026-04-27.md` §11 D9c.6.6.
  *
- * Scope today (per inventory §10.6):
+ * Scope today (per inventory §10.6 + D9c.6.5b):
  *   Rates  — 4 programs (Premier, Investor Premier, Elite, Select)
  *            × 6 in-scope (program × term) ladders × 3 lock days
- *   LLPAs  — 2 programs (Premier, Investor Premier) ingested
- *            Elite + Select LLPAs deferred to D9c.6.5b/c (different layout)
+ *   LLPAs  — 3 programs (Premier, Investor Premier, Elite) ingested.
+ *            Select LLPAs deferred to D9c.6.5c (cols 2+3 layout).
  */
 
 import { parseResicentralRatesXlsx } from './resicentral-rates.js';

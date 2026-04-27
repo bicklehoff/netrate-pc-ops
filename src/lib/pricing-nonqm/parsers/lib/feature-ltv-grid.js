@@ -18,7 +18,13 @@ import { cellStr, parseCell, isNa } from './cells.js';
 
 /**
  * @callback ClassifyLabel
- * @param {string} label - the trimmed label string from `labelCol`
+ * @param {string} label - the trimmed label string from `labelCol` (or the
+ *   sub-label when `categoryCol` is set)
+ * @param {Object} [ctx]
+ * @param {string} [ctx.category] - present only when `categoryCol` is set;
+ *   the most recent non-empty value seen in `categoryCol` (forward-fills
+ *   across rows where the category cell is blank, per Elite/Select layout
+ *   in inventory §10.6)
  * @returns {Object|null|undefined}
  *   Structured rule fields including `rule_type`. May include any of:
  *   property_type, loan_size_min/max, dscr_ratio_min/max, feature,
@@ -43,6 +49,14 @@ import { cellStr, parseCell, isNa } from './cells.js';
  * @param {Object} [opts]
  * @param {number} [opts.labelCol=0]
  * @param {number} [opts.startCol=1]
+ * @param {number} [opts.categoryCol] - when set, the sheet uses a 2-col
+ *   layout with a category column to the LEFT of `labelCol`. The category
+ *   cell forward-fills: the most recent non-empty value applies to all
+ *   subsequent rows until a new value appears. The classify callback
+ *   receives `(subLabel, { category })`. The emitted `raw_label` is
+ *   `"${category} / ${subLabel}"`. ResiCentral Elite uses col 3 = category,
+ *   col 4 = sub-label; Select uses col 2 = category, col 3 = sub-label.
+ *   Premier and Investor Premier omit this option (single-col labels).
  * @param {'cltv'|'ltv'} [opts.ltvKey='cltv']
  * @param {Object} [opts.baseFields] - merged into every emitted rule
  * @param {number} [opts.valueScale=1] - multiplier applied to every parsed
@@ -54,6 +68,7 @@ import { cellStr, parseCell, isNa } from './cells.js';
 export function extractFeatureLtvGrid(data, startRow, endRow, ltvBands, classify, opts = {}) {
   const labelCol = opts.labelCol ?? 0;
   const startCol = opts.startCol ?? 1;
+  const categoryCol = opts.categoryCol;       // undefined = single-col mode
   const ltvKey = opts.ltvKey ?? 'cltv';
   const baseFields = opts.baseFields ?? {};
   const valueScale = opts.valueScale ?? 1;
@@ -61,15 +76,28 @@ export function extractFeatureLtvGrid(data, startRow, endRow, ltvBands, classify
   const maxKey = `${ltvKey}_max`;
 
   const rules = [];
+  let activeCategory = null;       // forward-filled when categoryCol is set
 
   for (let r = startRow; r < endRow; r++) {
     const row = data[r];
     if (!row) continue;
+
+    if (categoryCol !== undefined) {
+      const cat = cellStr(row[categoryCol]);
+      if (cat) activeCategory = cat;
+    }
+
     const label = cellStr(row[labelCol]);
     if (!label) continue;
 
-    const classified = classify(label);
+    const classified = categoryCol !== undefined
+      ? classify(label, { category: activeCategory })
+      : classify(label);
     if (!classified) continue;
+
+    const rawLabel = categoryCol !== undefined && activeCategory
+      ? `${activeCategory} / ${label}`
+      : label;
 
     for (let j = 0; j < ltvBands.length; j++) {
       const rawVal = row[startCol + j];
@@ -86,7 +114,7 @@ export function extractFeatureLtvGrid(data, startRow, endRow, ltvBands, classify
         [maxKey]: ltv.max,
         llpa_points: scaled,
         not_offered: isNa(rawVal),
-        raw_label: label,
+        raw_label: rawLabel,
       });
     }
   }
