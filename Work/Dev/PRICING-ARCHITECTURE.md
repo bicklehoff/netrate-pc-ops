@@ -8,6 +8,7 @@ status: spec — pending David's review of Open Questions (§8); §10 decisions 
 amendments:
   - 2026-04-26 pc-dev — added §10 Multi-Lender DSCR Integration (D9c.x phase). Surfaces the architecture decisions required before resuming ResiCentral parser rebuild (lost from a pruned worktree on this date).
   - 2026-04-26 pc-dev — §10 review pass. AD-4 reshaped (borrower-facing simplification). Added AD-9 (borrower vs MLO surface split — two URLs, two products, one pricer). Open questions §10.4 resolved with David. MLO DSCR calc deferred to a new D9d phase.
+  - 2026-04-27 pc-dev — D9c.4b deferred. Investigation during D9c.4 deploy revealed NonQM ingest is fully manual (no cron); 11-day staleness is missing-pipeline, not broken-pipeline. Stale-sheet filter (§10.4 #2) is parked until NonQM ingest automation lands. New PLATFORM-2026 backlog item NONQM-INGEST-CRON tracks the prerequisite. Sequencing change: D9c.5 proceeds next (independent of ingest freshness).
 ---
 
 # NetRate Mortgage — Pricing Architecture
@@ -674,6 +675,8 @@ Numbered against D9c.x (D9c = "DSCR multi-lender" — continuation of UAD AD-10/
 
 **Why this order:** D9c.1–D9c.5 ship a multi-lender-ready pipeline carrying ONLY Everstream — no functional change to users beyond the borrower UX simplification at D9c.5. D9c.6–D9c.7 add the second lender into a known-good integration target. Decouples architecture risk from parser risk.
 
+**D9c.4b — DEFERRED:** sheet age cap (7 days) + `stale_lenders[]` meta field per §10.4 #2. Investigation during D9c.4 (2026-04-26) revealed NonQM ingest has no cron — the staleness is a missing pipeline, not a broken one. Filter is parked until PLATFORM-2026 backlog item `NONQM-INGEST-CRON` lands. D9c.5 proceeds without it (calc keeps showing the 11-day-stale prices, same as today; no regression).
+
 **D9d phase (deferred — not required for D9c success):**
 
 | # | PR | Scope | Risk | Pre-req |
@@ -688,7 +691,7 @@ The following were open questions during initial drafting; all resolved in the s
 
 1. **Lender display order when prices tie:** **freshest sheet wins** (effective_at desc). Tie-break on stale-sheet age — if a lender's sheet is older, its rows render below the fresher lender at the same price.
 
-2. **Sheet age cap:** **filter out lenders whose `effective_at` is more than 7 days old.** Surface a `stale_lenders: [{ lender_code, effective_at, age_days }]` array in `meta` for UI to mention. Forces ingest health — under this rule today's 11-day-old Everstream sheet would be filtered (which is the right outcome). Implication: D9c.4 must coordinate with the Everstream ingest cron health before shipping, or the calc empties.
+2. **Sheet age cap:** **filter out lenders whose `effective_at` is more than 7 days old.** Surface a `stale_lenders: [{ lender_code, effective_at, age_days }]` array in `meta` for UI to mention. Forces ingest health — under this rule today's 11-day-old Everstream sheet would be filtered (which is the right outcome). Implication: D9c.4 must coordinate with the Everstream ingest cron health before shipping, or the calc empties. **Parked 2026-04-27** — investigation during D9c.4 revealed NonQM ingest has no cron (fully manual); shipping the filter without automation would require manual re-ingest weekly. See PLATFORM-2026 backlog item `NONQM-INGEST-CRON` (filed 2026-04-27). Filter resumes as D9c.4b once ingest automation lands.
 
 3. **`tier_filter` semantics with multi-lender:** **silently skip lenders with no matching tier.** Aggregate across the rest. (Pre-D9c.5 only — the borrower calc no longer sends `tier_filter` after AD-4.)
 
