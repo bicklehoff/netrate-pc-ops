@@ -321,7 +321,7 @@ function extractPrepay(data, startRow, endRow, tier, rules) {
         lender_code: LENDER_CODE,
         tier,
         product_type: null,
-        rule_type: 'prepay',
+        rule_type: 'prepay_joint',
         prepay_years: years,
         feature: structureKey,
         llpa_points: isNa(rawVal) ? null : num,

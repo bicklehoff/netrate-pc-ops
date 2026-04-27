@@ -7,13 +7,13 @@
  * adjustments, and price caps.
  *
  * D9c.6a (2026-04-27): added support for the four ResiCentral rule_types
- * landed by D9c.6.5 — `prepay_term` (alias for Everstream's `prepay`,
- * carries `price_cap` for Premier-style max-price blocks),
- * `prepay_structure` (split from term per inventory Q4),
- * `pricing_special` (auto-fires on FICO/DSCR/CLTV gates per inventory Q3),
- * `loan_size_secondary` (sums with `loan_size` per inventory Q1). Existing
- * Everstream `prepay` rule_type kept unchanged — both code paths run in
- * parallel until the cleanup migration retires `prepay`.
+ * landed by D9c.6.5 — `prepay_term`, `prepay_structure`, `pricing_special`,
+ * `loan_size_secondary`. Migration 051 (PR #236) renamed Everstream's legacy
+ * `prepay` rule_type to `prepay_joint`, making the two prepay models explicit:
+ *   prepay_joint     — Everstream: joint (term × structure) LLPA, matched on
+ *                      both prepay_years + feature simultaneously.
+ *   prepay_term      — ResiCentral: term-only LLPA, additive with structure.
+ *   prepay_structure — ResiCentral: structure-only LLPA, additive with term.
  *
  * Separation of concerns:
  *   loadActiveDscrSheets(sql)                  → Array<{ sheet, products, rules }>
@@ -417,19 +417,22 @@ function priceOne(product, tierRules, scenario, { isCore }) {
     }
   }
 
-  // ── Prepay (Everstream — combined term + structure) ──────────────
+  // ── Prepay JOINT (Everstream — term × structure matrix) ─────────
+  // Single row covers both dimensions. Match requires prepay_years; also
+  // filters on feature/structure when the scenario provides it so the
+  // correct matrix cell is selected (e.g. "Six Months Interest / 3yr").
   if (scenario.prepay_years !== undefined && scenario.prepay_years !== null) {
     const prepayRule = applicable.find(r =>
-      r.rule_type === 'prepay' &&
+      r.rule_type === 'prepay_joint' &&
       Number(r.prepay_years) === Number(scenario.prepay_years) &&
       (!scenario.prepay_structure || r.feature === scenario.prepay_structure)
     );
     if (prepayRule?.not_offered) {
-      return { gated: true, gate_reason: `prepay:${scenario.prepay_years}yr:not_offered` };
+      return { gated: true, gate_reason: `prepay_joint:${scenario.prepay_years}yr:not_offered` };
     }
     if (prepayRule?.llpa_points !== null && prepayRule?.llpa_points !== undefined) {
       adjustments.push({
-        rule_type: 'prepay',
+        rule_type: 'prepay_joint',
         points: Number(prepayRule.llpa_points),
         label: `Prepay: ${scenario.prepay_structure || scenario.prepay_years + 'yr'}`,
       });
