@@ -31,6 +31,10 @@
       "has": [{ "type": "host", "value": "book.netratemortgage.com" }],
       "destination": "https://www.netratemortgage.com/book",
       "permanent": true
-    }
+    },
+    { "source": "/colorado-mortgage", "destination": "/colorado", "permanent": true },
+    { "source": "/california-mortgage", "destination": "/california", "permanent": true },
+    { "source": "/oregon-mortgage", "destination": "/oregon", "permanent": true },
+    { "source": "/texas-mortgage", "destination": "/texas", "permanent": true }
   ]
 }

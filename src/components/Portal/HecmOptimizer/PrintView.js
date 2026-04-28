@@ -19,7 +19,7 @@ function CoverPage() {
     <div className="print-page mb-8">
       {/* Header */}
       <div className="text-center mb-8">
-        <h1 className="text-2xl font-bold text-cyan-700">NetRate Mortgage LLC</h1>
+        <p className="text-2xl font-bold text-cyan-700">NetRate Mortgage LLC</p>
         <p className="text-sm text-gray-500">NMLS #1111861</p>
         <p className="text-xs text-gray-400 mt-1">357 South McCaslin Blvd., #200, Louisville, CO 80027 | 303-444-5251</p>
       </div>

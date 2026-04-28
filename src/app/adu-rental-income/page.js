@@ -175,22 +175,22 @@ export default function AduRentalIncome() {
 
             <h3 className="text-xl font-semibold text-gray-900 mt-6 mb-2">Colorado</h3>
             <p>
-              Basement apartments are everywhere along the Front Range, from Denver to Boulder to Fort Collins. Many homes already have finished basements with separate entrances that qualify as ADUs. This rule makes those units financially productive for qualifying purposes. <Link href="/colorado-mortgage" className="text-brand hover:underline">Learn more about Colorado mortgage options</Link>.
+              Basement apartments are everywhere along the Front Range, from Denver to Boulder to Fort Collins. Many homes already have finished basements with separate entrances that qualify as ADUs. This rule makes those units financially productive for qualifying purposes. <Link href="/colorado" className="text-brand hover:underline">Learn more about Colorado mortgage options</Link>.
             </p>
 
             <h3 className="text-xl font-semibold text-gray-900 mt-6 mb-2">California</h3>
             <p>
-              California leads the nation in ADU construction. State law (AB 68, SB 13, and subsequent legislation) has made it easier to build ADUs by right in most residential zones. With home prices among the highest in the country, the ability to count ADU income toward qualifying is a significant boost for buyers. <Link href="/california-mortgage" className="text-brand hover:underline">Learn more about California mortgage options</Link>.
+              California leads the nation in ADU construction. State law (AB 68, SB 13, and subsequent legislation) has made it easier to build ADUs by right in most residential zones. With home prices among the highest in the country, the ability to count ADU income toward qualifying is a significant boost for buyers. <Link href="/california" className="text-brand hover:underline">Learn more about California mortgage options</Link>.
             </p>
 
             <h3 className="text-xl font-semibold text-gray-900 mt-6 mb-2">Oregon</h3>
             <p>
-              Portland has been at the forefront of ADU-friendly zoning for over a decade. Oregon&apos;s statewide reforms (HB 2001) require cities to allow ADUs in single-family zones. The combination of supportive zoning and this new qualifying rule makes Oregon a strong market for ADU-equipped purchases. <Link href="/oregon-mortgage" className="text-brand hover:underline">Learn more about Oregon mortgage options</Link>.
+              Portland has been at the forefront of ADU-friendly zoning for over a decade. Oregon&apos;s statewide reforms (HB 2001) require cities to allow ADUs in single-family zones. The combination of supportive zoning and this new qualifying rule makes Oregon a strong market for ADU-equipped purchases. <Link href="/oregon" className="text-brand hover:underline">Learn more about Oregon mortgage options</Link>.
             </p>
 
             <h3 className="text-xl font-semibold text-gray-900 mt-6 mb-2">Texas</h3>
             <p>
-              Austin has seen a growing casita and ADU market, especially in central neighborhoods. While Texas zoning varies more by city, the demand for secondary units is increasing. Buyers in Austin, San Antonio, and other metro areas can now factor ADU income into their qualifying picture. <Link href="/texas-mortgage" className="text-brand hover:underline">Learn more about Texas mortgage options</Link>.
+              Austin has seen a growing casita and ADU market, especially in central neighborhoods. While Texas zoning varies more by city, the demand for secondary units is increasing. Buyers in Austin, San Antonio, and other metro areas can now factor ADU income into their qualifying picture. <Link href="/texas" className="text-brand hover:underline">Learn more about Texas mortgage options</Link>.
             </p>
           </section>
 

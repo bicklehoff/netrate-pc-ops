@@ -20,6 +20,10 @@ async function getCommentary(dateStr) {
   }
 }
 
+function toDateStr(d) {
+  return d instanceof Date ? d.toISOString().split('T')[0] : String(d).split('T')[0];
+}
+
 async function getAdjacentDates(dateStr) {
   try {
     const sql = neon(process.env.PC_DATABASE_URL || process.env.DATABASE_URL);
@@ -30,8 +34,8 @@ async function getAdjacentDates(dateStr) {
       SELECT date FROM rate_watch_commentaries WHERE date > ${dateStr} ORDER BY date ASC LIMIT 1
     `;
     return {
-      prev: prev[0] ? String(prev[0].date).split('T')[0] : null,
-      next: next[0] ? String(next[0].date).split('T')[0] : null,
+      prev: prev[0] ? toDateStr(prev[0].date) : null,
+      next: next[0] ? toDateStr(next[0].date) : null,
     };
   } catch {
     return { prev: null, next: null };
@@ -43,7 +47,7 @@ export async function generateMetadata({ params }) {
   const commentary = await getCommentary(date);
   if (!commentary) return { title: 'Rate Watch | NetRate Mortgage' };
 
-  const dateLabel = new Date(commentary.date + 'T12:00:00').toLocaleDateString('en-US', {
+  const dateLabel = new Date(toDateStr(commentary.date) + 'T12:00:00').toLocaleDateString('en-US', {
     month: 'long', day: 'numeric', year: 'numeric',
   });
 
@@ -71,7 +75,7 @@ export default async function RateWatchDatePage({ params }) {
 
   if (!commentary) notFound();
 
-  const dateLabel = new Date(commentary.date + 'T12:00:00').toLocaleDateString('en-US', {
+  const dateLabel = new Date(toDateStr(commentary.date) + 'T12:00:00').toLocaleDateString('en-US', {
     weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
   });
 

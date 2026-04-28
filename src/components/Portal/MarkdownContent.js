@@ -119,10 +119,30 @@ const components = {
   ),
 };
 
-export default function MarkdownContent({ content }) {
+const headingStyles = {
+  h1: 'text-3xl font-bold text-gray-900 mb-6 pb-3 border-b border-gray-200',
+  h2: 'text-2xl font-bold text-gray-900 mt-10 mb-4',
+  h3: 'text-xl font-semibold text-gray-800 mt-8 mb-3',
+  h4: 'text-lg font-semibold text-gray-700 mt-6 mb-2',
+};
+
+function makeHeadingComponents(offset) {
+  if (!offset) return {};
+  const tag = (level) => {
+    const demoted = Math.min(level + offset, 4);
+    const Tag = `h${demoted}`;
+    const Comp = ({ children }) => <Tag className={headingStyles[Tag]}>{children}</Tag>;
+    Comp.displayName = `DemotedH${demoted}`;
+    return Comp;
+  };
+  return { h1: tag(1), h2: tag(2), h3: tag(3), h4: tag(4) };
+}
+
+export default function MarkdownContent({ content, headingOffset = 0 }) {
+  const overrides = headingOffset ? makeHeadingComponents(headingOffset) : {};
   return (
     <div className="markdown-content">
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ ...components, ...overrides }}>
         {content}
       </ReactMarkdown>
     </div>
