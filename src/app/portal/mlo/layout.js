@@ -7,7 +7,7 @@ import { useEffect } from 'react';
 import SessionProvider from '@/components/Portal/SessionProvider';
 import DialerProvider from '@/components/Portal/Dialer/DialerProvider';
 import PhonePanel from '@/components/Portal/Dialer/PhonePanel';
-import { IncomingCallPopup } from '@/components/Portal/Dialer';
+import { IncomingCallPopup, SmsIncomingPopup } from '@/components/Portal/Dialer';
 import MloNav from '@/components/Portal/MloNav';
 import MloHeader from '@/components/Portal/MloHeader';
 
@@ -38,6 +38,9 @@ export default function MloLayout({ children }) {
       <DialerProvider>
         {/* Incoming call popup (floating, always available) */}
         <IncomingCallPopup />
+
+        {/* Incoming SMS popup (floating, always available) */}
+        <SmsIncomingPopup />
 
         {/* MLO portal — full viewport */}
         <div className="flex flex-col h-screen fixed inset-0 z-50 bg-gray-50">

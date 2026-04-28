@@ -19,6 +19,13 @@ export default function AudioSettings({ onClose }) {
     setInputDevice,
     testRingtone,
     testSpeaker,
+    smsPopupEnabled,
+    smsSoundEnabled,
+    smsBadgeEnabled,
+    setSmsPopupEnabled,
+    setSmsSoundEnabled,
+    setSmsBadgeEnabled,
+    testSmsChime,
   } = useDialer();
 
   // Trigger a permission prompt if labels are empty — without mic permission,
@@ -113,7 +120,7 @@ export default function AudioSettings({ onClose }) {
       </div>
 
       {/* Microphone input */}
-      <div>
+      <div className="mb-4">
         <label className="block text-[10px] font-medium text-gray-600 mb-1">
           Microphone
         </label>
@@ -130,6 +137,57 @@ export default function AudioSettings({ onClose }) {
           ))}
         </select>
       </div>
+
+      {/* SMS notifications section */}
+      <div className="pt-3 border-t border-gray-200">
+        <h4 className="text-xs font-semibold text-gray-900 mb-2">SMS notifications</h4>
+
+        <Toggle
+          label="Show in-portal popup"
+          checked={smsPopupEnabled}
+          onChange={(v) => setSmsPopupEnabled(v)}
+        />
+
+        <div className="flex items-center gap-2">
+          <Toggle
+            label="Play sound on new SMS"
+            checked={smsSoundEnabled}
+            onChange={(v) => setSmsSoundEnabled(v)}
+          />
+          <button
+            onClick={testSmsChime}
+            className="text-[10px] px-2 py-1 rounded border border-gray-300 bg-white hover:bg-gray-50 text-gray-700"
+            title="Play sample chime"
+          >
+            Test
+          </button>
+        </div>
+
+        <Toggle
+          label="Show unread count on taskbar (PWA only)"
+          checked={smsBadgeEnabled}
+          onChange={(v) => setSmsBadgeEnabled(v)}
+        />
+      </div>
     </div>
+  );
+}
+
+function Toggle({ label, checked, onChange }) {
+  return (
+    <label className="flex items-center justify-between gap-3 py-1.5 cursor-pointer">
+      <span className="text-xs text-gray-700 flex-1">{label}</span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        onClick={() => onChange(!checked)}
+        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors flex-shrink-0 ${checked ? 'bg-brand' : 'bg-gray-300'}`}
+      >
+        <span
+          className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${checked ? 'translate-x-5' : 'translate-x-1'}`}
+        />
+      </button>
+    </label>
   );
 }
