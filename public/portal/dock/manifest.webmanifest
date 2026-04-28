@@ -1,0 +1,25 @@
+{
+  "name": "NetRate Dock",
+  "short_name": "Dock",
+  "description": "NetRate Mortgage MLO dock — phone-first floating panel for calls and SMS.",
+  "start_url": "/portal/dock",
+  "scope": "/portal/dock/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#FFFFFF",
+  "theme_color": "#2E6BA8",
+  "icons": [
+    {
+      "src": "/icons/dock-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/dock-icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
