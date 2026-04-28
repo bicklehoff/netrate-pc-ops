@@ -128,7 +128,7 @@ function CostOfWaitingContent({ parRate }) {
     <div className="max-w-3xl mx-auto px-6 py-10">
       <div className="mb-8">
         <Link href="/tools" className="text-sm text-brand hover:underline">&larr; Back to tools</Link>
-        <h1 className="text-2xl font-bold text-gray-900 mt-3">Cost of Waiting Calculator</h1>
+        <div className="text-2xl font-bold text-gray-900 mt-3">Cost of Waiting Calculator</div>
         <p className="text-sm text-gray-500 mt-1">
           Every month you wait to refinance at a lower rate, you&apos;re paying more than you need to.
           This calculator shows exactly how much that delay costs you.

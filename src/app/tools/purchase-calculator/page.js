@@ -14,8 +14,11 @@ export default async function PurchaseCalculatorPage() {
     // Swallow — client falls back to hardcoded default.
   }
   return (
-    <Suspense>
-      <PurchaseCalculatorClient parRate={parRate} />
-    </Suspense>
+    <>
+      <h1 className="sr-only">Mortgage Purchase Calculator</h1>
+      <Suspense>
+        <PurchaseCalculatorClient parRate={parRate} />
+      </Suspense>
+    </>
   );
 }
