@@ -51,13 +51,22 @@ export async function generateMetadata({ params }) {
     month: 'long', day: 'numeric', year: 'numeric',
   });
 
+  const pageUrl = `https://www.netratemortgage.com/rate-watch/${date}`;
   return {
     title: `${commentary.headline} — ${dateLabel} | NetRate Mortgage`,
     description: commentary.commentary?.substring(0, 160),
+    alternates: { canonical: pageUrl },
     openGraph: {
       title: commentary.headline,
       description: commentary.commentary?.substring(0, 160),
       type: 'article',
+      url: pageUrl,
+      siteName: 'NetRate Mortgage',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: commentary.headline,
+      description: commentary.commentary?.substring(0, 160),
     },
   };
 }

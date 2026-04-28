@@ -208,7 +208,22 @@ export default function RootLayout({ children }) {
               </div>
             </a>
             <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
-              <a href="/rates" className="text-ink-mid hover:text-brand transition-colors">Rates</a>
+              <div className="relative group">
+                <a href="/rates" className="text-ink-mid hover:text-brand transition-colors flex items-center gap-1">
+                  Rates
+                  <svg className="w-3.5 h-3.5 transition-transform group-hover:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                </a>
+                <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                  <div className="bg-white rounded-lg shadow-nr-md border border-gray-200 py-2 w-48">
+                    <a href="/rates" className="block px-4 py-2 text-brand font-medium hover:bg-surface-alt transition-colors">All Rates &rarr;</a>
+                    <div className="border-t border-gray-100 my-1"></div>
+                    <a href="/refinance" className="block px-4 py-2 text-ink-mid hover:bg-surface-alt hover:text-brand transition-colors">Refinance</a>
+                    <a href="/rates/heloc" className="block px-4 py-2 text-ink-mid hover:bg-surface-alt hover:text-brand transition-colors">HELOC Rates</a>
+                    <a href="/rates/non-qm" className="block px-4 py-2 text-ink-mid hover:bg-surface-alt hover:text-brand transition-colors">Non-QM Rates</a>
+                    <a href="/rates/dscr" className="block px-4 py-2 text-ink-mid hover:bg-surface-alt hover:text-brand transition-colors">DSCR Rates</a>
+                  </div>
+                </div>
+              </div>
               <a href="/tools" className="text-ink-mid hover:text-brand transition-colors">Tools</a>
               <a href="/rate-watch" className="text-ink-mid hover:text-brand transition-colors">Market</a>
               <div className="relative group">
@@ -305,7 +320,8 @@ export default function RootLayout({ children }) {
                 <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-3">Services</h3>
                 <ul className="space-y-2 text-sm">
                   <li><a href="/rates" className="hover:text-white transition-colors">Today&apos;s Rates</a></li>
-                  <li><a href="/services" className="hover:text-white transition-colors">Refinance</a></li>
+                  <li><a href="/refinance" className="hover:text-white transition-colors">Refinance</a></li>
+                  <li><a href="/rates/heloc" className="hover:text-white transition-colors">HELOC Rates</a></li>
                   <li><a href="/services" className="hover:text-white transition-colors">Home Purchase</a></li>
                   <li><a href="/contact" className="hover:text-white transition-colors">See My Rate</a></li>
                   <li><a href="/portal/apply" className="hover:text-white transition-colors">Apply Now</a></li>

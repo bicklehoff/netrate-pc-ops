@@ -2,6 +2,10 @@ import sql from '@/lib/db';
 
 const BASE_URL = 'https://www.netratemortgage.com';
 
+function toDateStr(d) {
+  return d instanceof Date ? d.toISOString().split('T')[0] : String(d).split('T')[0];
+}
+
 export default async function sitemap() {
   // Fetch published content pages from DB
   let contentPages = [];
@@ -16,12 +20,32 @@ export default async function sitemap() {
     console.error('Sitemap: content_pages query failed:', e.message);
   }
 
+  // Fetch rate-watch daily archive pages
+  let rateWatchDates = [];
+  try {
+    rateWatchDates = await sql`
+      SELECT date FROM rate_watch_commentaries ORDER BY date DESC
+    `;
+  } catch (e) {
+    console.error('Sitemap: rate_watch_commentaries query failed:', e.message);
+  }
+
   const dynamicPages = contentPages.map(p => ({
     url: `${BASE_URL}/${p.slug}`,
     lastModified: p.updated_at ? new Date(p.updated_at) : new Date(),
     changeFrequency: 'monthly',
     priority: 0.7,
   }));
+
+  const rateWatchPages = rateWatchDates.map(r => {
+    const d = toDateStr(r.date);
+    return {
+      url: `${BASE_URL}/rate-watch/${d}`,
+      lastModified: new Date(d),
+      changeFrequency: 'never',
+      priority: 0.5,
+    };
+  });
 
   return [
     {
@@ -308,6 +332,8 @@ export default async function sitemap() {
       changeFrequency: 'yearly',
       priority: 0.2,
     },
+    // Dynamic rate-watch archive pages from DB
+    ...rateWatchPages,
     // Dynamic content pages from DB
     ...dynamicPages,
   ];
