@@ -27,6 +27,23 @@ const RINGING = 'ringing';
 const IN_PROGRESS = 'in-progress';
 const INCOMING = 'incoming';
 
+// localStorage keys for per-device audio routing prefs (persist across reloads)
+const LS_RINGTONE = 'dialer.audio.ringtoneDeviceId';
+const LS_SPEAKER = 'dialer.audio.speakerDeviceId';
+const LS_INPUT = 'dialer.audio.inputDeviceId';
+
+const readLS = (key) => {
+  if (typeof window === 'undefined') return null;
+  try { return window.localStorage.getItem(key); } catch { return null; }
+};
+const writeLS = (key, value) => {
+  if (typeof window === 'undefined') return;
+  try {
+    if (value == null) window.localStorage.removeItem(key);
+    else window.localStorage.setItem(key, value);
+  } catch { /* ignore quota / privacy mode */ }
+};
+
 export default function DialerProvider({ children }) {
   const [deviceReady, setDeviceReady] = useState(false);
   const [callState, setCallState] = useState(IDLE);
@@ -37,6 +54,14 @@ export default function DialerProvider({ children }) {
   const [callerInfo, setCallerInfo] = useState(null);      // { name, phone, contactId }
   const [recentInboundCall, setRecentInboundCall] = useState(null); // sticky context after cell pickup / caller hangup
   const [error, setError] = useState(null);
+
+  // Audio device routing — lets MLO send the ringer to desk speakers while
+  // the call audio stays on the headset. Persisted per-browser via localStorage.
+  const [audioDevices, setAudioDevices] = useState({ inputs: [], outputs: [] });
+  const [ringtoneDeviceId, setRingtoneDeviceIdState] = useState(null);
+  const [speakerDeviceId, setSpeakerDeviceIdState] = useState(null);
+  const [inputDeviceId, setInputDeviceIdState] = useState(null);
+  const [outputSelectionSupported, setOutputSelectionSupported] = useState(false);
 
   const deviceRef = useRef(null);
   const timerRef = useRef(null);
@@ -178,6 +203,66 @@ export default function DialerProvider({ children }) {
           }
         });
 
+        // Wire audio routing — split ringtone (e.g. desk speakers) from
+        // call speaker (e.g. headset). Twilio Voice SDK exposes this on
+        // device.audio; the browser must support setSinkId for output
+        // selection to work (Chrome/Edge yes, Safari no as of writing).
+        if (device.audio) {
+          const supported = !!device.audio.isOutputSelectionSupported;
+          if (mounted) setOutputSelectionSupported(supported);
+
+          const refreshDevices = () => {
+            const inputs = [];
+            const outputs = [];
+            try {
+              device.audio.availableInputDevices.forEach((d, id) => {
+                inputs.push({ deviceId: id, label: d.label || 'Microphone' });
+              });
+              device.audio.availableOutputDevices.forEach((d, id) => {
+                outputs.push({ deviceId: id, label: d.label || 'Speaker' });
+              });
+            } catch (e) {
+              console.warn('[Dialer] Failed to enumerate audio devices:', e);
+            }
+            if (mounted) setAudioDevices({ inputs, outputs });
+          };
+
+          // Apply persisted prefs. If a saved deviceId is no longer present
+          // (headset unplugged since last session), fall back to default.
+          const applySaved = () => {
+            const savedRing = readLS(LS_RINGTONE);
+            const savedSpeaker = readLS(LS_SPEAKER);
+            const savedInput = readLS(LS_INPUT);
+
+            const outputIds = new Set();
+            try { device.audio.availableOutputDevices.forEach((_, id) => outputIds.add(id)); } catch {}
+            const inputIds = new Set();
+            try { device.audio.availableInputDevices.forEach((_, id) => inputIds.add(id)); } catch {}
+
+            if (supported && savedRing && outputIds.has(savedRing)) {
+              try { device.audio.ringtoneDevices.set(savedRing); } catch (e) { console.warn('[Dialer] ringtone set failed:', e); }
+              if (mounted) setRingtoneDeviceIdState(savedRing);
+            }
+            if (supported && savedSpeaker && outputIds.has(savedSpeaker)) {
+              try { device.audio.speakerDevices.set(savedSpeaker); } catch (e) { console.warn('[Dialer] speaker set failed:', e); }
+              if (mounted) setSpeakerDeviceIdState(savedSpeaker);
+            }
+            if (savedInput && inputIds.has(savedInput)) {
+              try { device.audio.setInputDevice(savedInput); } catch (e) { console.warn('[Dialer] input set failed:', e); }
+              if (mounted) setInputDeviceIdState(savedInput);
+            }
+          };
+
+          refreshDevices();
+          applySaved();
+
+          // Re-enumerate when devices are plugged/unplugged.
+          device.audio.on('deviceChange', () => {
+            refreshDevices();
+            applySaved();
+          });
+        }
+
         await device.register();
         deviceRef.current = device;
       } catch (e) {
@@ -313,6 +398,61 @@ export default function DialerProvider({ children }) {
     setRecentInboundCall(null);
   }, []);
 
+  // ─── Audio device actions ────────────────────────────────
+
+  const setRingtoneDevice = useCallback((deviceId) => {
+    const dev = deviceRef.current;
+    if (!dev?.audio) return;
+    try {
+      dev.audio.ringtoneDevices.set(deviceId);
+      setRingtoneDeviceIdState(deviceId);
+      writeLS(LS_RINGTONE, deviceId);
+    } catch (e) {
+      console.error('[Dialer] setRingtoneDevice failed:', e);
+      setError(e.message);
+    }
+  }, []);
+
+  const setSpeakerDevice = useCallback((deviceId) => {
+    const dev = deviceRef.current;
+    if (!dev?.audio) return;
+    try {
+      dev.audio.speakerDevices.set(deviceId);
+      setSpeakerDeviceIdState(deviceId);
+      writeLS(LS_SPEAKER, deviceId);
+    } catch (e) {
+      console.error('[Dialer] setSpeakerDevice failed:', e);
+      setError(e.message);
+    }
+  }, []);
+
+  const setInputDevice = useCallback(async (deviceId) => {
+    const dev = deviceRef.current;
+    if (!dev?.audio) return;
+    try {
+      await dev.audio.setInputDevice(deviceId);
+      setInputDeviceIdState(deviceId);
+      writeLS(LS_INPUT, deviceId);
+    } catch (e) {
+      console.error('[Dialer] setInputDevice failed:', e);
+      setError(e.message);
+    }
+  }, []);
+
+  /** Play a sample ring on the configured ringtone device — used to test routing. */
+  const testRingtone = useCallback(() => {
+    const dev = deviceRef.current;
+    if (!dev?.audio) return;
+    try { dev.audio.ringtoneDevices.test(); } catch (e) { console.error('[Dialer] testRingtone failed:', e); }
+  }, []);
+
+  /** Play a sample tone on the configured speaker device — used to test routing. */
+  const testSpeaker = useCallback(() => {
+    const dev = deviceRef.current;
+    if (!dev?.audio) return;
+    try { dev.audio.speakerDevices.test(); } catch (e) { console.error('[Dialer] testSpeaker failed:', e); }
+  }, []);
+
   // Auto-clear recentInboundCall after 2 minutes so it doesn't linger forever.
   useEffect(() => {
     if (!recentInboundCall) return;
@@ -339,6 +479,13 @@ export default function DialerProvider({ children }) {
     IN_PROGRESS,
     INCOMING,
 
+    // Audio routing
+    audioDevices,
+    ringtoneDeviceId,
+    speakerDeviceId,
+    inputDeviceId,
+    outputSelectionSupported,
+
     // Actions
     dial,
     acceptCall,
@@ -347,6 +494,11 @@ export default function DialerProvider({ children }) {
     toggleMute,
     sendDigits,
     dismissRecentInboundCall,
+    setRingtoneDevice,
+    setSpeakerDevice,
+    setInputDevice,
+    testRingtone,
+    testSpeaker,
   };
 
   return (
