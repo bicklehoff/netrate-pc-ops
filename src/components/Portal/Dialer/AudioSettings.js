@@ -138,6 +138,28 @@ export default function AudioSettings({ onClose }) {
         </select>
       </div>
 
+      {/* Dock launcher */}
+      <div className="pt-3 border-t border-gray-200 mb-3">
+        <button
+          onClick={() => {
+            // Pop out the dock as a small floating window. Stable name lets
+            // subsequent clicks re-focus the existing dock instead of stacking.
+            window.open(
+              '/portal/dock',
+              'NetRateDock',
+              'width=320,height=600,menubar=no,toolbar=no,location=no,status=no,resizable=yes',
+            );
+          }}
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-brand/10 text-brand hover:bg-brand/20 text-xs font-medium transition-colors"
+          title="Open the floating dock window"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+          </svg>
+          Open dock window
+        </button>
+      </div>
+
       {/* SMS notifications section */}
       <div className="pt-3 border-t border-gray-200">
         <h4 className="text-xs font-semibold text-gray-900 mb-2">SMS notifications</h4>
