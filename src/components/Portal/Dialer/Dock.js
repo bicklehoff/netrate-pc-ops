@@ -55,10 +55,10 @@ export default function Dock() {
   const {
     smsUnreadCount,
     callState,
-    activeCall,
     INCOMING,
     IN_PROGRESS,
     callerInfo,
+    callDuration,
     dial,
     acceptCall,
     rejectCall,
@@ -199,7 +199,12 @@ export default function Dock() {
     setDialPadOpen(false);
   }, [dialNumber, dial]);
 
-  const isInCall = callState === IN_PROGRESS && activeCall;
+  // Dock runs in DialerProvider mode="passive" — `activeCall` (the local
+  // Twilio Call object) only exists on the primary. Source-of-truth for
+  // "is there a live call right now" is `callState === IN_PROGRESS`,
+  // which the primary broadcasts via BroadcastChannel. Hangup dispatches
+  // back to the primary via BC so we don't need a local Call reference.
+  const isInCall = callState === IN_PROGRESS;
 
   return (
     <div className="flex flex-col h-full bg-white">
@@ -292,16 +297,18 @@ export default function Dock() {
       {/* Active call banner — in progress with Hangup */}
       {isInCall && (
         <div className="px-3 py-2.5 bg-brand/5 border-b border-brand/20 flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-brand animate-pulse" />
+          <div className="w-2 h-2 rounded-full bg-brand animate-pulse flex-shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="text-[9px] uppercase tracking-wide text-brand font-bold">On call</p>
+            <p className="text-[9px] uppercase tracking-wide text-brand font-bold">
+              On call {callDuration > 0 ? `· ${Math.floor(callDuration / 60)}:${String(callDuration % 60).padStart(2, '0')}` : ''}
+            </p>
             <p className="text-xs font-semibold text-gray-900 truncate">
               {callerInfo?.name || callerInfo?.phone || 'Unknown'}
             </p>
           </div>
           <button
             onClick={hangup}
-            className="px-2.5 py-1 rounded bg-red-500 text-white text-[10px] font-bold hover:bg-red-600"
+            className="px-2.5 py-1 rounded bg-red-500 text-white text-[10px] font-bold hover:bg-red-600 flex-shrink-0"
           >
             Hang up
           </button>
