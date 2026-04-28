@@ -33,8 +33,14 @@ export default function DockLayout({ children }) {
 
   return (
     <SessionProvider>
-      <DialerProvider>
-        <div className="flex flex-col h-screen fixed inset-0 bg-gray-50 overflow-hidden">
+      {/* mode="passive" — dock listens for call/SMS state from the main portal
+         via BroadcastChannel instead of registering its own Twilio Voice Device.
+         Avoids the "most recent registration wins" collision when both windows
+         are open. */}
+      <DialerProvider mode="passive">
+        {/* z-50 + fixed inset-0 covers the public marketing nav from the
+           root layout. Same trick MloLayout uses. */}
+        <div className="flex flex-col h-screen fixed inset-0 z-50 bg-gray-50 overflow-hidden">
           {children}
         </div>
       </DialerProvider>
