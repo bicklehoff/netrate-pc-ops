@@ -14,8 +14,11 @@ export default async function RefiAnalyzerPage() {
     // Swallow — client falls back to hardcoded default.
   }
   return (
-    <Suspense>
-      <RefiAnalyzerClient parRate={parRate} />
-    </Suspense>
+    <>
+      <h1 className="sr-only">Refinance Recoup Analyzer</h1>
+      <Suspense>
+        <RefiAnalyzerClient parRate={parRate} />
+      </Suspense>
+    </>
   );
 }

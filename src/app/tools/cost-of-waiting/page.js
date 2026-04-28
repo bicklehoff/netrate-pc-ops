@@ -14,8 +14,11 @@ export default async function CostOfWaitingPage() {
     // Swallow — client falls back to hardcoded default.
   }
   return (
-    <Suspense>
-      <CostOfWaitingClient parRate={parRate} />
-    </Suspense>
+    <>
+      <h1 className="sr-only">Cost of Waiting to Buy a Home</h1>
+      <Suspense>
+        <CostOfWaitingClient parRate={parRate} />
+      </Suspense>
+    </>
   );
 }
