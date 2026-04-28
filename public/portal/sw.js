@@ -6,7 +6,7 @@
 //   - push event → show native notification
 //   - notificationclick → focus or open the PWA at the payload URL
 
-const SW_VERSION = 'v2-2026-04-22';
+const SW_VERSION = 'v3-2026-04-28';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -39,6 +39,13 @@ self.addEventListener('push', (event) => {
       icon: '/icons/icon-192.png',
       badge: '/icons/icon-192.png',
       tag: tag || undefined,
+      // renotify: when a new push arrives with a tag that matches an
+      // existing notification, re-alert (banner + sound) instead of
+      // silently replacing. Without this, repeat SMS from the same
+      // sender (tag = `sms-{from}`) update the existing notification
+      // quietly — no banner, no sound. Calls are unaffected because
+      // their tag is the unique callSid, so collisions don't happen.
+      renotify: Boolean(tag),
       data: { url: url || '/portal/mlo', ...(data || {}) },
       requireInteraction: false,
     })
