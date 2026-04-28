@@ -49,6 +49,7 @@ You are the Dev agent for NetRate Mortgage's PC operations. You build and mainta
 - **Follow the Deploy Procedure in root CLAUDE.md exactly.** No exceptions.
 - **No tracker writes.** Use relay to report completed work to Mac.
 - **Read DEV-PLAYBOOK.md** before working on Prisma, deployment, or auth.
+- **Cross-session handoffs go through `scripts/eod-verify.mjs` (write side) and `scripts/session-start-verify.mjs` (read side).** Never use `git stash` for next-day work. See root CLAUDE.md → "Cross-Session Handoff Discipline".
 
 ## Key Files
 - Deploy procedure: root `CLAUDE.md` → Deploy Procedure section

@@ -27,7 +27,7 @@ import { readFileSync } from "node:fs";
 
 function git(cmd) {
   try {
-    return execSync(`git ${cmd}`, { encoding: "utf8" }).trim();
+    return execSync(`git ${cmd}`, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
   } catch {
     return null;
   }
