@@ -11,6 +11,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import { playSmsChime } from '@/lib/sms-chime';
 
 const DialerContext = createContext(null);
 
@@ -31,6 +32,20 @@ const INCOMING = 'incoming';
 const LS_RINGTONE = 'dialer.audio.ringtoneDeviceId';
 const LS_SPEAKER = 'dialer.audio.speakerDeviceId';
 const LS_INPUT = 'dialer.audio.inputDeviceId';
+
+// localStorage keys for SMS notification prefs
+const LS_SMS_POPUP = 'dialer.sms.popupEnabled';
+const LS_SMS_SOUND = 'dialer.sms.soundEnabled';
+const LS_SMS_BADGE = 'dialer.sms.badgeEnabled';
+
+// SMS poll cadence — 10s matches the existing per-thread poll in SmsThread.
+// Tighter cadences trade CPU/network for latency; the OS push (path B)
+// covers the case where the tab is closed entirely.
+const SMS_POLL_INTERVAL_MS = 10_000;
+
+// Auto-dismiss the in-tab SMS popup after this long. Long enough to read,
+// short enough to clear on its own when the user is away from the desk.
+const SMS_POPUP_TTL_MS = 10_000;
 
 const readLS = (key) => {
   if (typeof window === 'undefined') return null;
@@ -63,9 +78,23 @@ export default function DialerProvider({ children }) {
   const [inputDeviceId, setInputDeviceIdState] = useState(null);
   const [outputSelectionSupported, setOutputSelectionSupported] = useState(false);
 
+  // SMS notification state — populated when the polling loop detects a new
+  // inbound message and the user's settings allow surfacing it.
+  const [incomingSms, setIncomingSms] = useState(null);   // { contactId, contactName, phone, body, at }
+  const [smsUnreadCount, setSmsUnreadCount] = useState(0);
+  const [smsPopupEnabled, setSmsPopupEnabledState] = useState(true);
+  const [smsSoundEnabled, setSmsSoundEnabledState] = useState(true);
+  const [smsBadgeEnabled, setSmsBadgeEnabledState] = useState(true);
+
   const deviceRef = useRef(null);
   const timerRef = useRef(null);
   const identityRef = useRef(null);
+  const smsLastSeenAtRef = useRef(null); // ISO ts of newest inbound seen so far
+  const smsPopupTimerRef = useRef(null);
+  const ringtoneDeviceIdRef = useRef(null); // mirrors state for use inside polling closure
+  const smsPopupEnabledRef = useRef(true);
+  const smsSoundEnabledRef = useRef(true);
+  const smsBadgeEnabledRef = useRef(true);
 
   // Duration timer
   const startTimer = useCallback(() => {
@@ -398,6 +427,169 @@ export default function DialerProvider({ children }) {
     setRecentInboundCall(null);
   }, []);
 
+  // Mirror audio + SMS prefs into refs so the polling closure (which captures
+  // a stale snapshot at mount) reads the latest values.
+  useEffect(() => { ringtoneDeviceIdRef.current = ringtoneDeviceId; }, [ringtoneDeviceId]);
+  useEffect(() => { smsPopupEnabledRef.current = smsPopupEnabled; }, [smsPopupEnabled]);
+  useEffect(() => { smsSoundEnabledRef.current = smsSoundEnabled; }, [smsSoundEnabled]);
+  useEffect(() => { smsBadgeEnabledRef.current = smsBadgeEnabled; }, [smsBadgeEnabled]);
+
+  // Load SMS prefs from localStorage on mount.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const popup = readLS(LS_SMS_POPUP);
+    const sound = readLS(LS_SMS_SOUND);
+    const badge = readLS(LS_SMS_BADGE);
+    if (popup === 'false') setSmsPopupEnabledState(false);
+    if (sound === 'false') setSmsSoundEnabledState(false);
+    if (badge === 'false') setSmsBadgeEnabledState(false);
+  }, []);
+
+  // ─── PWA taskbar unread badge ────────────────────────────
+  // navigator.setAppBadge() updates the badge on the installed PWA's
+  // taskbar / Start menu icon. No-op in regular Chrome tabs (the API
+  // exists but only renders for installed PWAs).
+  const updateAppBadge = useCallback((count) => {
+    if (typeof navigator === 'undefined') return;
+    if (!smsBadgeEnabledRef.current || count <= 0) {
+      if (typeof navigator.clearAppBadge === 'function') {
+        navigator.clearAppBadge().catch(() => {});
+      }
+      return;
+    }
+    if (typeof navigator.setAppBadge === 'function') {
+      navigator.setAppBadge(count).catch(() => {});
+    }
+  }, []);
+
+  // ─── SMS polling loop ────────────────────────────────────
+  // Runs every SMS_POLL_INTERVAL_MS while the provider is mounted.
+  // Compares the newest inbound message timestamp against the last seen,
+  // surfaces a popup + chime + updates the unread count + taskbar badge.
+  useEffect(() => {
+    let cancelled = false;
+
+    const isThreadCurrentlyOpen = (contactId, phone) => {
+      // Suppress popup if the user is staring at this thread already.
+      if (typeof window === 'undefined') return false;
+      const params = new URLSearchParams(window.location.search);
+      const isOnMessages = window.location.pathname.startsWith('/portal/mlo/messages');
+      if (!isOnMessages) return false;
+      const openContact = params.get('contact');
+      const openPhone = params.get('phone');
+      if (contactId && openContact === String(contactId)) return true;
+      if (phone && openPhone === phone) return true;
+      return false;
+    };
+
+    const poll = async () => {
+      try {
+        const res = await fetch('/api/dialer/sms/threads', { cache: 'no-store' });
+        if (!res.ok) return; // 401 during logout etc — silent retry
+        const { threads = [] } = await res.json();
+
+        // Aggregate unread inbound messages across all threads.
+        const totalUnread = threads.reduce((sum, t) => sum + (t.unread || 0), 0);
+        if (!cancelled) {
+          setSmsUnreadCount(totalUnread);
+          updateAppBadge(totalUnread);
+        }
+
+        // Find the newest inbound message across all threads.
+        const newest = threads
+          .filter((t) => t.last_direction === 'inbound')
+          .sort((a, b) => new Date(b.last_message_at) - new Date(a.last_message_at))[0];
+        if (!newest) return;
+
+        const newestAt = newest.last_message_at;
+
+        // First poll: just baseline. Don't surface anything that arrived
+        // before the user logged in.
+        if (smsLastSeenAtRef.current === null) {
+          smsLastSeenAtRef.current = newestAt;
+          return;
+        }
+
+        // No change.
+        if (new Date(newestAt) <= new Date(smsLastSeenAtRef.current)) return;
+
+        // New message detected.
+        smsLastSeenAtRef.current = newestAt;
+
+        // Suppression rules.
+        const tabHidden = typeof document !== 'undefined' && document.visibilityState === 'hidden';
+        const onThread = isThreadCurrentlyOpen(newest.contact_id, newest.phone);
+
+        if (!cancelled && smsPopupEnabledRef.current && !onThread && !tabHidden) {
+          const popupInfo = {
+            contactId: newest.contact_id || null,
+            contactName: newest.contact_name || null,
+            phone: newest.phone,
+            body: newest.last_message || '',
+            at: newestAt,
+          };
+          setIncomingSms(popupInfo);
+
+          // Reset auto-dismiss timer.
+          if (smsPopupTimerRef.current) clearTimeout(smsPopupTimerRef.current);
+          smsPopupTimerRef.current = setTimeout(() => {
+            setIncomingSms(null);
+          }, SMS_POPUP_TTL_MS);
+        }
+
+        if (!cancelled && smsSoundEnabledRef.current && !onThread && !tabHidden) {
+          playSmsChime(ringtoneDeviceIdRef.current).catch(() => { /* ignore */ });
+        }
+      } catch {
+        // Network blip / fetch abort — silent. Next tick will retry.
+      }
+    };
+
+    // Kick once immediately, then on interval.
+    poll();
+    const id = setInterval(poll, SMS_POLL_INTERVAL_MS);
+
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+      if (smsPopupTimerRef.current) clearTimeout(smsPopupTimerRef.current);
+    };
+  }, [updateAppBadge]);
+
+  // ─── SMS notification setters ────────────────────────────
+  const dismissIncomingSms = useCallback(() => {
+    setIncomingSms(null);
+    if (smsPopupTimerRef.current) {
+      clearTimeout(smsPopupTimerRef.current);
+      smsPopupTimerRef.current = null;
+    }
+  }, []);
+
+  const setSmsPopupEnabled = useCallback((on) => {
+    setSmsPopupEnabledState(on);
+    writeLS(LS_SMS_POPUP, on ? null : 'false');
+  }, []);
+
+  const setSmsSoundEnabled = useCallback((on) => {
+    setSmsSoundEnabledState(on);
+    writeLS(LS_SMS_SOUND, on ? null : 'false');
+  }, []);
+
+  const setSmsBadgeEnabled = useCallback((on) => {
+    setSmsBadgeEnabledState(on);
+    writeLS(LS_SMS_BADGE, on ? null : 'false');
+    if (!on && typeof navigator?.clearAppBadge === 'function') {
+      navigator.clearAppBadge().catch(() => {});
+    } else if (on) {
+      updateAppBadge(smsUnreadCount);
+    }
+  }, [smsUnreadCount, updateAppBadge]);
+
+  /** Test the SMS chime — used by the "Test" button in AudioSettings. */
+  const testSmsChime = useCallback(() => {
+    playSmsChime(ringtoneDeviceIdRef.current).catch(() => {});
+  }, []);
+
   // ─── Audio device actions ────────────────────────────────
 
   const setRingtoneDevice = useCallback((deviceId) => {
@@ -486,6 +678,13 @@ export default function DialerProvider({ children }) {
     inputDeviceId,
     outputSelectionSupported,
 
+    // SMS notifications
+    incomingSms,
+    smsUnreadCount,
+    smsPopupEnabled,
+    smsSoundEnabled,
+    smsBadgeEnabled,
+
     // Actions
     dial,
     acceptCall,
@@ -499,6 +698,11 @@ export default function DialerProvider({ children }) {
     setInputDevice,
     testRingtone,
     testSpeaker,
+    dismissIncomingSms,
+    setSmsPopupEnabled,
+    setSmsSoundEnabled,
+    setSmsBadgeEnabled,
+    testSmsChime,
   };
 
   return (

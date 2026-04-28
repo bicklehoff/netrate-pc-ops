@@ -3,6 +3,7 @@ export { default as DialerProvider, useDialer } from './DialerProvider';
 export { default as DialerPanel } from './DialerPanel';
 export { default as PhonePanel } from './PhonePanel';
 export { default as IncomingCallPopup } from './IncomingCallPopup';
+export { default as SmsIncomingPopup } from './SmsIncomingPopup';
 export { default as ActiveCall } from './ActiveCall';
 export { default as DialPad } from './DialPad';
 export { default as ContactSearch } from './ContactSearch';

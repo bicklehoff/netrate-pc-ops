@@ -95,7 +95,7 @@ function RefiAnalyzerContent({ parRate }) {
     <div className="max-w-3xl mx-auto px-6 py-10">
       <div className="mb-8">
         <Link href="/tools" className="text-sm text-brand hover:underline">← Back to tools</Link>
-        <h1 className="text-2xl font-bold text-gray-900 mt-3">Refi Recoup Analyzer</h1>
+        <div className="text-2xl font-bold text-gray-900 mt-3">Refi Recoup Analyzer</div>
         <p className="text-sm text-gray-500 mt-1">
           Should you refinance? Enter your current loan details and a new rate to see your monthly savings,
           break-even timeline, and total cost comparison. The math tells the story.

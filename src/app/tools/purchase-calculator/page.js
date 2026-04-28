@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { readHomepageCache } from '@/lib/rates/homepage-cache';
 import PurchaseCalculatorClient from './content';
 
@@ -12,5 +13,12 @@ export default async function PurchaseCalculatorPage() {
   } catch {
     // Swallow — client falls back to hardcoded default.
   }
-  return <PurchaseCalculatorClient parRate={parRate} />;
+  return (
+    <>
+      <h1 className="sr-only">Mortgage Purchase Calculator</h1>
+      <Suspense>
+        <PurchaseCalculatorClient parRate={parRate} />
+      </Suspense>
+    </>
+  );
 }

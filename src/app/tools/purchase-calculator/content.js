@@ -102,7 +102,7 @@ function PurchaseCalculatorContent({ parRate }) {
     <div className="max-w-3xl mx-auto px-6 py-10">
       <div className="mb-8">
         <Link href="/tools" className="text-sm text-brand hover:underline">← Back to tools</Link>
-        <h1 className="text-2xl font-bold text-gray-900 mt-3">Purchase Calculator</h1>
+        <div className="text-2xl font-bold text-gray-900 mt-3">Purchase Calculator</div>
         <p className="text-sm text-gray-500 mt-1">
           Estimate your monthly payment, cash to close, and how much home you can afford.
           Default is Conventional 97 (3% down) — adjust to fit your scenario.

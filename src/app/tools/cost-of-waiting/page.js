@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { readHomepageCache } from '@/lib/rates/homepage-cache';
 import CostOfWaitingClient from './content';
 
@@ -12,5 +13,12 @@ export default async function CostOfWaitingPage() {
   } catch {
     // Swallow — client falls back to hardcoded default.
   }
-  return <CostOfWaitingClient parRate={parRate} />;
+  return (
+    <>
+      <h1 className="sr-only">Cost of Waiting to Buy a Home</h1>
+      <Suspense>
+        <CostOfWaitingClient parRate={parRate} />
+      </Suspense>
+    </>
+  );
 }
