@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { readHomepageCache } from '@/lib/rates/homepage-cache';
 import RefiAnalyzerClient from './content';
 
@@ -12,5 +13,9 @@ export default async function RefiAnalyzerPage() {
   } catch {
     // Swallow — client falls back to hardcoded default.
   }
-  return <RefiAnalyzerClient parRate={parRate} />;
+  return (
+    <Suspense>
+      <RefiAnalyzerClient parRate={parRate} />
+    </Suspense>
+  );
 }
