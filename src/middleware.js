@@ -56,7 +56,11 @@ export async function middleware(request) {
   if (passwordRedirect) return passwordRedirect;
 
   // ─── MLO Routes: Require NextAuth session with MLO/admin role ──
-  if (pathname.startsWith('/portal/mlo') && !pathname.startsWith('/portal/mlo/login')) {
+  // /portal/dock is the floating mini-PWA panel — same auth model as /portal/mlo.
+  if (
+    (pathname.startsWith('/portal/mlo') && !pathname.startsWith('/portal/mlo/login')) ||
+    pathname.startsWith('/portal/dock')
+  ) {
     const token = await getToken({
       req: request,
       secret: process.env.NEXTAUTH_SECRET,
