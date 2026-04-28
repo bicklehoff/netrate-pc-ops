@@ -46,6 +46,18 @@ export const metadata = {
     statusBarStyle: 'default',
     title: 'NetRate',
   },
+  openGraph: {
+    type: 'website',
+    siteName: COMPANY_NAME,
+    title: `${COMPANY_NAME} | Today\'s Rates, Zero Pitch`,
+    description: `See today\'s real mortgage rates with transparent pricing. No sales pitch, no commitment. ${COMPANY_NAME} — ${OFFICE_ADDRESS.city}, ${OFFICE_ADDRESS.state}.`,
+    url: COMPANY_URL,
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: `${COMPANY_NAME} | Today\'s Rates, Zero Pitch`,
+    description: `See today\'s real mortgage rates with transparent pricing. No sales pitch, no commitment. ${COMPANY_NAME} — ${OFFICE_ADDRESS.city}, ${OFFICE_ADDRESS.state}.`,
+  },
 };
 
 export const viewport = {
