@@ -44,6 +44,7 @@ export default async function RatesPage({ searchParams }) {
       </div>
       <div className="bg-[#F5F7FA] min-h-screen">
       <div className="max-w-3xl mx-auto px-4 py-8">
+      <h1 className="sr-only">Today&apos;s Mortgage Rates</h1>
       <RateTool defaultState={defaultState} prefill={Object.keys(prefill).length ? prefill : null} brpToken={brpToken} />
 
       {/* Apply CTA */}

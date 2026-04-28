@@ -261,7 +261,7 @@ export default function DSCRCalculator() {
       {/* Header */}
       <div className="bg-brand border-b border-brand-dark">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
-          <span className="text-white font-bold text-base">DSCR Loan Calculator</span>
+          <h1 className="text-white font-bold text-base">DSCR Loan Calculator</h1>
           <span className="bg-accent text-ink text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Investor</span>
           <span className="ml-auto text-white/60 text-xs hidden sm:block">
             Live wholesale pricing · as of {sheetDate}

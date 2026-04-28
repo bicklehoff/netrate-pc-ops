@@ -90,7 +90,7 @@ export default function CaliforniaHousingUpdate() {
         <nav className="text-sm text-gray-500 mb-8">
           <Link href="/" className="text-brand hover:underline">Home</Link>
           <span className="mx-2">/</span>
-          <Link href="/california-mortgage" className="text-brand hover:underline">California</Link>
+          <Link href="/california" className="text-brand hover:underline">California</Link>
           <span className="mx-2">/</span>
           <span>Housing Update: SB 79 + Condo Rules</span>
         </nav>

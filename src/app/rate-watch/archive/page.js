@@ -37,7 +37,8 @@ export default async function RateWatchArchivePage() {
   // Group by month
   const grouped = {};
   for (const c of commentaries) {
-    const d = new Date(c.date + 'T12:00:00');
+    const dateStr0 = c.date instanceof Date ? c.date.toISOString().split('T')[0] : String(c.date).split('T')[0];
+    const d = new Date(dateStr0 + 'T12:00:00');
     const key = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
     if (!grouped[key]) grouped[key] = [];
     grouped[key].push(c);
@@ -62,7 +63,7 @@ export default async function RateWatchArchivePage() {
             <div className="space-y-2">
               {items.map((c) => {
                 const dateStr = c.date instanceof Date ? c.date.toISOString().split('T')[0] : String(c.date).split('T')[0];
-                const dayLabel = new Date(c.date + 'T12:00:00').toLocaleDateString('en-US', {
+                const dayLabel = new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', {
                   weekday: 'short', month: 'short', day: 'numeric',
                 });
                 return (

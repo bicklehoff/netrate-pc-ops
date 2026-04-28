@@ -131,7 +131,7 @@ export default async function ContentPage({ params }) {
       </h1>
 
       <div className="space-y-8 text-gray-700 leading-relaxed">
-        <MarkdownContent content={page.body} />
+        <MarkdownContent content={page.body} headingOffset={1} />
       </div>
 
       <div className="mt-12">
