@@ -50,7 +50,8 @@ export async function POST(req) {
       if (mediaRes.ok) {
         const ext = mediaContentType.split('/')[1]?.replace('jpeg', 'jpg') || 'bin';
         const filename = `sms-media/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-        const blob = await put(filename, mediaRes.body, {
+        const buffer = Buffer.from(await mediaRes.arrayBuffer());
+        const blob = await put(filename, buffer, {
           access: 'public',
           contentType: mediaContentType,
         });
