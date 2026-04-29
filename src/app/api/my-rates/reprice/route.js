@@ -8,7 +8,8 @@ import { NextResponse } from 'next/server';
 import sql from '@/lib/db';
 import { priceScenario } from '@/lib/rates/price-scenario';
 import { calcMonthlyPI } from '@/lib/rates/math';
-import { updateScenario, replaceScenarioRates } from '@/lib/scenarios/db';
+import { replaceScenarioRates } from '@/lib/scenarios/db';
+import { getRateAlertByScenarioId, updateRateAlert } from '@/lib/rate-alerts';
 
 export async function POST(request) {
   try {
@@ -102,11 +103,17 @@ export async function POST(request) {
       if (topRates.length >= 3) break;
     }
 
-    // Replace rates + update last_priced_at
+    // Replace rates and bump last_priced_at on the rate-alert subscription.
+    // Per UAD AD-10a (D9c Phase 3a, 2026-04-30): pricing-cycle fields live on
+    // rate_alerts now. Backfill from migration 053 guarantees a rate_alert
+    // row exists for every borrower scenario; defensively no-op if missing.
     await replaceScenarioRates(scenarioId, topRates);
-    await updateScenario(scenarioId, scenario.organization_id, {
-      last_priced_at: new Date(),
-    });
+    const rateAlert = await getRateAlertByScenarioId(scenarioId, scenario.organization_id);
+    if (rateAlert) {
+      await updateRateAlert(rateAlert.id, scenario.organization_id, {
+        last_priced_at: new Date(),
+      });
+    }
 
     return NextResponse.json({
       success: true,
