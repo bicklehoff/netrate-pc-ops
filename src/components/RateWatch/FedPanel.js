@@ -97,10 +97,17 @@ function PendingPanel({ date }) {
   );
 }
 
-export default function FedPanel({ fedEvents = [], nextMeeting = null }) {
+function formatAsOf(iso) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+export default function FedPanel({ fedEvents = [], nextMeeting = null, asOf = null }) {
   if (!fedEvents.length && !nextMeeting) return null;
 
   const [next] = fedEvents;
+  const asOfFormatted = formatAsOf(asOf);
 
   return (
     <div>
@@ -117,6 +124,12 @@ export default function FedPanel({ fedEvents = [], nextMeeting = null }) {
       </div>
 
       {next ? <NextMeetingPanel event={next} /> : <PendingPanel date={nextMeeting.date} />}
+
+      {asOfFormatted && (
+        <div className="text-[9px] text-slate-400 mt-2 text-right">
+          As of {asOfFormatted}
+        </div>
+      )}
     </div>
   );
 }
