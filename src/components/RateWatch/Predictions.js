@@ -42,7 +42,7 @@ export function FedPanelSection() {
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm h-full overflow-hidden">
-      <FedPanel fedEvents={data.fedEvents} nextMeeting={data.nextMeeting} />
+      <FedPanel fedEvents={data.fedEvents} nextMeeting={data.nextMeeting} asOf={data.timestamp} />
     </div>
   );
 }

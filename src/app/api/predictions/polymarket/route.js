@@ -72,39 +72,52 @@ function parseFedEvent(event) {
   };
 }
 
-async function fetchEvents() {
+async function fetchJson(url) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
   try {
-    // Fetch with AbortController timeout — response can be 8MB+
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000);
-
-    const res = await fetch(
-      `${POLYMARKET_BASE}/events?active=true&closed=false&limit=50&order=volume&ascending=false`,
-      { cache: 'no-store', signal: controller.signal }
-    );
-    clearTimeout(timeout);
-
+    const res = await fetch(url, { cache: 'no-store', signal: controller.signal });
     if (!res.ok) {
-      console.error('Polymarket events API error:', res.status);
+      console.error('Polymarket fetch error:', url, res.status);
       return null;
     }
+    return JSON.parse(await res.text());
+  } finally {
+    clearTimeout(timeout);
+  }
+}
 
-    const text = await res.text();
-    const data = JSON.parse(text);
-    const events = Array.isArray(data) ? data : data.data || [];
+async function fetchEvents() {
+  try {
+    // Two queries: search for Fed decision events (low-volume, slug-suffixed by year),
+    // plus volume-sorted events for general economic markets ("Market Predictions").
+    const [searchData, volumeData] = await Promise.all([
+      fetchJson(`${POLYMARKET_BASE}/public-search?q=fed+decision&limit_per_type=20&events_status=active`),
+      fetchJson(`${POLYMARKET_BASE}/events?active=true&closed=false&limit=50&order=volume&ascending=false`),
+    ]);
 
-    // Separate Fed decision events from other relevant events
+    if (!searchData && !volumeData) return null;
+
+    const fedSourceEvents = searchData?.events || [];
+    const volumeEvents = Array.isArray(volumeData) ? volumeData : volumeData?.data || [];
+
     const fedEvents = [];
     const otherEvents = [];
 
-    for (const event of events) {
-      const slug = event.slug || '';
+    // Fed decision events from search
+    for (const event of fedSourceEvents) {
       const title = event.title || '';
-
-      if (FED_SLUGS.some(s => slug.includes(s)) || /fed.?decision/i.test(title)) {
+      if (event.closed) continue;
+      if (FED_SLUGS.some(s => (event.slug || '').includes(s)) || /fed.?decision/i.test(title)) {
         fedEvents.push(parseFedEvent(event));
-      } else if (isRelevant(title)) {
-        // General economic events — return as simple markets
+      }
+    }
+
+    // General economic markets from volume-sorted query (skip the fed decisions, those are above)
+    for (const event of volumeEvents) {
+      const title = event.title || '';
+      if (FED_SLUGS.some(s => (event.slug || '').includes(s)) || /fed.?decision/i.test(title)) continue;
+      if (isRelevant(title)) {
         const markets = (event.markets || []).slice(0, 3).map(m => {
           let prices = m.outcomePrices || ['0.5', '0.5'];
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
