@@ -1,3 +1,4 @@
+import { randomBytes } from 'crypto';
 import { NextResponse } from 'next/server';
 import sql from '@/lib/db';
 import { priceScenario } from '@/lib/rates/price-scenario';
@@ -5,6 +6,7 @@ import { sendEmail } from '@/lib/resend';
 import { rateAlertWelcomeTemplate } from '@/lib/email-templates/borrower';
 import { calcMonthlyPI } from '@/lib/rates/math';
 import { createScenario } from '@/lib/scenarios/db';
+import { createRateAlert } from '@/lib/rate-alerts';
 import { apiError } from '@/lib/api/safe-error';
 import { rateLimit } from '@/lib/api/rate-limit';
 
@@ -90,7 +92,10 @@ export async function POST(request) {
       }
     }
 
-    // Create scenario (unified table) with owner_type='borrower'
+    // Create scenario (unified table) with owner_type='borrower'.
+    // Per UAD AD-10a (D9c Phase 3a, 2026-04-30): subscription lifecycle now lives
+    // on rate_alerts. createScenario receives only scenario inputs; alert fields
+    // are written via createRateAlert below.
     const scenario = await createScenario(
       {
         organization_id: orgId,
@@ -114,18 +119,23 @@ export async function POST(request) {
         property_type: scenarioData.propertyType || null,
         current_rate: scenarioData.currentRate || null,
         current_balance: scenarioData.currentPayoff || scenarioData.currentBalance || null,
-        alert_frequency: freq,
-        alert_days: days,
-        alert_status: 'active',
-        last_priced_at: initialPricing ? new Date() : null,
       },
       initialPricing || [],
       null,
     );
 
-    // Fetch unsub_token (created by DB default)
-    const tokRow = await sql`SELECT unsub_token FROM scenarios WHERE id = ${scenario.id}`;
-    const unsubToken = tokRow?.[0]?.unsub_token;
+    // Create the rate-alert subscription on this scenario.
+    const unsubToken = randomBytes(16).toString('hex');
+    await createRateAlert({
+      scenarioId: scenario.id,
+      organizationId: orgId,
+      leadId,
+      alertStatus: 'active',
+      alertFrequency: freq,
+      alertDays: days,
+      unsubToken,
+      lastPricedAt: initialPricing ? new Date() : null,
+    });
 
     // Send welcome email
     const SITE_URL = process.env.NEXTAUTH_URL || 'https://www.netratemortgage.com';

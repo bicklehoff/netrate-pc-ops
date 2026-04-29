@@ -37,6 +37,8 @@ import sql from '@/lib/db';
  * @param {string[]|null} [data.alertDays] - e.g. ['mon','wed','fri'].
  * @param {string|null} [data.unsubToken] - Pre-generated unsub token. Caller
  *   decides whether to populate.
+ * @param {Date|null} [data.lastPricedAt] - Initial pricing timestamp when the
+ *   subscription is created with an initial price snapshot already in hand.
  * @returns {Promise<object>} The created rate_alert row.
  */
 export async function createRateAlert({
@@ -48,6 +50,7 @@ export async function createRateAlert({
   alertFrequency = null,
   alertDays = null,
   unsubToken = null,
+  lastPricedAt = null,
 }) {
   if (!scenarioId) throw new Error('createRateAlert: scenarioId is required');
   if (!organizationId) throw new Error('createRateAlert: organizationId is required');
@@ -56,11 +59,11 @@ export async function createRateAlert({
     `INSERT INTO rate_alerts (
       id, organization_id, scenario_id, contact_id, lead_id,
       alert_status, alert_frequency, alert_days,
-      unsub_token, created_at, updated_at
+      unsub_token, last_priced_at, created_at, updated_at
     ) VALUES (
       gen_random_uuid(), $1, $2, $3, $4,
       $5, $6, $7::text[],
-      $8, NOW(), NOW()
+      $8, $9, NOW(), NOW()
     ) RETURNING *`,
     [
       organizationId,
@@ -71,6 +74,7 @@ export async function createRateAlert({
       alertFrequency,
       alertDays,
       unsubToken,
+      lastPricedAt,
     ],
   );
   return result.rows[0];

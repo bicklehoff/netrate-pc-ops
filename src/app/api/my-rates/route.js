@@ -35,9 +35,18 @@ export async function GET(request) {
     const allLeads = await sql`SELECT id FROM leads WHERE email = ${lead.email}`;
     const leadIds = allLeads.map(l => l.id);
 
-    // Fetch the LATEST borrower scenario with inlined rates
+    // Fetch the LATEST borrower scenario with inlined rates and the rate-alert
+    // subscription row (post-D9c Phase 3a, alert lifecycle lives on rate_alerts).
     const scenarioRows = await sql`
       SELECT s.*,
+        ra.id              AS _ra_id,
+        ra.alert_status    AS _ra_alert_status,
+        ra.alert_frequency AS _ra_alert_frequency,
+        ra.alert_days      AS _ra_alert_days,
+        ra.last_priced_at  AS _ra_last_priced_at,
+        ra.last_sent_at    AS _ra_last_sent_at,
+        ra.send_count      AS _ra_send_count,
+        ra.unsub_token     AS _ra_unsub_token,
         (SELECT COALESCE(jsonb_agg(jsonb_build_object(
           'rate', sr.rate, 'final_price', sr.final_price,
           'rebate_dollars', sr.rebate_dollars, 'discount_dollars', sr.discount_dollars,
@@ -47,13 +56,31 @@ export async function GET(request) {
         FROM scenario_rates sr WHERE sr.scenario_id = s.id
         ) AS rates
       FROM scenarios s
+      LEFT JOIN rate_alerts ra ON ra.scenario_id = s.id
       WHERE s.lead_id = ANY(${leadIds}) AND s.owner_type = 'borrower'
       ORDER BY s.created_at DESC
       LIMIT 1
     `;
 
-    // Shape each scenario into the legacy saved-scenario response format
-    const scenarios = scenarioRows.map(s => scenarioToSavedShape({ ...s, rates: s.rates || [] }));
+    // Shape each scenario into the legacy saved-scenario response format.
+    // Pass the rate_alert row (de-aliased) as the 2nd arg so the transform
+    // reads alert lifecycle from rate_alerts, not the soft-deprecated
+    // scenarios columns.
+    const scenarios = scenarioRows.map((s) => {
+      const rateAlert = s._ra_id
+        ? {
+            id: s._ra_id,
+            alert_status: s._ra_alert_status,
+            alert_frequency: s._ra_alert_frequency,
+            alert_days: s._ra_alert_days,
+            last_priced_at: s._ra_last_priced_at,
+            last_sent_at: s._ra_last_sent_at,
+            send_count: s._ra_send_count,
+            unsub_token: s._ra_unsub_token,
+          }
+        : null;
+      return scenarioToSavedShape({ ...s, rates: s.rates || [] }, rateAlert);
+    });
 
     return NextResponse.json({
       name: lead.name,
