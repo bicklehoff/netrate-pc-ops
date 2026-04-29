@@ -17,6 +17,8 @@
 
 ## MANDATORY: Read GOVERNANCE.md Before ANY Work
 
+**Governance version:** v2.7 (CODING-PRINCIPLES.md v1.2)
+
 Pull `netrate-governance` repo. Read `GOVERNANCE.md`. It contains ALL shared protocols:
 - **Session Handoff Protocol (SHP)** — session start, session close, triggers, automatic context recovery
 - **EOD Protocol** — end of day (8 steps, includes SHP)
