@@ -17,6 +17,7 @@
 
 import costOfWaitingV1 from './cost-of-waiting/v1/index.js';
 import refiAnalyzerV1 from './refi-analyzer/v1/index.js';
+import purchaseCalculatorV1 from './purchase-calculator/v1/index.js';
 
 /** @type {Map<string, Map<number, import('./types.js').ModuleDef>>} */
 export const REGISTRY = new Map([
@@ -25,6 +26,9 @@ export const REGISTRY = new Map([
   ])],
   ['refi-analyzer', new Map([
     [1, refiAnalyzerV1],
+  ])],
+  ['purchase-calculator', new Map([
+    [1, purchaseCalculatorV1],
   ])],
 ]);
 
@@ -38,6 +42,7 @@ export const REGISTRY = new Map([
 export const CURRENT_VERSIONS = {
   'cost-of-waiting': 1,
   'refi-analyzer': 1,
+  'purchase-calculator': 1,
 };
 
 /**
