@@ -120,6 +120,8 @@ export const module = {
 
 All modules register in a central registry at `src/lib/calc-modules/registry.js`. Standalone pages at `/tools/<id>` import `renderStandalone`. Quote composer reads the registry, lets MLO pick from available modules, and attaches each as `{moduleId, version, config}` on the quote record. On quote render, the composer looks up the registered module by id + version and invokes the appropriate render variant. Version pinning means saved/sent quotes re-render with the exact logic they were built with, not current logic — no surprise changes to a borrower's saved quote. New logic ships as `version: 2` and older quotes keep rendering their pinned version (or explicitly migrate).
 
+> **Full design spec:** [`Work/Dev/AD-11A-CALCULATOR-MODULE-REGISTRY.md`](AD-11A-CALCULATOR-MODULE-REGISTRY.md) (drafted 2026-04-29). Resolves the three load-bearing questions the amendment leaves open — compute purity (services-injection model), render variants (three components per version), and version lifetime (forever, per AD-12a). Also locks the `quotes.attached_modules` JSONB shape: `{moduleId, version, config, result, snapshotMeta}` — the `result` is frozen at send time, never re-computed on render.
+
 ### AD-12: Shareable quote links (Layer 3 Lite)
 MLO-generated quotes produce an interactive link (not just PDF). Borrower opens the link, sees live quote with attached calc modules. Email capture on engagement creates or links a Lead. This IS the lead capture mechanism for MLO-sourced prospects.
 
