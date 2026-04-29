@@ -1,6 +1,5 @@
-import { Suspense } from 'react';
 import { readHomepageCache } from '@/lib/rates/homepage-cache';
-import PurchaseCalculatorClient from './content';
+import { getCurrentModule } from '@/lib/calc-modules';
 
 // ISR: refresh every 10 minutes so the seed rate tracks the homepage cache.
 export const revalidate = 600;
@@ -13,12 +12,18 @@ export default async function PurchaseCalculatorPage() {
   } catch {
     // Swallow — client falls back to hardcoded default.
   }
+
+  // Local var named `mod` not `module` — Next.js ESLint reserves `module`.
+  const mod = getCurrentModule('purchase-calculator');
+  if (!mod) {
+    throw new Error('Module purchase-calculator not registered');
+  }
+  const Standalone = mod.views.standalone;
+
   return (
     <>
       <h1 className="sr-only">Mortgage Purchase Calculator</h1>
-      <Suspense>
-        <PurchaseCalculatorClient parRate={parRate} />
-      </Suspense>
+      <Standalone parRate={parRate} />
     </>
   );
 }
