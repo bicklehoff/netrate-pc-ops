@@ -124,15 +124,8 @@ const jsonLd = {
       '@id': `${COMPANY_URL}/#financialservice`,
       name: COMPANY_NAME,
       url: COMPANY_URL,
-      provider: { '@id': `${COMPANY_URL}/#organization` },
       description:
         `Mortgage brokerage offering refinance and purchase loans. Conventional, FHA, VA, and jumbo. NMLS #${INDIVIDUAL_NMLS} (individual) | #${COMPANY_NMLS} (company). Live rate tool with real wholesale pricing — no application required.`,
-      serviceType: [
-        'Mortgage Broker',
-        'Refinance',
-        'Home Purchase',
-        'Cash-Out Refinance',
-      ],
       areaServed: AREA_SERVED,
       hasOfferCatalog: {
         '@type': 'OfferCatalog',
