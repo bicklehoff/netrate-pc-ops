@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import DscrRateWidget from '@/components/DscrRateWidget';
+import { OG_IMAGES, TWITTER_IMAGES } from '@/lib/og';
 
 export const metadata = {
   title: 'DSCR Loan Rates — Investment Property Mortgages | NetRate Mortgage',
@@ -10,11 +11,13 @@ export const metadata = {
     type: 'website',
     siteName: 'NetRate Mortgage',
     url: 'https://www.netratemortgage.com/rates/dscr',
+    images: OG_IMAGES,
   },
   twitter: {
     card: 'summary_large_image',
     title: 'DSCR Loan Rates — Investment Property Mortgages | NetRate Mortgage',
     description: 'Live DSCR loan rates for investment property. No tax returns, no W-2s — qualify on rental income.',
+    images: TWITTER_IMAGES,
   },
   alternates: {
     canonical: 'https://www.netratemortgage.com/rates/dscr',

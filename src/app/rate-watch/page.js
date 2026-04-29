@@ -12,6 +12,7 @@ import WhatHappenedToday from '@/components/RateWatch/WhatHappenedToday';
 import BenchmarkIndexes from '@/components/RateWatch/BenchmarkIndexes';
 import MarketNews from '@/components/RateWatch/MarketNews';
 import { getHomepageLiveRates } from '@/lib/rates/homepage';
+import { OG_IMAGES, TWITTER_IMAGES } from '@/lib/og';
 
 export const revalidate = 1800; // 30 min — rates change once/day when new sheet is parsed
 
@@ -201,7 +202,8 @@ export async function generateMetadata() {
   return {
     title,
     description,
-    openGraph: { title, description },
+    openGraph: { title, description, images: OG_IMAGES },
+    twitter: { card: 'summary_large_image', title, description, images: TWITTER_IMAGES },
     alternates: {
       canonical: 'https://www.netratemortgage.com/rate-watch',
     },

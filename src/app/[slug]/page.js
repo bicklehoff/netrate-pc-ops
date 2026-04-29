@@ -9,6 +9,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import sql from '@/lib/db';
 import MarkdownContent from '@/components/Portal/MarkdownContent';
+import { OG_IMAGES, TWITTER_IMAGES } from '@/lib/og';
 
 const BASE_URL = 'https://www.netratemortgage.com';
 
@@ -73,11 +74,13 @@ export async function generateMetadata({ params }) {
       type: 'article',
       publishedTime: page.published_at,
       url: `${BASE_URL}/${slug}`,
+      images: OG_IMAGES,
     },
     twitter: {
       card: 'summary_large_image',
       title,
       description,
+      images: TWITTER_IMAGES,
     },
   };
 }

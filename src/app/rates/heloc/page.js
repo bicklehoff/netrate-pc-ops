@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { OG_IMAGES, TWITTER_IMAGES } from '@/lib/og';
 
 export const metadata = {
   title: 'HELOC & Home Equity Rates — Access Equity Without Refinancing | NetRate Mortgage',
@@ -9,11 +10,13 @@ export const metadata = {
     type: 'website',
     siteName: 'NetRate Mortgage',
     url: 'https://www.netratemortgage.com/rates/heloc',
+    images: OG_IMAGES,
   },
   twitter: {
     card: 'summary_large_image',
     title: 'HELOC & Home Equity Rates — Access Equity Without Refinancing | NetRate Mortgage',
     description: 'HELOC and home equity loan rates. Access your equity without touching your first mortgage rate. Compare line of credit vs closed-end second options.',
+    images: TWITTER_IMAGES,
   },
   alternates: {
     canonical: 'https://www.netratemortgage.com/rates/heloc',
