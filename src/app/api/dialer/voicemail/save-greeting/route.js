@@ -11,15 +11,17 @@ export async function POST(req) {
 
   const { searchParams } = new URL(req.url);
   const mloId = searchParams.get('mloId');
+  const type = searchParams.get('type') === 'exception' ? 'exception' : 'standard';
   const recordingUrl = formData.get('RecordingUrl');
 
   if (mloId && recordingUrl) {
     try {
-      // Append .mp3 so browsers can play it directly
       const mp3Url = recordingUrl.endsWith('.mp3') ? recordingUrl : `${recordingUrl}.mp3`;
-      await sql`
-        UPDATE staff SET voicemail_greeting_url = ${mp3Url} WHERE id = ${mloId}
-      `;
+      if (type === 'exception') {
+        await sql`UPDATE staff SET voicemail_exception_url = ${mp3Url} WHERE id = ${mloId}`;
+      } else {
+        await sql`UPDATE staff SET voicemail_greeting_url = ${mp3Url} WHERE id = ${mloId}`;
+      }
     } catch (e) {
       console.error('Failed to save greeting URL:', e);
     }

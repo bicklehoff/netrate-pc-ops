@@ -20,6 +20,19 @@ export async function POST(req) {
     );
   }
 
+  // Conference reconnect — browser dials "conference:<room>" to rejoin after
+  // the original call was redirected into a conference via /api/dialer/conference.
+  if (to.startsWith('conference:')) {
+    const room = to.replace('conference:', '');
+    const confTwiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Dial>
+    <Conference beep="false" waitUrl="https://twimlets.com/holdmusic?Bucket=com.twilio.music.ambient" waitMethod="GET">${room}</Conference>
+  </Dial>
+</Response>`;
+    return new Response(confTwiml, { headers: { 'Content-Type': 'text/xml' } });
+  }
+
   const mloId = from?.replace('client:mlo-', '') || null;
   const normalizedTo = normalizePhone(to);
 

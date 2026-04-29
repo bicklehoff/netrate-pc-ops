@@ -3,6 +3,7 @@ import sql from '@/lib/db';
 import { normalizePhone } from '@/lib/normalize-phone';
 import { DEFAULT_ORG_ID } from '@/lib/constants/org';
 import { sendPushToStaff } from '@/lib/push';
+import { sendSms } from '@/lib/twilio-voice';
 import { put } from '@vercel/blob';
 
 export async function POST(req) {
@@ -73,18 +74,42 @@ export async function POST(req) {
     console.error('Failed to store incoming SMS:', e);
   }
 
-  // Push notification to the MLO who owns this Twilio number
+  // Push notification + auto-reply for the MLO who owns this Twilio number
   try {
     const staffRows = normalizedTo
-      ? await sql`SELECT id FROM staff WHERE twilio_phone_number = ${normalizedTo} AND is_active = true LIMIT 1`
+      ? await sql`SELECT id, sms_auto_reply_enabled, sms_auto_reply_message, twilio_phone_number FROM staff WHERE twilio_phone_number = ${normalizedTo} AND is_active = true LIMIT 1`
       : [];
     if (staffRows.length) {
-      await sendPushToStaff(staffRows[0].id, {
+      const staff = staffRows[0];
+      await sendPushToStaff(staff.id, {
         title: senderName ? `SMS from ${senderName}` : 'New text message',
         body: (body || '').slice(0, 100),
         url: contactId ? `/portal/mlo/messages?contact=${contactId}` : '/portal/mlo/messages',
         tag: `sms-${normalizedFrom}`,
       });
+
+      // Auto-reply — send at most once per sender per 24 hours to prevent loops.
+      if (staff.sms_auto_reply_enabled && staff.sms_auto_reply_message && normalizedFrom) {
+        try {
+          const recentReply = await sql`
+            SELECT id FROM sms_messages
+            WHERE from_number = ${normalizedTo || to}
+              AND to_number = ${normalizedFrom}
+              AND is_auto_reply = true
+              AND created_at > now() - interval '24 hours'
+            LIMIT 1
+          `;
+          if (!recentReply.length) {
+            await sendSms(normalizedFrom, staff.sms_auto_reply_message, staff.twilio_phone_number || null);
+            await sql`
+              INSERT INTO sms_messages (organization_id, direction, from_number, to_number, body, status, is_auto_reply)
+              VALUES (${DEFAULT_ORG_ID}, 'outbound', ${normalizedTo || to || ''}, ${normalizedFrom}, ${staff.sms_auto_reply_message}, 'sent', true)
+            `;
+          }
+        } catch (e) {
+          console.error('SMS auto-reply failed:', e);
+        }
+      }
     }
   } catch (e) {
     console.error('Push notification for incoming SMS failed:', e);
