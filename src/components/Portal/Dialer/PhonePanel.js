@@ -14,10 +14,12 @@ import CallNotes from './CallNotes';
 import SmsThread from './SmsThread';
 import ContactCard from './ContactCard';
 import AudioSettings from './AudioSettings';
+import VoicemailInbox from './VoicemailInbox';
 
 const TABS = [
   { id: 'dial', label: 'Dial' },
   { id: 'sms', label: 'SMS' },
+  { id: 'voicemail', label: 'Voicemail' },
   { id: 'contact', label: 'Contact' },
   { id: 'history', label: 'History' },
 ];
@@ -612,6 +614,12 @@ export default function PhonePanel() {
                 <p className="text-xs text-gray-400">Search and select a contact</p>
               </div>
             )}
+          </div>
+        )}
+
+        {activeTab === 'voicemail' && (
+          <div className="h-[400px]">
+            <VoicemailInbox />
           </div>
         )}
 
