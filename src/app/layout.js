@@ -59,11 +59,13 @@ export const metadata = {
     title: `${COMPANY_NAME} | Today\'s Rates, Zero Pitch`,
     description: `See today\'s real mortgage rates with transparent pricing. No sales pitch, no commitment. ${COMPANY_NAME} — ${OFFICE_ADDRESS.city}, ${OFFICE_ADDRESS.state}.`,
     url: COMPANY_URL,
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: `${COMPANY_NAME} — See real mortgage rates before you apply` }],
   },
   twitter: {
     card: 'summary_large_image',
     title: `${COMPANY_NAME} | Today\'s Rates, Zero Pitch`,
     description: `See today\'s real mortgage rates with transparent pricing. No sales pitch, no commitment. ${COMPANY_NAME} — ${OFFICE_ADDRESS.city}, ${OFFICE_ADDRESS.state}.`,
+    images: ['/og-image.png'],
   },
 };
 
