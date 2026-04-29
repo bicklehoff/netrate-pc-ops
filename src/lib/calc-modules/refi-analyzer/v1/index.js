@@ -12,7 +12,6 @@ import { compute } from './compute.js';
 import { schema } from './schema.js';
 import StandaloneView from './StandaloneView.js';
 import EmbeddedView from './EmbeddedView.js';
-import PDFView from './PDFView.js';
 
 /** @type {import('../../types.js').ModuleDef} */
 const definition = {
@@ -25,7 +24,8 @@ const definition = {
   views: {
     standalone: StandaloneView,
     embedded: EmbeddedView,
-    pdf: PDFView,
+    // Lazy thunk — keeps @react-pdf/renderer out of client bundles.
+    pdf: () => import('./PDFView.js').then((m) => m.default),
   },
   capabilities: {
     needsRates: false,

@@ -100,7 +100,10 @@ const definition = {
   views: {
     standalone: StandaloneView,    // full /tools/<id> page layout
     embedded: EmbeddedView,        // compact card, fits in /portal/quote/[id]
-    pdf: PDFView,                  // @react-pdf/renderer component for PDF export
+    // Lazy thunk — keeps @react-pdf/renderer (~250KB) out of every
+    // client bundle that imports the registry. Send-quote handler
+    // awaits this when generating a PDF deliverable.
+    pdf: () => import('./PDFView.js').then(m => m.default),
   },
 
   // ─── Capabilities (declarative metadata) ────────────────────
