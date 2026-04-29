@@ -82,9 +82,14 @@ export default function DialerProvider({ children, mode = 'primary' }) {
   const [deviceReady, setDeviceReady] = useState(false);
   const [callState, setCallState] = useState(IDLE);
   const [activeCall, setActiveCall] = useState(null);     // Twilio Call object
+  const [activeCallSid, setActiveCallSid] = useState(null); // parent CallSid for REST API ops
   const [incomingCall, setIncomingCall] = useState(null);  // Incoming Call object
   const [isMuted, setIsMuted] = useState(false);
+  const [isOnHold, setIsOnHold] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
+  const [transferState, setTransferState] = useState(null); // null | 'selecting' | 'transferring'
+  const [conferenceState, setConferenceState] = useState(null); // null | 'selecting' | 'connecting' | 'active'
+  const [conferenceRoom, setConferenceRoom] = useState(null);
   const [callerInfo, setCallerInfo] = useState(null);      // { name, phone, contactId }
   const [recentInboundCall, setRecentInboundCall] = useState(null); // sticky context after cell pickup / caller hangup
   const [error, setError] = useState(null);
@@ -386,6 +391,7 @@ export default function DialerProvider({ children, mode = 'primary' }) {
   const wireCallEvents = useCallback((call) => {
     call.on('accept', () => {
       setCallState(IN_PROGRESS);
+      setActiveCallSid(call.parameters?.CallSid || null);
       startTimer();
     });
 
@@ -393,9 +399,14 @@ export default function DialerProvider({ children, mode = 'primary' }) {
       // Call was active on the browser and ended — clear sticky record too
       setCallState(IDLE);
       setActiveCall(null);
+      setActiveCallSid(null);
       setCallerInfo(null);
       setRecentInboundCall(null);
       setIsMuted(false);
+      setIsOnHold(false);
+      setTransferState(null);
+      setConferenceState(null);
+      setConferenceRoom(null);
       stopTimer();
     });
 
@@ -404,8 +415,13 @@ export default function DialerProvider({ children, mode = 'primary' }) {
       // recentInboundCall so the sticky popup still shows caller context.
       setCallState(IDLE);
       setActiveCall(null);
+      setActiveCallSid(null);
       setIncomingCall(null);
       setCallerInfo(null);
+      setIsOnHold(false);
+      setTransferState(null);
+      setConferenceState(null);
+      setConferenceRoom(null);
       stopTimer();
     });
 
@@ -511,6 +527,67 @@ export default function DialerProvider({ children, mode = 'primary' }) {
       activeCall.sendDigits(digits);
     }
   }, [activeCall]);
+
+  /** Toggle hold — mutes mic and marks UI as on-hold. Real hold music requires server-side TwiML redirect. */
+  const toggleHold = useCallback(() => {
+    if (!activeCall) return;
+    const nowOnHold = !isOnHold;
+    activeCall.mute(nowOnHold);
+    setIsOnHold(nowOnHold);
+    setIsMuted(nowOnHold ? true : isMuted);
+  }, [activeCall, isOnHold, isMuted]);
+
+  /** Open the transfer panel. */
+  const startTransfer = useCallback(() => setTransferState('selecting'), []);
+  const cancelTransfer = useCallback(() => setTransferState(null), []);
+
+  /** Execute a blind transfer to `to`. */
+  const executeTransfer = useCallback(async (to) => {
+    if (!activeCallSid) return;
+    setTransferState('transferring');
+    try {
+      const res = await fetch('/api/dialer/transfer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ callSid: activeCallSid, to }),
+      });
+      if (!res.ok) throw new Error('Transfer failed');
+      // Browser leg will disconnect shortly — wireCallEvents cleanup handles state.
+    } catch (e) {
+      console.error('[Transfer] failed:', e);
+      setTransferState(null);
+    }
+  }, [activeCallSid]);
+
+  /** Open the add-call panel for conference. */
+  const startConference = useCallback(() => setConferenceState('selecting'), []);
+  const cancelConference = useCallback(() => setConferenceState(null), []);
+
+  /** Dial a third party into a conference with the current call. */
+  const executeConference = useCallback(async (to) => {
+    if (!activeCallSid) return;
+    setConferenceState('connecting');
+    try {
+      const res = await fetch('/api/dialer/conference', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ callSid: activeCallSid, to }),
+      });
+      if (!res.ok) throw new Error('Conference failed');
+      const { room } = await res.json();
+      setConferenceRoom(room);
+      setConferenceState('active');
+      // Original browser leg disconnects — reconnect to the conference room.
+      if (deviceRef.current) {
+        const confCall = await deviceRef.current.connect({ params: { To: `conference:${room}` } });
+        wireCallEvents(confCall);
+        setActiveCall(confCall);
+      }
+    } catch (e) {
+      console.error('[Conference] failed:', e);
+      setConferenceState(null);
+    }
+  }, [activeCallSid, wireCallEvents]);
 
   /** Manually dismiss the sticky recent-call popup */
   const dismissRecentInboundCall = useCallback(() => {
@@ -903,11 +980,16 @@ export default function DialerProvider({ children, mode = 'primary' }) {
     deviceReady,
     callState,
     activeCall,
+    activeCallSid,
     incomingCall,
     isMuted,
+    isOnHold,
     callDuration,
     callerInfo,
     recentInboundCall,
+    transferState,
+    conferenceState,
+    conferenceRoom,
     error,
 
     // Constants
@@ -937,7 +1019,14 @@ export default function DialerProvider({ children, mode = 'primary' }) {
     rejectCall,
     hangup,
     toggleMute,
+    toggleHold,
     sendDigits,
+    startTransfer,
+    cancelTransfer,
+    executeTransfer,
+    startConference,
+    cancelConference,
+    executeConference,
     dismissRecentInboundCall,
     setRingtoneDevice,
     setSpeakerDevice,

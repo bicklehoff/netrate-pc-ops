@@ -15,6 +15,7 @@ import SmsThread from './SmsThread';
 import ContactCard from './ContactCard';
 import AudioSettings from './AudioSettings';
 import VoicemailInbox from './VoicemailInbox';
+import PhoneSettings from './PhoneSettings';
 
 const TABS = [
   { id: 'dial', label: 'Dial' },
@@ -22,6 +23,7 @@ const TABS = [
   { id: 'voicemail', label: 'Voicemail' },
   { id: 'contact', label: 'Contact' },
   { id: 'history', label: 'History' },
+  { id: 'settings', label: 'Settings' },
 ];
 
 // Drag threshold (px) — movement below this is treated as a click
@@ -626,6 +628,12 @@ export default function PhonePanel() {
         {activeTab === 'history' && (
           <div className="p-2">
             <CallHistory onSelectContact={handleContactSelect} />
+          </div>
+        )}
+
+        {activeTab === 'settings' && (
+          <div className="h-[400px]">
+            <PhoneSettings />
           </div>
         )}
       </div>

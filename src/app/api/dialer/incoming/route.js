@@ -40,16 +40,25 @@ export async function POST(req) {
   let mloId = null;
   try {
     let mlos = normalizedTo
-      ? await sql`SELECT id, phone, voicemail_greeting_url FROM staff WHERE twilio_phone_number = ${normalizedTo} AND is_active = true LIMIT 1`
+      ? await sql`SELECT id, phone, voicemail_greeting_url, voicemail_exception_url, voicemail_mode, dnd_enabled, call_forward_enabled, call_forward_number FROM staff WHERE twilio_phone_number = ${normalizedTo} AND is_active = true LIMIT 1`
       : [];
     if (!mlos.length) {
-      mlos = await sql`SELECT id, phone, voicemail_greeting_url FROM staff WHERE is_active = true ORDER BY created_at LIMIT 1`;
+      mlos = await sql`SELECT id, phone, voicemail_greeting_url, voicemail_exception_url, voicemail_mode, dnd_enabled, call_forward_enabled, call_forward_number FROM staff WHERE is_active = true ORDER BY created_at LIMIT 1`;
     }
     if (mlos.length > 0) {
       mloId = mlos[0].id;
       targetIdentity = `mlo-${mloId}`;
       fallbackNumber = mlos[0].phone || null;
-      greetingUrl = mlos[0].voicemail_greeting_url || null;
+
+      // Resolve greeting URL from voicemail mode
+      const mode = mlos[0].voicemail_mode || 'standard';
+      if (mode === 'exception' && mlos[0].voicemail_exception_url) {
+        greetingUrl = mlos[0].voicemail_exception_url;
+      } else if (mode === 'auto') {
+        greetingUrl = null; // forces Alice TTS fallback
+      } else {
+        greetingUrl = mlos[0].voicemail_greeting_url || null;
+      }
 
       // ─── Self-cell short-circuit ────────────────────────────
       // If the inbound From is the MLO's own cell, this is a forwarding
@@ -82,6 +91,29 @@ export async function POST(req) {
   <Hangup />
 </Response>`;
         return new Response(loopTwiml, { headers: { 'Content-Type': 'text/xml' } });
+      }
+
+      // ─── DND — skip ring, go straight to voicemail ─────────
+      if (mlos[0].dnd_enabled) {
+        await sql`
+          INSERT INTO call_logs (organization_id, mlo_id, contact_id, direction, from_number, to_number, status, twilio_call_sid)
+          VALUES (${DEFAULT_ORG_ID}, ${mloId}, ${contactId}, 'inbound', ${normalizedFrom || from || ''}, ${normalizedTo || to || ''}, 'voicemail', ${callSid})
+        `;
+        const dndTwiml = buildIncomingTwiml(null, callerName, null, contactId, greetingUrl, true);
+        return new Response(dndTwiml, { headers: { 'Content-Type': 'text/xml' } });
+      }
+
+      // ─── Unconditional call forwarding ──────────────────────
+      if (mlos[0].call_forward_enabled && mlos[0].call_forward_number) {
+        await sql`
+          INSERT INTO call_logs (organization_id, mlo_id, contact_id, direction, from_number, to_number, status, twilio_call_sid)
+          VALUES (${DEFAULT_ORG_ID}, ${mloId}, ${contactId}, 'inbound', ${normalizedFrom || from || ''}, ${normalizedTo || to || ''}, 'forwarded', ${callSid})
+        `;
+        const fwdTwiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Dial callerId="${normalizedTo || to}">${mlos[0].call_forward_number}</Dial>
+</Response>`;
+        return new Response(fwdTwiml, { headers: { 'Content-Type': 'text/xml' } });
       }
 
       await sql`

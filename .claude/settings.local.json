@@ -9,7 +9,11 @@
       "Bash(*)",
       "WebFetch(*)",
       "WebSearch(*)",
-      "mcp__netrate-context__get_briefing"
+      "mcp__netrate-context__get_briefing",
+      "Bash(echo \"branch=fix/pwa-sw-scope-split\")",
+      "Bash(date -Iseconds)",
+      "Bash(echo \"started=$\\(date -Iseconds\\)\")",
+      "Bash(echo \"branch=feature/sms-mms-images\")"
     ]
   }
 }

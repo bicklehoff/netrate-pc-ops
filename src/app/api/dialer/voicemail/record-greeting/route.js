@@ -3,9 +3,12 @@ import sql from '@/lib/db';
 
 // Initiates a call to the MLO's cell. When they answer, greeting-prompt TwiML
 // plays a prompt and records their voicemail greeting.
-export async function POST() {
+export async function POST(req) {
   const { session, mloId } = await requireMloSession();
   if (!session) return unauthorizedResponse();
+
+  const body = await req.json().catch(() => ({}));
+  const type = body.type === 'exception' ? 'exception' : 'standard';
 
   const staffRows = await sql`SELECT phone FROM staff WHERE id = ${mloId} LIMIT 1`;
   const cell = staffRows[0]?.phone;
@@ -30,7 +33,7 @@ export async function POST() {
       body: new URLSearchParams({
         To: cell,
         From: fromNumber,
-        Url: `${baseUrl}/api/dialer/voicemail/greeting-prompt?mloId=${mloId}`,
+        Url: `${baseUrl}/api/dialer/voicemail/greeting-prompt?mloId=${mloId}&type=${type}`,
       }),
     }
   );
