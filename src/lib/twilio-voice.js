@@ -158,7 +158,7 @@ export function buildVoicemailTwiml() {
  * @param {string} [from] - Sender phone (E.164) — the MLO's staff.twilio_phone_number
  * @returns {Promise<object>} Twilio API response
  */
-export async function sendSms(to, body, from) {
+export async function sendSms(to, body, from, mediaUrl = null) {
   const auth = Buffer.from(`${TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`).toString('base64');
 
   const params = {
@@ -166,6 +166,7 @@ export async function sendSms(to, body, from) {
     Body: body,
     StatusCallback: 'https://www.netratemortgage.com/api/dialer/sms/status',
   };
+  if (mediaUrl) params.MediaUrl = mediaUrl;
   // Route through Messaging Service whenever configured — this is what attaches
   // the outbound to our registered A2P campaign. Sending with a bare `From` (no
   // service) is non-compliant for business messaging and Twilio rejects it.
