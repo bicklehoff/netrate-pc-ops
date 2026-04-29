@@ -63,7 +63,7 @@ function getCanonicalUrl(req) {
   const url = new URL(req.url);
   // Use the configured base URL or reconstruct from headers
   const baseUrl = process.env.NEXTAUTH_URL || `https://${url.host}`;
-  return `${baseUrl}${url.pathname}`;
+  return `${baseUrl}${url.pathname}${url.search}`;
 }
 
 /**
