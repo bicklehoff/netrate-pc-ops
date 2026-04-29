@@ -7,14 +7,17 @@
  * Claw owns: actual, result, forecast, prior — this cron never overwrites those.
  * PC owns: date, name, time, big — the schedule skeleton.
  *
- * Events seeded (FRED release IDs):
- *   50  — Jobs Report (Employment Situation) — 8:30 AM ET
- *   10  — CPI Release (Consumer Price Index) — 8:30 AM ET
- *   21  — PCE / Personal Income — 8:30 AM ET
- *   46  — PPI Release (Producer Price Index) — 8:30 AM ET
- *   180 — FOMC Meeting (FOMC Press Release) — 2:00 PM ET
- *   53  — GDP Release (Gross Domestic Product) — 8:30 AM ET
- *   113 — Retail Sales — 8:30 AM ET
+ * Events seeded (verified FRED release IDs):
+ *   50  — Jobs Report          (Employment Situation)                    — 8:30 AM ET
+ *   10  — CPI Release          (Consumer Price Index)                    — 8:30 AM ET
+ *   54  — PCE / Personal Income (Personal Income and Outlays)            — 8:30 AM ET
+ *   46  — PPI Release          (Producer Price Index)                    — 8:30 AM ET
+ *   101 — FOMC Meeting         (FOMC Press Release)                      — 2:00 PM ET
+ *   53  — GDP Release          (Gross Domestic Product)                  — 8:30 AM ET
+ *   9   — Retail Sales         (Advance Monthly Retail and Food Services) — 8:30 AM ET
+ *   180 — Jobless Claims       (Unemployment Insurance Weekly)           — 8:30 AM ET
+ *   95  — Durable Goods        (Manufacturer's Shipments, Inventories)   — 8:30 AM ET
+ *   27  — Housing Starts       (New Residential Construction)            — 8:30 AM ET
  */
 
 import { NextResponse } from 'next/server';
@@ -26,11 +29,14 @@ const FRED_BASE = 'https://api.stlouisfed.org/fred/release/dates';
 const KEY_RELEASES = [
   { id: 50,  name: 'Jobs Report',           time: '8:30 AM ET',  big: true  },
   { id: 10,  name: 'CPI Release',           time: '8:30 AM ET',  big: true  },
-  { id: 21,  name: 'PCE / Personal Income', time: '8:30 AM ET',  big: false },
+  { id: 54,  name: 'PCE / Personal Income', time: '8:30 AM ET',  big: true  },
   { id: 46,  name: 'PPI Release',           time: '8:30 AM ET',  big: false },
-  { id: 180, name: 'FOMC Meeting',          time: '2:00 PM ET',  big: true  },
+  { id: 101, name: 'FOMC Meeting',          time: '2:00 PM ET',  big: true  },
   { id: 53,  name: 'GDP Release',           time: '8:30 AM ET',  big: true  },
-  { id: 113, name: 'Retail Sales',          time: '8:30 AM ET',  big: false },
+  { id: 9,   name: 'Retail Sales',          time: '8:30 AM ET',  big: false },
+  { id: 180, name: 'Jobless Claims',        time: '8:30 AM ET',  big: true  },
+  { id: 95,  name: 'Durable Goods',         time: '8:30 AM ET',  big: false },
+  { id: 27,  name: 'Housing Starts',        time: '8:30 AM ET',  big: false },
 ];
 
 // How many days ahead to seed
@@ -76,6 +82,7 @@ export async function GET(request) {
 
   const results = {};
   const errors = {};
+  const datesByName = {};
 
   for (const release of KEY_RELEASES) {
     try {
@@ -95,20 +102,42 @@ export async function GET(request) {
         seeded++;
       }
 
+      datesByName[release.name] = dates;
       results[release.name] = { seeded, dates };
     } catch (err) {
       errors[release.name] = err.message;
     }
   }
 
+  // Cleanup: remove stale future skeleton events whose date is no longer in the
+  // freshly-fetched FRED schedule for that name. Catches drift from prior seeds
+  // (e.g. wrong release IDs that pulled dates from a different release calendar).
+  // Skip cleanup for rows where Claw has already filled in actual/result values.
+  let cleaned = 0;
+  for (const [name, dates] of Object.entries(datesByName)) {
+    if (dates.length === 0) continue;
+    const deleted = await sql`
+      DELETE FROM economic_calendar_events
+      WHERE source = 'fred-calendar'
+        AND name = ${name}
+        AND date >= ${todayStr}::date
+        AND actual IS NULL
+        AND result IS NULL
+        AND date != ALL(${dates}::date[])
+      RETURNING id
+    `;
+    cleaned += deleted.length;
+  }
+
   const hasErrors = Object.keys(errors).length > 0;
-  console.log(`[cron/calendar-seed] ${todayStr}: seeded=${Object.values(results).reduce((s, r) => s + r.seeded, 0)} errors=${Object.keys(errors).length}`);
+  console.log(`[cron/calendar-seed] ${todayStr}: seeded=${Object.values(results).reduce((s, r) => s + r.seeded, 0)} cleaned=${cleaned} errors=${Object.keys(errors).length}`);
 
   return NextResponse.json({
     ok: !hasErrors,
     date: todayStr,
     lookahead: `${todayStr} → ${toStr}`,
     results,
+    cleaned,
     ...(hasErrors && { errors }),
   });
 }
