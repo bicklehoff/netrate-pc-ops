@@ -78,12 +78,14 @@ A module is a static object exported from `src/lib/calc-modules/<id>/v<N>/index.
 // src/lib/calc-modules/cost-of-waiting/v1/index.js
 
 import { compute } from './compute.js';
-import StandaloneView from './StandaloneView.jsx';
-import EmbeddedView from './EmbeddedView.jsx';
-import PDFView from './PDFView.jsx';
+import StandaloneView from './StandaloneView.js';
+import EmbeddedView from './EmbeddedView.js';
+import PDFView from './PDFView.js';
 import { schema } from './schema.js';
 
-export const module = {
+// Default export, not `export const module` — Next.js ESLint
+// (no-assign-module-variable) forbids the name `module`.
+const definition = {
   // ─── Identity ───────────────────────────────────────────────
   id: 'cost-of-waiting',          // stable string, never changes — paths key off this
   version: 1,                      // integer, bumped on logic change (see §6)
@@ -120,6 +122,8 @@ export const module = {
     relevantLoanTypes: [],
   },
 };
+
+export default definition;
 ```
 
 **Why this shape:**
