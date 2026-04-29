@@ -19,7 +19,13 @@ import { put } from '@vercel/blob';
 import crypto from 'crypto';
 import { requireMloSession, unauthorizedResponse } from '@/lib/require-mlo-session';
 import { getScenarioById, updateScenario } from '@/lib/scenarios/db';
-import { scenarioToQuoteShape } from '@/lib/quotes';
+import {
+  createQuote,
+  getQuoteByScenarioId,
+  scenarioToQuoteShape,
+  sendQuote,
+  updateQuote,
+} from '@/lib/quotes';
 
 export const maxDuration = 30;
 
@@ -39,8 +45,22 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
+    // Per UAD AD-10a + AD-12a (D9c Phase 3b, 2026-04-30): the send flow now
+    // routes through the quotes table. Existing scenarios from before
+    // Phase 1 backfill may not yet have a quote row (drafts weren't
+    // backfilled). Create one on first send.
+    let quoteRow = await getQuoteByScenarioId(id, orgId);
+    if (!quoteRow) {
+      quoteRow = await createQuote({
+        scenarioId: id,
+        organizationId: orgId,
+        mloId,
+        contactId: scenario.contact_id || null,
+      });
+    }
+
     // Shape into legacy quote format for PDF/email
-    const quote = scenarioToQuoteShape(scenario);
+    const quote = scenarioToQuoteShape(scenario, quoteRow);
 
     // Require contact email (post-UAD identity)
     const contactEmail = quote.contact_email;
@@ -153,21 +173,36 @@ export async function POST(request, { params }) {
 
     await sendEmail(emailPayload);
 
-    // Update scenario status
+    // Transition the quote to 'sent' on first send (sets sent_at + share_token
+    // + 7-day expires_at). Re-sends are idempotent: status stays 'sent' (or
+    // 'viewed'/etc.), expires_at stays anchored at first send (per AD-12a),
+    // and we just refresh pdf_url + pdf_generated_at via updateQuote below.
+    let quoteAfterSend = quoteRow;
+    if (quoteRow.status === 'draft') {
+      quoteAfterSend = await sendQuote(quoteRow.id, orgId, {
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      });
+    }
+
+    // Refresh PDF fields (post-send fields per updateQuote allowlist).
     const now = new Date();
-    await updateScenario(id, orgId, {
-      status: 'sent',
-      sent_at: now,
-      pdf_url: pdfUrl,
-      pdf_generated_at: pdfUrl ? now : null,
-      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    });
+    if (pdfUrl) {
+      quoteAfterSend = await updateQuote(quoteAfterSend.id, orgId, {
+        pdf_url: pdfUrl,
+        pdf_generated_at: now,
+      });
+    }
+
+    // Keep scenarios.status in sync for the list view (which still reads
+    // from scenarios.status until that view is converted). status is not in
+    // the deprecation set; this write doesn't fire [d9c-deprecation].
+    await updateScenario(id, orgId, { status: quoteAfterSend.status });
 
     // Reload and return
     const updated = await getScenarioById(id, orgId);
     return NextResponse.json({
       success: true,
-      quote: scenarioToQuoteShape(updated),
+      quote: scenarioToQuoteShape(updated, quoteAfterSend),
       pdfUrl,
       quoteLink,
     });

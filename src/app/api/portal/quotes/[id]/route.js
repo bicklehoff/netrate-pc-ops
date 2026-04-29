@@ -13,7 +13,7 @@
 import { NextResponse } from 'next/server';
 import sql from '@/lib/db';
 import { getScenarioById, updateScenario } from '@/lib/scenarios/db';
-import { scenarioToQuoteShape } from '@/lib/quotes';
+import { getQuoteByScenarioId, scenarioToQuoteShape, updateQuote } from '@/lib/quotes';
 import { deriveIdentity } from '@/lib/scenarios';
 
 export async function GET(request, { params }) {
@@ -52,20 +52,43 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
-    // Check expiration
-    if (scenario.expires_at && new Date(scenario.expires_at) < new Date()) {
+    // Per UAD AD-10a (D9c Phase 3b): expires_at + viewed_at live on quotes.
+    // Fall back to the scenario columns for the transition window — they
+    // were populated by the Phase 1 backfill for sent rows but stay null
+    // on new flows post-Phase-3b.
+    const quoteRow = await getQuoteByScenarioId(id, borrower.organization_id);
+    const expiresAt = quoteRow?.expires_at ?? scenario.expires_at;
+    if (expiresAt && new Date(expiresAt) < new Date()) {
       return NextResponse.json({ error: 'This quote has expired. Contact your loan officer for updated pricing.' }, { status: 410 });
     }
 
-    // Track first view
-    if (!scenario.viewed_at) {
+    // Track first view on the quote row (the source of truth post-Phase-3b).
+    // Mirror status='viewed' to scenarios.status for the list view, which
+    // still reads from scenarios.status during the transition.
+    let viewedQuote = quoteRow;
+    if (quoteRow && !quoteRow.viewed_at) {
+      try {
+        viewedQuote = await updateQuote(quoteRow.id, borrower.organization_id, {
+          viewed_at: new Date(),
+          status: 'viewed',
+        });
+      } catch {
+        // updateQuote rejects status transitions from terminal states
+        // (accepted/declined/expired) — silently ignore; tracking is
+        // best-effort, not a hard requirement.
+      }
+      await updateScenario(id, borrower.organization_id, { status: 'viewed' });
+    } else if (!quoteRow && !scenario.viewed_at) {
+      // Defensive fallback for any scenario without a quote row yet —
+      // shouldn't happen after Phase 1 backfill, but keeps the borrower
+      // view from silently dropping the view event.
       await updateScenario(id, borrower.organization_id, {
         viewed_at: new Date(),
         status: 'viewed',
       });
     }
 
-    const quote = scenarioToQuoteShape(scenario);
+    const quote = scenarioToQuoteShape(scenario, viewedQuote);
 
     // Return sanitized quote (no internal IDs)
     return NextResponse.json({

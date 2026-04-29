@@ -96,6 +96,28 @@ export async function getQuoteById(id, orgId) {
 }
 
 /**
+ * Get the latest quote for a scenario_id (or null if none exists).
+ *
+ * Per AD-12a, supersede semantics allow more than one quote per scenario
+ * over time (the wrong-quote flow creates a new quote with parent_quote_id
+ * pointing at the old). For Phase 3 transition, callers want "the current
+ * quote" — defined as the most recently created.
+ *
+ * @param {string} scenarioId
+ * @param {string} orgId
+ * @returns {Promise<object|null>}
+ */
+export async function getQuoteByScenarioId(scenarioId, orgId) {
+  const rows = await sql`
+    SELECT * FROM quotes
+    WHERE scenario_id = ${scenarioId} AND organization_id = ${orgId}
+    ORDER BY created_at DESC
+    LIMIT 1
+  `;
+  return rows[0] || null;
+}
+
+/**
  * Get a quote by its share token. Org-unscoped because the token is the
  * auth (used by /portal/quote/[token] borrower magic-link entry).
  *
