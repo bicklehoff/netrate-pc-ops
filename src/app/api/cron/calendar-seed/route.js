@@ -2,55 +2,144 @@
  * Vercel Cron Job — Weekly Economic Calendar Seed
  * Runs every Monday at 8:00 AM UTC via vercel.json schedule.
  *
- * Fetches upcoming release dates from FRED's releases API for key economic
- * indicators and upserts them into economic_calendar_events as skeleton events.
+ * Generates skeleton events for major economic releases over the next 90 days
+ * using known release patterns (weekly, monthly nth-weekday, hardcoded). FRED's
+ * release/dates API only returns past dates and is not viable for forward-looking
+ * scheduling — that's why this cron uses patterns instead.
+ *
  * Claw owns: actual, result, forecast, prior — this cron never overwrites those.
  * PC owns: date, name, time, big — the schedule skeleton.
  *
- * Events seeded (verified FRED release IDs):
- *   50  — Jobs Report          (Employment Situation)                    — 8:30 AM ET
- *   10  — CPI Release          (Consumer Price Index)                    — 8:30 AM ET
- *   54  — PCE / Personal Income (Personal Income and Outlays)            — 8:30 AM ET
- *   46  — PPI Release          (Producer Price Index)                    — 8:30 AM ET
- *   101 — FOMC Meeting         (FOMC Press Release)                      — 2:00 PM ET
- *   53  — GDP Release          (Gross Domestic Product)                  — 8:30 AM ET
- *   9   — Retail Sales         (Advance Monthly Retail and Food Services) — 8:30 AM ET
- *   180 — Jobless Claims       (Unemployment Insurance Weekly)           — 8:30 AM ET
- *   95  — Durable Goods        (Manufacturer's Shipments, Inventories)   — 8:30 AM ET
- *   27  — Housing Starts       (New Residential Construction)            — 8:30 AM ET
+ * Pattern accuracy: these are approximations of typical release windows. Claw's
+ * data fill (actual/result) drives display priority. If a date is off by 1-2
+ * days from the actual release, Claw can either correct or insert the right
+ * date and the next cron run's cleanup will reconcile.
  */
 
 import { NextResponse } from 'next/server';
 import sql from '@/lib/db';
 
-const FRED_BASE = 'https://api.stlouisfed.org/fred/release/dates';
-
-// FRED release ID → calendar display name + time + big flag
-const KEY_RELEASES = [
-  { id: 50,  name: 'Jobs Report',           time: '8:30 AM ET',  big: true  },
-  { id: 10,  name: 'CPI Release',           time: '8:30 AM ET',  big: true  },
-  { id: 54,  name: 'PCE / Personal Income', time: '8:30 AM ET',  big: true  },
-  { id: 46,  name: 'PPI Release',           time: '8:30 AM ET',  big: false },
-  { id: 101, name: 'FOMC Meeting',          time: '2:00 PM ET',  big: true  },
-  { id: 53,  name: 'GDP Release',           time: '8:30 AM ET',  big: true  },
-  { id: 9,   name: 'Retail Sales',          time: '8:30 AM ET',  big: false },
-  { id: 180, name: 'Jobless Claims',        time: '8:30 AM ET',  big: true  },
-  { id: 95,  name: 'Durable Goods',         time: '8:30 AM ET',  big: false },
-  { id: 27,  name: 'Housing Starts',        time: '8:30 AM ET',  big: false },
-];
-
-// How many days ahead to seed
 const LOOKAHEAD_DAYS = 90;
 
-async function fetchReleaseDates(releaseId, apiKey, todayStr, toStr) {
-  const url = `${FRED_BASE}?release_id=${releaseId}&sort_order=asc&realtime_start=${todayStr}&api_key=${apiKey}&file_type=json`;
-  const res = await fetch(url, { cache: 'no-store' });
-  if (!res.ok) throw new Error(`FRED release/${releaseId} returned ${res.status}`);
-  const data = await res.json();
-  return (data.release_dates || [])
-    .map(d => d.date)
-    .filter(d => d >= todayStr && d <= toStr);
+// Hardcoded FOMC 2026 release dates (statement day, 2:00 PM ET)
+const FOMC_DATES = [
+  '2026-01-28', '2026-03-18', '2026-04-29',
+  '2026-06-17', '2026-07-29', '2026-09-16',
+  '2026-10-28', '2026-12-09',
+];
+
+// Date helpers — all return YYYY-MM-DD strings
+function toISO(d) { return d.toISOString().split('T')[0]; }
+
+function generateWeekly(dayOfWeek, fromDate, lookaheadDays) {
+  const dates = [];
+  const d = new Date(fromDate);
+  d.setUTCHours(0, 0, 0, 0);
+  while (d.getUTCDay() !== dayOfWeek) d.setUTCDate(d.getUTCDate() + 1);
+  const end = new Date(fromDate);
+  end.setUTCDate(end.getUTCDate() + lookaheadDays);
+  while (d <= end) {
+    dates.push(toISO(d));
+    d.setUTCDate(d.getUTCDate() + 7);
+  }
+  return dates;
 }
+
+function generateNthWeekdayOfMonth(nth, dayOfWeek, fromDate, lookaheadDays) {
+  const dates = [];
+  const start = new Date(fromDate);
+  const end = new Date(fromDate);
+  end.setUTCDate(end.getUTCDate() + lookaheadDays);
+  let cursor = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), 1));
+  while (cursor <= end) {
+    const first = new Date(cursor);
+    const offset = (dayOfWeek - first.getUTCDay() + 7) % 7;
+    const target = new Date(first);
+    target.setUTCDate(1 + offset + (nth - 1) * 7);
+    if (target >= start && target <= end) dates.push(toISO(target));
+    cursor = new Date(Date.UTC(cursor.getUTCFullYear(), cursor.getUTCMonth() + 1, 1));
+  }
+  return dates;
+}
+
+function generateMonthlyOnDay(dayOfMonth, fromDate, lookaheadDays) {
+  const dates = [];
+  const start = new Date(fromDate);
+  const end = new Date(fromDate);
+  end.setUTCDate(end.getUTCDate() + lookaheadDays);
+  let cursor = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), dayOfMonth));
+  while (cursor <= end) {
+    if (cursor >= start) dates.push(toISO(cursor));
+    cursor = new Date(Date.UTC(cursor.getUTCFullYear(), cursor.getUTCMonth() + 1, dayOfMonth));
+  }
+  return dates;
+}
+
+// Quarterly: month 1, 4, 7, 10 — Nth weekday of that month
+function generateQuarterlyNthWeekday(quarterMonths, nth, dayOfWeek, fromDate, lookaheadDays) {
+  const all = generateNthWeekdayOfMonth(nth, dayOfWeek, fromDate, lookaheadDays);
+  return all.filter(s => quarterMonths.includes(parseInt(s.slice(5, 7), 10)));
+}
+
+// Release definitions: name, time, big flag, and a function returning future dates
+const RELEASE_PATTERNS = [
+  // Weekly — every Thursday
+  {
+    name: 'Jobless Claims', time: '8:30 AM ET', big: true,
+    generate: (today, lookahead) => generateWeekly(4, today, lookahead),
+  },
+  // First Friday of each month
+  {
+    name: 'Jobs Report', time: '8:30 AM ET', big: true,
+    generate: (today, lookahead) => generateNthWeekdayOfMonth(1, 5, today, lookahead),
+  },
+  // ~2nd Wednesday — CPI
+  {
+    name: 'CPI Release', time: '8:30 AM ET', big: true,
+    generate: (today, lookahead) => generateNthWeekdayOfMonth(2, 3, today, lookahead),
+  },
+  // ~2nd Thursday — PPI (day after CPI)
+  {
+    name: 'PPI Release', time: '8:30 AM ET', big: false,
+    generate: (today, lookahead) => generateNthWeekdayOfMonth(2, 4, today, lookahead),
+  },
+  // ~3rd Tuesday — Retail Sales
+  {
+    name: 'Retail Sales', time: '8:30 AM ET', big: false,
+    generate: (today, lookahead) => generateNthWeekdayOfMonth(3, 2, today, lookahead),
+  },
+  // ~3rd Wednesday — Housing Starts
+  {
+    name: 'Housing Starts', time: '8:30 AM ET', big: false,
+    generate: (today, lookahead) => generateNthWeekdayOfMonth(3, 3, today, lookahead),
+  },
+  // ~4th Wednesday — Durable Goods
+  {
+    name: 'Durable Goods', time: '8:30 AM ET', big: false,
+    generate: (today, lookahead) => generateNthWeekdayOfMonth(4, 3, today, lookahead),
+  },
+  // Last Friday — PCE / Personal Income (approximate; sometimes Thursday)
+  {
+    name: 'PCE / Personal Income', time: '8:30 AM ET', big: true,
+    generate: (today, lookahead) => generateMonthlyOnDay(28, today, lookahead),
+  },
+  // GDP advance — 4th Thursday of Jan/Apr/Jul/Oct
+  {
+    name: 'GDP Release', time: '8:30 AM ET', big: true,
+    generate: (today, lookahead) => generateQuarterlyNthWeekday([1, 4, 7, 10], 4, 4, today, lookahead),
+  },
+  // FOMC — hardcoded 2026 dates
+  {
+    name: 'FOMC Meeting', time: '2:00 PM ET', big: true,
+    generate: (today, lookahead) => {
+      const todayStr = toISO(today);
+      const end = new Date(today);
+      end.setUTCDate(end.getUTCDate() + lookahead);
+      const endStr = toISO(end);
+      return FOMC_DATES.filter(d => d >= todayStr && d <= endStr);
+    },
+  },
+];
 
 export async function GET(request) {
   // Auth: Vercel cron (Bearer) or CLAW_API_KEY for manual triggers
@@ -69,31 +158,23 @@ export async function GET(request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const fredApiKey = process.env.FRED_API_KEY;
-  if (!fredApiKey) {
-    return NextResponse.json({ error: 'FRED_API_KEY not set' }, { status: 500 });
-  }
-
   const today = new Date();
-  const todayStr = today.toISOString().split('T')[0];
-  const toDate = new Date(today);
-  toDate.setDate(toDate.getDate() + LOOKAHEAD_DAYS);
-  const toStr = toDate.toISOString().split('T')[0];
+  today.setUTCHours(0, 0, 0, 0);
+  const todayStr = toISO(today);
 
   const results = {};
   const errors = {};
   const datesByName = {};
 
-  for (const release of KEY_RELEASES) {
+  for (const release of RELEASE_PATTERNS) {
     try {
-      const dates = await fetchReleaseDates(release.id, fredApiKey, todayStr, toStr);
+      const dates = release.generate(today, LOOKAHEAD_DAYS);
       let seeded = 0;
 
       for (const dateStr of dates) {
-        // Upsert: create skeleton event; never overwrite Claw-owned fields (actual, result, forecast, prior)
         await sql`
           INSERT INTO economic_calendar_events (date, name, time, big, source, updated_at)
-          VALUES (${new Date(dateStr)}, ${release.name}, ${release.time}, ${release.big}, 'fred-calendar', NOW())
+          VALUES (${dateStr}::date, ${release.name}, ${release.time}, ${release.big}, 'pattern-seed', NOW())
           ON CONFLICT (date, name) DO UPDATE SET
             time = EXCLUDED.time,
             big = EXCLUDED.big,
@@ -110,15 +191,14 @@ export async function GET(request) {
   }
 
   // Cleanup: remove stale future skeleton events whose date is no longer in the
-  // freshly-fetched FRED schedule for that name. Catches drift from prior seeds
-  // (e.g. wrong release IDs that pulled dates from a different release calendar).
-  // Skip cleanup for rows where Claw has already filled in actual/result values.
+  // freshly-generated pattern for that name. Skips rows where Claw has filled
+  // in actual/result so published values are never clobbered.
   let cleaned = 0;
   for (const [name, dates] of Object.entries(datesByName)) {
     if (dates.length === 0) continue;
     const deleted = await sql`
       DELETE FROM economic_calendar_events
-      WHERE source = 'fred-calendar'
+      WHERE source IN ('pattern-seed', 'fred-calendar')
         AND name = ${name}
         AND date >= ${todayStr}::date
         AND actual IS NULL
@@ -130,14 +210,16 @@ export async function GET(request) {
   }
 
   const hasErrors = Object.keys(errors).length > 0;
-  console.log(`[cron/calendar-seed] ${todayStr}: seeded=${Object.values(results).reduce((s, r) => s + r.seeded, 0)} cleaned=${cleaned} errors=${Object.keys(errors).length}`);
+  const totalSeeded = Object.values(results).reduce((s, r) => s + r.seeded, 0);
+  console.log(`[cron/calendar-seed] ${todayStr}: seeded=${totalSeeded} cleaned=${cleaned} errors=${Object.keys(errors).length}`);
 
   return NextResponse.json({
     ok: !hasErrors,
     date: todayStr,
-    lookahead: `${todayStr} → ${toStr}`,
-    results,
+    lookahead: `${LOOKAHEAD_DAYS} days`,
+    seeded: totalSeeded,
     cleaned,
+    results,
     ...(hasErrors && { errors }),
   });
 }
