@@ -486,7 +486,11 @@ export default function PhonePanel() {
           <div className="flex gap-1">
             {selectedContact.phone && (
               <button
-                onClick={() => setActiveTab('dial')}
+                onClick={() => dial(selectedContact.phone, {
+                  name: `${selectedContact.first_name} ${selectedContact.last_name}`,
+                  phone: selectedContact.phone,
+                  contact_id: selectedContact.id,
+                })}
                 className="p-1.5 rounded-lg bg-green-500 text-white hover:bg-green-600 transition-colors"
                 title="Call"
               >
