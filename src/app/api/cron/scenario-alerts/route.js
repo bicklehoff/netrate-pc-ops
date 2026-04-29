@@ -10,6 +10,7 @@
 import { NextResponse } from 'next/server';
 import sql from '@/lib/db';
 import { priceScenario } from '@/lib/rates/price-scenario';
+import { updateRateAlert } from '@/lib/rate-alerts';
 
 function getTodayDay() {
   // Get today's day abbreviation in Mountain time
@@ -44,9 +45,16 @@ export async function GET(request) {
   let skipped = 0;
 
   try {
-    // Find active borrower scenarios — filter for today's schedule in JS (alert_days is a text array)
+    // Per UAD AD-10a (D9c Phase 3c, 2026-04-30): subscription lifecycle
+    // (alert_status, alert_days) lives on rate_alerts now. Drive the cron
+    // off rate_alerts as primary, JOIN scenarios for the pricing inputs.
     const scenarios = await sql`
-      SELECT s.*, l.name AS lead_name, l.email AS lead_email,
+      SELECT
+        ra.id            AS rate_alert_id,
+        ra.alert_days    AS ra_alert_days,
+        s.*,
+        l.name           AS lead_name,
+        l.email          AS lead_email,
         (SELECT COALESCE(jsonb_agg(jsonb_build_object(
           'rate', sr.rate, 'apr', sr.apr, 'monthlyPI', sr.monthly_pi,
           'price', sr.final_price, 'lenderName', sr.lender, 'program', sr.program,
@@ -55,14 +63,15 @@ export async function GET(request) {
         ) ORDER BY sr.display_order), '[]'::jsonb)
          FROM scenario_rates sr WHERE sr.scenario_id = s.id
         ) AS last_pricing_data
-      FROM scenarios s
+      FROM rate_alerts ra
+      INNER JOIN scenarios s ON s.id = ra.scenario_id
       LEFT JOIN leads l ON s.lead_id = l.id
-      WHERE s.alert_status = 'active' AND s.owner_type = 'borrower'
+      WHERE ra.alert_status = 'active' AND s.owner_type = 'borrower'
     `;
 
-    // Filter to those scheduled for today
+    // Filter to those scheduled for today (alert_days lives on rate_alerts now)
     const dueScenarios = scenarios.filter(s =>
-      Array.isArray(s.alert_days) && s.alert_days.includes(today)
+      Array.isArray(s.ra_alert_days) && s.ra_alert_days.includes(today)
     );
 
     for (const scenario of dueScenarios) {
@@ -141,16 +150,19 @@ export async function GET(request) {
           ? Math.round((bestRate - bestRatePrev) * 1000) / 1000
           : null;
 
-        // Create queue entry for MLO review
+        // Create queue entry for MLO review. Per migration 053,
+        // scenario_alert_queue.rate_alert_id is NOT NULL — populate it.
+        // scenario_id is kept during the transition window and dropped in
+        // Phase 4 along with the scenarios.* lifecycle columns.
         await sql`
-          INSERT INTO scenario_alert_queue (scenario_id, pricing_data, previous_data, best_rate, best_rate_prev, rate_change, status)
-          VALUES (${scenario.id}, ${JSON.stringify(topRates)}, ${prevRates ? JSON.stringify(prevRates) : null}, ${bestRate}, ${bestRatePrev}, ${rateChange}, 'pending')
+          INSERT INTO scenario_alert_queue (scenario_id, rate_alert_id, pricing_data, previous_data, best_rate, best_rate_prev, rate_change, status)
+          VALUES (${scenario.id}, ${scenario.rate_alert_id}, ${JSON.stringify(topRates)}, ${prevRates ? JSON.stringify(prevRates) : null}, ${bestRate}, ${bestRatePrev}, ${rateChange}, 'pending')
         `;
 
-        // Update last_priced_at on the scenario
-        await sql`
-          UPDATE scenarios SET last_priced_at = NOW(), updated_at = NOW() WHERE id = ${scenario.id}
-        `;
+        // Bump last_priced_at on the rate_alert subscription (post-3a path).
+        await updateRateAlert(scenario.rate_alert_id, scenario.organization_id, {
+          last_priced_at: new Date(),
+        });
 
         queued++;
       } catch (err) {
