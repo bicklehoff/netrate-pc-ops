@@ -3,7 +3,7 @@
   "short_name": "Dock",
   "description": "NetRate Mortgage MLO dock — phone-first floating panel for calls and SMS.",
   "start_url": "/portal/dock",
-  "scope": "/portal/dock/",
+  "scope": "/portal/dock",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#FFFFFF",
