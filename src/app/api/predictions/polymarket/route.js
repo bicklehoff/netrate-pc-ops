@@ -160,6 +160,7 @@ export async function GET() {
     const response = NextResponse.json({
       fedEvents: result?.fedEvents || [],
       markets: result?.otherMarkets || [],
+      nextMeeting: result?.nextMeeting || null,
       source: result ? 'polymarket' : 'error',
       timestamp: new Date().toISOString(),
     });
