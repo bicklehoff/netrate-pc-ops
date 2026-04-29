@@ -20,12 +20,15 @@ export default function DockLayout({ children }) {
     return () => { document.body.style.overflow = ''; };
   }, []);
 
-  // Register the same /portal/sw.js so push notifications + PWA badging
-  // work even when only the dock is open.
+  // Register /portal/sw.js scoped to /portal/dock/ — distinct from the MLO
+  // portal's registration (scoped to /portal/mlo/). Chrome requires separate
+  // SW registrations with non-overlapping scopes for two same-origin PWAs to
+  // both be installable. Scope /portal/dock/ is valid because the SW file
+  // lives at /portal/sw.js (a parent path).
   useEffect(() => {
     if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
     navigator.serviceWorker
-      .register('/portal/sw.js')
+      .register('/portal/sw.js', { scope: '/portal/dock/' })
       .catch((err) => {
         console.error('Service worker registration failed:', err);
       });
