@@ -3,6 +3,7 @@ import sql from '@/lib/db';
 import { normalizePhone } from '@/lib/normalize-phone';
 import { DEFAULT_ORG_ID } from '@/lib/constants/org';
 import { sendPushToStaff } from '@/lib/push';
+import { put } from '@vercel/blob';
 
 export async function POST(req) {
   const formData = await req.formData();
@@ -13,6 +14,9 @@ export async function POST(req) {
   const to = formData.get('To');
   const body = formData.get('Body');
   const messageSid = formData.get('MessageSid');
+  const numMedia = parseInt(formData.get('NumMedia') || '0', 10);
+  const mediaUrl = numMedia > 0 ? formData.get('MediaUrl0') : null;
+  const mediaContentType = numMedia > 0 ? formData.get('MediaContentType0') : null;
 
   const normalizedFrom = normalizePhone(from);
   const normalizedTo = normalizePhone(to);
@@ -32,11 +36,38 @@ export async function POST(req) {
     }
   }
 
+  // Download inbound MMS media from Twilio and re-host on Vercel Blob
+  let blobUrl = null;
+  let blobContentType = null;
+  if (mediaUrl && mediaContentType) {
+    try {
+      const auth = Buffer.from(
+        `${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`
+      ).toString('base64');
+      const mediaRes = await fetch(mediaUrl, {
+        headers: { Authorization: `Basic ${auth}` },
+      });
+      if (mediaRes.ok) {
+        const ext = mediaContentType.split('/')[1]?.replace('jpeg', 'jpg') || 'bin';
+        const filename = `sms-media/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const buffer = Buffer.from(await mediaRes.arrayBuffer());
+        const blob = await put(filename, buffer, {
+          access: 'public',
+          contentType: mediaContentType,
+        });
+        blobUrl = blob.url;
+        blobContentType = mediaContentType;
+      }
+    } catch (e) {
+      console.error('Failed to re-host inbound MMS media:', e);
+    }
+  }
+
   // Store the inbound message
   try {
     await sql`
-      INSERT INTO sms_messages (organization_id, contact_id, direction, from_number, to_number, body, status, twilio_message_sid)
-      VALUES (${DEFAULT_ORG_ID}, ${contactId}, 'inbound', ${normalizedFrom || from || ''}, ${normalizedTo || to || ''}, ${body || ''}, 'received', ${messageSid})
+      INSERT INTO sms_messages (organization_id, contact_id, direction, from_number, to_number, body, status, twilio_message_sid, media_url, media_content_type)
+      VALUES (${DEFAULT_ORG_ID}, ${contactId}, 'inbound', ${normalizedFrom || from || ''}, ${normalizedTo || to || ''}, ${body || ''}, 'received', ${messageSid}, ${blobUrl}, ${blobContentType})
     `;
   } catch (e) {
     console.error('Failed to store incoming SMS:', e);

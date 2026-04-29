@@ -123,14 +123,30 @@ async function fetchEvents() {
       }
     }
 
-    // Sort Fed events by date (next meeting first)
-    fedEvents.sort((a, b) => {
+    // Drop resolved markets (Polymarket keeps them active for hours after settlement)
+    const now = new Date();
+    const activeFedEvents = fedEvents.filter(e => !e.endDate || new Date(e.endDate) > now);
+
+    // Sort by date (next meeting first)
+    activeFedEvents.sort((a, b) => {
       if (!a.endDate) return 1;
       if (!b.endDate) return -1;
       return new Date(a.endDate) - new Date(b.endDate);
     });
 
-    return { fedEvents, otherMarkets: otherEvents.slice(0, 6) };
+    // When Polymarket hasn't opened the next meeting's market yet, surface the date
+    // so the UI can show a countdown instead of disappearing entirely.
+    const FOMC_2026 = [
+      '2026-06-17', '2026-07-29', '2026-09-16', '2026-10-28', '2026-12-09',
+    ];
+    let nextMeeting = null;
+    if (activeFedEvents.length === 0) {
+      const today = now.toISOString().slice(0, 10);
+      const next = FOMC_2026.find(d => d >= today);
+      if (next) nextMeeting = { date: next, pending: true };
+    }
+
+    return { fedEvents: activeFedEvents, otherMarkets: otherEvents.slice(0, 6), nextMeeting };
   } catch (error) {
     console.error('Polymarket fetch error:', error.message, error.stack?.split('\n').slice(0,3).join(' '));
     return null;

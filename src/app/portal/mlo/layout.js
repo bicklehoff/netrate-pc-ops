@@ -18,16 +18,16 @@ export default function MloLayout({ children }) {
     return () => { document.body.style.overflow = ''; };
   }, []);
 
-  // Register the service worker scoped to /portal/. Required for PWA install
-  // + future push notifications. Scaffold only — no caching / no push handler
-  // in this PR. Registration is idempotent; browsers skip re-install when the
-  // sw.js file hasn't changed.
+  // Register the service worker scoped to /portal/mlo/ so Chrome treats the
+  // MLO portal as a distinct PWA from the dock (/portal/dock/). Two PWAs on
+  // the same origin require separate SW registrations with non-overlapping
+  // scopes — sharing the same /portal/ registration causes Chrome to suppress
+  // the second install prompt. Scope /portal/mlo/ is valid because the SW
+  // file lives at /portal/sw.js (a parent path), which allows any sub-scope.
   useEffect(() => {
     if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
-    // Located at public/portal/sw.js so default scope resolves to /portal/
-    // without needing a Service-Worker-Allowed header.
     navigator.serviceWorker
-      .register('/portal/sw.js')
+      .register('/portal/sw.js', { scope: '/portal/mlo/' })
       .catch((err) => {
         console.error('Service worker registration failed:', err);
       });

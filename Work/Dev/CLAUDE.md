@@ -1,16 +1,14 @@
 # PC Dev Agent — Role Instructions
 
-## MANDATORY PRE-WORK READ — Coding Principles + Handoff Discipline
+## MANDATORY PRE-WORK READ — Coding Principles
 
-**Before responding to any request that may involve code, you MUST internalize BOTH:**
+**Before responding to any request that may involve code, you MUST internalize:**
 
-1. `<your-local-path>/netrate-governance/CODING-PRINCIPLES.md`
-2. `<your-local-path>/netrate-governance/HANDOFF-DISCIPLINE.md`
+`<your-local-path>/netrate-governance/CODING-PRINCIPLES.md`
 
-(On PC: `~/Documents/netrate-governance/<filename>` — adjust if your clone lives elsewhere.)
+(On PC: `~/Documents/netrate-governance/CODING-PRINCIPLES.md` — adjust if your clone lives elsewhere.)
 
-### CODING-PRINCIPLES.md
-Your operating contract for engineering judgment. It defines:
+This file is your operating contract. It defines:
 - The senior-dev meta-rule (default mindset, not optional)
 - Tier classification (T1/T2/T3/T4) — mandatory before non-trivial work
 - Required patterns (second-time-factor-out, inventory-before-parser, reverse-caller grep, follow-ups need dates and criteria)
@@ -20,19 +18,35 @@ Your operating contract for engineering judgment. It defines:
 
 **Read it before you respond, not before you edit.** By the time you start editing, scoping decisions have already happened. Coding Principles must shape the conversation, not retrofit the implementation.
 
-### HANDOFF-DISCIPLINE.md
-Your operating contract for moving Dev work between sessions without losing it. It defines:
-- The `handoff-git-state v1` schema every cross-session Dev relay must include
-- Producer-side preconditions (clean tree, fully pushed, on a feature branch with upstream)
-- Consumer-side drift checks (refuse to trust the handoff if branch is gone, origin moved, or diff stat shifted)
-- The rule: **`git stash` is BANNED as a cross-session handoff mechanism** (PC lost a full day of Phase 1 prep work to a stash whose message did not match its contents — 2026-04-27)
-- Reference scripts in this repo at `scripts/eod-verify.mjs` + `scripts/session-start-verify.mjs`
+If you have not read `CODING-PRINCIPLES.md` this session, **stop and read it now** before continuing.
 
-**Read it before any cross-session relay** (Session Close, EOD). The producer-side verifier must run, and its `handoff-git-state v1` block must be included in the relay content.
+Mac is the authority for `CODING-PRINCIPLES.md`. David is the override.
 
-If you have not read both files this session, **stop and read them now** before continuing.
+---
 
-Mac is the authority for both files. David is the override.
+## MANDATORY PRE-WORK READ — Handoff Discipline
+
+**Before responding to any request that may involve cross-session work, you MUST internalize:**
+
+`<your-local-path>/netrate-governance/HANDOFF-DISCIPLINE.md`
+
+(On PC: `D:/PROJECTS/netrate-governance/HANDOFF-DISCIPLINE.md` — adjust if your clone lives elsewhere.)
+
+This file is the operating contract for moving Dev work between sessions without losing it. It defines:
+- The `handoff-git-state v1` schema — the only acceptable format for git state in EOD/SHP relays
+- EOD-side preconditions (clean tree, pushed commits, feature branch with upstream) before a handoff block can be emitted
+- Session-start drift checks that refuse the handoff if `origin_head` moved, the branch was deleted, or the diff drifted
+- The hard rule: **`git stash` is BANNED as a cross-session handoff mechanism**
+
+**The reference implementation lives in this repo:** `scripts/eod-verify.mjs` (producer) and `scripts/session-start-verify.mjs` (consumer). The consumer script is the tool that catches a stale handoff before this session acts on it.
+
+**At session start:** if the prior session's relay contains a `handoff-git-state v1` block, run `node scripts/session-start-verify.mjs` against it before doing anything else. If it exits non-zero, do not trust the handoff narrative — re-derive state from `git log origin/main..origin/<branch> --stat`.
+
+**At session end:** run `node scripts/eod-verify.mjs` and paste its output verbatim into the handoff relay's `content` field. Never write the block by hand or from memory.
+
+If you have not read `HANDOFF-DISCIPLINE.md` this session, **stop and read it now** before continuing.
+
+Mac is the authority for `HANDOFF-DISCIPLINE.md`. David is the override.
 
 ---
 
@@ -62,6 +76,7 @@ You are the Dev agent for NetRate Mortgage's PC operations. You build and mainta
 - **Follow the Deploy Procedure in root CLAUDE.md exactly.** No exceptions.
 - **No tracker writes.** Use relay to report completed work to Mac.
 - **Read DEV-PLAYBOOK.md** before working on Prisma, deployment, or auth.
+- **Cross-session handoffs go through `scripts/eod-verify.mjs` (write side) and `scripts/session-start-verify.mjs` (read side).** Never use `git stash` for next-day work. See root CLAUDE.md → "Cross-Session Handoff Discipline".
 
 ## Key Files
 - Deploy procedure: root `CLAUDE.md` → Deploy Procedure section

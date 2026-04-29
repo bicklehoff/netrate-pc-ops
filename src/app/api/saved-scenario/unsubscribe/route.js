@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import sql from '@/lib/db';
+import { getRateAlertByUnsubToken, updateRateAlert } from '@/lib/rate-alerts';
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
@@ -13,28 +13,24 @@ export async function GET(request) {
   }
 
   try {
-    const rows = await sql`
-      SELECT id, alert_status FROM scenarios WHERE unsub_token = ${token} LIMIT 1
-    `;
+    const rateAlert = await getRateAlertByUnsubToken(token);
 
-    if (!rows.length) {
+    if (!rateAlert) {
       return new NextResponse(renderPage('Not Found', 'This unsubscribe link is no longer valid.'), {
         status: 404,
         headers: { 'Content-Type': 'text/html' },
       });
     }
 
-    const scenario = rows[0];
-
-    if (scenario.alert_status === 'unsubscribed') {
+    if (rateAlert.alert_status === 'unsubscribed') {
       return new NextResponse(renderPage('Already Unsubscribed', 'You have already been unsubscribed from rate alerts for this scenario.'), {
         headers: { 'Content-Type': 'text/html' },
       });
     }
 
-    await sql`
-      UPDATE scenarios SET alert_status = 'unsubscribed', updated_at = NOW() WHERE id = ${scenario.id}
-    `;
+    await updateRateAlert(rateAlert.id, rateAlert.organization_id, {
+      alert_status: 'unsubscribed',
+    });
 
     return new NextResponse(renderPage('Unsubscribed', 'You have been unsubscribed from rate alerts for this scenario. You will no longer receive updates.'), {
       headers: { 'Content-Type': 'text/html' },

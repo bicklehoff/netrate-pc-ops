@@ -4,7 +4,7 @@
 
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useDialer } from './DialerProvider';
 
 export default function AudioSettings({ onClose }) {
@@ -138,6 +138,29 @@ export default function AudioSettings({ onClose }) {
         </select>
       </div>
 
+      {/* Dock launcher */}
+      <div className="pt-3 border-t border-gray-200 mb-3 space-y-2">
+        <button
+          onClick={() => {
+            // Pop out the dock as a small floating window. Stable name lets
+            // subsequent clicks re-focus the existing dock instead of stacking.
+            window.open(
+              '/portal/dock',
+              'NetRateDock',
+              'width=320,height=600,menubar=no,toolbar=no,location=no,status=no,resizable=yes',
+            );
+          }}
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-brand/10 text-brand hover:bg-brand/20 text-xs font-medium transition-colors"
+          title="Open the floating dock window"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+          </svg>
+          Open dock window
+        </button>
+        <TestInboundButton />
+      </div>
+
       {/* SMS notifications section */}
       <div className="pt-3 border-t border-gray-200">
         <h4 className="text-xs font-semibold text-gray-900 mb-2">SMS notifications</h4>
@@ -169,6 +192,56 @@ export default function AudioSettings({ onClose }) {
           onChange={(v) => setSmsBadgeEnabled(v)}
         />
       </div>
+    </div>
+  );
+}
+
+// TestInboundButton — fires a server-side Twilio call to the MLO's
+// Voice Client identity, simulating an inbound customer call without
+// involving any cell carrier. Replaces the "call own DID from own cell"
+// test workflow that the loop short-circuit blocks.
+function TestInboundButton() {
+  const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState(null);
+
+  async function handleClick() {
+    setBusy(true);
+    setStatus(null);
+    try {
+      const res = await fetch('/api/dialer/test-inbound', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) {
+        setStatus({ kind: 'error', text: data.error || 'Test call failed' });
+      } else {
+        setStatus({ kind: 'success', text: 'Test call placed — your dialer should ring now.' });
+      }
+    } catch (e) {
+      setStatus({ kind: 'error', text: e.message || 'Network error' });
+    } finally {
+      setBusy(false);
+      // Auto-clear status after 6 seconds so subsequent tests look fresh.
+      setTimeout(() => setStatus(null), 6000);
+    }
+  }
+
+  return (
+    <div>
+      <button
+        onClick={handleClick}
+        disabled={busy}
+        className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 text-xs font-medium transition-colors disabled:opacity-50"
+        title="Place a server-side test call to ring your dialer"
+      >
+        <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z" />
+        </svg>
+        {busy ? 'Placing test call…' : 'Test inbound call'}
+      </button>
+      {status && (
+        <p className={`mt-1 text-[10px] ${status.kind === 'error' ? 'text-red-600' : 'text-go-dark'}`}>
+          {status.text}
+        </p>
+      )}
     </div>
   );
 }

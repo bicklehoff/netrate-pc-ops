@@ -47,6 +47,20 @@ const SMS_POLL_INTERVAL_MS = 10_000;
 // short enough to clear on its own when the user is away from the desk.
 const SMS_POPUP_TTL_MS = 10_000;
 
+// BroadcastChannel name shared across all DialerProvider instances on the
+// same origin (main portal + dock + any other windows). Primary broadcasts
+// state changes; passive instances listen + send actions back.
+const BC_CHANNEL_NAME = 'netrate-dialer';
+
+// BroadcastChannel message types
+const BC_STATE_UPDATE = 'state';        // primary → passive
+const BC_ACTION_ANSWER = 'answer';      // passive → primary
+const BC_ACTION_DECLINE = 'decline';    // passive → primary
+const BC_ACTION_HANGUP = 'hangup';      // passive → primary
+const BC_ACTION_DIAL = 'dial';          // passive → primary
+const BC_ACTION_TOGGLE_MUTE = 'toggleMute';  // passive → primary
+const BC_REQUEST_STATE = 'requestState';     // passive → primary (on connect)
+
 const readLS = (key) => {
   if (typeof window === 'undefined') return null;
   try { return window.localStorage.getItem(key); } catch { return null; }
@@ -59,7 +73,12 @@ const writeLS = (key, value) => {
   } catch { /* ignore quota / privacy mode */ }
 };
 
-export default function DialerProvider({ children }) {
+export default function DialerProvider({ children, mode = 'primary' }) {
+  // Passive surfaces (dock, future read-only views) skip Device registration
+  // and SMS polling. They mirror state from the primary instance via
+  // BroadcastChannel and dispatch user actions back to primary.
+  const isPrimary = mode !== 'passive';
+  const isPassive = !isPrimary;
   const [deviceReady, setDeviceReady] = useState(false);
   const [callState, setCallState] = useState(IDLE);
   const [activeCall, setActiveCall] = useState(null);     // Twilio Call object
@@ -88,6 +107,7 @@ export default function DialerProvider({ children }) {
 
   const deviceRef = useRef(null);
   const timerRef = useRef(null);
+  const tokenRefreshRef = useRef(null);
   const identityRef = useRef(null);
   const smsLastSeenAtRef = useRef(null); // ISO ts of newest inbound seen so far
   const smsPopupTimerRef = useRef(null);
@@ -95,6 +115,21 @@ export default function DialerProvider({ children }) {
   const smsPopupEnabledRef = useRef(true);
   const smsSoundEnabledRef = useRef(true);
   const smsBadgeEnabledRef = useRef(true);
+  const bcRef = useRef(null); // BroadcastChannel for cross-window sync
+
+  // ─── BroadcastChannel — cross-window state sync ───────────
+  // Primary broadcasts state changes; passive instances listen and mirror.
+  // Both modes also listen for action messages from the other side
+  // (passive → primary: "answer this call"; primary → passive: state delta).
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof BroadcastChannel === 'undefined') return;
+    const ch = new BroadcastChannel(BC_CHANNEL_NAME);
+    bcRef.current = ch;
+    return () => {
+      ch.close();
+      bcRef.current = null;
+    };
+  }, []);
 
   // Duration timer
   const startTimer = useCallback(() => {
@@ -111,8 +146,13 @@ export default function DialerProvider({ children }) {
     }
   }, []);
 
-  // Initialize Twilio Device
+  // Initialize Twilio Device — primary only. Passive surfaces (dock) skip
+  // this so they don't collide with the main portal's registration.
+  // Twilio's rule: most-recent registration with the same identity wins;
+  // older ones get unregistered. With this guard, only ONE Device per
+  // browser per identity is alive at a time — owned by the main portal.
   useEffect(() => {
+    if (isPassive) return; // dock + read-only surfaces don't touch Twilio
     let mounted = true;
 
     async function initDevice() {
@@ -157,8 +197,21 @@ export default function DialerProvider({ children }) {
           if (mounted) setDeviceReady(false);
         });
 
-        device.on('error', (err) => {
+        device.on('error', async (err) => {
           console.error('[Dialer] Twilio Device error:', err);
+          // 31205 = AccessTokenExpired — fetch a fresh token and re-register
+          if (err.code === 31205) {
+            try {
+              const r = await fetch('/api/dialer/token', { method: 'POST' });
+              const { token: newToken } = await r.json();
+              device.updateToken(newToken);
+              await device.register();
+            } catch (refreshErr) {
+              console.error('[Dialer] Token re-register failed:', refreshErr);
+              if (mounted) setError('Session expired — please reload the page.');
+            }
+            return;
+          }
           if (mounted) setError(err.message);
         });
 
@@ -294,6 +347,19 @@ export default function DialerProvider({ children }) {
 
         await device.register();
         deviceRef.current = device;
+
+        // Periodic refresh every 45 min — keeps token alive even when
+        // tokenWillExpire is missed (PWA backgrounded, screen off, etc.)
+        tokenRefreshRef.current = setInterval(async () => {
+          if (!deviceRef.current) return;
+          try {
+            const r = await fetch('/api/dialer/token', { method: 'POST' });
+            const { token: newToken } = await r.json();
+            deviceRef.current.updateToken(newToken);
+          } catch (e) {
+            console.error('[Dialer] Periodic token refresh failed:', e);
+          }
+        }, 45 * 60 * 1000);
       } catch (e) {
         console.error('Device init failed:', e);
         if (mounted) setError(e.message);
@@ -305,12 +371,16 @@ export default function DialerProvider({ children }) {
     return () => {
       mounted = false;
       stopTimer();
+      if (tokenRefreshRef.current) {
+        clearInterval(tokenRefreshRef.current);
+        tokenRefreshRef.current = null;
+      }
       if (deviceRef.current) {
         deviceRef.current.destroy();
         deviceRef.current = null;
       }
     };
-  }, [stopTimer]);
+  }, [isPassive, stopTimer]);
 
   // Wire up call events helper
   const wireCallEvents = useCallback((call) => {
@@ -358,8 +428,12 @@ export default function DialerProvider({ children }) {
 
   // ─── Actions ─────────────────────────────────────────────
 
-  /** Make an outbound call */
+  /** Make an outbound call. Passive: dispatch via BC to primary. */
   const dial = useCallback(async (phoneNumber, contactInfo = null) => {
+    if (isPassive) {
+      bcRef.current?.postMessage({ type: BC_ACTION_DIAL, payload: { number: phoneNumber, contactInfo } });
+      return;
+    }
     if (!deviceRef.current || callState !== IDLE) return;
 
     try {
@@ -378,42 +452,58 @@ export default function DialerProvider({ children }) {
       setError(e.message);
       setCallState(IDLE);
     }
-  }, [callState, wireCallEvents]);
+  }, [isPassive, callState, wireCallEvents]);
 
-  /** Accept an incoming call */
+  /** Accept an incoming call. Passive: dispatch via BC to primary. */
   const acceptCall = useCallback(() => {
+    if (isPassive) {
+      bcRef.current?.postMessage({ type: BC_ACTION_ANSWER });
+      return;
+    }
     if (!incomingCall) return;
 
     incomingCall.accept();
     wireCallEvents(incomingCall);
     setActiveCall(incomingCall);
     setIncomingCall(null);
-  }, [incomingCall, wireCallEvents]);
+  }, [isPassive, incomingCall, wireCallEvents]);
 
-  /** Reject an incoming call */
+  /** Reject an incoming call. Passive: dispatch via BC to primary. */
   const rejectCall = useCallback(() => {
+    if (isPassive) {
+      bcRef.current?.postMessage({ type: BC_ACTION_DECLINE });
+      return;
+    }
     if (!incomingCall) return;
 
     incomingCall.reject();
     setIncomingCall(null);
     setCallState(IDLE);
     setCallerInfo(null);
-  }, [incomingCall]);
+  }, [isPassive, incomingCall]);
 
-  /** Hang up the active call */
+  /** Hang up the active call. Passive: dispatch via BC to primary. */
   const hangup = useCallback(() => {
+    if (isPassive) {
+      bcRef.current?.postMessage({ type: BC_ACTION_HANGUP });
+      return;
+    }
     if (activeCall) {
       activeCall.disconnect();
     }
-  }, [activeCall]);
+  }, [isPassive, activeCall]);
 
-  /** Toggle mute */
+  /** Toggle mute. Passive: dispatch via BC to primary. */
   const toggleMute = useCallback(() => {
+    if (isPassive) {
+      bcRef.current?.postMessage({ type: BC_ACTION_TOGGLE_MUTE });
+      return;
+    }
     if (!activeCall) return;
     const newMuted = !isMuted;
     activeCall.mute(newMuted);
     setIsMuted(newMuted);
-  }, [activeCall, isMuted]);
+  }, [isPassive, activeCall, isMuted]);
 
   /** Send DTMF digits (dial pad during call) */
   const sendDigits = useCallback((digits) => {
@@ -466,7 +556,9 @@ export default function DialerProvider({ children }) {
   // Runs every SMS_POLL_INTERVAL_MS while the provider is mounted.
   // Compares the newest inbound message timestamp against the last seen,
   // surfaces a popup + chime + updates the unread count + taskbar badge.
+  // PRIMARY ONLY — passive instances mirror this state from BroadcastChannel.
   useEffect(() => {
+    if (isPassive) return; // dock listens via BC, no duplicate polling
     let cancelled = false;
 
     const isThreadCurrentlyOpen = (contactId, phone) => {
@@ -554,7 +646,161 @@ export default function DialerProvider({ children }) {
       clearInterval(id);
       if (smsPopupTimerRef.current) clearTimeout(smsPopupTimerRef.current);
     };
-  }, [updateAppBadge]);
+  }, [isPassive, updateAppBadge]);
+
+  // ─── Primary: broadcast state changes ────────────────────
+  // Whenever the slice of state we want passive surfaces to mirror changes,
+  // post a snapshot on the channel. Passive instances (dock) update local
+  // React state from these snapshots.
+  useEffect(() => {
+    if (!isPrimary) return;
+    const ch = bcRef.current;
+    if (!ch) return;
+    ch.postMessage({
+      type: BC_STATE_UPDATE,
+      payload: {
+        deviceReady,
+        callState,
+        callerInfo,
+        recentInboundCall,
+        isMuted,
+        callDuration,
+        incomingSms,
+        smsUnreadCount,
+      },
+    });
+  }, [
+    isPrimary,
+    deviceReady,
+    callState,
+    callerInfo,
+    recentInboundCall,
+    isMuted,
+    callDuration,
+    incomingSms,
+    smsUnreadCount,
+  ]);
+
+  // ─── Passive: listen for state updates + initial sync ────
+  useEffect(() => {
+    if (!isPassive) return;
+    const ch = bcRef.current;
+    if (!ch) return;
+
+    const handleMessage = (event) => {
+      const msg = event.data;
+      if (!msg || msg.type !== BC_STATE_UPDATE) return;
+      const p = msg.payload || {};
+      // Mirror primary's state into our local React state. Each setter is
+      // a no-op when the value matches, so this doesn't cause render churn.
+      if (p.deviceReady !== undefined) setDeviceReady(p.deviceReady);
+      if (p.callState !== undefined) setCallState(p.callState);
+      if (p.callerInfo !== undefined) setCallerInfo(p.callerInfo);
+      if (p.recentInboundCall !== undefined) setRecentInboundCall(p.recentInboundCall);
+      if (p.isMuted !== undefined) setIsMuted(p.isMuted);
+      if (p.callDuration !== undefined) setCallDuration(p.callDuration);
+      if (p.incomingSms !== undefined) setIncomingSms(p.incomingSms);
+      if (p.smsUnreadCount !== undefined) setSmsUnreadCount(p.smsUnreadCount);
+    };
+
+    ch.addEventListener('message', handleMessage);
+    // Ask primary for current state on connect (handles dock-opened-after-call case).
+    ch.postMessage({ type: BC_REQUEST_STATE });
+    return () => ch.removeEventListener('message', handleMessage);
+  }, [isPassive]);
+
+  // ─── Primary: respond to action messages from passive surfaces ──
+  // The dock can dispatch "answer this call" / "decline" / "hangup" / "dial"
+  // back to the primary, which then performs the actual Device action.
+  useEffect(() => {
+    if (!isPrimary) return;
+    const ch = bcRef.current;
+    if (!ch) return;
+
+    const handleMessage = async (event) => {
+      const msg = event.data;
+      if (!msg) return;
+      switch (msg.type) {
+        case BC_REQUEST_STATE:
+          // Re-broadcast current state so the new passive instance syncs up.
+          // The state-broadcast effect above already triggers, but BC events
+          // don't arrive at the sender — we need an explicit reply.
+          ch.postMessage({
+            type: BC_STATE_UPDATE,
+            payload: {
+              deviceReady,
+              callState,
+              callerInfo,
+              recentInboundCall,
+              isMuted,
+              callDuration,
+              incomingSms,
+              smsUnreadCount,
+            },
+          });
+          break;
+        case BC_ACTION_ANSWER:
+          if (incomingCall) {
+            incomingCall.accept();
+            wireCallEvents(incomingCall);
+            setActiveCall(incomingCall);
+            setIncomingCall(null);
+          }
+          break;
+        case BC_ACTION_DECLINE:
+          if (incomingCall) {
+            incomingCall.reject();
+            setIncomingCall(null);
+            setCallState(IDLE);
+            setCallerInfo(null);
+          }
+          break;
+        case BC_ACTION_HANGUP:
+          if (activeCall) activeCall.disconnect();
+          break;
+        case BC_ACTION_DIAL:
+          // Defer to the primary's local dial(); avoids duplicating the
+          // Device.connect() logic.
+          if (deviceRef.current && callState === IDLE && msg.payload?.number) {
+            try {
+              const call = await deviceRef.current.connect({ params: { To: msg.payload.number } });
+              wireCallEvents(call);
+              setActiveCall(call);
+              setCallState(RINGING);
+              setCallerInfo(msg.payload.contactInfo || { phone: msg.payload.number });
+            } catch (e) {
+              console.error('[Dialer] BC dial failed:', e);
+            }
+          }
+          break;
+        case BC_ACTION_TOGGLE_MUTE:
+          if (activeCall) {
+            const newMuted = !isMuted;
+            activeCall.mute(newMuted);
+            setIsMuted(newMuted);
+          }
+          break;
+        default:
+          break;
+      }
+    };
+
+    ch.addEventListener('message', handleMessage);
+    return () => ch.removeEventListener('message', handleMessage);
+  }, [
+    isPrimary,
+    incomingCall,
+    activeCall,
+    callState,
+    isMuted,
+    deviceReady,
+    callerInfo,
+    recentInboundCall,
+    callDuration,
+    incomingSms,
+    smsUnreadCount,
+    wireCallEvents,
+  ]);
 
   // ─── SMS notification setters ────────────────────────────
   const dismissIncomingSms = useCallback(() => {

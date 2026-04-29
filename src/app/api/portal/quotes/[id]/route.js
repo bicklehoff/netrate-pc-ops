@@ -13,7 +13,8 @@
 import { NextResponse } from 'next/server';
 import sql from '@/lib/db';
 import { getScenarioById, updateScenario } from '@/lib/scenarios/db';
-import { scenarioToQuoteShape, deriveIdentity } from '@/lib/scenarios/transform';
+import { scenarioToQuoteShape } from '@/lib/quotes';
+import { deriveIdentity } from '@/lib/scenarios';
 
 export async function GET(request, { params }) {
   try {

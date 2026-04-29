@@ -313,7 +313,35 @@ export async function listScenarios({
  * @param {object} fields - Partial update fields
  * @returns {object|null} Updated scenario or null if not found
  */
+// Soft-deprecation surveillance for D9c Phase 2: keys that the AD-10a split
+// moved to dedicated tables (rate_alerts, quotes). Phase 2 still APPLIES the
+// update against scenarios columns (they exist until Phase 4 cleanup), but
+// logs a warning so stale call sites surface in production logs. Each
+// Phase 3 sub-PR (3a, 3b, 3c) silences its slice's logs by routing the
+// caller to updateRateAlert() or updateQuote() instead. Phase 4 hard-rejects.
+const DEPRECATED_ALERT_KEYS = new Set([
+  'alert_status', 'alert_frequency', 'alert_days',
+  'last_priced_at', 'last_sent_at', 'send_count',
+]);
+const DEPRECATED_QUOTE_KEYS = new Set([
+  'sent_at', 'viewed_at', 'expires_at',
+  'pdf_url', 'pdf_generated_at', 'version',
+]);
+
 export async function updateScenario(id, orgId, fields) {
+  // Soft-deprecation logger — see comment block above.
+  const deprecatedKeysPresent = Object.keys(fields).filter(
+    (k) => DEPRECATED_ALERT_KEYS.has(k) || DEPRECATED_QUOTE_KEYS.has(k),
+  );
+  if (deprecatedKeysPresent.length > 0) {
+    const callsite = (new Error().stack || '').split('\n').slice(2, 5).map((l) => l.trim()).join(' | ');
+    console.warn(
+      `[d9c-deprecation] updateScenario() called with alert/quote keys ` +
+      `[${deprecatedKeysPresent.join(', ')}] — callers should migrate to ` +
+      `updateRateAlert() or updateQuote() per UAD AD-10a. callsite: ${callsite}`,
+    );
+  }
+
   const allowedCols = new Set([
     'status', 'visibility',
     'loan_purpose', 'loan_type', 'property_value', 'loan_amount', 'ltv', 'fico',
@@ -380,6 +408,19 @@ export async function replaceScenarioFeeItems(scenarioId, feeBreakdown) {
 
 /**
  * Delete a scenario and all its rates/fee items (cascading).
+ *
+ * @deprecated D9c Phase 2 (2026-04-29) — UAD AD-10a + AD-12a require quotes
+ *   and rate_alerts to be immutable evidence of borrower-facing artifacts.
+ *   Direct deletion of a scenario that has either references would now fail
+ *   the new RESTRICT FK constraints (added by migration 053). Reverse-caller
+ *   grep is clean: this function has zero callers as of 2026-04-29 (see
+ *   D9C-PR1-PHASE1-MIGRATION-SPEC §8.1). Function will be removed in Phase 4
+ *   along with the legacy column drops.
+ *
+ *   If you need to remove a scenario in the future, the right operation is
+ *   a soft-delete (`UPDATE scenarios SET deleted_at = NOW()`) — the
+ *   scenarios.deleted_at column already exists.
+ *
  * @param {string} id
  * @param {string} orgId
  * @returns {boolean} true if deleted, false if not found

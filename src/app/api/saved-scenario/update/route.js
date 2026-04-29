@@ -9,6 +9,7 @@ import sql from '@/lib/db';
 import { priceScenario } from '@/lib/rates/price-scenario';
 import { calcMonthlyPI } from '@/lib/rates/math';
 import { updateScenario, replaceScenarioRates } from '@/lib/scenarios/db';
+import { getRateAlertByScenarioId, updateRateAlert } from '@/lib/rate-alerts';
 import { apiError } from '@/lib/api/safe-error';
 import { rateLimit } from '@/lib/api/rate-limit';
 
@@ -95,7 +96,9 @@ export async function POST(request) {
       }
     }
 
-    // Update the scenario with new inputs via DAL
+    // Update the scenario with new inputs via DAL.
+    // Per UAD AD-10a (D9c Phase 3a, 2026-04-30): pricing-cycle fields
+    // (last_priced_at) live on rate_alerts now — updated below.
     await updateScenario(existingScenario.id, scenarioOrgId, {
       loan_purpose: scenarioData.purpose || null,
       loan_type: scenarioData.loanType || null,
@@ -110,12 +113,21 @@ export async function POST(request) {
       property_type: scenarioData.propertyType || null,
       current_rate: scenarioData.currentRate || null,
       current_balance: scenarioData.currentPayoff || scenarioData.currentBalance || null,
-      last_priced_at: pricingData ? new Date() : null,
     });
 
     // Replace rates if we have fresh pricing
     if (pricingData && pricingData.length > 0) {
       await replaceScenarioRates(existingScenario.id, pricingData);
+
+      // Touch the rate-alert subscription's last_priced_at. Backfill from
+      // migration 053 guarantees a rate_alert row exists for every borrower
+      // scenario; defensively no-op if the lookup misses.
+      const rateAlert = await getRateAlertByScenarioId(existingScenario.id, scenarioOrgId);
+      if (rateAlert) {
+        await updateRateAlert(rateAlert.id, scenarioOrgId, {
+          last_priced_at: new Date(),
+        });
+      }
     }
 
     // Also update the lead record with latest scenario details
