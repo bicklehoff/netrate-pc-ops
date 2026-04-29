@@ -3,7 +3,7 @@
   "short_name": "NetRate",
   "description": "NetRate Mortgage MLO portal — pipeline, contacts, dialer, quotes.",
   "start_url": "/portal/mlo",
-  "scope": "/portal/mlo/",
+  "scope": "/portal/mlo",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#FFFFFF",
