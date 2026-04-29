@@ -1,4 +1,5 @@
-import Link from 'next/link'
+import Link from 'next/link';
+import { OG_IMAGES, TWITTER_IMAGES } from '@/lib/og';
 
 export const metadata = {
   title: 'Can Crypto Assets Qualify You for a Mortgage? | NetRate Mortgage',
@@ -10,11 +11,13 @@ export const metadata = {
     title: 'Can Crypto Assets Qualify You for a Mortgage?',
     description: 'Some mortgage programs now accept cryptocurrency as qualifying assets. Here\'s what counts, what doesn\'t, and how it works for conventional, government, and non-QM loans.',
     url: 'https://www.netratemortgage.com/crypto-mortgage',
+    images: OG_IMAGES,
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Can Crypto Assets Qualify You for a Mortgage?',
     description: 'Some mortgage programs now accept cryptocurrency as qualifying assets. Here\'s what counts, what doesn\'t, and how it works.',
+    images: TWITTER_IMAGES,
   },
   alternates: {
     canonical: 'https://www.netratemortgage.com/crypto-mortgage',

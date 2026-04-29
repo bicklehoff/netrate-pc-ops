@@ -1,4 +1,5 @@
-import Link from 'next/link'
+import Link from 'next/link';
+import { OG_IMAGES, TWITTER_IMAGES } from '@/lib/og';
 
 export const metadata = {
   title: 'California Housing Update: SB 79 Transit Housing + New Condo Rules | NetRate Mortgage',
@@ -10,11 +11,13 @@ export const metadata = {
     publishedTime: '2026-03-27T00:00:00Z',
     siteName: 'NetRate Mortgage',
     url: 'https://www.netratemortgage.com/california-housing-update',
+    images: OG_IMAGES,
   },
   twitter: {
     card: 'summary_large_image',
     title: 'California Housing Update: SB 79 Transit Housing + New Condo Rules',
     description: 'California is building more housing near transit and Fannie Mae just made condo financing easier. Here\'s what changed and what it means if you\'re buying or refinancing.',
+    images: TWITTER_IMAGES,
   },
   alternates: {
     canonical: 'https://www.netratemortgage.com/california-housing-update',

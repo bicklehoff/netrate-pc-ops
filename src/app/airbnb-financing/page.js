@@ -1,4 +1,5 @@
-import Link from 'next/link'
+import Link from 'next/link';
+import { OG_IMAGES, TWITTER_IMAGES } from '@/lib/og';
 
 export const metadata = {
   title: 'How to Finance an Airbnb or Short-Term Rental Property | NetRate Mortgage',
@@ -10,11 +11,13 @@ export const metadata = {
     title: 'How to Finance an Airbnb or Short-Term Rental Property',
     description: 'Yes, you can get a mortgage on a short-term rental property. DSCR loans qualify on rental income — no W-2s, no tax returns. Here\'s how it works.',
     url: 'https://www.netratemortgage.com/airbnb-financing',
+    images: OG_IMAGES,
   },
   twitter: {
     card: 'summary_large_image',
     title: 'How to Finance an Airbnb or Short-Term Rental Property',
     description: 'DSCR loans qualify on rental income — no W-2s, no tax returns. Here\'s how it works.',
+    images: TWITTER_IMAGES,
   },
   alternates: {
     canonical: 'https://www.netratemortgage.com/airbnb-financing',

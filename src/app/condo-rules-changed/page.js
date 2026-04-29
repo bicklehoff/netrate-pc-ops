@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { OG_IMAGES, TWITTER_IMAGES } from '@/lib/og';
 
 export const metadata = {
   title: 'New Condo Mortgage Rules: What Changed and Why It Matters | NetRate Mortgage',
@@ -10,11 +11,13 @@ export const metadata = {
     siteName: 'NetRate Mortgage',
     type: 'article',
     publishedTime: '2026-03-27T00:00:00Z',
+    images: OG_IMAGES,
   },
   twitter: {
     card: 'summary_large_image',
     title: 'New Condo Mortgage Rules: What Changed and Why It Matters',
     description: 'Fannie Mae just retired the investor concentration limit for condos. If your building was blocked from conventional financing, that rule is gone.',
+    images: TWITTER_IMAGES,
   },
   alternates: {
     canonical: 'https://www.netratemortgage.com/condo-rules-changed',

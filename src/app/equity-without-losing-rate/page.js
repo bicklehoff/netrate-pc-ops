@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { OG_IMAGES, TWITTER_IMAGES } from '@/lib/og';
 
 export const metadata = {
   title: 'Access Home Equity Without Refinancing Your Low Rate | NetRate Mortgage',
@@ -10,11 +11,13 @@ export const metadata = {
     siteName: 'NetRate Mortgage',
     type: 'article',
     publishedTime: '2026-03-27T00:00:00Z',
+    images: OG_IMAGES,
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Access Home Equity Without Refinancing Your Low Rate',
     description: 'A HELOC or second lien lets you tap your equity without touching your first mortgage.',
+    images: TWITTER_IMAGES,
   },
   alternates: {
     canonical: 'https://www.netratemortgage.com/equity-without-losing-rate',

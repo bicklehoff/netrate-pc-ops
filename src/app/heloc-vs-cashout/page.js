@@ -1,4 +1,5 @@
-import Link from 'next/link'
+import Link from 'next/link';
+import { OG_IMAGES, TWITTER_IMAGES } from '@/lib/og';
 
 export const metadata = {
   title: 'HELOC vs Cash-Out Refinance — Which Is Better for Accessing Equity? | NetRate Mortgage',
@@ -10,11 +11,13 @@ export const metadata = {
     publishedTime: '2026-03-27T00:00:00Z',
     siteName: 'NetRate Mortgage',
     url: 'https://www.netratemortgage.com/heloc-vs-cashout',
+    images: OG_IMAGES,
   },
   twitter: {
     card: 'summary_large_image',
     title: 'HELOC vs Cash-Out Refinance — Which Is Better for Accessing Equity?',
     description: 'Two ways to access your home equity. One keeps your current rate. One replaces it. Here\'s how to figure out which is right for your situation.',
+    images: TWITTER_IMAGES,
   },
   alternates: {
     canonical: 'https://www.netratemortgage.com/heloc-vs-cashout',

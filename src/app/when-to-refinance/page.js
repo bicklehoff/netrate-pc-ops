@@ -1,4 +1,5 @@
-import Link from 'next/link'
+import Link from 'next/link';
+import { OG_IMAGES, TWITTER_IMAGES } from '@/lib/og';
 
 export const metadata = {
   title: 'Should I Refinance? How to Know When It Makes Sense | NetRate Mortgage',
@@ -10,11 +11,13 @@ export const metadata = {
     title: 'Should I Refinance? How to Know When It Makes Sense',
     description: 'A refinance isn\'t always worth it. Here\'s how to figure out if the math works for your situation.',
     url: 'https://www.netratemortgage.com/when-to-refinance',
+    images: OG_IMAGES,
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Should I Refinance? How to Know When It Makes Sense',
     description: 'A refinance isn\'t always worth it. Here\'s how to figure out if the math works for your situation.',
+    images: TWITTER_IMAGES,
   },
   alternates: {
     canonical: 'https://www.netratemortgage.com/when-to-refinance',
