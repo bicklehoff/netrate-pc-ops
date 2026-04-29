@@ -24,7 +24,7 @@ export async function POST(req) {
   const ext = file.type.split('/')[1].replace('jpeg', 'jpg');
   const filename = `sms-media/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
 
-  const blob = await put(filename, file.stream(), {
+  const blob = await put(filename, file, {
     access: 'public',
     contentType: file.type,
   });
