@@ -7,10 +7,10 @@ export async function POST(req) {
   const { session, orgId, mloId } = await requireMloSession();
   if (!session) return unauthorizedResponse();
 
-  const { to, body, contactId } = await req.json();
+  const { to, body, contactId, mediaUrl } = await req.json();
 
-  if (!to || !body) {
-    return Response.json({ error: 'Missing "to" or "body"' }, { status: 400 });
+  if (!to || (!body && !mediaUrl)) {
+    return Response.json({ error: 'Missing "to" or message content' }, { status: 400 });
   }
 
   const normalizedTo = normalizePhone(to) || to;
@@ -22,11 +22,11 @@ export async function POST(req) {
     const staffRows = await sql`SELECT twilio_phone_number FROM staff WHERE id = ${mloId} LIMIT 1`;
     const fromNumber = staffRows[0]?.twilio_phone_number || process.env.TWILIO_PHONE_NUMBER;
 
-    const twilioResponse = await sendSms(normalizedTo, body, fromNumber);
+    const twilioResponse = await sendSms(normalizedTo, body || '', fromNumber, mediaUrl || null);
 
     const rows = await sql`
-      INSERT INTO sms_messages (organization_id, contact_id, mlo_id, direction, from_number, to_number, body, status, twilio_message_sid)
-      VALUES (${orgId}, ${contactId || null}, ${mloId}, 'outbound', ${fromNumber}, ${normalizedTo}, ${body}, ${twilioResponse.status || 'queued'}, ${twilioResponse.sid})
+      INSERT INTO sms_messages (organization_id, contact_id, mlo_id, direction, from_number, to_number, body, status, twilio_message_sid, media_url)
+      VALUES (${orgId}, ${contactId || null}, ${mloId}, 'outbound', ${fromNumber}, ${normalizedTo}, ${body || ''}, ${twilioResponse.status || 'queued'}, ${twilioResponse.sid}, ${mediaUrl || null})
       RETURNING *
     `;
 
