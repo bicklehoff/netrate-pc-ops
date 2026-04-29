@@ -38,11 +38,11 @@ export function FedPanelSection() {
     );
   }
 
-  if (!data?.fedEvents?.length) return null;
+  if (!data?.fedEvents?.length && !data?.nextMeeting) return null;
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm h-full overflow-hidden">
-      <FedPanel fedEvents={data.fedEvents} />
+      <FedPanel fedEvents={data.fedEvents} nextMeeting={data.nextMeeting} />
     </div>
   );
 }

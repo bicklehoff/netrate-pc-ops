@@ -74,8 +74,31 @@ function ProbBox({ label, pct, type, primary = false }) {
   );
 }
 
-export default function FedPanel({ fedEvents = [] }) {
-  if (!fedEvents.length) return null;
+function PendingPanel({ date }) {
+  const days = daysUntil(date + 'T00:00:00Z');
+  return (
+    <div>
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <div className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-0.5">Next FOMC Meeting</div>
+          <div className="text-slate-900 font-bold text-sm">{formatMeetingDate(date + 'T00:00:00Z')}</div>
+        </div>
+        {days && (
+          <div className="text-right">
+            <div className="text-xl font-black text-primary tabular-nums">{days}</div>
+            <div className="text-[9px] uppercase text-slate-400 font-bold">days</div>
+          </div>
+        )}
+      </div>
+      <div className="rounded-xl bg-slate-50 p-3 text-center">
+        <div className="text-xs text-slate-500">Prediction markets open closer to the meeting</div>
+      </div>
+    </div>
+  );
+}
+
+export default function FedPanel({ fedEvents = [], nextMeeting = null }) {
+  if (!fedEvents.length && !nextMeeting) return null;
 
   const [next] = fedEvents;
 
@@ -93,7 +116,7 @@ export default function FedPanel({ fedEvents = [] }) {
         </a>
       </div>
 
-      <NextMeetingPanel event={next} />
+      {next ? <NextMeetingPanel event={next} /> : <PendingPanel date={nextMeeting.date} />}
     </div>
   );
 }
