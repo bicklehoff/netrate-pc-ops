@@ -15,8 +15,14 @@
  * module = importing it here and adding to REGISTRY + CURRENT_VERSIONS.
  */
 
+import costOfWaitingV1 from './cost-of-waiting/v1/index.js';
+
 /** @type {Map<string, Map<number, import('./types.js').ModuleDef>>} */
-export const REGISTRY = new Map();
+export const REGISTRY = new Map([
+  ['cost-of-waiting', new Map([
+    [1, costOfWaitingV1],
+  ])],
+]);
 
 /**
  * The "current" version of each module. The MLO picker and standalone
@@ -25,7 +31,9 @@ export const REGISTRY = new Map();
  *
  * @type {Record<string, number>}
  */
-export const CURRENT_VERSIONS = {};
+export const CURRENT_VERSIONS = {
+  'cost-of-waiting': 1,
+};
 
 /**
  * Look up a specific version of a module. Returns null if either the
