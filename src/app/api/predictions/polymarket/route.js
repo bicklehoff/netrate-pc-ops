@@ -123,14 +123,18 @@ async function fetchEvents() {
       }
     }
 
-    // Sort Fed events by date (next meeting first)
-    fedEvents.sort((a, b) => {
+    // Drop resolved markets (Polymarket keeps them active for hours after settlement)
+    const now = new Date();
+    const activeFedEvents = fedEvents.filter(e => !e.endDate || new Date(e.endDate) > now);
+
+    // Sort by date (next meeting first)
+    activeFedEvents.sort((a, b) => {
       if (!a.endDate) return 1;
       if (!b.endDate) return -1;
       return new Date(a.endDate) - new Date(b.endDate);
     });
 
-    return { fedEvents, otherMarkets: otherEvents.slice(0, 6) };
+    return { fedEvents: activeFedEvents, otherMarkets: otherEvents.slice(0, 6) };
   } catch (error) {
     console.error('Polymarket fetch error:', error.message, error.stack?.split('\n').slice(0,3).join(' '));
     return null;
