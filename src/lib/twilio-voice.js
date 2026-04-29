@@ -106,7 +106,7 @@ function xmlAttrEscape(s) {
     .replace(/'/g, '&apos;');
 }
 
-export function buildIncomingTwiml(clientIdentity, callerName, fallbackNumber, contactId) {
+export function buildIncomingTwiml(clientIdentity, callerName, fallbackNumber, contactId, greetingUrl) {
   // The url= on <Number> fires /api/dialer/whisper when the cell leg answers,
   // BEFORE the caller is bridged. Whisper plays privately to the MLO so they
   // hear "NetRate Mortgage call from {name}" before connecting to the caller.
@@ -130,8 +130,10 @@ export function buildIncomingTwiml(clientIdentity, callerName, fallbackNumber, c
     </Client>
     ${fallbackNumber ? `<Number url="/api/dialer/whisper">${fallbackNumber}</Number>` : ''}
   </Dial>
-  <Say>Sorry, no one is available to take your call. Please leave a message after the beep.</Say>
-  <Record maxLength="120" transcribe="true" action="/api/dialer/voicemail" />
+  ${greetingUrl
+    ? `<Play>${greetingUrl}</Play>`
+    : `<Say voice="alice">You've reached NetRate Mortgage. We're unavailable right now. Please leave your name, number, and a brief message and we'll get back to you shortly.</Say>`}
+  <Record maxLength="120" transcribe="true" transcribeCallback="/api/dialer/voicemail/transcription" action="/api/dialer/voicemail" />
 </Response>`;
 }
 

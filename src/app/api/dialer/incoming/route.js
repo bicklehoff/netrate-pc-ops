@@ -36,18 +36,20 @@ export async function POST(req) {
   // staff member if the number isn't mapped (shouldn't happen in prod).
   let targetIdentity = 'mlo-default';
   let fallbackNumber = null;
+  let greetingUrl = null;
   let mloId = null;
   try {
     let mlos = normalizedTo
-      ? await sql`SELECT id, phone FROM staff WHERE twilio_phone_number = ${normalizedTo} AND is_active = true LIMIT 1`
+      ? await sql`SELECT id, phone, voicemail_greeting_url FROM staff WHERE twilio_phone_number = ${normalizedTo} AND is_active = true LIMIT 1`
       : [];
     if (!mlos.length) {
-      mlos = await sql`SELECT id, phone FROM staff WHERE is_active = true ORDER BY created_at LIMIT 1`;
+      mlos = await sql`SELECT id, phone, voicemail_greeting_url FROM staff WHERE is_active = true ORDER BY created_at LIMIT 1`;
     }
     if (mlos.length > 0) {
       mloId = mlos[0].id;
       targetIdentity = `mlo-${mloId}`;
       fallbackNumber = mlos[0].phone || null;
+      greetingUrl = mlos[0].voicemail_greeting_url || null;
 
       // ─── Self-cell short-circuit ────────────────────────────
       // If the inbound From is the MLO's own cell, this is a forwarding
@@ -106,6 +108,6 @@ export async function POST(req) {
     await sendPushToStaff(mloId, pushPayload);
   }
 
-  const twiml = buildIncomingTwiml(targetIdentity, callerName, fallbackNumber, contactId);
+  const twiml = buildIncomingTwiml(targetIdentity, callerName, fallbackNumber, contactId, greetingUrl);
   return new Response(twiml, { headers: { 'Content-Type': 'text/xml' } });
 }
