@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import sql from '@/lib/db';
+import { OG_IMAGES } from '@/lib/og';
 
 export const metadata = {
   title: 'Mortgage Resources — Guides, Explainers, and Updates | NetRate Mortgage',
@@ -10,6 +11,7 @@ export const metadata = {
     url: 'https://www.netratemortgage.com/resources',
     siteName: 'NetRate Mortgage',
     type: 'website',
+    images: OG_IMAGES,
   },
   alternates: {
     canonical: 'https://www.netratemortgage.com/resources',

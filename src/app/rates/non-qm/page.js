@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { OG_IMAGES, TWITTER_IMAGES } from '@/lib/og';
 
 export const metadata = {
   title: 'Non-QM Mortgage Rates — DSCR, Bank Statement, Foreign National | NetRate Mortgage',
@@ -9,11 +10,13 @@ export const metadata = {
     type: 'website',
     siteName: 'NetRate Mortgage',
     url: 'https://www.netratemortgage.com/rates/non-qm',
+    images: OG_IMAGES,
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Non-QM Mortgage Rates — DSCR, Bank Statement, Foreign National | NetRate Mortgage',
     description: 'Non-QM mortgage rates for investors, self-employed borrowers, and foreign nationals. DSCR loans, bank statement programs, ITIN, and asset depletion. Updated daily.',
+    images: TWITTER_IMAGES,
   },
   alternates: {
     canonical: 'https://www.netratemortgage.com/rates/non-qm',

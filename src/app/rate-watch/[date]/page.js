@@ -1,6 +1,7 @@
 import { neon } from '@neondatabase/serverless';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import { OG_IMAGES, TWITTER_IMAGES } from '@/lib/og';
 
 export const revalidate = 3600; // ISR: 1 hour
 
@@ -62,11 +63,13 @@ export async function generateMetadata({ params }) {
       type: 'article',
       url: pageUrl,
       siteName: 'NetRate Mortgage',
+      images: OG_IMAGES,
     },
     twitter: {
       card: 'summary_large_image',
       title: commentary.headline,
       description: commentary.commentary?.substring(0, 160),
+      images: TWITTER_IMAGES,
     },
   };
 }
