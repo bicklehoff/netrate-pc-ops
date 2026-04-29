@@ -16,7 +16,7 @@ import {
   replaceScenarioRates,
   replaceScenarioFeeItems,
 } from '@/lib/scenarios/db';
-import { scenarioToQuoteShape } from '@/lib/scenarios/transform';
+import { scenarioToQuoteShape } from '@/lib/quotes';
 
 export async function GET(request, { params }) {
   try {

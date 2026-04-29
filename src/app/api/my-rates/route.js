@@ -7,7 +7,7 @@
 
 import { NextResponse } from 'next/server';
 import sql from '@/lib/db';
-import { scenarioToSavedShape } from '@/lib/scenarios/transform';
+import { scenarioToSavedShape } from '@/lib/rate-alerts';
 import { apiError } from '@/lib/api/safe-error';
 import { rateLimit } from '@/lib/api/rate-limit';
 
