@@ -19,7 +19,7 @@ import { put } from '@vercel/blob';
 import crypto from 'crypto';
 import { requireMloSession, unauthorizedResponse } from '@/lib/require-mlo-session';
 import { getScenarioById, updateScenario } from '@/lib/scenarios/db';
-import { scenarioToQuoteShape } from '@/lib/scenarios/transform';
+import { scenarioToQuoteShape } from '@/lib/quotes';
 
 export const maxDuration = 30;
 

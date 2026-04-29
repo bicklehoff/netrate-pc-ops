@@ -18,7 +18,8 @@ import { buildFeeBreakdown } from '@/lib/quotes/fee-builder';
 import { calculateMonthlyPI } from '@/lib/mortgage-math';
 import { requireMloSession, unauthorizedResponse } from '@/lib/require-mlo-session';
 import { createScenario, listScenarios } from '@/lib/scenarios/db';
-import { scenarioToQuoteShape, deriveIdentity } from '@/lib/scenarios/transform';
+import { scenarioToQuoteShape } from '@/lib/quotes';
+import { deriveIdentity } from '@/lib/scenarios';
 
 export async function GET(request) {
   try {
