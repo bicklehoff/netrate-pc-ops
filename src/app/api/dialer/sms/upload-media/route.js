@@ -21,13 +21,19 @@ export async function POST(req) {
     return Response.json({ error: 'File exceeds 5 MB limit' }, { status: 400 });
   }
 
-  const ext = file.type.split('/')[1].replace('jpeg', 'jpg');
-  const filename = `sms-media/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  try {
+    const ext = file.type.split('/')[1].replace('jpeg', 'jpg');
+    const filename = `sms-media/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const buffer = Buffer.from(await file.arrayBuffer());
 
-  const blob = await put(filename, file, {
-    access: 'public',
-    contentType: file.type,
-  });
+    const blob = await put(filename, buffer, {
+      access: 'public',
+      contentType: file.type,
+    });
 
-  return Response.json({ url: blob.url, contentType: file.type });
+    return Response.json({ url: blob.url, contentType: file.type });
+  } catch (e) {
+    console.error('[upload-media] Blob put failed:', e?.message || e);
+    return Response.json({ error: e?.message || 'Upload failed' }, { status: 500 });
+  }
 }
