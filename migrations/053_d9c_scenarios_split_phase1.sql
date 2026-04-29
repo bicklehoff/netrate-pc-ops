@@ -13,11 +13,14 @@
 -- Phase 1 is ADDITIVE. No columns dropped from `scenarios`. Soak window
 -- mandatory before Phase 4 cleanup (after Phase 2/3 consumer rewrites land).
 --
--- Idempotency:
---   - All CREATE statements use IF NOT EXISTS where supported.
---   - Backfills are guarded by NOT EXISTS / row count checks so re-running
---     against an already-migrated DB is safe.
---   - Single transaction wrapping; partial failure rolls back cleanly.
+-- Idempotency strategy (because Neon's HTTP driver runs each statement as a
+-- separate HTTP request — no session-level transaction across calls):
+--   - All CREATE statements use IF NOT EXISTS.
+--   - Backfills are guarded by NOT EXISTS so re-running is safe.
+--   - ALTER TABLE ADD COLUMN uses IF NOT EXISTS.
+--   - The BEGIN; ... COMMIT; framing here is honored if the file is applied
+--     via psql or another tool that maintains a single session. The runner
+--     filters them out and relies on idempotency for safety on re-run.
 --
 -- The runner (scripts/_run-migration-053.mjs) executes pre-flights before
 -- applying this file, and verification queries after. SQL alone is not

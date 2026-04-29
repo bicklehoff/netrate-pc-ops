@@ -192,15 +192,19 @@ async function applyMigration() {
   const sqlPath = path.join(__dirname, '..', 'migrations', '053_d9c_scenarios_split_phase1.sql');
   const sqlText = fs.readFileSync(sqlPath, 'utf8');
 
-  // Split on semicolons that aren't inside dollar-quoted strings or comments.
-  // Keep this simple — none of our statements use $$ blocks.
+  // Split on semicolons. Strip comment-only lines first. Filter BEGIN/COMMIT/ROLLBACK
+  // because Neon's HTTP driver runs each `sql.query()` call as a separate request —
+  // session-level transactions don't span calls. (Per DEV-PLAYBOOK §1.4 and existing
+  // migration runners 047/048.) The migration's transactional guarantees come from
+  // idempotency guards (IF NOT EXISTS, NOT EXISTS in backfill SELECTs) plus careful
+  // statement ordering — not from BEGIN/COMMIT wrappers.
   const statements = sqlText
     .split('\n')
     .filter((line) => !line.trim().startsWith('--'))
     .join('\n')
     .split(/;\s*\n/)
     .map((s) => s.trim())
-    .filter((s) => s && s !== 'BEGIN' && s !== 'COMMIT');
+    .filter((s) => s && !/^\s*(BEGIN|COMMIT|ROLLBACK)\s*$/i.test(s));
 
   console.log(`  Parsed ${statements.length} statements from ${path.basename(sqlPath)}`);
 
@@ -209,22 +213,22 @@ async function applyMigration() {
     return;
   }
 
-  // Execute as a single tx; any failure rolls all changes back.
-  await sql`BEGIN`;
-  try {
-    for (let i = 0; i < statements.length; i++) {
-      const stmt = statements[i];
-      const preview = stmt.split('\n')[0].slice(0, 80);
-      process.stdout.write(`  [${String(i + 1).padStart(2, '0')}/${statements.length}] ${preview}... `);
+  // Apply each statement individually. On failure, throw — partial state will need
+  // manual review (the namespace pre-flight catches the most common restartability
+  // issues; idempotency guards in the SQL handle the rest).
+  for (let i = 0; i < statements.length; i++) {
+    const stmt = statements[i];
+    const preview = stmt.split('\n').find((l) => l.trim())?.slice(0, 80) || '(empty)';
+    process.stdout.write(`  [${String(i + 1).padStart(2, '0')}/${statements.length}] ${preview}... `);
+    try {
       await sql.query(stmt);
       process.stdout.write(`ok\n`);
+    } catch (e) {
+      process.stdout.write(`FAIL\n`);
+      fail('Apply', `Statement ${i + 1} failed: ${e.message}\n\nStatement was:\n${stmt}`);
     }
-    await sql`COMMIT`;
-    console.log(`  ✓ Migration applied`);
-  } catch (e) {
-    try { await sql`ROLLBACK`; } catch { /* already rolled back */ }
-    fail('Apply', `Migration failed; rolled back. Error: ${e.message}`);
   }
+  console.log(`  ✓ Migration applied (${statements.length} statements)`);
 }
 
 // ─── Verify ──────────────────────────────────────────────────────────

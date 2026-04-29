@@ -347,9 +347,18 @@ Per the namespace lessons from Phase 0 (CODING-PRINCIPLES.md "Inventory must inc
 4. **Reverse-caller paranoia:** before run, the runner prints a count of distinct `mlo_id`/`contact_id`/`deal_id` values referenced — anything that resolves to a non-existent FK target during INSERT will fail loudly (no silent NULL fallback).
 5. **Empty-target check:** `rate_alerts`, `quotes` row counts both 0 before INSERT (so the migration is restartable from a clean state, not from a partial run).
 
-### 7.2 Transactional wrapping
+### 7.2 Transactional behavior (clarified)
 
-All steps run inside a single `BEGIN; ... COMMIT;` block where Postgres allows. The two `ALTER TABLE` calls on `scenario_alert_queue` (ADD COLUMN, then SET NOT NULL after backfill) are inside the same transaction — if any verification query fails, the whole migration rolls back.
+The SQL file frames its statements with `BEGIN; ... COMMIT;`. Neon's HTTP driver, however, runs each `sql.query()` call as an independent HTTP request — there is no session-level transaction spanning calls. The runner filters BEGIN/COMMIT/ROLLBACK out of the parsed statement list and applies each statement individually (matching the established pattern in `_run-migration-047.mjs` / `_run-migration-048.mjs`).
+
+**Implication:** if a statement mid-way through fails, prior statements are NOT rolled back. The migration's safety comes from:
+- Idempotency: every `CREATE TABLE` is `IF NOT EXISTS`, every `ALTER TABLE ADD COLUMN` is `IF NOT EXISTS`, every backfill INSERT has a `NOT EXISTS` guard.
+- Pre-flight assertions catching the common restartability issues before any write.
+- The Neon-branch rehearsal (Q5) catches statement-ordering bugs against real data before prod.
+
+**If transactional rollback becomes critical** (it isn't for this migration — all statements are forward-only and idempotent), the alternative is a single `sql.query()` call carrying the full SQL file as one string. That requires wrapping all the verification logic differently and is not worth the added complexity for an additive Phase 1 migration.
+
+The `BEGIN; ... COMMIT;` framing in the SQL file is preserved so that if it's ever applied via `psql` (which DOES maintain session-level transactions), the framing is honored — defensive in depth.
 
 ### 7.3 Post-migration verification (in runner, exit non-zero on any failure)
 
