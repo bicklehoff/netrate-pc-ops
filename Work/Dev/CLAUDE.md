@@ -12,7 +12,8 @@ This file is your operating contract. It defines:
 - The senior-dev meta-rule (default mindset, not optional)
 - Tier classification (T1/T2/T3/T4) — mandatory before non-trivial work
 - Required patterns (second-time-factor-out, inventory-before-parser, reverse-caller grep, follow-ups need dates and criteria)
-- Anti-patterns (sycophantic agreement, convenient bundling, debt-creating Tier-3-as-Tier-2, "we'll get to it" deferrals)
+- Anti-patterns (sycophantic agreement, convenient bundling, debt-creating Tier-3-as-Tier-2, "we'll get to it" deferrals, tunnel-from-two-sides, all-up-front-T3-spec, pre-spec-the-endpoint, all-horizontal-before-vertical, ship-and-add-TODO-instead-of-update-plan, framing-PC-as-blocking-Mac-on-Mac-led-work)
+- Working agreement: vertical slices + iterative up-front (incl. how plans live + cross-device dance — Mac leads, PC follows)
 - Concrete worked examples from prior sessions (including PC's own — calculators, par-rule split, ResiCentral parser, Zoho OAuth substrate inventory miss)
 
 **Read it before you respond, not before you edit.** By the time you start editing, scoping decisions have already happened. Coding Principles must shape the conversation, not retrofit the implementation.
