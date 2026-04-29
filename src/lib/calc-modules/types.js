@@ -22,7 +22,12 @@
  * @typedef {Object} ModuleViews
  * @property {React.ComponentType<any>} standalone - Full-page layout for /tools/<id> routes.
  * @property {React.ComponentType<any>} embedded   - Compact card for /portal/quote/[id]. Pure presentational; consumes frozen result.
- * @property {React.ComponentType<any>} pdf        - @react-pdf/renderer component for PDF export. Pure presentational.
+ * @property {() => Promise<React.ComponentType<any>>} pdf
+ *   Lazy thunk. Returns a promise resolving to the PDF component.
+ *   PDFViews import @react-pdf/renderer (~250KB) — keeping the import
+ *   lazy keeps that dependency out of every client bundle that uses
+ *   the registry (e.g., /tools/<id> standalone pages). The send-quote
+ *   handler awaits this when generating a PDF deliverable.
  */
 
 /**

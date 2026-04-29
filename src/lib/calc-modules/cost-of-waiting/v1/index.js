@@ -13,7 +13,6 @@ import { compute } from './compute.js';
 import { schema } from './schema.js';
 import StandaloneView from './StandaloneView.js';
 import EmbeddedView from './EmbeddedView.js';
-import PDFView from './PDFView.js';
 
 /**
  * Default export rather than `export const module` because Next.js
@@ -31,7 +30,9 @@ const definition = {
   views: {
     standalone: StandaloneView,
     embedded: EmbeddedView,
-    pdf: PDFView,
+    // Lazy thunk — keeps @react-pdf/renderer out of every client bundle
+    // that imports the registry. Send handler awaits this when needed.
+    pdf: () => import('./PDFView.js').then((m) => m.default),
   },
   capabilities: {
     needsRates: false,

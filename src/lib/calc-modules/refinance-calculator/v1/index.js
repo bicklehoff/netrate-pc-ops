@@ -1,11 +1,9 @@
 /**
- * purchase-calculator v1 — module def.
+ * refinance-calculator v1 — module def.
  *
- * Pure local archetype despite the original migration plan calling
- * this "first rate-pulling". The actual code accepts the rate as user
- * input and uses the homepage parRate cache only as an SSR seed; no
- * /api/pricing fetch happens at compute time. needsRates: false. The
- * first true rate-pulling migration is refinance-calculator (Phase 5).
+ * Rate-pulling archetype — first module to exercise services.fetchRates.
+ * compute() awaits the injected service, builds the rate ladder, and
+ * computes 4 strategy outcomes (noCost / zeroOop / lowest / custom).
  *
  * Default export — see Phase 2 PR #284 for the ESLint rationale.
  */
@@ -17,10 +15,10 @@ import EmbeddedView from './EmbeddedView.js';
 
 /** @type {import('../../types.js').ModuleDef} */
 const definition = {
-  id: 'purchase-calculator',
+  id: 'refinance-calculator',
   version: 1,
-  label: 'Purchase Payment Breakdown',
-  description: 'Monthly PITI(A) payment, cash to close, and DTI for a purchase scenario.',
+  label: 'Refinance Calculator',
+  description: '4-strategy refinance breakdown (no-cost, zero-OOP, lowest rate, custom) priced against today\'s wholesale rates.',
   inputSchema: schema,
   compute,
   views: {
@@ -30,10 +28,10 @@ const definition = {
     pdf: () => import('./PDFView.js').then((m) => m.default),
   },
   capabilities: {
-    needsRates: false,
+    needsRates: true,
     needsToday: false,
     attachable: true,
-    relevantPurposes: ['purchase'],
+    relevantPurposes: ['refinance', 'cashout'],
     relevantLoanTypes: [],
   },
 };

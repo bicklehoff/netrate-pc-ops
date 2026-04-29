@@ -18,6 +18,7 @@
 import costOfWaitingV1 from './cost-of-waiting/v1/index.js';
 import refiAnalyzerV1 from './refi-analyzer/v1/index.js';
 import purchaseCalculatorV1 from './purchase-calculator/v1/index.js';
+import refinanceCalculatorV1 from './refinance-calculator/v1/index.js';
 
 /** @type {Map<string, Map<number, import('./types.js').ModuleDef>>} */
 export const REGISTRY = new Map([
@@ -29,6 +30,9 @@ export const REGISTRY = new Map([
   ])],
   ['purchase-calculator', new Map([
     [1, purchaseCalculatorV1],
+  ])],
+  ['refinance-calculator', new Map([
+    [1, refinanceCalculatorV1],
   ])],
 ]);
 
@@ -43,6 +47,7 @@ export const CURRENT_VERSIONS = {
   'cost-of-waiting': 1,
   'refi-analyzer': 1,
   'purchase-calculator': 1,
+  'refinance-calculator': 1,
 };
 
 /**
