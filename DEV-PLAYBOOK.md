@@ -34,20 +34,40 @@ Rehearsal is **optional** (skip allowed) when the migration is purely additive a
 The principle: **rehearse when the blast radius includes live rows.** Don't cargo-cult the protocol on migrations that are structurally incapable of destroying anything.
 
 ```bash
-# 1. Create a branch (Neon console or CLI — 30 seconds)
-neon branches create --name migration-NNN-test
+# 1. Create a rehearsal branch (uses scripts/_neon-branch.mjs — see below).
+#    Stdout = connection URI. Stderr = human-readable summary.
+URI=$(node scripts/_neon-branch.mjs create rehearsal-NNN-2026-MM-DD)
 
-# 2. Run against the branch
-PC_DATABASE_URL=<branch-connection-string> node scripts/_run-migration-NNN.mjs
+# 2. Run the migration against the rehearsal branch
+node scripts/_run-migration-NNN.mjs --connection-string="$URI"
 
-# 3. Verify the post-run distribution matches expectations
+# 3. (Optional) Re-run to verify idempotency — should be a no-op
+node scripts/_run-migration-NNN.mjs --connection-string="$URI"
 
-# 4. Delete the branch, run against prod
-neon branches delete migration-NNN-test
+# 4. Delete the rehearsal branch (refuses to delete the default branch)
+node scripts/_neon-branch.mjs delete rehearsal-NNN-2026-MM-DD
+
+# 5. Run against prod
 node scripts/_run-migration-NNN.mjs
 ```
 
-The runner already accepts any `DATABASE_URL`, so no special mode needed — just point it at the branch URL. The branch is a full copy of prod data at that instant.
+The runner already accepts any connection string via `--connection-string=<url>` (or `PC_DATABASE_URL` env var), so no special mode needed.
+
+### Branch helper: `scripts/_neon-branch.mjs`
+
+Reusable CLI for branch lifecycle. Reads `NEON_API_KEY` and `NEON_PROJECT_ID` from `.env`. The PC site project is `aged-dew-33863780` (neon-purple-xylophone, hosting `netrate_pc`). Other projects in the org: `delicate-cake-43404873` (netrate-tracker / TrackerPortal+MCP), `aged-moon-72816287` (birdy device).
+
+```bash
+node scripts/_neon-branch.mjs create <name>     # creates from default; prints URI to stdout
+node scripts/_neon-branch.mjs list              # lists all branches in NEON_PROJECT_ID
+node scripts/_neon-branch.mjs uri <id-or-name>  # gets URI for an existing branch
+node scripts/_neon-branch.mjs delete <id-or-name>  # refuses default + protected branches
+node scripts/_neon-branch.mjs list-projects     # lists all 3 PC org projects
+```
+
+The Neon account is Vercel-managed (org `org-muddy-meadow-62766825`), but personal API keys still work for branch operations against existing projects. Project creation does NOT work through the Neon API for Vercel-managed orgs — those go through Vercel.
+
+Reference rehearsal log: `Work/Dev/audits/D9C-PR1-PHASE1-REHEARSAL-LOG-2026-04-29.md`.
 
 **Why this matters:** Migration 017 (loan_term months→years) had a statement ordering bug — the `/12` pass ran before the outlier null, so `WHERE loan_term = 30` matched all 659 just-converted 30-year rows instead of the one Rocket Mortgage outlier. 659 rows were nulled and had to be restored manually from Neon PITR. A branch run would have shown the wrong post-run distribution immediately.
 
