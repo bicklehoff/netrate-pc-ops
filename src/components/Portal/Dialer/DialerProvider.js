@@ -107,6 +107,7 @@ export default function DialerProvider({ children, mode = 'primary' }) {
 
   const deviceRef = useRef(null);
   const timerRef = useRef(null);
+  const tokenRefreshRef = useRef(null);
   const identityRef = useRef(null);
   const smsLastSeenAtRef = useRef(null); // ISO ts of newest inbound seen so far
   const smsPopupTimerRef = useRef(null);
@@ -196,8 +197,21 @@ export default function DialerProvider({ children, mode = 'primary' }) {
           if (mounted) setDeviceReady(false);
         });
 
-        device.on('error', (err) => {
+        device.on('error', async (err) => {
           console.error('[Dialer] Twilio Device error:', err);
+          // 31205 = AccessTokenExpired — fetch a fresh token and re-register
+          if (err.code === 31205) {
+            try {
+              const r = await fetch('/api/dialer/token', { method: 'POST' });
+              const { token: newToken } = await r.json();
+              device.updateToken(newToken);
+              await device.register();
+            } catch (refreshErr) {
+              console.error('[Dialer] Token re-register failed:', refreshErr);
+              if (mounted) setError('Session expired — please reload the page.');
+            }
+            return;
+          }
           if (mounted) setError(err.message);
         });
 
@@ -333,6 +347,19 @@ export default function DialerProvider({ children, mode = 'primary' }) {
 
         await device.register();
         deviceRef.current = device;
+
+        // Periodic refresh every 45 min — keeps token alive even when
+        // tokenWillExpire is missed (PWA backgrounded, screen off, etc.)
+        tokenRefreshRef.current = setInterval(async () => {
+          if (!deviceRef.current) return;
+          try {
+            const r = await fetch('/api/dialer/token', { method: 'POST' });
+            const { token: newToken } = await r.json();
+            deviceRef.current.updateToken(newToken);
+          } catch (e) {
+            console.error('[Dialer] Periodic token refresh failed:', e);
+          }
+        }, 45 * 60 * 1000);
       } catch (e) {
         console.error('Device init failed:', e);
         if (mounted) setError(e.message);
@@ -344,6 +371,10 @@ export default function DialerProvider({ children, mode = 'primary' }) {
     return () => {
       mounted = false;
       stopTimer();
+      if (tokenRefreshRef.current) {
+        clearInterval(tokenRefreshRef.current);
+        tokenRefreshRef.current = null;
+      }
       if (deviceRef.current) {
         deviceRef.current.destroy();
         deviceRef.current = null;
