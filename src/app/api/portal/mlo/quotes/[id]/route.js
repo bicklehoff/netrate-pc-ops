@@ -16,7 +16,7 @@ import {
   replaceScenarioRates,
   replaceScenarioFeeItems,
 } from '@/lib/scenarios/db';
-import { scenarioToQuoteShape } from '@/lib/quotes';
+import { getQuoteByScenarioId, scenarioToQuoteShape } from '@/lib/quotes';
 
 export async function GET(request, { params }) {
   try {
@@ -33,7 +33,8 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
-    return NextResponse.json({ quote: scenarioToQuoteShape(scenario) });
+    const quote = await getQuoteByScenarioId(id, orgId);
+    return NextResponse.json({ quote: scenarioToQuoteShape(scenario, quote) });
   } catch (err) {
     console.error('Quote GET error:', err);
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
@@ -124,7 +125,8 @@ export async function PATCH(request, { params }) {
 
     // Reload and return
     const updated = await getScenarioById(id, orgId);
-    return NextResponse.json({ quote: scenarioToQuoteShape(updated) });
+    const updatedQuote = await getQuoteByScenarioId(id, orgId);
+    return NextResponse.json({ quote: scenarioToQuoteShape(updated, updatedQuote) });
   } catch (err) {
     console.error('Quote PATCH error:', err);
     return NextResponse.json({ error: 'Internal error', detail: err.message }, { status: 500 });

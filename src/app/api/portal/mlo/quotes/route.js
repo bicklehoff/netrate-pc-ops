@@ -18,7 +18,7 @@ import { buildFeeBreakdown } from '@/lib/quotes/fee-builder';
 import { calculateMonthlyPI } from '@/lib/mortgage-math';
 import { requireMloSession, unauthorizedResponse } from '@/lib/require-mlo-session';
 import { createScenario, listScenarios } from '@/lib/scenarios/db';
-import { scenarioToQuoteShape } from '@/lib/quotes';
+import { createQuote, scenarioToQuoteShape } from '@/lib/quotes';
 import { deriveIdentity } from '@/lib/scenarios';
 
 export async function GET(request) {
@@ -46,29 +46,49 @@ export async function GET(request) {
       limit,
     });
 
+    // Per UAD AD-10a (D9c Phase 3b): sent_at, viewed_at, version live on
+    // quotes. Fetch the latest quote per scenario in a single query and
+    // merge into the list shape. Older quotes still backfilled with these
+    // fields on scenarios.* survive via the COALESCE fallback.
+    const scenarioIds = scenarios.map((s) => s.id);
+    const quotesById = new Map();
+    if (scenarioIds.length > 0) {
+      const quoteRows = await sql`
+        SELECT DISTINCT ON (scenario_id) scenario_id, sent_at, viewed_at, version, status
+        FROM quotes
+        WHERE scenario_id = ANY(${scenarioIds})
+          AND organization_id = ${orgId}
+        ORDER BY scenario_id, created_at DESC
+      `;
+      for (const q of quoteRows) {
+        quotesById.set(q.scenario_id, q);
+      }
+    }
+
     // The list shape keeps rates[] inline (from the DAL subquery). For
     // backward compatibility, expose old-shape fields alongside. Identity
     // comes from deriveIdentity (contact → lead → legacy).
     const quotes = scenarios.map((s) => {
       const { contact_name, contact_email } = deriveIdentity(s);
+      const q = quotesById.get(s.id);
       return {
-      id: s.id,
-      contact_name,
-      contact_email,
-      purpose: s.loan_purpose,
-      loan_amount: s.loan_amount,
-      loan_type: s.loan_type,
-      state: s.state,
-      fico: s.fico,
-      ltv: s.ltv,
-      term: s.term,
-      status: s.status,
-      monthly_payment: s.monthly_payment,
-      version: s.version,
-      sent_at: s.sent_at,
-      viewed_at: s.viewed_at,
-      created_at: s.created_at,
-      updated_at: s.updated_at,
+        id: s.id,
+        contact_name,
+        contact_email,
+        purpose: s.loan_purpose,
+        loan_amount: s.loan_amount,
+        loan_type: s.loan_type,
+        state: s.state,
+        fico: s.fico,
+        ltv: s.ltv,
+        term: s.term,
+        status: q?.status ?? s.status,
+        monthly_payment: s.monthly_payment,
+        version: q?.version ?? s.version,
+        sent_at: q?.sent_at ?? s.sent_at,
+        viewed_at: q?.viewed_at ?? s.viewed_at,
+        created_at: s.created_at,
+        updated_at: s.updated_at,
       };
     });
 
@@ -301,7 +321,8 @@ export async function POST(request) {
         monthly_tax: monthlyTax || null,
         monthly_insurance: monthlyInsurance || null,
         monthly_mip: monthlyMip || null,
-        version: 1,
+        // Per UAD AD-10a (D9c Phase 3b, 2026-04-30): version lives on quotes
+        // now. createScenario no longer carries it.
         effective_date: pricing.effectiveDate ? new Date(pricing.effectiveDate) : null,
         loan_classification: pricing.loanClassification || null,
         pricing_result_count: pricing.resultCount || null,
@@ -310,8 +331,19 @@ export async function POST(request) {
       fees,
     );
 
+    // Create the draft quote row alongside the scenario. The quote carries
+    // MLO-deliverable lifecycle (status, share_token, sent_at, viewed_at,
+    // pdf_url, expires_at, attached_modules, version, parent_quote_id) per
+    // UAD AD-10a + AD-12a.
+    const quote = await createQuote({
+      scenarioId: scenario.id,
+      organizationId: orgId,
+      mloId,
+      contactId: body.contactId || null,
+    });
+
     return NextResponse.json({
-      quote: scenarioToQuoteShape(scenario),
+      quote: scenarioToQuoteShape(scenario, quote),
       pricing: {
         effectiveDate: pricing.effectiveDate,
         loanClassification: pricing.loanClassification,

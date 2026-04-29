@@ -41,7 +41,11 @@ export function scenarioToQuoteShape(scenario, quote = null) {
   const q = quote || scenario;
 
   return {
-    id: quote?.id || scenario.id,
+    // The API id remains the scenario id even when a quote row is present.
+    // The quote.id is an internal lifecycle handle; routes (URL params,
+    // email magic links, blob paths) all key off scenario.id. Phase 3b
+    // 2-arg callers and Phase 2 1-arg callers see the same id.
+    id: scenario.id,
     organization_id: scenario.organization_id,
     mlo_id: scenario.mlo_id,
     contact_id: scenario.contact_id,
