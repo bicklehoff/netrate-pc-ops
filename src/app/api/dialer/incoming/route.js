@@ -49,15 +49,37 @@ export async function POST(req) {
       targetIdentity = `mlo-${mloId}`;
       fallbackNumber = mlos[0].phone || null;
 
-      // Self-call optimization: when an MLO calls their own Twilio number from
-      // their own cell (e.g. test calls), the parallel-dial cell leg can't
-      // ring because the line is busy with the outbound call. T-Mobile sends
-      // it straight to voicemail in ~1s, which Twilio considers an "answer"
-      // and uses to cancel the parallel browser leg before the MLO can click
-      // Accept. Skipping the cell leg in that case lets the browser leg ring
-      // unimpeded for self-tests. No effect on real customer calls.
+      // ─── Self-cell short-circuit ────────────────────────────
+      // If the inbound From is the MLO's own cell, this is a forwarding
+      // loop — the MLO dialed their cell from the dialer, the cell
+      // carrier forwarded the unanswered ring back to their Twilio DID,
+      // and routing it normally would re-ring the browser Client (busy
+      // with the outbound) AND re-ring the cell via the parallel-dial
+      // Number leg (independent call, no parent linkage to the outbound),
+      // making the phone ring forever after MLO hangs up the dock leg.
+      //
+      // Hang up immediately. Don't ring anyone.
+      //
+      // Trade-off: this also blocks the "MLO calls own DID from own cell
+      // to test inbound" workflow. Replacement: AudioSettings gear has a
+      // "Test inbound call" button that uses the Twilio API to place a
+      // test call directly to the MLO's Voice Client identity — fully
+      // scriptable, no cell carrier involvement, tests browser-side
+      // pipeline + Accept/Decline buttons end-to-end. Use that instead.
       if (fallbackNumber && normalizedFrom === fallbackNumber) {
-        fallbackNumber = null;
+        try {
+          await sql`
+            INSERT INTO call_logs (organization_id, mlo_id, contact_id, direction, from_number, to_number, status, twilio_call_sid)
+            VALUES (${DEFAULT_ORG_ID}, ${mloId}, ${contactId}, 'inbound', ${normalizedFrom || from || ''}, ${normalizedTo || to || ''}, 'self-loop-dropped', ${callSid})
+          `;
+        } catch (e) {
+          console.error('Failed to log self-loop drop:', e);
+        }
+        const loopTwiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Hangup />
+</Response>`;
+        return new Response(loopTwiml, { headers: { 'Content-Type': 'text/xml' } });
       }
 
       await sql`

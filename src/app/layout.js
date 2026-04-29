@@ -33,7 +33,14 @@ export const metadata = {
   keywords: `mortgage rates, refinance, home loan, Colorado mortgage, ${COMPANY_NAME}`,
   manifest: '/manifest.webmanifest',
   icons: {
+    // SVG favicon listed first — browsers that support SVG (Chrome, Edge,
+    // Firefox, Safari 16+) will pick it for the tab favicon. Adds a
+    // brand-blue rounded frame around the existing white-and-bars logo
+    // so the icon pops against varied browser tab backgrounds
+    // (Zoho-mail style). PNG entries remain for older browsers and as
+    // PWA install fallbacks; manifest icons are unchanged.
     icon: [
+      { url: '/icons/favicon.svg', type: 'image/svg+xml' },
       { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
       { url: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
     ],

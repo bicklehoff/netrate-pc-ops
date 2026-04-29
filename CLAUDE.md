@@ -221,6 +221,33 @@ Before entering Gate 1, check `.claude/deploy.lock`:
 - **If absent:** Create it with your branch name and ISO timestamp. Delete it after deploy completes or aborts.
 - **Stale locks:** If the timestamp is more than 2 hours old, ask David whether to clear it (session may have crashed).
 
+#### Cross-Session Handoff Discipline (mandatory)
+
+Cross-session WIP **must be a pushed commit on a feature branch**, never a `git stash`. Stash is for in-session context switches only (≤1 hour, same worktree). Stashes are local, ephemeral, and their messages are descriptive intent the next session has no way to verify against contents — yesterday's lost Phase 1 work was a relay that said "phase1-prep stashed" while the actual stash held Phase 0 files.
+
+Two scripts make this mechanical, not voluntary:
+
+- **`scripts/eod-verify.mjs`** — run before writing the EOD/handoff relay. Refuses to emit if the working tree is dirty or commits are unpushed. Forces a `wip:` commit + push first. Output is a fenced `handoff-git-state v1` block: branch, head SHA, origin head, base SHA, stash count, full diff stat vs `origin/main`. **Paste this block verbatim into the relay's `content` field — it is the only acceptable format for git state.**
+- **`scripts/session-start-verify.mjs`** — run on session start before acting on a handoff relay. Pipe the pasted block in. It re-runs the same checks against current git and refuses (exit 1) if `origin/<branch>` moved, the branch was deleted, or the diff stat drifted. If it refuses: do **not** trust the relay; read source-of-truth git state directly.
+
+Required pattern:
+
+```bash
+# End of session — before writing relay:
+git add -A && git commit -m "wip: <state>" && git push -u origin <branch>   # if anything uncommitted
+node scripts/eod-verify.mjs                                                  # paste output into relay
+
+# Start of session — after reading the handoff relay:
+node scripts/session-start-verify.mjs <<< "<paste the block>"                # exit 1 = stop and investigate
+```
+
+Banned:
+- Writing a handoff relay describing "stashed" work — stashes are not a handoff mechanism.
+- Writing the `git_state` block from memory or by hand — only `eod-verify.mjs` output is trusted.
+- Acting on a handoff before `session-start-verify.mjs` exits 0.
+
+If you're tempted to skip the verifier "just this once" — that's exactly the failure mode that lost yesterday's work.
+
 ---
 
 ## Tech Stack
