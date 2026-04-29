@@ -1,6 +1,5 @@
-import { Suspense } from 'react';
 import { readHomepageCache } from '@/lib/rates/homepage-cache';
-import RefiAnalyzerClient from './content';
+import { getCurrentModule } from '@/lib/calc-modules';
 
 // ISR: refresh every 10 minutes so the seed rate tracks the homepage cache.
 export const revalidate = 600;
@@ -13,12 +12,18 @@ export default async function RefiAnalyzerPage() {
   } catch {
     // Swallow — client falls back to hardcoded default.
   }
+
+  // Local var named `mod` not `module` — Next.js ESLint reserves `module`.
+  const mod = getCurrentModule('refi-analyzer');
+  if (!mod) {
+    throw new Error('Module refi-analyzer not registered');
+  }
+  const Standalone = mod.views.standalone;
+
   return (
     <>
       <h1 className="sr-only">Refinance Recoup Analyzer</h1>
-      <Suspense>
-        <RefiAnalyzerClient parRate={parRate} />
-      </Suspense>
+      <Standalone parRate={parRate} />
     </>
   );
 }
